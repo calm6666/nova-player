@@ -569,151 +569,25 @@ export const PlayerDocker = defineComponent<
       video.autoplay = true;
     }
 
-    // ===== HTML5 媒体元素标准事件（完整 21 个）=====
-    // 加载生命周期
-    video.addEventListener("loadstart", handleLoadStart);
-    video.addEventListener("loadedmetadata", handleLoadedMetadata);
-    video.addEventListener("loadeddata", handleLoadedData);
-    video.addEventListener("canplay", handleCanPlay);
-    video.addEventListener("canplaythrough", handleCanPlayThrough);
-    video.addEventListener("durationchange", handleDurationChange);
-    video.addEventListener("progress", handleProgress);
-    video.addEventListener("suspend", handleSuspend);
-    video.addEventListener("stalled", handleStalled);
-    video.addEventListener("abort", handleAbort);
-    video.addEventListener("emptied", handleEmptied);
-    video.addEventListener("error", handleError);
-    // 播放状态
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("playing", handlePlaying);
-    video.addEventListener("pause", handlePause);
-    video.addEventListener("ended", handleEnded);
-    // 进度与跳转
-    video.addEventListener("timeupdate", handleTimeUpdate);
-    video.addEventListener("seeking", handleSeeking);
-    video.addEventListener("seeked", handleSeeked);
-    // 音量与速率
-    video.addEventListener("volumechange", handleVolumeChange);
-    video.addEventListener("ratechange", handleRateChange);
-    // 缓冲等待
-    video.addEventListener("waiting", handleWaiting);
+    // 注意：HTML5 媒体元素标准事件（loadstart/loadedmetadata/play/pause/
+    // timeupdate/waiting 等全部 21 个）不再在此层绑定 —— 由 VideoPlayer 核心
+    // 的 bindVideoEvents 独占绑定（同步 stateMgr + 广播事件总线），本组件经
+    // 「stateMgr 键订阅 + 事件总线订阅」双通道消费（见 setupVideoEventSubscriptions），
+    // 消除此前每个事件双侧各绑一次的重复绑定与双重状态写入
 
     lifecycle.emit?.("videoCreated", { video });
   };
 
   // ============================================
-  // 事件处理器
+  // video 事件消费（订阅制）
+  // VideoPlayer 核心（bindVideoEvents）独占 video 原生事件绑定：同步
+  // stateMgr 运行时状态并广播事件总线。本组件不再重复绑定任何媒体事件，
+  // 经「stateMgr 键订阅 + 事件总线订阅」双通道完成全部 UI 更新：
+  // - 键订阅（STATE / DURATION / CURRENT_TIME / BUFFERED / VOLUME / MUTED）
+  //   注册于下方「运行时状态订阅」区（值驱动的 UI 更新）
+  // - 总线订阅（WAITING / CAN_PLAY / SEEKING / SEEKED，含延迟判定等
+  //   时序敏感逻辑）注册于 setupVideoEventSubscriptions
   // ============================================
-
-  /**
-   * 视频元数据加载完成时，初始化时长显示和音量状态
-   */
-  const handleLoadedMetadata = (): void => {
-    if (!videoRef.value) return;
-    const duration = videoRef.value.duration;
-    stateMgr?.set(PlayerStateKeyEnum.DURATION, duration);
-    // 分辨率写入运行时状态（供「视频统计信息」面板等消费）
-    stateMgr?.set(PlayerStateKeyEnum.VIDEO_WIDTH, videoRef.value.videoWidth);
-    stateMgr?.set(PlayerStateKeyEnum.VIDEO_HEIGHT, videoRef.value.videoHeight);
-    // 迷你播放器进度条的总时长基准
-    miniApi.setDuration?.(duration);
-    lifecycle.emit?.("loadedMetadata", { duration });
-
-    // 延迟初始化控制栏（确保 Controls 组件已挂载）
-    controlsApi.initDuration?.();
-    // 将总时长回传给进度条（进度条挂载时 props.duration 仍为 0）
-    progressBarApi.setDuration?.(duration);
-    // 底部影子进度条共用同一份总时长
-    controlsApi.setDuration?.(duration);
-    controlsApi.updateVolumeDisplay?.(readVolume());
-    if (readMuted()) {
-      controlsApi.updateMute?.(true);
-    }
-    // 视频加载完成即显示控制栏（与既有实现 loadedMetadata → initControls 末尾的
-    // showControls("control") 行为一致；初始加载与 load() 换源后的
-    // loadedmetadata 都会经过此处）
-    showControls("video");
-  };
-
-  /**
-   * 视频播放时间更新时，同步更新控制栏进度和弹幕
-   */
-  const handleTimeUpdate = (): void => {
-    if (!videoRef.value) return;
-    const currentTime = videoRef.value.currentTime;
-    // 画面在推进就说明没卡住：DASH 换档取新分片会触发 seek/waiting，但画面仍在播
-    if (!videoRef.value.paused) {
-      cancelBuffIndicator();
-      stateApi.hideBuffering?.();
-    }
-    if (
-      !videoRef.value.paused &&
-      (stateMgr?.get(PlayerStateKeyEnum.IS_LOADING) ?? false)
-    ) {
-      playerContainerRef.value?.classList.remove("state-buff");
-      stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
-    }
-    stateMgr?.set(PlayerStateKeyEnum.CURRENT_TIME, currentTime);
-    controlsApi.updateCurrent?.(currentTime);
-    // 将播放进度转发给顶部进度条（更新已播放条与滑块）
-    progressBarApi.updateProgress?.(currentTime);
-    // 迷你播放器模式时同步其播放进度条
-    miniApi.changeTempo?.(currentTime);
-    lifecycle.emit?.("timeUpdate", { currentTime });
-    props.events?.emit(PlayerEventEnum.TIME_UPDATE, {
-      time: currentTime,
-    });
-  };
-
-  /**
-   * 视频缓冲进度更新时，同步更新控制栏缓冲进度
-   */
-  const handleProgress = (): void => {
-    if (!videoRef.value) return;
-    const buffered = videoRef.value.buffered;
-    if (buffered.length > 0) {
-      const buffer = buffered.end(buffered.length - 1);
-      stateMgr?.set(PlayerStateKeyEnum.BUFFERED, buffer);
-      controlsApi.updateBuffer?.(buffer);
-      // 将缓冲进度转发给顶部进度条（更新缓冲条）
-      progressBarApi.updateBuffer?.(buffer);
-      // 迷你播放器模式时同步其缓冲进度条
-      miniApi.changeBuffer?.(buffer);
-      lifecycle.emit?.("progress", { buffer });
-    }
-  };
-
-  /**
-   * 视频开始播放时，更新播放状态和弹幕
-   */
-  const handlePlay = (): void => {
-    playerContainerRef.value?.classList.remove("state-paused");
-    rowDmApi.playPause?.("playing");
-    // 重新播放时隐藏片尾推荐面板（与既有实现行为一致）
-    endingApi.closeEndWrap?.();
-    stateMgr?.set(PlayerStateKeyEnum.STATE, PlayerState.PLAYING);
-    lifecycle.emit?.("play");
-  };
-
-  /**
-   * 视频暂停时，更新暂停状态和弹幕
-   */
-  const handlePause = (): void => {
-    playerContainerRef.value?.classList.add("state-paused");
-    rowDmApi.playPause?.("paused");
-    stateMgr?.set(PlayerStateKeyEnum.STATE, PlayerState.PAUSED);
-    lifecycle.emit?.("pause");
-  };
-
-  /**
-   * 视频播放结束时，更新播放状态
-   */
-  const handleEnded = (): void => {
-    stateMgr?.set(PlayerStateKeyEnum.STATE, PlayerState.ENDED);
-    // 播放结束时显示片尾推荐面板（与既有实现行为一致）
-    endingApi.showEndWrap?.();
-    lifecycle.emit?.("ended");
-  };
 
   /** 缓冲指示的延迟句柄：短暂换档（画面未停）不显示，真正卡住才显示 */
   let buffDelayTimer: ReturnType<typeof setTimeout> | null = null;
@@ -743,147 +617,55 @@ export const PlayerDocker = defineComponent<
     return false;
   };
 
-  /**
-   * 视频缓冲等待时，延迟添加缓冲状态样式
-   */
-  const handleWaiting = (): void => {
-    if (canContinuePlayback()) {
-      lifecycle.emit?.("waiting");
-      return;
-    }
-    if (buffDelayTimer !== null) return;
-    buffDelayTimer = setTimeout(() => {
-      buffDelayTimer = null;
-      playerContainerRef.value?.classList.add("state-buff");
-      stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, true);
-    }, 300);
-    lifecycle.emit?.("waiting");
-  };
-
-  /**
-   * 视频缓冲完成可播放时，移除缓冲状态样式
-   */
-  const handleCanPlay = (): void => {
-    cancelBuffIndicator();
-    playerContainerRef.value?.classList.remove("state-buff");
-    stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
-    lifecycle.emit?.("canplay");
-  };
-
-  /** canplaythrough：缓冲足够、可流畅播放到结尾（§4.2 canPlayThrough） */
-  const handleCanPlayThrough = (): void => {
-    lifecycle.emit?.("canPlayThrough");
-    props.events?.emit(PlayerEventEnum.CAN_PLAY_THROUGH);
-  };
-
-  // ============================================
-  // HTML5 媒体元素标准事件处理器（补全）
-  // ============================================
-
-  /** loadstart：开始加载媒体 */
-  const handleLoadStart = (): void => {
-    stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, true);
-    lifecycle.emit?.("loadStart");
-  };
-
-  /** loadeddata：首帧数据加载完成 */
-  const handleLoadedData = (): void => {
-    lifecycle.emit?.("loadedData");
-  };
-
-  /** durationchange：时长变化，同步时长显示 */
-  const handleDurationChange = (): void => {
-    if (!videoRef.value) return;
-    const duration = videoRef.value.duration;
-    stateMgr?.set(PlayerStateKeyEnum.DURATION, duration);
-    controlsApi.initDuration?.();
-    progressBarApi.setDuration?.(duration);
-    controlsApi.setDuration?.(duration);
-    lifecycle.emit?.("durationChange", { duration });
-  };
-
-  /** playing：实际开始播放（缓冲结束后） */
-  const handlePlaying = (): void => {
-    cancelBuffIndicator();
-    playerContainerRef.value?.classList.remove("state-buff");
-    stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
-    lifecycle.emit?.("playing");
-  };
-
   /** 是否处于清晰度切换中（切档会引发 seek/waiting，但画面未停，不该算加载中） */
   const isQualitySwitching = (): boolean =>
     stateMgr?.get(PlayerStateKeyEnum.QUALITY_SWITCH_STATE) === "switching";
 
-  /** seeking：跳转开始 */
-  const handleSeeking = (): void => {
-    playerContainerRef.value?.classList.add("state-buff");
-    if (!isQualitySwitching()) {
-      stateApi.showBuffering?.();
-    }
-    lifecycle.emit?.("seeking", {
-      currentTime: videoRef.value?.currentTime ?? 0,
-    });
-  };
+  /**
+   * 订阅事件总线上由本组件消费的时序类媒体事件：
+   * - WAITING：真正卡住（300ms 内未恢复）才亮缓冲指示，短暂换档被过滤
+   * - CAN_PLAY：缓冲恢复撤下缓冲指示
+   * - SEEKING / SEEKED：跳转起止的缓冲态亮灭（清晰度切换除外）
+   * 订阅返回的解绑函数统一交给 cleanupFns（teardown 释放）
+   */
+  const setupVideoEventSubscriptions = (): void => {
+    if (!props.events) return;
 
-  /** seeked：跳转完成 */
-  const handleSeeked = (): void => {
-    playerContainerRef.value?.classList.remove("state-buff");
-    stateApi.hideBuffering?.();
-    const currentTime = videoRef.value?.currentTime ?? 0;
-    stateMgr?.set(PlayerStateKeyEnum.CURRENT_TIME, currentTime);
-    controlsApi.updateCurrent?.(currentTime);
-    // 跳转完成后同步刷新进度条
-    progressBarApi.updateProgress?.(currentTime);
-    lifecycle.emit?.("seeked", { currentTime });
-  };
-
-  /** volumechange：音量 / 静音变化 */
-  const handleVolumeChange = (): void => {
-    if (!videoRef.value) return;
-    stateMgr?.set(PlayerStateKeyEnum.VOLUME, videoRef.value.volume);
-    stateMgr?.set(PlayerStateKeyEnum.MUTED, videoRef.value.muted);
-    controlsApi.updateVolumeDisplay?.(videoRef.value.volume);
-    controlsApi.updateMute?.(videoRef.value.muted);
-    lifecycle.emit?.("volumeChange", {
-      volume: videoRef.value.volume,
-      muted: videoRef.value.muted,
-    });
-  };
-
-  /** ratechange：播放速率变化 */
-  const handleRateChange = (): void => {
-    if (!videoRef.value) return;
-    stateMgr?.set(
-      PlayerStateKeyEnum.PLAYBACK_RATE,
-      videoRef.value.playbackRate,
+    cleanupFns.push(
+      props.events.on(PlayerEventEnum.WAITING, () => {
+        if (canContinuePlayback()) return;
+        if (buffDelayTimer !== null) return;
+        buffDelayTimer = setTimeout(() => {
+          buffDelayTimer = null;
+          playerContainerRef.value?.classList.add("state-buff");
+          stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, true);
+        }, 300);
+      }),
     );
-    lifecycle.emit?.("rateChange", { rate: videoRef.value.playbackRate });
-  };
 
-  /** suspend：浏览器主动暂停加载（非错误） */
-  const handleSuspend = (): void => {
-    lifecycle.emit?.("suspend");
-  };
+    cleanupFns.push(
+      props.events.on(PlayerEventEnum.CAN_PLAY, () => {
+        cancelBuffIndicator();
+        playerContainerRef.value?.classList.remove("state-buff");
+        stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
+      }),
+    );
 
-  /** stalled：数据停滞 */
-  const handleStalled = (): void => {
-    lifecycle.emit?.("stalled");
-  };
+    cleanupFns.push(
+      props.events.on(PlayerEventEnum.SEEKING, () => {
+        playerContainerRef.value?.classList.add("state-buff");
+        if (!isQualitySwitching()) {
+          stateApi.showBuffering?.();
+        }
+      }),
+    );
 
-  /** abort：加载被中止 */
-  const handleAbort = (): void => {
-    stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
-    lifecycle.emit?.("abort");
-  };
-
-  /** emptied：媒体被清空（重新加载前） */
-  const handleEmptied = (): void => {
-    lifecycle.emit?.("emptied");
-  };
-
-  /** error：加载 / 解码错误 */
-  const handleError = (): void => {
-    lifecycle.emit?.("error", { error: videoRef.value?.error });
+    cleanupFns.push(
+      props.events.on(PlayerEventEnum.SEEKED, () => {
+        playerContainerRef.value?.classList.remove("state-buff");
+        stateApi.hideBuffering?.();
+      }),
+    );
   };
 
   // ============================================
@@ -1360,6 +1142,121 @@ export const PlayerDocker = defineComponent<
       PlayerStateKeyEnum.QUALITY_SWITCH_STATE,
       (phase) => {
         driveQualitySwitchUI(phase);
+      },
+      lifecycle,
+    );
+
+    // ===== video 事件驱动的 UI 更新（核心层写键、本层订阅消费） =====
+
+    // 播放状态（play / playing / pause / ended 汇聚到 STATE 键）→
+    // 容器状态类 / 弹幕播放暂停 / 片尾推荐面板（合并原四个播放态 handler）
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.STATE,
+      (state) => {
+        if (state === PlayerState.PLAYING) {
+          // playing 语义：缓冲恢复后的实际播放，同时撤下暂停与缓冲样式
+          cancelBuffIndicator();
+          playerContainerRef.value?.classList.remove(
+            "state-buff",
+            "state-paused",
+          );
+          rowDmApi.playPause?.("playing");
+          // 重新播放时隐藏片尾推荐面板（与既有实现行为一致）
+          endingApi.closeEndWrap?.();
+          return;
+        }
+        if (state === PlayerState.PAUSED) {
+          playerContainerRef.value?.classList.add("state-paused");
+          rowDmApi.playPause?.("paused");
+          return;
+        }
+        if (state === PlayerState.ENDED) {
+          // 播放结束时显示片尾推荐面板（与既有实现行为一致）
+          endingApi.showEndWrap?.();
+        }
+      },
+      lifecycle,
+    );
+
+    // 总时长（loadedmetadata / durationchange 双事件统一写入 DURATION 键）→
+    // 控制栏与顶部进度条的时长初始化（合并原双 handler 的重复 UI 动作，幂等）
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.DURATION,
+      (duration) => {
+        // 迷你播放器进度条的总时长基准
+        miniApi.setDuration?.(duration);
+        // 延迟初始化控制栏（确保 Controls 组件已挂载）
+        controlsApi.initDuration?.();
+        // 将总时长回传给进度条（进度条挂载时 props.duration 仍为 0）
+        progressBarApi.setDuration?.(duration);
+        // 底部影子进度条共用同一份总时长
+        controlsApi.setDuration?.(duration);
+        controlsApi.updateVolumeDisplay?.(readVolume());
+        if (readMuted()) {
+          controlsApi.updateMute?.(true);
+        }
+        // 视频加载完成即显示控制栏（与既有实现 loadedmetadata → showControls 一致；
+        // 初始加载与 load() 换源后的 loadedmetadata 都会经过此处）
+        showControls("video");
+      },
+      lifecycle,
+    );
+
+    // 当前播放时间（timeupdate / seeked 写入 CURRENT_TIME 键）→
+    // 控制栏时间 / 顶部进度条 / 迷你播放器进度
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.CURRENT_TIME,
+      (currentTime) => {
+        const video = videoRef.value;
+        // 画面在推进就说明没卡住：DASH 换档取新分片会触发 seek/waiting，但画面仍在播
+        if (video && !video.paused) {
+          cancelBuffIndicator();
+          stateApi.hideBuffering?.();
+          if (stateMgr?.get(PlayerStateKeyEnum.IS_LOADING) ?? false) {
+            playerContainerRef.value?.classList.remove("state-buff");
+            stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
+          }
+        }
+        controlsApi.updateCurrent?.(currentTime);
+        // 将播放进度转发给顶部进度条（更新已播放条与滑块）
+        progressBarApi.updateProgress?.(currentTime);
+        // 迷你播放器模式时同步其播放进度条
+        miniApi.changeTempo?.(currentTime);
+      },
+      lifecycle,
+    );
+
+    // 缓冲进度（progress 事件写入 BUFFERED 键）→
+    // 控制栏缓冲条 / 顶部进度条缓冲条 / 迷你播放器
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.BUFFERED,
+      (buffer) => {
+        controlsApi.updateBuffer?.(buffer);
+        progressBarApi.updateBuffer?.(buffer);
+        miniApi.changeBuffer?.(buffer);
+      },
+      lifecycle,
+    );
+
+    // 音量 / 静音（volumechange 事件写入 VOLUME / MUTED 键）→ 控制栏音量显示
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.VOLUME,
+      (volume) => {
+        controlsApi.updateVolumeDisplay?.(volume);
+      },
+      lifecycle,
+    );
+
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.MUTED,
+      (muted) => {
+        controlsApi.updateMute?.(muted);
       },
       lifecycle,
     );
@@ -2085,6 +1982,8 @@ export const PlayerDocker = defineComponent<
     initVideo();
     // 绑定所有 DOM 事件
     initEvent();
+    // 订阅事件总线上的时序类媒体事件（WAITING / CAN_PLAY / SEEKING / SEEKED）
+    setupVideoEventSubscriptions();
     // 订阅清晰度切换事件（补充档位展示名）
     setupQualityEvents();
     // 订阅配置中心的动态变化（progress.segments / interaction.keyboard）
@@ -2139,24 +2038,8 @@ export const PlayerDocker = defineComponent<
       document.body.classList.remove("webscreen-fix");
     }
 
-    // 清理视频事件监听
-    if (videoRef.value) {
-      videoRef.value.removeEventListener(
-        "loadedmetadata",
-        handleLoadedMetadata,
-      );
-      videoRef.value.removeEventListener("timeupdate", handleTimeUpdate);
-      videoRef.value.removeEventListener("progress", handleProgress);
-      videoRef.value.removeEventListener("play", handlePlay);
-      videoRef.value.removeEventListener("pause", handlePause);
-      videoRef.value.removeEventListener("ended", handleEnded);
-      videoRef.value.removeEventListener("waiting", handleWaiting);
-      videoRef.value.removeEventListener("canplay", handleCanPlay);
-      videoRef.value.removeEventListener(
-        "canplaythrough",
-        handleCanPlayThrough,
-      );
-    }
+    // video 媒体事件监听已随订阅制重构移除（核心层独占绑定）；
+    // 总线订阅解绑函数在 cleanupFns 中统一释放
 
     // 清理所有 DOM 事件监听
     cleanupFns.forEach((fn) => fn());

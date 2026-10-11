@@ -107,6 +107,18 @@ export interface CardContentPatch {
   title?: string;
   /** score：图标类型（触发条目重建） */
   scoreType?: InteractionType;
+  /**
+   * 时间窗起点（秒，四类卡片通用）：
+   * 更新后按当前播放时间立即重算窗口归属（入窗即刻创建显示 /
+   * 出窗即刻淡出移除），编辑/展示两种模式同一口径
+   */
+  timeStart?: number;
+  /** 时间窗终点（秒，四类卡片通用），同 timeStart 的同步语义 */
+  timeEnd?: number;
+  /** 顶部定位（百分比，四类卡片通用）：定位为渲染期静态 style，变更触发条目重建 */
+  top?: number;
+  /** 左侧定位（百分比，四类卡片通用），同 top 的重建语义 */
+  left?: number;
 }
 
 /**

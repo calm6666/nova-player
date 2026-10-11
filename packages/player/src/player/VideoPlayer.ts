@@ -1152,6 +1152,10 @@ export class VideoPlayer
       this.store.setDuration(duration);
       this.state.set(PlayerStateKeyEnum.IS_LOADING, false);
       this.state.set(PlayerStateKeyEnum.DURATION, duration);
+      // 分辨率写入运行时状态（供「视频统计信息」面板等消费）；
+      // 事件绑定归核心层独占后，此处为该键的唯一写入口
+      this.state.set(PlayerStateKeyEnum.VIDEO_WIDTH, this.videoEl?.videoWidth ?? 0);
+      this.state.set(PlayerStateKeyEnum.VIDEO_HEIGHT, this.videoEl?.videoHeight ?? 0);
       this.setState(PlayerState.IDLE);
       this.events.emit(PlayerEventEnum.LOADED_METADATA, { duration });
       this.callbacks.loadedmetadata?.(duration);

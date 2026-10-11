@@ -20,11 +20,11 @@
  * - 'interactive'（默认，展示模式）：订阅 TIME_UPDATE 按时间窗口显隐卡片，
  *   注册全部交互监听（点赞/投币/收藏/关注/投票/评分/关闭/跳链），
  *   关闭按钮点击即关闭并回传 config 业务回调
- * - 'edit'（编辑模式）：全部卡片常驻显示（时间不驱动显隐），
- *   仅订阅 MOUNTED 与 POSITION_CHANGE（位置上报是编辑模式的核心输出），
- *   卡片不注册任何点击/关闭监听（关闭圆环仅渲染不可点），
+ * - 'edit'（编辑模式）：显隐口径与展示模式完全一致（同样由 TIME_UPDATE
+ *   按时间窗口驱动，到播放时间点才创建/显示，播过窗口即淡出移除），
+ *   区别仅在卡片可编辑：不注册点击/关闭监听（关闭圆环仅渲染不可点），
  *   bindDragInEditMode 提供拖拽定位，贴边经 AlignLines 响应式组件绘制辅助线；
- *   关闭环与展示模式同口径随播放进度推进（视频暂停圆环随之停住）
+ *   POSITION_CHANGE 位置上报是编辑模式的核心输出
  *
  * 内容编辑 API（updateCardContent / removeCard）：
  * - 文本字段原地更新 + contentVersion 自增 → 响应式文本精准更新 DOM
@@ -259,13 +259,6 @@ class InteractionPluginClass implements InteractionPluginAPI {
   private alignLines: Signal<AlignLinesState> = createAlignLinesSignal();
 
   /**
-   * 播放器实例引用（install 时保存）：
-   * 编辑模式常驻条目创建后用于读取当前播放时间校准关闭环
-   * （后装场景视频可能已播放过半，满环起步与展示模式口径不一致）
-   */
-  private playerRef: VideoPlayer | null = null;
-
-  /**
    * 拖拽贴边回调：把 dragEditor 报告的边界写入辅助线 signal
    * （bounds 为 null 或某方向字段缺省时，对应线段隐藏，位置保留上次值）
    */
@@ -355,9 +348,6 @@ class InteractionPluginClass implements InteractionPluginAPI {
     // injectPluginStyle 幂等，多播放器实例共享同一样式节点
     injectPluginStyle("interaction", interactionCss);
 
-    // 保存播放器引用：编辑模式常驻条目创建后读取当前播放时间校准关闭环
-    this.playerRef = player;
-
     const events: PlayerEventBus = player.events;
     // 保存事件总线引用，供卡片交互发生时发布互动事件
     this.eventBus = player.events;
@@ -376,10 +366,10 @@ class InteractionPluginClass implements InteractionPluginAPI {
       this.initAfterMounted(player.el);
     }
 
-    // 公共订阅：时间更新（两种模式都需要）：
-    // - 展示模式：diffAlgorithm 增量同步卡片时间窗口显隐与关闭环
-    // - 编辑模式：卡片常驻不参与窗口显隐，仅随播放进度推进关闭环
-    //   （视频暂停时 TIME_UPDATE 停发 → 圆环随之停住，与展示模式一致）
+    // 公共订阅：时间更新（两种模式同一口径）：
+    // diffAlgorithm 增量同步卡片时间窗口显隐与关闭环
+    // （编辑模式同样到播放时间点才创建/显示卡片；视频暂停时
+    //   TIME_UPDATE 停发 → 圆环随之停住）
     const unsubTimeUpdate = events.on(
       PlayerEventEnum.TIME_UPDATE,
       (data): void => {
@@ -496,7 +486,6 @@ class InteractionPluginClass implements InteractionPluginAPI {
     this.dmInsideElement = null;
     this.container = null;
     this.eventBus = null;
-    this.playerRef = null;
     this.currentTime = 0;
     this.prevTime = 0;
   }
@@ -521,17 +510,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
     if (this.dmInsideElement) {
       // 挂载响应式根（4 个 For 控制流，编辑模式追加对齐辅助线）
       this.mountRoot();
-      // 编辑模式：全部卡片立即创建并常驻显示（供拖拽编辑）
-      if (this.isEditMode) {
-        this.createEditEntries();
-        // 常驻条目创建后按当前播放位置校准关闭环：
-        // 后装场景视频可能已播放过半，满环起步会与展示模式口径不一致；
-        // 视频暂停时校准一次后停住，与「随播放进度变化」的语义一致
-        this.currentTime = this.playerRef?.getCurrentTime() ?? 0;
-        this.refreshEditRemaining(this.linkActive.value);
-        this.refreshEditRemaining(this.voteActive.value);
-        this.refreshEditRemaining(this.scoreActive.value);
-      }
+      // 显隐口径两种模式统一：卡片由 TIME_UPDATE 按播放时间窗口驱动创建，
+      // 编辑模式同样到显示时间点才出现（此前编辑模式挂载即全量常驻，
+      // 与展示模式行为不一致）；挂载后首个 TIME_UPDATE 完成窗口同步
     }
   }
 
@@ -741,16 +722,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
     // 根未挂载：无从创建卡片（数据已持有，待挂载后由时间驱动）
     if (this.rootVNode === null) return;
 
-    // 编辑模式：卡片常驻显示不参与窗口显隐，
-    // 仅随播放进度推进关闭环（与展示模式同一口径；
-    // 视频暂停时 TIME_UPDATE 停发 → 圆环随之停住）
-    if (this.isEditMode) {
-      this.refreshEditRemaining(this.linkActive.value);
-      this.refreshEditRemaining(this.voteActive.value);
-      this.refreshEditRemaining(this.scoreActive.value);
-      return;
-    }
-
+    // 显隐口径两种模式统一：编辑模式同样按时间窗口 diff 驱动创建/显示/
+    // 淡出移除（关闭环剩余比例由 syncCard 窗口内路径刷新，
+    // 视频暂停时 TIME_UPDATE 停发 → 圆环随之停住，与展示模式一致）
     this.syncList(
       ENTRY_PREFIX.guideThree,
       this.interactCard.guideList,
@@ -1014,66 +988,10 @@ class InteractionPluginClass implements InteractionPluginAPI {
   // ==================== 数据增删与编辑模式 ====================
 
   /**
-   * 编辑模式：为全部卡片立即创建常驻条目（显示态可拖拽编辑）
-   * 幂等：已存在的下标跳过
-   */
-  private createEditEntries(): void {
-    this.interactCard.guideList.forEach(
-      (item: InteractionGuideThree, index: number): void => {
-        this.appendEditEntry(
-          ENTRY_PREFIX.guideThree,
-          index,
-          item,
-          this.guideActive,
-        );
-      },
-    );
-    this.interactCard.linkList.forEach(
-      (item: InteractionLink, index: number): void => {
-        this.appendEditEntry(ENTRY_PREFIX.link, index, item, this.linkActive);
-      },
-    );
-    this.interactCard.voteList.forEach(
-      (item: InteractionVote, index: number): void => {
-        this.appendEditEntry(ENTRY_PREFIX.vote, index, item, this.voteActive);
-      },
-    );
-    this.interactCard.scoreList.forEach(
-      (item: InteractionScore, index: number): void => {
-        this.appendEditEntry(ENTRY_PREFIX.score, index, item, this.scoreActive);
-      },
-    );
-  }
-
-  /**
-   * 编辑模式：按当前播放进度刷新一批条目的关闭环剩余比例
-   *
-   * 口径与展示模式的 syncCard 完全一致：
-   * remaining = 1 - clamp((now - timeStart) / (timeEnd - timeStart), 0, 1)；
-   * 播放头在窗口前为满环（1）、越过 timeEnd 为空环（0）；
-   * 时间窗缺失/非法的卡片保持在满环（无倒计时语义可推进）
-   */
-  private refreshEditRemaining(
-    entries: ReadonlyArray<ActiveCardEntry<SyncItem>>,
-  ): void {
-    const now = this.currentTime;
-    for (const entry of entries) {
-      const { timeStart, timeEnd } = entry.item;
-      if (
-        timeStart === undefined ||
-        timeEnd === undefined ||
-        timeEnd <= timeStart
-      ) {
-        entry.remaining.value = 1;
-        continue;
-      }
-      const ratio = (now - timeStart) / (timeEnd - timeStart);
-      entry.remaining.value = 1 - Math.min(Math.max(ratio, 0), 1);
-    }
-  }
-
-  /**
    * 编辑模式追加单张卡片条目（幂等）
+   *
+   * 显隐随时间窗口驱动后，本方法仅服务 rebuildEntry 的「编辑中卡片
+   * 窗口内无闪烁重建」场景（immediate 显示态渲染，不播淡入过渡）
    *
    * @param idPrefix - 条目 id 的类型前缀
    * @param listIndex - 卡片在数据列表中的下标
@@ -1107,7 +1025,8 @@ class InteractionPluginClass implements InteractionPluginAPI {
   /**
    * 运行时添加卡片后的即时同步：
    * 根未挂载则仅入列表（待 MOUNTED 后由时间驱动）；
-   * 编辑模式立即常显；展示模式按当前时间窗口判断是否立即创建
+   * 两种模式统一按当前时间窗口判断是否立即创建（未来卡片由后续
+   * TIME_UPDATE 驱动，编辑模式与展示模式同一口径）
    */
   private syncAddedCard<T extends SyncItem>(
     idPrefix: string,
@@ -1119,11 +1038,6 @@ class InteractionPluginClass implements InteractionPluginAPI {
     if (this.rootVNode === null) return;
     const listIndex = list.indexOf(item);
     if (listIndex < 0) return;
-    if (this.isEditMode) {
-      this.appendEditEntry(idPrefix, listIndex, item, active);
-      return;
-    }
-    // 展示模式：按当前时间窗口判断（未来卡片由后续 TIME_UPDATE 驱动）
     this.syncCard(idPrefix, listIndex, item, this.currentTime, active);
   }
 
@@ -1240,7 +1154,7 @@ class InteractionPluginClass implements InteractionPluginAPI {
 
   /**
    * 更新数据：清空全部活跃条目与交互状态，替换提供的列表后重建
-   * （编辑模式立即常显重建；播放模式由后续 TIME_UPDATE 按窗口重建）
+   * （两种模式统一由后续 TIME_UPDATE 按时间窗口重建条目）
    */
   updateData(data: Partial<InteractionCard>): void {
     // 清空全部活跃条目（含移除定时器与拖拽绑定）
@@ -1268,15 +1182,8 @@ class InteractionPluginClass implements InteractionPluginAPI {
       this.interactCard.scoreList = data.scoreList;
     }
 
-    // 编辑模式：立即重建常显条目
-    if (this.isEditMode && this.rootVNode !== null) {
-      this.createEditEntries();
-      // 常显重建后按当前播放位置校准关闭环（新条目满环起步需校准）
-      this.currentTime = this.playerRef?.getCurrentTime() ?? this.currentTime;
-      this.refreshEditRemaining(this.linkActive.value);
-      this.refreshEditRemaining(this.voteActive.value);
-      this.refreshEditRemaining(this.scoreActive.value);
-    }
+    // 重建统一交给后续 TIME_UPDATE 按时间窗口驱动（编辑/展示同一口径）：
+    // 播放中的下一个时间更新点即完成窗口内条目的创建与显示
   }
 
   // ==================== 内容编辑（updateCardContent / removeCard） ====================
@@ -1301,8 +1208,10 @@ class InteractionPluginClass implements InteractionPluginAPI {
   /**
    * 结构性变更的条目重建：移除旧条目后按新数据重建
    *
-   * 编辑模式以显示态直接重建（不播淡入过渡，避免编辑过程闪烁）；
-   * 展示模式交由 syncCard 按当前时间窗口决定是否重建。
+   * 编辑模式：显隐口径与展示模式一致（时间窗驱动），唯一差异在编辑
+   * 体验——仍在当前显示窗口内的卡片以显示态立即重建（不播淡入过渡，
+   * 避免编辑过程闪烁）；被改到窗口外的不重建，交由 TIME_UPDATE 到点驱动。
+   * 展示模式：交由 syncCard 按当前时间窗口决定是否重建。
    */
   private rebuildEntry<T extends SyncItem>(
     idPrefix: string,
@@ -1316,14 +1225,77 @@ class InteractionPluginClass implements InteractionPluginAPI {
     if (existing !== undefined) {
       this.removeEntry(active, existing);
     }
-    // 根未挂载：数据已更新，待挂载后由时间驱动/常显重建兜底
+    // 根未挂载：数据已更新，待挂载后由时间驱动重建兜底
     if (this.rootVNode === null) return;
     if (this.isEditMode) {
-      this.appendEditEntry(idPrefix, listIndex, item, active, true);
+      // 与 syncCard 同口径的窗口判定（提前量 / 上界 / 关闭态）
+      const { timeStart, timeEnd } = item;
+      const inWindow =
+        timeStart !== undefined &&
+        timeEnd !== undefined &&
+        item.isClose !== true &&
+        this.currentTime >= timeStart - CARD_CREATE_LEAD &&
+        this.currentTime <= timeEnd;
+      // 窗口内的编辑中卡片：显示态立即重建（无过渡不闪烁）
+      if (inWindow) {
+        this.appendEditEntry(idPrefix, listIndex, item, active, true);
+      }
+      // 窗口外：不重建，与展示模式一致由后续 TIME_UPDATE 到点创建
       return;
     }
     // 展示模式：按当前时间窗口判断（未来卡片由后续 TIME_UPDATE 驱动）
     this.syncCard(idPrefix, listIndex, item, this.currentTime, active);
+  }
+
+  /**
+   * 通用调度字段补丁：时间窗（timeStart/timeEnd）与定位（top/left）
+   *
+   * 四类卡片共用字段，先落到数据条目再同步渲染：
+   * - 时间窗：按当前播放时间立即重算窗口归属（入窗即刻创建显示 /
+   *   出窗即刻淡出移除），编辑/展示两种模式同一口径
+   * - 定位：渲染期为静态 style（--top/--left CSS 变量），变更走条目重建；
+   *   交互状态按 listIndex 存于 Map，重建不丢失
+   *
+   * @param idPrefix - 条目 id 的类型前缀
+   * @param listIndex - 卡片在对应数据列表中的下标
+   * @param item - 卡片原始数据（时间窗与定位字段可写）
+   * @param active - 该类型的活跃条目 signal 数组
+   * @param patch - 内容补丁（仅消费 timeStart/timeEnd/top/left）
+   */
+  private applySchedulePatch<T extends SyncItem & { top: number; left: number }>(
+    idPrefix: string,
+    listIndex: number,
+    item: T,
+    active: Signal<ActiveCardEntry<T>[]>,
+    patch: CardContentPatch,
+  ): void {
+    // 根未挂载：数据写入后待挂载兜底，无需同步渲染
+    if (this.rootVNode === null) {
+      if (patch.timeStart !== undefined) item.timeStart = patch.timeStart;
+      if (patch.timeEnd !== undefined) item.timeEnd = patch.timeEnd;
+      if (patch.top !== undefined) item.top = patch.top;
+      if (patch.left !== undefined) item.left = patch.left;
+      return;
+    }
+
+    // 时间窗补丁：写入后按当前播放时间重算窗口归属
+    // （入窗即刻创建显示 / 出窗即刻淡出移除，编辑/展示同一口径；
+    // 关闭环剩余比例由 syncCard 窗口内路径刷新）
+    if (patch.timeStart !== undefined || patch.timeEnd !== undefined) {
+      if (patch.timeStart !== undefined) item.timeStart = patch.timeStart;
+      if (patch.timeEnd !== undefined) item.timeEnd = patch.timeEnd;
+      this.syncCard(idPrefix, listIndex, item, this.currentTime, active);
+    }
+
+    // 定位补丁：写入后条目重建（静态 style 变更的最小可靠路径）
+    const posChanged =
+      (patch.top !== undefined && patch.top !== item.top) ||
+      (patch.left !== undefined && patch.left !== item.left);
+    if (posChanged) {
+      if (patch.top !== undefined) item.top = patch.top;
+      if (patch.left !== undefined) item.left = patch.left;
+      this.rebuildEntry(idPrefix, listIndex, item, active);
+    }
   }
 
   /**
@@ -1332,7 +1304,8 @@ class InteractionPluginClass implements InteractionPluginAPI {
    * 文本字段（linkContent / question / optionTexts 等长 / title）：
    * 原地更新 + contentVersion 自增 → 响应式文本精准更新 DOM；
    * 结构字段（guideType / scoreType / optionTexts 变长）：
-   * 类名变体、图标与选项行数为渲染期静态结构，条目按新数据重建。
+   * 类名变体、图标与选项行数为渲染期静态结构，条目按新数据重建；
+   * 调度字段（timeStart/timeEnd/top/left）：见 applySchedulePatch。
    *
    * @param type - 卡片类型
    * @param index - 卡片在对应数据列表中的下标
@@ -1343,6 +1316,13 @@ class InteractionPluginClass implements InteractionPluginAPI {
       case "guideThree": {
         const item = this.interactCard.guideList[index];
         if (item === undefined) return;
+        this.applySchedulePatch(
+          ENTRY_PREFIX.guideThree,
+          index,
+          item,
+          this.guideActive,
+          patch,
+        );
         if (patch.guideType !== undefined && patch.guideType !== item.type) {
           item.type = patch.guideType;
           this.rebuildEntry(ENTRY_PREFIX.guideThree, index, item, this.guideActive);
@@ -1352,6 +1332,13 @@ class InteractionPluginClass implements InteractionPluginAPI {
       case "link": {
         const item = this.interactCard.linkList[index];
         if (item === undefined) return;
+        this.applySchedulePatch(
+          ENTRY_PREFIX.link,
+          index,
+          item,
+          this.linkActive,
+          patch,
+        );
         if (patch.linkContent !== undefined) {
           item.linkContent = patch.linkContent;
           this.bumpEntryContent(this.linkActive, index);
@@ -1361,6 +1348,13 @@ class InteractionPluginClass implements InteractionPluginAPI {
       case "vote": {
         const item = this.interactCard.voteList[index];
         if (item === undefined) return;
+        this.applySchedulePatch(
+          ENTRY_PREFIX.vote,
+          index,
+          item,
+          this.voteActive,
+          patch,
+        );
         if (patch.question !== undefined) {
           item.question = patch.question;
           this.bumpEntryContent(this.voteActive, index);
@@ -1391,6 +1385,13 @@ class InteractionPluginClass implements InteractionPluginAPI {
       case "score": {
         const item = this.interactCard.scoreList[index];
         if (item === undefined) return;
+        this.applySchedulePatch(
+          ENTRY_PREFIX.score,
+          index,
+          item,
+          this.scoreActive,
+          patch,
+        );
         if (patch.title !== undefined) {
           item.title = patch.title;
           this.bumpEntryContent(this.scoreActive, index);
@@ -1445,15 +1446,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
     this.scoreStates.clear();
 
     if (this.rootVNode === null) return;
-    if (this.isEditMode) {
-      this.createEditEntries();
-      this.currentTime = this.playerRef?.getCurrentTime() ?? this.currentTime;
-      this.refreshEditRemaining(this.linkActive.value);
-      this.refreshEditRemaining(this.voteActive.value);
-      this.refreshEditRemaining(this.scoreActive.value);
-      return;
-    }
-    // 展示模式：四类列表按当前时间窗口立即重建（在窗卡片恢复显示）
+    // 四类列表按当前时间窗口立即重建（在窗卡片恢复显示）：
+    // 编辑/展示同一口径 —— 编辑模式当前窗口内的卡片删除其他卡片后
+    // 同样立即恢复显示（可继续编辑），窗口外卡片到点再出现
     this.syncList(
       ENTRY_PREFIX.guideThree,
       this.interactCard.guideList,
