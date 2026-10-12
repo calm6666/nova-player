@@ -19,7 +19,9 @@
  * ```
  *
  * 视觉与交互：
- * - 位置 left:23px / bottom:71px（CSS 常量，缩放经 --scale CSS 变量）
+ * - 位置 left:23px / bottom:71px（CSS 常量，缩放经 --scale CSS 变量）；
+ *   全屏 / 网页全屏（容器 data-screen="full"/"web"）下 bottom 抬到 96px
+ *   —— 全屏控制栏高 73px 会盖住 71px 档（scss 的媒体查询适配段）
  * - 深色胶囊（高 30px 圆角 20px），左侧 26px 进度环中心为卡片类型图标
  * - 进度环沿用卡片关闭时刻的剩余比例继续随播放倒数，归零后条目移除
  * - 点击条目任意区域重新打开原卡片（由插件清除关闭标记并重建显示）
@@ -69,7 +71,7 @@ export function renderShrinkBar(
     "div",
     {
       // 缩放经 --scale CSS 变量（新元素统一缩放协议）；
-      // 位置为 CSS 常量（left:23px / bottom:71px），不随卡片定位
+      // 位置为 CSS 常量（left:23px / bottom:71px，全屏档 96px 见 scss），不随卡片定位
       style: { "--scale": "1" },
       // 条目显隐类直接表达式（默认 opacity:0，show 翻转播放 0.35s 淡入）
       class:

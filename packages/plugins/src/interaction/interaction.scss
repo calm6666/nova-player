@@ -962,6 +962,20 @@
   opacity: 1;
 }
 
+// 全屏 / 网页全屏下的位置适配（对齐控制栏的尺寸档位，player.scss
+// 的 [data-screen="full"]/[data-screen="web"] 段：≥750px 时控制栏
+// 高 73px、toast 也抬到 bottom:100px）：
+// 普通模式 bottom:71px 会被全屏控制栏（73px 高）整个盖住 ——
+// 抬到 96px（= 全屏控制栏 73px + 23px 间距，间距与普通档保持一致）
+@media screen and (min-width: 750px) {
+  .nova-player-container[data-screen='full'],
+  .nova-player-container[data-screen='web'] {
+    .nova-danmaku-x-cmd-shrink {
+      bottom: 96px;
+    }
+  }
+}
+
 // 26px 进度环锚定在条目左端（top/left:2px），环中心为卡片类型图标
 .nova-danmaku-x-cmd-shrink .nova-danmaku-x-circle {
   top: 2px;
