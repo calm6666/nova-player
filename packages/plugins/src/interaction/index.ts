@@ -63,10 +63,12 @@ import type {
   InteractionLink,
   InteractionVote,
   InteractionScore,
+  InteractionScoreSum,
   InteractionCard,
   InteractionPluginConfig,
   InteractionPluginMode,
   ActiveCardEntry,
+  ShrinkCardEntry,
   CardContentPatch,
   VoteOption,
 } from "./types";
@@ -78,6 +80,14 @@ import { renderVoteCard, createVoteCardState } from "./VoteCard";
 import type { VoteCardOptions, VoteCardState } from "./VoteCard";
 import { renderScoreCard, createScoreCardState } from "./ScoreCard";
 import type { ScoreCardOptions, ScoreCardState } from "./ScoreCard";
+import { renderScoreSumCard } from "./ScoreSumCard";
+import type {
+  ScoreSumCardOptions,
+  ScoreSumSummary,
+  ScoreSumSummaryItem,
+} from "./ScoreSumCard";
+import { renderShrinkBar } from "./ShrinkBar";
+import { getShrinkMeta } from "./icons";
 import { CARD_FADE_MS } from "./closeCircle";
 import { bindDragInEditMode } from "./dragEditor";
 import type { AlignLineBounds } from "./dragEditor";
@@ -102,7 +112,11 @@ const ENTRY_PREFIX = {
   link: "link:",
   vote: "vote:",
   score: "score:",
+  scoreSum: "scoreSum:",
 } as const;
+
+/** 缩小条目 id 前缀（For 的 key 由前缀 + 类型 + 列表下标构成） */
+const SHRINK_ENTRY_PREFIX = "shrink:";
 
 // ============================================
 // 类型定义
@@ -150,7 +164,8 @@ const isCardType = (value: unknown): value is CardType =>
   value === "guideThree" ||
   value === "link" ||
   value === "vote" ||
-  value === "score";
+  value === "score" ||
+  value === "scoreSum";
 
 /** 收窄到点赞关注条目 */
 const isGuideEntry = (
@@ -176,20 +191,65 @@ const isScoreEntry = (
 ): item is ActiveCardEntry<InteractionScore> =>
   hasStringId(item) && item.id.startsWith(ENTRY_PREFIX.score);
 
+/** 收窄到评分总结条目 */
+const isScoreSumEntry = (
+  item: unknown,
+): item is ActiveCardEntry<InteractionScoreSum> =>
+  hasStringId(item) && item.id.startsWith(ENTRY_PREFIX.scoreSum);
+
+/** 收窄到左下角缩小条目 */
+const isShrinkEntry = (item: unknown): item is ShrinkCardEntry =>
+  hasStringId(item) && item.id.startsWith(SHRINK_ENTRY_PREFIX);
+
 // ============================================
 // 互动插件 API 接口
 // ============================================
 
 /** 互动插件完整 API 接口 */
 export interface InteractionPluginAPI extends Plugin {
-  /** 添加引导卡片 */
-  addGuide(item: InteractionGuideThree): void;
-  /** 添加链接卡片 */
-  addLink(item: InteractionLink): void;
-  /** 添加投票卡片 */
-  addVote(item: InteractionVote): void;
-  /** 添加评分卡片 */
-  addScore(item: InteractionScore): void;
+  /**
+   * 添加引导卡片（时间窗与任何已有卡片重叠时拒绝添加）
+   * @returns 是否添加成功（false = 时间窗重叠被拒）
+   */
+  addGuide(item: InteractionGuideThree): boolean;
+  /**
+   * 添加链接卡片（时间窗与任何已有卡片重叠时拒绝添加）
+   * @returns 是否添加成功（false = 时间窗重叠被拒）
+   */
+  addLink(item: InteractionLink): boolean;
+  /**
+   * 添加投票卡片（时间窗与任何已有卡片重叠时拒绝添加）
+   * @returns 是否添加成功（false = 时间窗重叠被拒）
+   */
+  addVote(item: InteractionVote): boolean;
+  /**
+   * 添加评分卡片（时间窗与任何已有卡片重叠时拒绝添加）
+   * @returns 是否添加成功（false = 时间窗重叠被拒）
+   */
+  addScore(item: InteractionScore): boolean;
+  /**
+   * 添加评分总结卡片
+   * 前置条件：scoreList 至少已有一张评分卡片；
+   * 时间窗与任何已有卡片重叠时拒绝添加
+   * @returns 是否添加成功（false = 无评分卡片或时间窗重叠被拒）
+   */
+  addScoreSum(item: InteractionScoreSum): boolean;
+  /**
+   * 查询待设置的时间窗是否与任何已有卡片重叠
+   * （编辑面板在提交添加/修改前预检，重叠则 toast 提示并拒绝提交）
+   *
+   * @param type - 待设置卡片的类型（新增与修改均传目标类型）
+   * @param index - 待设置卡片在其列表中的下标（新增传 -1 表示不在任何列表中）
+   * @param timeStart - 待设置的时间窗起点（秒）
+   * @param timeEnd - 待设置的时间窗终点（秒）
+   * @returns true = 与某张已有卡片的时间窗重叠
+   */
+  wouldOverlap(
+    type: CardType,
+    index: number,
+    timeStart: number,
+    timeEnd: number,
+  ): boolean;
   /** 获取容器 */
   getContainer(): HTMLElement | null;
   /** 关闭卡片 */
@@ -198,8 +258,12 @@ export interface InteractionPluginAPI extends Plugin {
   getStatus(): InteractionCard;
   /** 更新数据 */
   updateData(data: Partial<InteractionCard>): void;
-  /** 编辑卡片内容（文本精准更新 / 结构字段触发条目重建） */
-  updateCardContent(type: CardType, index: number, patch: CardContentPatch): void;
+  /**
+   * 编辑卡片内容（文本精准更新 / 结构字段触发条目重建）
+   * 时间窗补丁（timeStart/timeEnd）会做重叠校验，重叠时拒绝应用
+   * @returns 是否成功应用（false = 时间窗重叠被拒）
+   */
+  updateCardContent(type: CardType, index: number, patch: CardContentPatch): boolean;
   /** 从数据列表移除卡片并销毁其条目（编辑器删除语义） */
   removeCard(type: CardType, index: number): void;
 }
@@ -223,10 +287,11 @@ class InteractionPluginClass implements InteractionPluginAPI {
     linkList: [],
     voteList: [],
     scoreList: [],
+    scoreSumList: [],
   };
 
   // ============================================
-  // 响应式数据源：4 个活跃条目 signal 数组（For 控制流消费）
+  // 响应式数据源：活跃条目 signal 数组（For 控制流消费）
   // 条目加入数组 = 挂载 DOM，移除 = 销毁 DOM
   // ============================================
 
@@ -234,6 +299,12 @@ class InteractionPluginClass implements InteractionPluginAPI {
   private linkActive = signal<ActiveCardEntry<InteractionLink>[]>([]);
   private voteActive = signal<ActiveCardEntry<InteractionVote>[]>([]);
   private scoreActive = signal<ActiveCardEntry<InteractionScore>[]>([]);
+  private scoreSumActive = signal<ActiveCardEntry<InteractionScoreSum>[]>([]);
+  /**
+   * 左下角缩小条目（展示模式下卡片被手动关闭后的残留条目）：
+   * 进度环沿用关闭时刻的剩余比例继续倒数，归零移除；点击重开原卡片
+   */
+  private shrinkActive = signal<ShrinkCardEntry[]>([]);
 
   // ============================================
   // 交互状态（按列表下标持有，跨 DOM 重建保留：
@@ -334,6 +405,7 @@ class InteractionPluginClass implements InteractionPluginAPI {
         linkList: config.data.linkList ?? [],
         voteList: config.data.voteList ?? [],
         scoreList: config.data.scoreList ?? [],
+        scoreSumList: config.data.scoreSumList ?? [],
       };
     }
 
@@ -473,6 +545,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
     this.disposeEntries(this.linkActive);
     this.disposeEntries(this.voteActive);
     this.disposeEntries(this.scoreActive);
+    this.disposeEntries(this.scoreSumActive);
+    // 缩小条目无定时器与拖拽绑定，直接清空
+    this.shrinkActive.value = [];
 
     // 清理交互状态
     this.guideStates.clear();
@@ -519,13 +594,13 @@ class InteractionPluginClass implements InteractionPluginAPI {
   }
 
   /**
-   * 挂载响应式根：Fragment 包裹 4 个 For 控制流
+   * 挂载响应式根：Fragment 包裹全部 For 控制流
    * For 按 key（类型前缀 + 列表下标）精准创建/销毁卡片 DOM
    * 编辑模式追加对齐辅助线（alignLines signal 驱动的响应式组件）
    */
   private mountRoot(): void {
     if (this.rootVNode !== null || this.dmInsideElement === null) return;
-    // 卡片控制流（两种模式共用）
+    // 卡片控制流（两种模式共用）+ 左下角缩小条目控制流（仅展示模式消费）
     const flows: VNode[] = [
       h(For, {
         each: this.guideActive,
@@ -546,6 +621,16 @@ class InteractionPluginClass implements InteractionPluginAPI {
         each: this.scoreActive,
         key: entryKey,
         render: this.renderScoreEntry,
+      }),
+      h(For, {
+        each: this.scoreSumActive,
+        key: entryKey,
+        render: this.renderScoreSumEntry,
+      }),
+      h(For, {
+        each: this.shrinkActive,
+        key: entryKey,
+        render: this.renderShrinkEntry,
       }),
     ];
     // 编辑模式：追加对齐辅助线（拖拽贴边时由 handleAlignLines 写 signal 驱动显隐）
@@ -723,6 +808,72 @@ class InteractionPluginClass implements InteractionPluginAPI {
     return renderScoreCard(item, state, options);
   };
 
+  /**
+   * 渲染评分总结卡片
+   * 聚合数据（全部评分卡题目 / 平均分 / 总参与人数）在条目创建时
+   * 计算一次并注入 signal（评分窗口与总结窗口互斥，评分行为不可能
+   * 与总结卡显示同时发生，聚合值保持正确）；
+   * 展示模式注册关闭回调；编辑模式仅绑定拖拽
+   */
+  private readonly renderScoreSumEntry = (item: unknown): VNode => {
+    if (!isScoreSumEntry(item)) return h("div", {});
+    const { listIndex, item: card } = item;
+
+    // 聚合全部评分卡片：题目 + 当前平均分 + 总参与人数
+    const summaryItems: ScoreSumSummaryItem[] =
+      this.interactCard.scoreList.map(
+        (score: InteractionScore, scoreIndex: number): ScoreSumSummaryItem => {
+          const state = this.scoreStates.get(scoreIndex);
+          const scoreCount = state ? state.count.value : 0;
+          const totalScore = state ? state.totalScore.value : 0;
+          return {
+            name: score.title,
+            average:
+              scoreCount > 0 ? (totalScore / scoreCount).toFixed(1) : "0.0",
+          };
+        },
+      );
+    const totalCount = this.interactCard.scoreList.reduce(
+      (sum: number, _score: InteractionScore, scoreIndex: number): number => {
+        const state = this.scoreStates.get(scoreIndex);
+        return sum + (state ? state.count.value : 0);
+      },
+      0,
+    );
+    const summary = signal<ScoreSumSummary>({
+      items: summaryItems,
+      count: totalCount,
+    });
+
+    // 编辑模式：仅传 bindDrag（onClose 缺省 → 关闭圆环不注册点击）
+    if (this.isEditMode) {
+      const editOptions: ScoreSumCardOptions = {
+        bindDrag: this.makeBindDrag("scoreSum", listIndex, card),
+      };
+      return renderScoreSumCard(item, summary, editOptions);
+    }
+
+    const options: ScoreSumCardOptions = {
+      onClose: (): void => {
+        this.closeEntry("scoreSum", item, this.scoreSumActive);
+      },
+    };
+    return renderScoreSumCard(item, summary, options);
+  };
+
+  /**
+   * 渲染左下角缩小条目（仅展示模式会写入 shrinkActive）：
+   * 点击条目 → 清除卡片关闭标记 → 移除条目 → 原卡片重新显示
+   */
+  private readonly renderShrinkEntry = (item: unknown): VNode => {
+    if (!isShrinkEntry(item)) return h("div", {});
+    return renderShrinkBar(item, {
+      onClick: (): void => {
+        this.reopenFromShrink(item);
+      },
+    });
+  };
+
   // ==================== 时间更新与窗口同步 ====================
 
   /**
@@ -763,6 +914,14 @@ class InteractionPluginClass implements InteractionPluginAPI {
       this.scoreActive,
       currentTime,
     );
+    this.syncList(
+      ENTRY_PREFIX.scoreSum,
+      this.interactCard.scoreSumList,
+      this.scoreSumActive,
+      currentTime,
+    );
+    // 左下角缩小条目：进度环继续倒数，归零移除（或卡片被重开时移除）
+    this.syncShrinkEntries();
   }
 
   /**
@@ -967,6 +1126,10 @@ class InteractionPluginClass implements InteractionPluginAPI {
   /**
    * 关闭卡片：标记关闭时间点（seek 回退可恢复）、淡出后删除 DOM、
    * 发布卡片关闭事件（外部 config.onCardClose 由 install 订阅转发）
+   *
+   * 展示模式下 guide 以外的卡片在关闭环未归零时被手动关闭，
+   * 会在互动区左下角生成缩小条目（进度环继续倒数至归零，点击重开）；
+   * 编辑模式不生成（编辑模式的关闭圆环本就不可点击）
    */
   private closeEntry<T extends SyncItem>(
     type: CardType,
@@ -976,10 +1139,175 @@ class InteractionPluginClass implements InteractionPluginAPI {
     entry.item.isClose = true;
     entry.item.closeTime = this.currentTime;
     this.scheduleRemoval(active, entry);
+    // 左下角缩小条目：仅展示模式 + guide 以外的卡片（guide 无关闭概念）
+    if (!this.isEditMode && type !== "guideThree") {
+      this.appendShrinkEntry(type, entry);
+    }
     this.eventBus?.emit(PlayerEventEnum.INTERACTION_CARD_CLOSE, {
       type,
       index: entry.listIndex,
     });
+  }
+
+  /**
+   * 生成左下角缩小条目：进度环沿用卡片关闭时刻的剩余比例继续倒数
+   * （同卡片同下标重复关闭时幂等替换，不产生重复条目）
+   */
+  private appendShrinkEntry<T extends SyncItem>(
+    type: CardType,
+    entry: ActiveCardEntry<T>,
+  ): void {
+    const meta = getShrinkMeta(type);
+    const id = `${SHRINK_ENTRY_PREFIX}${type}:${entry.listIndex}`;
+    // 幂等：同卡片的旧条目先移除（理论上互斥时间窗下不会共存）
+    const rest = this.shrinkActive.value.filter(
+      (candidate: ShrinkCardEntry) => candidate.id !== id,
+    );
+    const shrink: ShrinkCardEntry = {
+      id,
+      type,
+      listIndex: entry.listIndex,
+      icon: meta.icon,
+      title: meta.title,
+      show: signal(false),
+      // 关闭时刻的剩余比例即为缩小条目进度环的起点
+      remaining: signal(entry.remaining.value),
+    };
+    this.shrinkActive.value = [...rest, shrink];
+    // 双 rAF 后翻转显示态（播放 0.35s 淡入过渡，与卡片显隐协议一致）
+    this.scheduleShow(shrink);
+  }
+
+  /**
+   * 同步左下角缩小条目（每次 TIME_UPDATE 调用）：
+   * - 进度环按原卡片时间窗继续倒数（1 → 0），归零移除条目
+   * - 源卡片被重新打开（点击条目）或 seek 回关闭点之前
+   *   （closeTime 重置逻辑已清除 isClose）→ 移除条目
+   * - 源卡片数据被删除 → 移除条目
+   */
+  private syncShrinkEntries(): void {
+    const current = this.shrinkActive.value;
+    if (current.length === 0) return;
+    const kept: ShrinkCardEntry[] = [];
+    for (const shrink of current) {
+      const source = this.findShrinkSourceItem(shrink);
+      // 源卡片不存在或已被重新打开：条目随之移除
+      if (source === null) continue;
+      const { timeStart, timeEnd } = source;
+      if (timeStart === undefined || timeEnd === undefined) continue;
+      const total = timeEnd - timeStart;
+      const elapsedRatio =
+        total > 0 ? (this.currentTime - timeStart) / total : 0;
+      const remaining = 1 - Math.min(Math.max(elapsedRatio, 0), 1);
+      // 归零（播放越过 timeEnd）：条目完成使命移除
+      if (remaining <= 0) continue;
+      shrink.remaining.value = remaining;
+      kept.push(shrink);
+    }
+    if (kept.length !== current.length) {
+      this.shrinkActive.value = kept;
+    }
+  }
+
+  /**
+   * 查找缩小条目对应的源卡片数据（按类型 + 列表下标），
+   * 源已从数据列表删除或卡片已被重新打开时返回 null
+   */
+  private findShrinkSourceItem(
+    shrink: ShrinkCardEntry,
+  ): SyncItem | null {
+    switch (shrink.type) {
+      case "link": {
+        const item = this.interactCard.linkList[shrink.listIndex];
+        return item !== undefined && item.isClose === true ? item : null;
+      }
+      case "vote": {
+        const item = this.interactCard.voteList[shrink.listIndex];
+        return item !== undefined && item.isClose === true ? item : null;
+      }
+      case "score": {
+        const item = this.interactCard.scoreList[shrink.listIndex];
+        return item !== undefined && item.isClose === true ? item : null;
+      }
+      case "scoreSum": {
+        const item = this.interactCard.scoreSumList[shrink.listIndex];
+        return item !== undefined && item.isClose === true ? item : null;
+      }
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * 点击缩小条目重开原卡片：清除关闭标记 → 移除条目 →
+   * 按当前播放时间立即重建卡片（当前仍在时间窗内即刻恢复显示）
+   */
+  private reopenFromShrink(shrink: ShrinkCardEntry): void {
+    // 先移除条目（无论源卡片是否仍可显示）
+    this.shrinkActive.value = this.shrinkActive.value.filter(
+      (candidate: ShrinkCardEntry) => candidate !== shrink,
+    );
+    // 清除关闭标记：卡片回到「窗口内即显示」状态
+    switch (shrink.type) {
+      case "link": {
+        const item = this.interactCard.linkList[shrink.listIndex];
+        if (item === undefined) return;
+        item.isClose = false;
+        item.closeTime = undefined;
+        this.syncCard(
+          ENTRY_PREFIX.link,
+          shrink.listIndex,
+          item,
+          this.currentTime,
+          this.linkActive,
+        );
+        return;
+      }
+      case "vote": {
+        const item = this.interactCard.voteList[shrink.listIndex];
+        if (item === undefined) return;
+        item.isClose = false;
+        item.closeTime = undefined;
+        this.syncCard(
+          ENTRY_PREFIX.vote,
+          shrink.listIndex,
+          item,
+          this.currentTime,
+          this.voteActive,
+        );
+        return;
+      }
+      case "score": {
+        const item = this.interactCard.scoreList[shrink.listIndex];
+        if (item === undefined) return;
+        item.isClose = false;
+        item.closeTime = undefined;
+        this.syncCard(
+          ENTRY_PREFIX.score,
+          shrink.listIndex,
+          item,
+          this.currentTime,
+          this.scoreActive,
+        );
+        return;
+      }
+      case "scoreSum": {
+        const item = this.interactCard.scoreSumList[shrink.listIndex];
+        if (item === undefined) return;
+        item.isClose = false;
+        item.closeTime = undefined;
+        this.syncCard(
+          ENTRY_PREFIX.scoreSum,
+          shrink.listIndex,
+          item,
+          this.currentTime,
+          this.scoreSumActive,
+        );
+        return;
+      }
+      default:
+        return;
+    }
   }
 
   /**
@@ -1061,9 +1389,57 @@ class InteractionPluginClass implements InteractionPluginAPI {
   // ==================== 公共 API ====================
 
   /**
-   * 添加点赞关注卡片（入数据列表 + 立即同步时间窗口）
+   * 查询待设置的时间窗是否与任何已有卡片重叠
+   *
+   * 时间窗不完整的条目（timeStart/timeEnd 缺省）不参与判定
+   * （与 syncCard 的「时间范围不完整不参与时间驱动」口径一致）；
+   * 半开区间相交判定：边界相接（前卡 timeEnd == 后卡 timeStart）
+   * 不视为重叠，保证节目单可无缝衔接
    */
-  addGuide(item: InteractionGuideThree): void {
+  wouldOverlap(
+    type: CardType,
+    index: number,
+    timeStart: number,
+    timeEnd: number,
+  ): boolean {
+    /** 单条卡片与待设置窗口是否相交（时间窗不完整视为不相交） */
+    const overlaps = (item: SyncItem): boolean => {
+      if (item.timeStart === undefined || item.timeEnd === undefined) {
+        return false;
+      }
+      return item.timeStart < timeEnd && item.timeEnd > timeStart;
+    };
+    /** 遍历单个列表：排除自身（同类型同下标）后任一条目相交即重叠 */
+    const checkList = <T extends SyncItem>(
+      list: T[],
+      itemType: CardType,
+    ): boolean =>
+      list.some(
+        (item: T, itemIndex: number): boolean =>
+          !(itemType === type && itemIndex === index) && overlaps(item),
+      );
+    return (
+      checkList(this.interactCard.guideList, "guideThree") ||
+      checkList(this.interactCard.linkList, "link") ||
+      checkList(this.interactCard.voteList, "vote") ||
+      checkList(this.interactCard.scoreList, "score") ||
+      checkList(this.interactCard.scoreSumList, "scoreSum")
+    );
+  }
+
+  /**
+   * 添加点赞关注卡片（入数据列表 + 立即同步时间窗口）
+   * 时间窗与任何已有卡片重叠时拒绝添加（一次只能存在一张卡片）
+   */
+  addGuide(item: InteractionGuideThree): boolean {
+    // 时间窗完整才参与互斥校验（guide 卡片时间窗可缺省）
+    if (
+      item.timeStart !== undefined &&
+      item.timeEnd !== undefined &&
+      this.wouldOverlap("guideThree", -1, item.timeStart, item.timeEnd)
+    ) {
+      return false;
+    }
     this.interactCard.guideList.push(item);
     this.syncAddedCard(
       ENTRY_PREFIX.guideThree,
@@ -1071,12 +1447,21 @@ class InteractionPluginClass implements InteractionPluginAPI {
       item,
       this.guideActive,
     );
+    return true;
   }
 
   /**
    * 添加外链卡片（入数据列表 + 立即同步时间窗口）
+   * 时间窗与任何已有卡片重叠时拒绝添加
    */
-  addLink(item: InteractionLink): void {
+  addLink(item: InteractionLink): boolean {
+    if (
+      item.timeStart !== undefined &&
+      item.timeEnd !== undefined &&
+      this.wouldOverlap("link", -1, item.timeStart, item.timeEnd)
+    ) {
+      return false;
+    }
     this.interactCard.linkList.push(item);
     this.syncAddedCard(
       ENTRY_PREFIX.link,
@@ -1084,12 +1469,21 @@ class InteractionPluginClass implements InteractionPluginAPI {
       item,
       this.linkActive,
     );
+    return true;
   }
 
   /**
    * 添加投票卡片（入数据列表 + 立即同步时间窗口）
+   * 时间窗与任何已有卡片重叠时拒绝添加
    */
-  addVote(item: InteractionVote): void {
+  addVote(item: InteractionVote): boolean {
+    if (
+      item.timeStart !== undefined &&
+      item.timeEnd !== undefined &&
+      this.wouldOverlap("vote", -1, item.timeStart, item.timeEnd)
+    ) {
+      return false;
+    }
     this.interactCard.voteList.push(item);
     this.syncAddedCard(
       ENTRY_PREFIX.vote,
@@ -1097,12 +1491,21 @@ class InteractionPluginClass implements InteractionPluginAPI {
       item,
       this.voteActive,
     );
+    return true;
   }
 
   /**
    * 添加评分卡片（入数据列表 + 立即同步时间窗口）
+   * 时间窗与任何已有卡片重叠时拒绝添加
    */
-  addScore(item: InteractionScore): void {
+  addScore(item: InteractionScore): boolean {
+    if (
+      item.timeStart !== undefined &&
+      item.timeEnd !== undefined &&
+      this.wouldOverlap("score", -1, item.timeStart, item.timeEnd)
+    ) {
+      return false;
+    }
     this.interactCard.scoreList.push(item);
     this.syncAddedCard(
       ENTRY_PREFIX.score,
@@ -1110,6 +1513,34 @@ class InteractionPluginClass implements InteractionPluginAPI {
       item,
       this.scoreActive,
     );
+    return true;
+  }
+
+  /**
+   * 添加评分总结卡片（入数据列表 + 立即同步时间窗口）
+   * 前置条件：scoreList 至少已有一张评分卡片；
+   * 时间窗与任何已有卡片重叠时拒绝添加
+   */
+  addScoreSum(item: InteractionScoreSum): boolean {
+    // 总结卡必须建立在已有评分卡的基础上（无可汇总的题目）
+    if (this.interactCard.scoreList.length === 0) {
+      return false;
+    }
+    if (
+      item.timeStart !== undefined &&
+      item.timeEnd !== undefined &&
+      this.wouldOverlap("scoreSum", -1, item.timeStart, item.timeEnd)
+    ) {
+      return false;
+    }
+    this.interactCard.scoreSumList.push(item);
+    this.syncAddedCard(
+      ENTRY_PREFIX.scoreSum,
+      this.interactCard.scoreSumList,
+      item,
+      this.scoreSumActive,
+    );
+    return true;
   }
 
   /**
@@ -1157,6 +1588,16 @@ class InteractionPluginClass implements InteractionPluginAPI {
         }
         break;
       }
+      case "scoreSum": {
+        const entry = this.scoreSumActive.value.find(
+          (candidate: ActiveCardEntry<InteractionScoreSum>) =>
+            candidate.listIndex === index,
+        );
+        if (entry !== undefined) {
+          this.closeEntry("scoreSum", entry, this.scoreSumActive);
+        }
+        break;
+      }
       default:
         break;
     }
@@ -1179,6 +1620,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
     this.disposeEntries(this.linkActive);
     this.disposeEntries(this.voteActive);
     this.disposeEntries(this.scoreActive);
+    this.disposeEntries(this.scoreSumActive);
+    // 左下角缩小条目随数据更换一并清空（源卡片已不在新数据中）
+    this.shrinkActive.value = [];
 
     // 数据更换后旧交互状态不再适用
     this.guideStates.clear();
@@ -1197,6 +1641,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
     }
     if (data.scoreList) {
       this.interactCard.scoreList = data.scoreList;
+    }
+    if (data.scoreSumList) {
+      this.interactCard.scoreSumList = data.scoreSumList;
     }
 
     // 重建统一交给后续 TIME_UPDATE 按时间窗口驱动（编辑/展示同一口径）：
@@ -1289,32 +1736,51 @@ class InteractionPluginClass implements InteractionPluginAPI {
   /**
    * 通用调度字段补丁：时间窗（timeStart/timeEnd）与定位（top/left）
    *
-   * 四类卡片共用字段，先落到数据条目再同步渲染：
+   * 五类卡片共用字段，先落到数据条目再同步渲染：
    * - 时间窗：按当前播放时间立即重算窗口归属（入窗即刻创建显示 /
-   *   出窗即刻淡出移除），编辑/展示两种模式同一口径
+   *   出窗即刻淡出移除），编辑/展示两种模式同一口径；
+   *   补丁合并后的新窗口与其他任何卡片重叠时整个补丁拒绝（一次
+   *   只能存在一张卡片，编辑面板据返回值 toast 提示）
    * - 定位：渲染期为静态 style（--top/--left CSS 变量），变更走条目重建；
    *   交互状态按 listIndex 存于 Map，重建不丢失
    *
+   * @param type - 卡片类型（重叠校验时排除自身条目）
    * @param idPrefix - 条目 id 的类型前缀
    * @param listIndex - 卡片在对应数据列表中的下标
    * @param item - 卡片原始数据（时间窗与定位字段可写）
    * @param active - 该类型的活跃条目 signal 数组
    * @param patch - 内容补丁（仅消费 timeStart/timeEnd/top/left）
+   * @returns 是否成功应用（false = 合并后的时间窗与其他卡片重叠被拒）
    */
   private applySchedulePatch<T extends SyncItem & { top: number; left: number }>(
+    type: CardType,
     idPrefix: string,
     listIndex: number,
     item: T,
     active: Signal<ActiveCardEntry<T>[]>,
     patch: CardContentPatch,
-  ): void {
+  ): boolean {
+    // 时间窗补丁：合并 patch 与现值得到新窗口，与其他卡片重叠则整体拒绝
+    // （时间窗不完整的卡片不参与互斥，与 wouldOverlap 的判定口径一致）
+    if (patch.timeStart !== undefined || patch.timeEnd !== undefined) {
+      const nextStart = patch.timeStart ?? item.timeStart;
+      const nextEnd = patch.timeEnd ?? item.timeEnd;
+      if (
+        nextStart !== undefined &&
+        nextEnd !== undefined &&
+        this.wouldOverlap(type, listIndex, nextStart, nextEnd)
+      ) {
+        return false;
+      }
+    }
+
     // 根未挂载：数据写入后待挂载兜底，无需同步渲染
     if (this.rootVNode === null) {
       if (patch.timeStart !== undefined) item.timeStart = patch.timeStart;
       if (patch.timeEnd !== undefined) item.timeEnd = patch.timeEnd;
       if (patch.top !== undefined) item.top = patch.top;
       if (patch.left !== undefined) item.left = patch.left;
-      return;
+      return true;
     }
 
     // 时间窗补丁：写入后按当前播放时间重算窗口归属
@@ -1335,6 +1801,7 @@ class InteractionPluginClass implements InteractionPluginAPI {
       if (patch.left !== undefined) item.left = patch.left;
       this.rebuildEntry(idPrefix, listIndex, item, active);
     }
+    return true;
   }
 
   /**
@@ -1353,18 +1820,28 @@ class InteractionPluginClass implements InteractionPluginAPI {
    * @param index - 卡片在对应数据列表中的下标
    * @param patch - 内容补丁（未提供的字段保持原值）
    */
-  updateCardContent(type: CardType, index: number, patch: CardContentPatch): void {
+  updateCardContent(
+    type: CardType,
+    index: number,
+    patch: CardContentPatch,
+  ): boolean {
     switch (type) {
       case "guideThree": {
         const item = this.interactCard.guideList[index];
-        if (item === undefined) return;
-        this.applySchedulePatch(
-          ENTRY_PREFIX.guideThree,
-          index,
-          item,
-          this.guideActive,
-          patch,
-        );
+        if (item === undefined) return false;
+        // 调度补丁（时间窗/定位）：时间窗重叠时整个补丁拒绝
+        if (
+          !this.applySchedulePatch(
+            "guideThree",
+            ENTRY_PREFIX.guideThree,
+            index,
+            item,
+            this.guideActive,
+            patch,
+          )
+        ) {
+          return false;
+        }
         if (patch.guideType !== undefined && patch.guideType !== item.type) {
           item.type = patch.guideType;
           // 形态为根类名变体（三连/关注区 DOM 恒在、CSS 显隐）：
@@ -1373,34 +1850,44 @@ class InteractionPluginClass implements InteractionPluginAPI {
           const state = this.guideStates.get(index);
           if (state) state.guideTypeSignal.value = patch.guideType;
         }
-        return;
+        return true;
       }
       case "link": {
         const item = this.interactCard.linkList[index];
-        if (item === undefined) return;
-        this.applySchedulePatch(
-          ENTRY_PREFIX.link,
-          index,
-          item,
-          this.linkActive,
-          patch,
-        );
+        if (item === undefined) return false;
+        if (
+          !this.applySchedulePatch(
+            "link",
+            ENTRY_PREFIX.link,
+            index,
+            item,
+            this.linkActive,
+            patch,
+          )
+        ) {
+          return false;
+        }
         if (patch.linkContent !== undefined) {
           item.linkContent = patch.linkContent;
           this.bumpEntryContent(this.linkActive, index);
         }
-        return;
+        return true;
       }
       case "vote": {
         const item = this.interactCard.voteList[index];
-        if (item === undefined) return;
-        this.applySchedulePatch(
-          ENTRY_PREFIX.vote,
-          index,
-          item,
-          this.voteActive,
-          patch,
-        );
+        if (item === undefined) return false;
+        if (
+          !this.applySchedulePatch(
+            "vote",
+            ENTRY_PREFIX.vote,
+            index,
+            item,
+            this.voteActive,
+            patch,
+          )
+        ) {
+          return false;
+        }
         if (patch.question !== undefined) {
           item.question = patch.question;
           this.bumpEntryContent(this.voteActive, index);
@@ -1434,18 +1921,23 @@ class InteractionPluginClass implements InteractionPluginAPI {
             if (state) state.optionsSignal.value = [...item.options];
           }
         }
-        return;
+        return true;
       }
       case "score": {
         const item = this.interactCard.scoreList[index];
-        if (item === undefined) return;
-        this.applySchedulePatch(
-          ENTRY_PREFIX.score,
-          index,
-          item,
-          this.scoreActive,
-          patch,
-        );
+        if (item === undefined) return false;
+        if (
+          !this.applySchedulePatch(
+            "score",
+            ENTRY_PREFIX.score,
+            index,
+            item,
+            this.scoreActive,
+            patch,
+          )
+        ) {
+          return false;
+        }
         if (patch.title !== undefined) {
           item.title = patch.title;
           this.bumpEntryContent(this.scoreActive, index);
@@ -1458,10 +1950,23 @@ class InteractionPluginClass implements InteractionPluginAPI {
           const state = this.scoreStates.get(index);
           if (state) state.scoreIconList.value = [patch.scoreType];
         }
-        return;
+        return true;
+      }
+      case "scoreSum": {
+        const item = this.interactCard.scoreSumList[index];
+        if (item === undefined) return false;
+        // 总结卡只有调度字段（定位 + 时间窗），内容为运行期聚合
+        return this.applySchedulePatch(
+          "scoreSum",
+          ENTRY_PREFIX.scoreSum,
+          index,
+          item,
+          this.scoreSumActive,
+          patch,
+        );
       }
       default:
-        return;
+        return false;
     }
   }
 
@@ -1488,6 +1993,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
       case "score":
         removed = this.interactCard.scoreList.splice(index, 1).length > 0;
         break;
+      case "scoreSum":
+        removed = this.interactCard.scoreSumList.splice(index, 1).length > 0;
+        break;
       default:
         return;
     }
@@ -1498,12 +2006,16 @@ class InteractionPluginClass implements InteractionPluginAPI {
     this.disposeEntries(this.linkActive);
     this.disposeEntries(this.voteActive);
     this.disposeEntries(this.scoreActive);
+    this.disposeEntries(this.scoreSumActive);
+    // 左下角缩小条目一并清空（源卡片下标已位移，按新数据重建后由
+    // 后续关闭操作重新生成）
+    this.shrinkActive.value = [];
     this.guideStates.clear();
     this.voteStates.clear();
     this.scoreStates.clear();
 
     if (this.rootVNode === null) return;
-    // 四类列表按当前时间窗口立即重建（在窗卡片恢复显示）：
+    // 五类列表按当前时间窗口立即重建（在窗卡片恢复显示）：
     // 编辑/展示同一口径 —— 编辑模式当前窗口内的卡片删除其他卡片后
     // 同样立即恢复显示（可继续编辑），窗口外卡片到点再出现
     this.syncList(
@@ -1515,6 +2027,12 @@ class InteractionPluginClass implements InteractionPluginAPI {
     this.syncList(ENTRY_PREFIX.link, this.interactCard.linkList, this.linkActive, this.currentTime);
     this.syncList(ENTRY_PREFIX.vote, this.interactCard.voteList, this.voteActive, this.currentTime);
     this.syncList(ENTRY_PREFIX.score, this.interactCard.scoreList, this.scoreActive, this.currentTime);
+    this.syncList(
+      ENTRY_PREFIX.scoreSum,
+      this.interactCard.scoreSumList,
+      this.scoreSumActive,
+      this.currentTime,
+    );
   }
 }
 
@@ -1559,5 +2077,6 @@ export type {
   InteractionLink,
   InteractionVote,
   InteractionScore,
+  InteractionScoreSum,
   VoteOption,
 } from "./types";

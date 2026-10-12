@@ -1497,20 +1497,22 @@ async function getSpriteFile() {
  *   { guideList: [{type, top, left, timeStart, timeEnd}],
  *     linkList:  [{top, left, linkContent, timeStart, timeEnd}],
  *     voteList:  [{top, left, question, options: [{optionText, votes}], timeStart, timeEnd}],
- *     scoreList: [{top, left, title, scoreType, timeStart, timeEnd}] }
+ *     scoreList: [{top, left, title, scoreType, timeStart, timeEnd}],
+ *     scoreSumList: [{top, left, timeStart, timeEnd}] }
  * top/left 是百分比（相对内容区）、timeStart/timeEnd 是秒。
  * 播放器只读自己认识的字段，所以元素里多带一个 id（编辑用）不影响消费方。
  */
-const INTERACTION_KINDS = ['guide', 'link', 'vote', 'score'];
+const INTERACTION_KINDS = ['guide', 'link', 'vote', 'score', 'scoreSum'];
 
 // 默认数据照 hili-player demo 页的 INITIAL_INTERACTION_DATA（demo/entry-client.ts）：
-// 四类各一条、时间窗错开（2-12 / 4-14 / 6-16 / 8-18），拖动进度条能依次看到四张卡。
+// 五类各一条。左下角缩小条目上线后一次只能存在一张卡片，时间窗互斥不重叠
+// （2-10 / 12-20 / 22-30 / 32-40 / 42-52），拖动进度条能依次看到五张卡。
 const interactionStore = {
   guide: [
-    { id: 'card-g1', type: 1, top: 30, left: 50, timeStart: 2, timeEnd: 12 },
+    { id: 'card-g1', type: 1, top: 30, left: 50, timeStart: 2, timeEnd: 10 },
   ],
   link: [
-    { id: 'card-l1', top: 55, left: 35, linkContent: 'Demo external video', timeStart: 4, timeEnd: 14 },
+    { id: 'card-l1', top: 55, left: 35, linkContent: 'Demo external video', timeStart: 12, timeEnd: 20 },
   ],
   vote: [
     {
@@ -1522,14 +1524,39 @@ const interactionStore = {
         { optionText: 'Option A', votes: 3 },
         { optionText: 'Option B', votes: 1 },
       ],
-      timeStart: 6,
-      timeEnd: 16,
+      timeStart: 22,
+      timeEnd: 30,
     },
   ],
   score: [
-    { id: 'card-s1', top: 45, left: 70, title: 'Rate it', scoreType: 1, timeStart: 8, timeEnd: 18 },
+    { id: 'card-s1', top: 45, left: 70, title: 'Rate it', scoreType: 1, timeStart: 32, timeEnd: 40 },
+  ],
+  scoreSum: [
+    { id: 'card-ss1', top: 40, left: 60, timeStart: 42, timeEnd: 52 },
   ],
 };
+
+/**
+ * 时间窗互斥校验：待写入窗口与任何已有卡片（五类全查，排除自身 id）重叠 → true。
+ * 一次只能存在一张卡片（关闭后左下角缩小条目占用同一段时间轴），
+ * 页面编辑与服务端落库双保险：重叠直接 400 拒绝。
+ */
+function interactionWouldOverlap(kind, card) {
+  const kinds = INTERACTION_KINDS;
+  for (const listKind of kinds) {
+    const list = interactionStore[listKind];
+    for (const existing of list) {
+      // 修改自身（同 kind 同 id）不计入
+      if (kind === listKind && card.id && existing.id === card.id) continue;
+      if (existing.timeStart === undefined || existing.timeEnd === undefined) continue;
+      // 半开区间相交：边界相接（前卡 timeEnd == 后卡 timeStart）不算重叠
+      if (existing.timeStart < card.timeEnd && existing.timeEnd > card.timeStart) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 // 手动新增卡片的 id 序号。从 100 起：内置默认卡占用 card-g1/l1/v1/s1 这几个号，
 // 从 0 递增会分出 card-v1 这种和默认卡同号的 id（自测时踩过），findIndex 就会命中两张。
@@ -1592,21 +1619,23 @@ function sanitizeInteractionCard(kind, input) {
       }))
       .slice(0, 8);
     if (card.options.length === 0) card.options = [{ optionText: '选项一', votes: 0 }];
-  } else {
+  } else if (kind === 'score') {
     card.title = sanitizeText(input.title, '给个评分吧');
     card.scoreType = pickEnum(input.scoreType, [1, 2, 3], 1);
   }
+  // scoreSum：无类型专属字段（内容由播放器运行期从 scoreList 聚合）
 
   return { card };
 }
 
-/** GET /x/player/interaction 的响应体（播放器形状：guideList/linkList/voteList/scoreList） */
+/** GET /x/player/interaction 的响应体（播放器形状：guideList/linkList/voteList/scoreList/scoreSumList） */
 function interactionResponse() {
   return {
     guideList: interactionStore.guide,
     linkList: interactionStore.link,
     voteList: interactionStore.vote,
     scoreList: interactionStore.score,
+    scoreSumList: interactionStore.scoreSum,
   };
 }
 
@@ -2069,13 +2098,13 @@ async function handleRequest(req, res) {
   }
 
   // ---- 8b. 交互卡片（播放器拉取 + 页面增删改）------------------------------
-  // GET /x/player/interaction：播放器形状（guideList/linkList/voteList/scoreList）。
+  // GET /x/player/interaction：播放器形状（guideList/linkList/voteList/scoreList/scoreSumList）。
   // QtPlayer 的 Main.qml fetchProgressMetaFrom() 和 hili-player demo 都按这个约定拉。
   if (pathname === '/x/player/interaction' && isGet) {
     const { aid, cid } = pickIds(url);
     const data = interactionResponse();
     const total = data.guideList.length + data.linkList.length
-      + data.voteList.length + data.scoreList.length;
+      + data.voteList.length + data.scoreList.length + data.scoreSumList.length;
     log(`GET /x/player/interaction aid=${aid || '-'} cid=${cid || '-'} → ${total} 张卡片`);
     sendJson(res, 200, { code: 0, message: '0', data });
     return;
@@ -2105,6 +2134,21 @@ async function handleRequest(req, res) {
     const { card, error } = sanitizeInteractionCard(String(body.kind || ''), body.card);
     if (error) {
       sendJson(res, 400, { code: -400, message: error });
+      return;
+    }
+
+    // 评分总结卡片前置条件：scoreList 至少已有一张评分卡（无可汇总的题目）
+    if (body.kind === 'scoreSum' && interactionStore.score.length === 0) {
+      sendJson(res, 400, { code: -400, message: '评分总结卡片需要先添加至少一张评分卡片' });
+      return;
+    }
+
+    // 时间窗互斥校验：与任何已有卡片重叠 → 拒绝落库（一次只能存在一张卡片）
+    if (interactionWouldOverlap(String(body.kind || ''), card)) {
+      sendJson(res, 400, {
+        code: -400,
+        message: `时间窗 ${card.timeStart}s-${card.timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+      });
       return;
     }
 

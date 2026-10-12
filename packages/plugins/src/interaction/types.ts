@@ -9,7 +9,7 @@ import type { Signal } from "@/core";
 export type InteractionType = 1 | 2 | 3;
 
 /** 互动卡片类型 */
-export type CardType = 'guideThree' | 'link' | 'vote' | 'score';
+export type CardType = 'guideThree' | 'link' | 'vote' | 'score' | 'scoreSum';
 
 /** 互动模式 */
 export type InteractionMode = 'guide' | 'link' | 'vote' | 'score';
@@ -77,12 +77,30 @@ export interface InteractionScore {
   element?: HTMLDivElement;
 }
 
+/**
+ * 评分总结卡片配置
+ *
+ * 汇总卡片：内容（题目列表 / 平均分 / 参与人数）由插件运行期从
+ * scoreList 全量聚合，数据条目只承载定位与时间窗字段；
+ * 添加前提：scoreList 至少已有一张评分卡片
+ */
+export interface InteractionScoreSum {
+  top: number;
+  left: number;
+  timeStart?: number;
+  timeEnd?: number;
+  closeTime?: number;
+  isClose?: boolean;
+  element?: HTMLDivElement;
+}
+
 /** 互动卡片集合 */
 export interface InteractionCard {
   guideList: InteractionGuideThree[];
   linkList: InteractionLink[];
   voteList: InteractionVote[];
   scoreList: InteractionScore[];
+  scoreSumList: InteractionScoreSum[];
 }
 
 /**
@@ -157,6 +175,31 @@ export interface ActiveCardEntry<T> {
   removeTimer: number | null;
   /** 编辑模式拖拽绑定的清理函数（条目移除时调用） */
   dragCleanup: (() => void) | null;
+}
+
+/**
+ * 左下角缩小条目（展示模式下卡片被手动关闭后的倒计时残留条目）
+ *
+ * 卡片点关闭后不在原地淡出消失，而是在互动区左下角生成一条
+ * 「图标 + 标题 + 进度环」的缩小条目：进度环沿用卡片关闭时刻的
+ * 剩余比例继续随播放倒数，归零后条目移除；条目存在期间点击可
+ * 重新打开原卡片（清除关闭标记，卡片回到显示态）
+ */
+export interface ShrinkCardEntry {
+  /** For 的稳定 key：shrink: + 类型前缀 + 列表下标 */
+  id: string;
+  /** 被关闭卡片的类型（guideThree 无关闭概念，不会出现） */
+  type: CardType;
+  /** 被关闭卡片在其数据列表中的下标 */
+  listIndex: number;
+  /** 条目图标（16x16 图片 URL，由卡片类型映射） */
+  icon: string;
+  /** 条目标题文案（推荐 / 投票，由卡片类型映射） */
+  title: string;
+  /** 是否显示（驱动 .nova-danmaku-x-show 淡入过渡类） */
+  show: Signal<boolean>;
+  /** 进度环剩余比例（1 = 满环 → 0 = 空环），随播放推进递减，归零移除条目 */
+  remaining: Signal<number>;
 }
 
 /**

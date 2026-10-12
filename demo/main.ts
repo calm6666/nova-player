@@ -670,6 +670,7 @@ const PlayerSection = defineComponent(() => {
             h("option", { value: "link" }, "外链卡片"),
             h("option", { value: "vote" }, "投票卡片"),
             h("option", { value: "score" }, "评分卡片"),
+            h("option", { value: "scoreSum" }, "评分总结卡片"),
           ),
         ),
         h(

@@ -1041,6 +1041,28 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+/* 轻量 toast 提示（时间窗互斥校验拒绝时弹出，自动淡出） */
+.demo-toast {
+  position: fixed;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 10px 18px;
+  background: rgba(20, 20, 24, 0.92);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.demo-toast.demo-toast-show {
+  opacity: 1;
+}
+
 /* 单张卡片的编辑分组 */
 .ice-group {
   display: flex;

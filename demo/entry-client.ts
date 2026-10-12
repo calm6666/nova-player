@@ -66,6 +66,7 @@ import type {
   InteractionLink,
   InteractionVote,
   InteractionScore,
+  InteractionScoreSum,
   CardType,
 } from "@/lumina/plugins/interaction";
 import type {
@@ -1146,18 +1147,20 @@ for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
 /**
  * 初始交互卡片数据
  *
- * 覆盖 guide（三连+关注）/ link / vote / score 四类卡片各 1 条，
- * 首屏 2-18 秒内依次出现；作为模式切换与播放器重建的数据快照初值。
+ * 覆盖 guide（三连+关注）/ link / vote / score / scoreSum 五类卡片各 1 条；
+ * 左下角缩小条目上线后一次只能存在一张卡片，各时间窗互斥不重叠：
+ * 2-10 引导 → 12-20 外链 → 22-30 投票 → 32-40 评分 → 42-52 评分总结，
+ * 作为模式切换与播放器重建的数据快照初值。
  */
 const INITIAL_INTERACTION_DATA: InteractionCard = {
-  guideList: [{ type: 1, top: 30, left: 50, timeStart: 2, timeEnd: 12 }],
+  guideList: [{ type: 1, top: 30, left: 50, timeStart: 2, timeEnd: 10 }],
   linkList: [
     {
       top: 60,
       left: 30,
       linkContent: "Demo external video",
-      timeStart: 4,
-      timeEnd: 14,
+      timeStart: 12,
+      timeEnd: 20,
       isClose: true,
     },
   ],
@@ -1167,8 +1170,8 @@ const INITIAL_INTERACTION_DATA: InteractionCard = {
       left: 70,
       question: "Pick one",
       options: [{ optionText: "Option A" }, { optionText: "Option B" }],
-      timeStart: 6,
-      timeEnd: 16,
+      timeStart: 22,
+      timeEnd: 30,
       isClose: true,
     },
   ],
@@ -1178,8 +1181,17 @@ const INITIAL_INTERACTION_DATA: InteractionCard = {
       left: 75,
       title: "Rate it",
       scoreType: 1,
-      timeStart: 8,
-      timeEnd: 18,
+      timeStart: 32,
+      timeEnd: 40,
+      isClose: true,
+    },
+  ],
+  scoreSumList: [
+    {
+      top: 40,
+      left: 60,
+      timeStart: 42,
+      timeEnd: 52,
       isClose: true,
     },
   ],
@@ -3228,7 +3240,8 @@ function renderInteractionContentPanel(): void {
     status.guideList.length +
     status.linkList.length +
     status.voteList.length +
-    status.scoreList.length;
+    status.scoreList.length +
+    status.scoreSumList.length;
   if (total === 0) {
     appendPanelTip(panel, "暂无交互卡片：点击上方「+ xx卡片」按钮添加");
     return;
@@ -3246,6 +3259,9 @@ function renderInteractionContentPanel(): void {
   status.scoreList.forEach((item, index) => {
     panel.appendChild(buildScoreGroup(api, item, index));
   });
+  status.scoreSumList.forEach((item, index) => {
+    panel.appendChild(buildScoreSumGroup(api, item, index));
+  });
 }
 
 /** 面板占位提示行 */
@@ -3254,6 +3270,34 @@ function appendPanelTip(panel: HTMLElement, text: string): void {
   tip.className = "ice-tip";
   tip.textContent = text;
   panel.appendChild(tip);
+}
+
+/** toast 隐藏定时器（连续提示时复用同一元素，重置计时） */
+let toastHideTimer: number | null = null;
+
+/**
+ * 轻量 toast 提示
+ *
+ * 时间窗互斥校验拒绝（添加 / 设置与其他卡片重叠）时弹出，
+ * 2.4s 后自动淡出；连续触发时复用同一元素并重置计时
+ */
+function showToast(message: string): void {
+  let toast = document.getElementById("demo-toast");
+  if (toast === null) {
+    toast = document.createElement("div");
+    toast.id = "demo-toast";
+    toast.className = "demo-toast";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add("demo-toast-show");
+  if (toastHideTimer !== null) {
+    window.clearTimeout(toastHideTimer);
+  }
+  toastHideTimer = window.setTimeout((): void => {
+    toast?.classList.remove("demo-toast-show");
+    toastHideTimer = null;
+  }, 2400);
 }
 
 /** 字段行：标签 + 控件 */
@@ -3345,8 +3389,24 @@ function buildScheduleFields(
         item.timeStart !== undefined ? String(item.timeStart) : "";
       return;
     }
+    // 时间窗互斥预检：与其他卡片重叠 → toast 提示并拒绝（不写数据）
+    if (
+      item.timeEnd !== undefined &&
+      api.wouldOverlap(type, index, next, item.timeEnd)
+    ) {
+      showToast(`时间窗 ${next}s-${item.timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+      startInput.value =
+        item.timeStart !== undefined ? String(item.timeStart) : "";
+      return;
+    }
+    // 先经插件应用（内含重叠二次校验），成功才同步面板数据并记日志
+    if (!api.updateCardContent(type, index, { timeStart: next })) {
+      showToast("时间窗与其他卡片重叠，设置未生效");
+      startInput.value =
+        item.timeStart !== undefined ? String(item.timeStart) : "";
+      return;
+    }
     item.timeStart = next;
-    api.updateCardContent(type, index, { timeStart: next });
     logAction(`updateCardContent("${type}", ${index}, { timeStart: ${next} })`);
   };
   startInput.addEventListener("change", applyStartTime);
@@ -3377,8 +3437,22 @@ function buildScheduleFields(
       endInput.value = item.timeEnd !== undefined ? String(item.timeEnd) : "";
       return;
     }
+    // 时间窗互斥预检：与其他卡片重叠 → toast 提示并拒绝（不写数据）
+    if (
+      item.timeStart !== undefined &&
+      api.wouldOverlap(type, index, item.timeStart, next)
+    ) {
+      showToast(`时间窗 ${item.timeStart}s-${next}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+      endInput.value = item.timeEnd !== undefined ? String(item.timeEnd) : "";
+      return;
+    }
+    // 先经插件应用（内含重叠二次校验），成功才同步面板数据并记日志
+    if (!api.updateCardContent(type, index, { timeEnd: next })) {
+      showToast("时间窗与其他卡片重叠，设置未生效");
+      endInput.value = item.timeEnd !== undefined ? String(item.timeEnd) : "";
+      return;
+    }
     item.timeEnd = next;
-    api.updateCardContent(type, index, { timeEnd: next });
     logAction(`updateCardContent("${type}", ${index}, { timeEnd: ${next} })`);
   };
   endInput.addEventListener("change", applyEndTime);
@@ -3622,6 +3696,24 @@ function buildScoreGroup(
   return group;
 }
 
+/**
+ * scoreSum 卡片分组：仅通用调度字段（时间窗 + 定位）
+ *
+ * 总结卡内容（题目列表 / 平均分 / 总人数）由插件运行期从
+ * scoreList 聚合，无内容编辑字段；添加前提 scoreList 非空
+ * 由 addScoreSum 校验（空列表返回 false → toast 提示）
+ */
+function buildScoreSumGroup(
+  api: InteractionPluginAPI,
+  item: InteractionScoreSum,
+  index: number,
+): HTMLElement {
+  const group = buildIceGroup(`评分总结卡片 #${index}`, "scoreSum", index);
+  // 通用调度字段：时间窗 + 定位（内容为运行期聚合，无专属字段）
+  group.appendChild(buildScheduleFields(api, "scoreSum", index, item));
+  return group;
+}
+
 /** 同步模式切换 UI：两个模式按钮高亮态 + 内容面板显隐 */
 const syncInteractionUi = (): void => {
   const viewBtn = document.getElementById("btn-interaction-view");
@@ -3733,6 +3825,11 @@ const renderIceKindFields = (): void => {
     return;
   }
 
+  // scoreSum：无类型专属字段（内容由插件运行期从 scoreList 聚合）
+  if (typeSelect.value === "scoreSum") {
+    return;
+  }
+
   // score：标题 + 图标类型
   const titleInput = document.createElement("input");
   titleInput.className = "ice-input";
@@ -3824,7 +3921,11 @@ wireDemoButton("btn-ice-add", () => {
       const select = document.getElementById("ice-add-guide-type");
       const raw = select instanceof HTMLSelectElement ? Number(select.value) : 1;
       const guideType = raw === 2 || raw === 3 ? raw : 1;
-      api.addGuide({ top, left, timeStart, timeEnd, type: guideType });
+      // 时间窗互斥校验在插件内完成：重叠返回 false → toast 提示不添加
+      if (!api.addGuide({ top, left, timeStart, timeEnd, type: guideType })) {
+        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        return;
+      }
       logAction(
         `addGuide: ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%（播放到该区间即可看到）`,
       );
@@ -3836,7 +3937,10 @@ wireDemoButton("btn-ice-add", () => {
         input instanceof HTMLInputElement && input.value.trim() !== ""
           ? input.value.trim()
           : `外部链接卡片 #${api.getStatus().linkList.length + 1}`;
-      api.addLink({ top, left, timeStart, timeEnd, linkContent: content });
+      if (!api.addLink({ top, left, timeStart, timeEnd, linkContent: content })) {
+        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        return;
+      }
       logAction(
         `addLink "${content}": ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%`,
       );
@@ -3860,7 +3964,10 @@ wireDemoButton("btn-ice-add", () => {
         optionTexts.length > 0
           ? optionTexts.map((text) => ({ optionText: text }))
           : [{ optionText: "支持" }, { optionText: "反对" }];
-      api.addVote({ top, left, timeStart, timeEnd, question, options });
+      if (!api.addVote({ top, left, timeStart, timeEnd, question, options })) {
+        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        return;
+      }
       logAction(
         `addVote "${question}"（${options.length} 选项）: ${timeStart}s-${timeEnd}s`,
       );
@@ -3875,9 +3982,27 @@ wireDemoButton("btn-ice-add", () => {
           : "运行期新增评分";
       const raw = select instanceof HTMLSelectElement ? Number(select.value) : 1;
       const scoreType = raw === 2 || raw === 3 ? raw : 1;
-      api.addScore({ top, left, timeStart, timeEnd, title, scoreType });
+      if (!api.addScore({ top, left, timeStart, timeEnd, title, scoreType })) {
+        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        return;
+      }
       logAction(
         `addScore "${title}": ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%`,
+      );
+      break;
+    }
+    case "scoreSum": {
+      // 前置条件（至少一张评分卡）与时间窗互斥均由插件校验，失败 toast 提示
+      if (!api.addScoreSum({ top, left, timeStart, timeEnd })) {
+        if (api.getStatus().scoreList.length === 0) {
+          showToast("评分总结卡片需要先添加至少一张评分卡片");
+        } else {
+          showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        }
+        return;
+      }
+      logAction(
+        `addScoreSum: ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%（汇总全部评分卡）`,
       );
       break;
     }
@@ -3919,6 +4044,7 @@ wireDemoButton("btn-interaction-close", () => {
     { type: "vote", label: "投票", list: status.voteList },
     { type: "link", label: "外链", list: status.linkList },
     { type: "score", label: "评分", list: status.scoreList },
+    { type: "scoreSum", label: "评分总结", list: status.scoreSumList },
   ];
   for (const candidate of candidates) {
     if (candidate.list.length > 0) {
@@ -3929,7 +4055,7 @@ wireDemoButton("btn-interaction-close", () => {
       return;
     }
   }
-  logAction("暂无可关闭的卡片（vote / link / score 列表均为空）");
+  logAction("暂无可关闭的卡片（vote / link / score / scoreSum 列表均为空）");
 });
 
 // 获取交互容器：getContainer 查询插件挂载的层容器

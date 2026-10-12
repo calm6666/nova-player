@@ -86,3 +86,38 @@ export function renderCloseCircle(
     ),
   );
 }
+
+/**
+ * 渲染缩小条目的进度环（左下角缩小条目专用变体）
+ *
+ * 与关闭圆环同一套两半环倒计时结构，差异：
+ * - 直径 26px（--width/--height），环色 #ffffffb3
+ * - 环中心不是 × 图标而是卡片类型图标 img（16x16 圆形，由 CSS 居中）
+ * - 环本身不注册点击（点击交互由缩小条目根元素整体承接）
+ *
+ * @param remaining - 剩余进度 signal（1 → 0，随播放继续倒数至归零）
+ * @param icon - 环中心的图标 URL（由卡片类型映射）
+ */
+export function renderShrinkRing(
+  remaining: Signal<number>,
+  icon: string,
+): VNode {
+  return h(
+    "span",
+    {
+      class: "nova-danmaku-x-circle",
+      // 26px 环 + 半环旋转角全部经 CSS 变量驱动（与关闭圆环同一机制）
+      style: {
+        "--width": "26px",
+        "--height": "26px",
+        "--color": "#ffffffb3",
+        "--leftDeg": `${getLeftDeg(remaining.value)}deg`,
+        "--rightDeg": `${getRightDeg(remaining.value)}deg`,
+      },
+    },
+    h("span", { class: "nova-danmaku-x-circle-left" }, h("span", { class: "nova-danmaku-x-circle-left-bar" })),
+    h("span", { class: "nova-danmaku-x-circle-right" }, h("span", { class: "nova-danmaku-x-circle-right-bar" })),
+    // 环中心图标：16x16 + 5px 内边距恰好填满 26px 环（CSS .nova-danmaku-x-shrink-img）
+    h("img", { class: "nova-danmaku-x-shrink-img", src: icon, alt: "" }),
+  );
+}
