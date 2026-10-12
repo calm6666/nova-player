@@ -6,15 +6,18 @@
  * 图标全部使用图片资源（描边版 off / 填充版 on，按评分类型映射）：
  * - 星星 / 爱心 / 柠檬 ×（描边 / 填充）共 6 张图片（icons.ts 统一持有）
  * - 悬停联动：悬停某项时该项放大（CSS :hover scale）且该项及之前的
- *   全部图标切换为填充版，移开后恢复；已评分后评分区 pointer-events:
+ *   全部图标切换为填充版，**该项及之前的数值气泡全部显示**（display
+ *   由内联响应式表达式驱动）；移开恢复；已评分后评分区 pointer-events:
  *   none（-has-result 类）悬停自然失效
  * - 数字 / 结果文本颜色 = 图标填充主色（星星 #ffb027 / 爱心 #FA5555 /
  *   柠檬 #F7DC6F），随图标类型编辑响应式切换
  * 评分后展示结果：
- * - 根加 -voted 类（scss 控制评分项数值气泡 display: block）
  * - 根加 -has-result 类（scss 控制评分项依次左移收拢 + 结果区淡入，
  *   位移序列 0/-20/-40/-60/-80px，延迟 0.2/0.3/0.4/0.5/0.6s）
- * - 平均分与参与人数由状态信号响应式更新
+ * - 点击评分时同步清悬停值 → 数值气泡全部即刻消失（无 -voted 常显态）
+ * - 平均分与参与人数由状态信号响应式更新；**平均分为 10 分制口径**
+ *   （图标/数字是 1-5，总分按 value×2 累计 —— 参考行为：评 3 分 →
+ *   平均 6.0）
  * 右上角带两半环倒计时关闭按钮（100% → 0 随播放推进消隐，点击即关闭）
  *
  * 响应式写法：class / style / src 等属性直接绑定内联动态表达式
@@ -48,7 +51,6 @@ const CLASS_NAMES = {
   HL_SCORE_AREA_ITEM: "nova-danmaku-x-score-area-item",
   HL_SCORE_RESULT: "nova-danmaku-x-score-result",
   HL_SCORE_COUNT: "nova-danmaku-x-score-count",
-  HL_SCORE_VOTED: "nova-danmaku-x-score-voted",
   HL_SCORE_HAS_RESULT: "nova-danmaku-x-has-result",
   HL_SHOW: "nova-danmaku-x-show",
 } as const;
@@ -177,6 +179,9 @@ function renderScoreItem(
             // 已评分后不再响应（插件层校验的渲染层兜底）
             if (state.selected.value > 0) return;
             options.onScoreSelect?.(value);
+            // 评分落定后立即清悬停值：数值气泡随悬停态显示（非已评态），
+            // 清零后全部气泡即刻消失（「点击后数字直接关闭」，对齐参考行为）
+            state.hoverIndex.value = 0;
           }
         : undefined,
     },
@@ -197,8 +202,24 @@ function renderScoreItem(
           : getScoreIconPair(state.scoreIconList.value[0] ?? 1).off,
       alt: "",
     }),
-    // 数值气泡：仅显示自身评分值（1-5），颜色继承评分区主题色
-    h("span", {}, String(value)),
+    // 数值气泡：仅显示自身评分值（1-5），颜色继承评分区主题色。
+    // 显隐协议（对齐参考行为）：默认 display:none（scss 基础规则），
+    // 悬停联动 —— 悬停第 n 项时**前 n 项**的气泡全部显示（不只是悬停项
+    // 自己），移开全部隐藏；已评分后不再有悬停态（has-result 禁指针 +
+    // 点击时清零）→ 气泡全部消失（「点击后数字直接关闭」）
+    h(
+      "span",
+      {
+        style: {
+          display:
+            state.hoverIndex.value > 0 &&
+            state.hoverIndex.value === value
+              ? "block"
+              : "none",
+        },
+      },
+      String(value),
+    ),
   );
 }
 
@@ -239,11 +260,12 @@ export function renderScoreCard(
             entry.dragCleanup = bindDrag(el) ?? null;
           }
         : undefined,
-      // 根类名直接表达式：显隐过渡类 + 评分后 -voted（数值气泡显示）
-      // 与 -has-result（评分项收拢 + 结果区淡入）类
+      // 根类名直接表达式：显隐过渡类 + 评分后 -has-result
+      // （评分项收拢 + 结果区淡入）类。**无 -voted 类**：数值气泡的显隐
+      // 完全由悬停态驱动（悬停联动显示前 n 项，点击评分后清零全消失），
+      // 对齐参考 DOM —— 评分类组合只有 has-result，没有 voted
       class: [
         CLASS_NAMES.HL_SCORE,
-        state.selected.value > 0 ? CLASS_NAMES.HL_SCORE_VOTED : "",
         state.selected.value > 0 ? CLASS_NAMES.HL_SCORE_HAS_RESULT : "",
         entry.show.value ? CLASS_NAMES.HL_SHOW : "",
       ]

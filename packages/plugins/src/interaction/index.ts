@@ -793,8 +793,10 @@ class InteractionPluginClass implements InteractionPluginAPI {
         // 校验未评分（信号写入同步生效，重复点击立即被拦截）
         if (state.selected.value > 0) return;
         state.selected.value = value;
-        // 对齐旧实现：总分累加、人数 +1，平均分 = 总分 / 人数
-        state.totalScore.value = state.totalScore.value + value;
+        // 总分按 10 分制累计（图标/数字是 1-5，总分 = value×2：
+        // 参考行为 —— 评 3 分 1 人参与 → 平均 6.0）；
+        // scoreSum 聚合的平均分与评分卡结果区共用该口径
+        state.totalScore.value = state.totalScore.value + value * 2;
         state.count.value = state.count.value + 1;
         this.eventBus?.emit(PlayerEventEnum.INTERACTION_SCORE_SELECT, {
           scoreIndex: listIndex,
@@ -1180,33 +1182,57 @@ class InteractionPluginClass implements InteractionPluginAPI {
 
   /**
    * 同步左下角缩小条目（每次 TIME_UPDATE 调用）：
-   * - 进度环按原卡片时间窗继续倒数（1 → 0），归零移除条目
+   * - 进度环按原卡片时间窗继续倒数（1 → 0），归零淡出移除条目
    * - 源卡片被重新打开（点击条目）或 seek 回关闭点之前
-   *   （closeTime 重置逻辑已清除 isClose）→ 移除条目
-   * - 源卡片数据被删除 → 移除条目
+   *   （closeTime 重置逻辑已清除 isClose）→ 淡出移除条目
+   * - 源卡片数据被删除 → 淡出移除条目
+   * 移除统一走 scheduleShrinkRemoval（先翻 show 播放 0.35s 淡出，
+   * 过渡结束后再删 DOM —— 与卡片显隐过渡协议一致，两端对齐）
    */
   private syncShrinkEntries(): void {
     const current = this.shrinkActive.value;
     if (current.length === 0) return;
-    const kept: ShrinkCardEntry[] = [];
     for (const shrink of current) {
+      // 淡出排队中的条目：等定时器删除（不重复触发、不再刷新进度）
+      if (shrink.closing === true) continue;
       const source = this.findShrinkSourceItem(shrink);
-      // 源卡片不存在或已被重新打开：条目随之移除
-      if (source === null) continue;
+      // 源卡片不存在或已被重新打开：条目随之淡出移除
+      if (source === null) {
+        this.scheduleShrinkRemoval(shrink);
+        continue;
+      }
       const { timeStart, timeEnd } = source;
-      if (timeStart === undefined || timeEnd === undefined) continue;
+      if (timeStart === undefined || timeEnd === undefined) {
+        this.scheduleShrinkRemoval(shrink);
+        continue;
+      }
       const total = timeEnd - timeStart;
       const elapsedRatio =
         total > 0 ? (this.currentTime - timeStart) / total : 0;
       const remaining = 1 - Math.min(Math.max(elapsedRatio, 0), 1);
-      // 归零（播放越过 timeEnd）：条目完成使命移除
-      if (remaining <= 0) continue;
+      // 归零（播放越过 timeEnd）：条目完成使命淡出移除
+      if (remaining <= 0) {
+        this.scheduleShrinkRemoval(shrink);
+        continue;
+      }
       shrink.remaining.value = remaining;
-      kept.push(shrink);
     }
-    if (kept.length !== current.length) {
-      this.shrinkActive.value = kept;
-    }
+  }
+
+  /**
+   * 淡出移除缩小条目（幂等）：翻转 show 播放 0.35s 淡出过渡，
+   * 过渡结束后从 shrinkActive 删除（DOM 销毁）。
+   * closing 标记防重入 —— 归零 / 源失效 / 重开等路径并发触发只排一次。
+   */
+  private scheduleShrinkRemoval(shrink: ShrinkCardEntry): void {
+    if (shrink.closing === true) return;
+    shrink.closing = true;
+    shrink.show.value = false;
+    window.setTimeout((): void => {
+      this.shrinkActive.value = this.shrinkActive.value.filter(
+        (candidate: ShrinkCardEntry) => candidate !== shrink,
+      );
+    }, CARD_FADE_MS);
   }
 
   /**
@@ -1239,14 +1265,13 @@ class InteractionPluginClass implements InteractionPluginAPI {
   }
 
   /**
-   * 点击缩小条目重开原卡片：清除关闭标记 → 移除条目 →
+   * 点击缩小条目重开原卡片：清除关闭标记 → 条目淡出移除 →
    * 按当前播放时间立即重建卡片（当前仍在时间窗内即刻恢复显示）
    */
   private reopenFromShrink(shrink: ShrinkCardEntry): void {
-    // 先移除条目（无论源卡片是否仍可显示）
-    this.shrinkActive.value = this.shrinkActive.value.filter(
-      (candidate: ShrinkCardEntry) => candidate !== shrink,
-    );
+    // 条目淡出移除（0.35s 过渡后删 DOM，与卡片显隐协议一致）；
+    // 无论源卡片是否仍可显示，条目使命已结束
+    this.scheduleShrinkRemoval(shrink);
     // 清除关闭标记：卡片回到「窗口内即显示」状态
     switch (shrink.type) {
       case "link": {
@@ -1955,15 +1980,24 @@ class InteractionPluginClass implements InteractionPluginAPI {
       case "scoreSum": {
         const item = this.interactCard.scoreSumList[index];
         if (item === undefined) return false;
-        // 总结卡只有调度字段（定位 + 时间窗），内容为运行期聚合
-        return this.applySchedulePatch(
-          "scoreSum",
-          ENTRY_PREFIX.scoreSum,
-          index,
-          item,
-          this.scoreSumActive,
-          patch,
-        );
+        // 调度补丁（定位 + 时间窗）；标题为可编辑文本字段（版本号驱动精准更新）
+        if (
+          !this.applySchedulePatch(
+            "scoreSum",
+            ENTRY_PREFIX.scoreSum,
+            index,
+            item,
+            this.scoreSumActive,
+            patch,
+          )
+        ) {
+          return false;
+        }
+        if (patch.title !== undefined) {
+          item.title = patch.title;
+          this.bumpEntryContent(this.scoreSumActive, index);
+        }
+        return true;
       }
       default:
         return false;

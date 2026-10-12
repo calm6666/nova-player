@@ -3697,11 +3697,11 @@ function buildScoreGroup(
 }
 
 /**
- * scoreSum 卡片分组：仅通用调度字段（时间窗 + 定位）
+ * scoreSum 卡片分组：通用调度字段（时间窗 + 定位）+ 标题编辑
  *
- * 总结卡内容（题目列表 / 平均分 / 总人数）由插件运行期从
- * scoreList 聚合，无内容编辑字段；添加前提 scoreList 非空
- * 由 addScoreSum 校验（空列表返回 false → toast 提示）
+ * 总结卡标题可编辑（updateCardContent title 补丁 → 渲染层精准更新）；
+ * 题目列表 / 平均分 / 总人数由插件运行期从 scoreList 聚合，无编辑字段；
+ * 添加前提 scoreList 非空由 addScoreSum 校验（空列表返回 false → toast 提示）
  */
 function buildScoreSumGroup(
   api: InteractionPluginAPI,
@@ -3709,8 +3709,19 @@ function buildScoreSumGroup(
   index: number,
 ): HTMLElement {
   const group = buildIceGroup(`评分总结卡片 #${index}`, "scoreSum", index);
-  // 通用调度字段：时间窗 + 定位（内容为运行期聚合，无专属字段）
+  // 通用调度字段：时间窗 + 定位（内容为运行期聚合）
   group.appendChild(buildScheduleFields(api, "scoreSum", index, item));
+
+  // 标题编辑：title 补丁 → contentVersion 自增 → 卡片标题文本精准更新
+  const titleInput = document.createElement("input");
+  titleInput.className = "ice-input";
+  titleInput.type = "text";
+  titleInput.value = item.title ?? "";
+  titleInput.placeholder = "总结卡片标题";
+  titleInput.addEventListener("input", () => {
+    api.updateCardContent("scoreSum", index, { title: titleInput.value });
+  });
+  group.appendChild(buildIceField("标题", titleInput));
   return group;
 }
 
@@ -3825,8 +3836,15 @@ const renderIceKindFields = (): void => {
     return;
   }
 
-  // scoreSum：无类型专属字段（内容由插件运行期从 scoreList 聚合）
+  // scoreSum：标题（题目列表 / 平均分 / 总人数由插件运行期从 scoreList 聚合）
   if (typeSelect.value === "scoreSum") {
+    const titleInput = document.createElement("input");
+    titleInput.className = "ice-input";
+    titleInput.type = "text";
+    titleInput.id = "ice-add-scoresum-title";
+    titleInput.value = "评分总结";
+    titleInput.placeholder = "总结卡片标题";
+    wrap.appendChild(buildIceField("标题", titleInput));
     return;
   }
 
@@ -3992,8 +4010,13 @@ wireDemoButton("btn-ice-add", () => {
       break;
     }
     case "scoreSum": {
-      // 前置条件（至少一张评分卡）与时间窗互斥均由插件校验，失败 toast 提示
-      if (!api.addScoreSum({ top, left, timeStart, timeEnd })) {
+      // 标题可编辑；前置条件（至少一张评分卡）与时间窗互斥均由插件校验，失败 toast 提示
+      const titleInput = document.getElementById("ice-add-scoresum-title");
+      const title =
+        titleInput instanceof HTMLInputElement && titleInput.value.trim() !== ""
+          ? titleInput.value.trim()
+          : "评分总结";
+      if (!api.addScoreSum({ top, left, timeStart, timeEnd, title })) {
         if (api.getStatus().scoreList.length === 0) {
           showToast("评分总结卡片需要先添加至少一张评分卡片");
         } else {
@@ -4002,7 +4025,7 @@ wireDemoButton("btn-ice-add", () => {
         return;
       }
       logAction(
-        `addScoreSum: ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%（汇总全部评分卡）`,
+        `addScoreSum "${title}": ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%（汇总全部评分卡）`,
       );
       break;
     }

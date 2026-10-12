@@ -1498,7 +1498,7 @@ async function getSpriteFile() {
  *     linkList:  [{top, left, linkContent, timeStart, timeEnd}],
  *     voteList:  [{top, left, question, options: [{optionText, votes}], timeStart, timeEnd}],
  *     scoreList: [{top, left, title, scoreType, timeStart, timeEnd}],
- *     scoreSumList: [{top, left, timeStart, timeEnd}] }
+ *     scoreSumList: [{top, left, title, timeStart, timeEnd}] }
  * top/left 是百分比（相对内容区）、timeStart/timeEnd 是秒。
  * 播放器只读自己认识的字段，所以元素里多带一个 id（编辑用）不影响消费方。
  */
@@ -1532,7 +1532,7 @@ const interactionStore = {
     { id: 'card-s1', top: 45, left: 70, title: 'Rate it', scoreType: 1, timeStart: 32, timeEnd: 40 },
   ],
   scoreSum: [
-    { id: 'card-ss1', top: 40, left: 60, timeStart: 42, timeEnd: 52 },
+    { id: 'card-ss1', top: 40, left: 60, title: '评分总结', timeStart: 42, timeEnd: 52 },
   ],
 };
 
@@ -1622,8 +1622,10 @@ function sanitizeInteractionCard(kind, input) {
   } else if (kind === 'score') {
     card.title = sanitizeText(input.title, '给个评分吧');
     card.scoreType = pickEnum(input.scoreType, [1, 2, 3], 1);
+  } else if (kind === 'scoreSum') {
+    // scoreSum：仅标题可编辑（题目列表 / 平均分 / 总人数由播放器运行期从 scoreList 聚合）
+    card.title = sanitizeText(input.title, '评分总结');
   }
-  // scoreSum：无类型专属字段（内容由播放器运行期从 scoreList 聚合）
 
   return { card };
 }

@@ -195,8 +195,12 @@ export function renderScoreSumCard(
           }
         : undefined,
     ),
-    // 标题（参考 DOM 为空标题占位，保持结构一致）
-    h("div", { class: CLASS_NAMES.HL_SCORE_SUM_TITLE }, ""),
+    // 标题（可编辑文本：读取 contentVersion 的显式 getter，文案编辑精准更新；
+    // 缺省为空占位 —— 保持参考 DOM 结构，标题区高度恒在）
+    h("div", { class: CLASS_NAMES.HL_SCORE_SUM_TITLE }, (): string => {
+      void entry.contentVersion.value;
+      return item.title ?? "";
+    }),
     // 总参与人数（响应式文本，读取 summary 聚合值）
     h(
       "div",

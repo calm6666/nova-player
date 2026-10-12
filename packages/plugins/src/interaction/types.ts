@@ -87,6 +87,8 @@ export interface InteractionScore {
 export interface InteractionScoreSum {
   top: number;
   left: number;
+  /** 卡片标题（编辑可设置；缺省渲染为空占位，保持参考 DOM 结构） */
+  title?: string;
   timeStart?: number;
   timeEnd?: number;
   closeTime?: number;
@@ -122,7 +124,7 @@ export interface CardContentPatch {
   question?: string;
   /** vote：全部选项文案（长度变化时尾部增删选项行，不重建卡片） */
   optionTexts?: string[];
-  /** score：标题文案 */
+  /** score / scoreSum：标题文案 */
   title?: string;
   /** score：图标类型（信号替换图标，不重建卡片） */
   scoreType?: InteractionType;
@@ -200,6 +202,12 @@ export interface ShrinkCardEntry {
   show: Signal<boolean>;
   /** 进度环剩余比例（1 = 满环 → 0 = 空环），随播放推进递减，归零移除条目 */
   remaining: Signal<number>;
+  /**
+   * 淡出移除中标记（幂等防重入）：
+   * 条目移除统一走「先翻 show 播放 0.35s 淡出 → 过渡结束后删 DOM」，
+   * 置位后不再刷新进度、不重复排队移除（与卡片显隐过渡协议一致）
+   */
+  closing?: boolean;
 }
 
 /**
