@@ -23,6 +23,7 @@ import { SAFE_MARGIN } from "./dragEditor";
 // ============================================
 
 const CLASS_NAMES = {
+  LINE_WAP: "nova-danmaku-x-line-wrap",
   LINE: "nova-danmaku-x-line",
   VERTICAL: "nova-danmaku-x-line-vertical",
   HORIZONTAL: "nova-danmaku-x-line-horizontal",
@@ -91,7 +92,7 @@ export function createAlignLinesSignal(): Signal<AlignLinesState> {
 export function renderAlignLines(lines: Signal<AlignLinesState>): VNode {
   return h(
     "div",
-    {},
+    { class: CLASS_NAMES.LINE_WAP },
     // 垂直容器：before = 左竖线（--left/--left-show），after = 右竖线（--right/--right-show）
     h("div", {
       class: `${CLASS_NAMES.LINE} ${CLASS_NAMES.VERTICAL}`,

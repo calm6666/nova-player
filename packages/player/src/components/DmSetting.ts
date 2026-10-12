@@ -454,7 +454,7 @@ export const DmSetting = defineComponent<DmSettingProps, DmSettingEvents>(
 
     lifecycle.onMounted = (): void => {
       if (stateMgr) {
-        const area = stateMgr.get(PlayerStateKeyEnum.DANMAKU_AREA) ?? 50;
+        const area = stateMgr.get(PlayerStateKeyEnum.DANMAKU_AREA) ?? 75;
         const opacity =
           (stateMgr.get(PlayerStateKeyEnum.DANMAKU_OPACITY) ?? 1) * 100;
         const fontsize =
@@ -617,7 +617,8 @@ export const DmSetting = defineComponent<DmSettingProps, DmSettingEvents>(
                 "nova-player-dm-setting-left-area",
                 t("player.ui.dmsetting.area"),
                 {
-                  value: 50,
+                  // 初始值与运行时状态默认值保持一致（75%），挂载后由 onMounted 推送真实值
+                  value: 75,
                   // 带 dot 档位滑块：档位吸附由 Slider 的 marks 逻辑接管（步长即相邻档位间距）
                   marks: AREA_MARKS,
                   onChange: handleAreaChange,

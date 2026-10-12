@@ -426,9 +426,29 @@
       left: 0;
       position: absolute;
       top: 0;
-      -webkit-transition: width 1s;
-      transition: width 1s;
-      width: 26px;
+      border-radius: 4px 0 0 4px;
+      /* border-radius 过渡时长 0s + 延迟 1s：与 width 1s 过渡同期开始，
+         宽度动画完成的同一刻圆角才瞬时切换（100% 时 4px 0 0 4px → 4px；
+         反向变化同样延迟 1s，声明式实现无 JS 计时器） */
+      -webkit-transition: width 1s, border-radius 0s 1s;
+      transition: width 1s, border-radius 0s 1s;
+      width: 0;
+    }
+  }
+
+  .nova-danmaku-x-vote.nova-danmaku-x-selected {
+    .nova-danmaku-x-vote-an {
+      -webkit-animation: voteFont 0.35s forwards;
+      animation: voteFont 0.35s forwards;
+    }
+    .nova-danmaku-x-vote-an-bg-buffer {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  .nova-danmaku-x-vote-an.nova-danmaku-x-select {
+    .nova-danmaku-x-vote-an-bg-buffer {
+      background: rgba(0, 161, 214, 0.6) !important;
     }
   }
 
@@ -855,5 +875,17 @@
       height: 32px;
       margin: 0px 6.5px;
     }
+  }
+}
+
+@keyframes voteFont {
+  0% {
+    color: #000;
+  }
+  65% {
+    color: #000;
+  }
+  100% {
+    color: #fff;
   }
 }

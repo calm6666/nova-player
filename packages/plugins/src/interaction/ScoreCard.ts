@@ -17,7 +17,7 @@
  * - bindDrag 为 undefined 时不绑定拖拽（展示模式不传）
  */
 
-import { h, signal } from "@/core";
+import { h, signal, For } from "@/core";
 import type { Signal } from "@/core";
 import type { VNode } from "@/types";
 import type {
@@ -129,14 +129,26 @@ export interface ScoreCardState {
   count: Signal<number>;
   /** 总分和（平均分 = totalScore / count） */
   totalScore: Signal<number>;
+  /**
+   * 图标类型列表（各评分项图标位单元素 For 的渲染源）：
+   * 图标类型编辑时插件层写入 [新类型]，For 按值替换图标 VNode，
+   * 评分项容器/数值气泡/类名全部复用（卡片 DOM 不销毁重建）
+   */
+  scoreIconList: Signal<InteractionType[]>;
 }
 
-/** 创建评分卡片的初始交互状态 */
-export function createScoreCardState(): ScoreCardState {
+/**
+ * 创建评分卡片的初始交互状态
+ * @param scoreType - 初始图标类型（1 = 星星，2 = 爱心，3 = 柠檬）
+ */
+export function createScoreCardState(
+  scoreType: InteractionType,
+): ScoreCardState {
   return {
     selected: signal(0),
     count: signal(0),
     totalScore: signal(0),
+    scoreIconList: signal([scoreType]),
   };
 }
 
@@ -181,17 +193,18 @@ const SCORE_ITEM_COUNT = 5;
  * </div>
  * ```
  *
- * 响应式点：选中值及以下的项追加 -active 类（直接表达式，编译器追踪 selected）
+ * 响应式点：
+ * - 类名：选中值及以下的项追加 -active 类（直接表达式，编译器追踪 selected）
+ * - 图标：图标位为单元素 For（渲染源 scoreIconList），图标类型编辑时
+ *   插件层写入 [新类型] → For 按值替换图标 VNode，项容器与其余子节点复用
  *
  * @param index - 评分项下标（0-4，评分值 = index + 1）
- * @param scoreType - 图标类型
  * @param state - 交互状态信号集合
  * @param options - 渲染选项
  * @returns 评分项 VNode
  */
 function renderScoreItem(
   index: number,
-  scoreType: InteractionType,
   state: ScoreCardState,
   options: ScoreCardOptions,
 ): VNode {
@@ -216,7 +229,11 @@ function renderScoreItem(
           }
         : undefined,
     },
-    renderScoreIcon(scoreType),
+    // 图标位单元素 For：scoreIconList 变更时按值 diff 替换图标 VNode
+    h(For, {
+      each: state.scoreIconList,
+      render: (iconType: InteractionType): VNode => renderScoreIcon(iconType),
+    }),
     h("span", {}, String(value)),
   );
 }
@@ -285,14 +302,13 @@ export function renderScoreCard(
         return item.title;
       },
     ),
-    // 评分项列表（固定 5 项，1-5 分）
+    // 评分项列表（固定 5 项，1-5 分；图标类型经 state.scoreIconList 响应）
     h(
       "div",
       { class: CLASS_NAMES.HL_SCORE_AREA },
       ...Array.from(
         { length: SCORE_ITEM_COUNT },
-        (_, index: number): VNode =>
-          renderScoreItem(index, item.scoreType, state, options),
+        (_, index: number): VNode => renderScoreItem(index, state, options),
       ),
     ),
     // 平均分（响应式文本：参与人数 > 0 时保留一位小数）

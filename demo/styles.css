@@ -1248,3 +1248,79 @@
   font-size: 13px;
   color: rgba(255, 255, 255, 0.4);
 }
+
+/* ============================================
+ * 添加表单（分段进度条 / 交互卡片共用，基于 ice-* 控件体系）
+ * ============================================ */
+
+/* 表单容器：纵向排布字段行 */
+.ice-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+/* 数字输入（秒数 / 百分比）：定宽靠左，余宽留给说明或按钮 */
+.ice-form .ice-num,
+.ice-field-pair .ice-num {
+  flex: none;
+  width: 92px;
+}
+
+/* 行内组合容器：输入 + 小按钮 / 输入 + 标签 + 输入 */
+.ice-field-pair {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 组合行内第二个标签（如「左侧(%)」）与前方输入的间距 */
+.ice-label.ice-label-gap {
+  min-width: 48px;
+}
+
+/* 多行选项输入（投票选项，每行一个） */
+.ice-textarea {
+  height: auto;
+  min-height: 64px;
+  padding: 6px 8px;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* 表单提交按钮（右对齐收尾） */
+.ice-form .btn {
+  align-self: flex-start;
+}
+
+/* ============================================
+ * 分段列表行内编辑（标题 / 起止秒数输入 + 删除）
+ * ============================================ */
+
+/* 标题输入占余宽（原 span 样式迁移为 input） */
+.seg-item .seg-item-label {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  font-size: 13px;
+}
+
+/* 行内秒数输入：定宽对齐 */
+.seg-item .ice-num {
+  flex: none;
+  width: 84px;
+  height: 26px;
+}
+
+/* 删除按钮高度与输入行对齐 */
+.seg-item .seg-item-remove {
+  height: 26px;
+}

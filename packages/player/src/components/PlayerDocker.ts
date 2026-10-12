@@ -355,6 +355,15 @@ export interface PlayerDockerProps {
   getStreamDownloadSpeed?: () => number;
 
   /**
+   * 原生流媒体播放器实例提供者（dash.js / hls.js / flv.js 实例）
+   *
+   * 由 VideoPlayer 注入（其持有 StreamMiddleware，转发当前生效插件的
+   * `getNativePlayer()`）；供 VideoInfo 等统计面板读取库原生实时数据，
+   * 原生播放（非流媒体模式）返回 null。
+   */
+  getNativeStreamPlayer?: () => unknown;
+
+  /**
    * 预览图提供者（progress.previewProvider 配置注入）
    *
    * 进度条悬停时按「悬停时间 + 总时长」询问外部预览帧，
@@ -906,6 +915,8 @@ export const PlayerDocker = defineComponent<
     if (name === "info" && !lazyPanelVNodes.info) {
       lazyPanelVNodes.info = h(VideoInfo, {
         src: props.src,
+        // 原生流媒体实例提供者：码率曲线优先读 hls.js/dash.js 的静态码率
+        getNativePlayer: props.getNativeStreamPlayer,
         onClose: () => {
           videoInfoApi.close?.();
         },

@@ -28,6 +28,7 @@ import {
   generateBufferChart,
   generateFPSChart,
 } from "../utils/media/chart";
+import { readNativeBitrate } from "../utils/media/monitor";
 import { renderSvgMarkup } from "../utils/svgMarkup";
 import type {
   BitrateDataPoint,
@@ -52,6 +53,14 @@ export interface VideoInfoItem {
 export interface VideoInfoProps {
   /** 视频源地址（用于解析视频 Host） */
   src?: string;
+  /**
+   * 原生流媒体播放器实例提供者（dash.js / hls.js / flv.js 实例）
+   *
+   * 由 PlayerDocker 注入（转发 VideoPlayer 持有的 StreamMiddleware 当前
+   * 生效插件）；码率曲线优先从该实例读取当前选中清晰度的静态码率，
+   * 原生播放（非流媒体模式）返回 null 时回退 webkitDecodedByteCount 差分。
+   */
+  getNativePlayer?: () => unknown;
   /** 信息项数组，未提供时使用默认信息项 */
   items?: VideoInfoItem[];
   /** 关闭面板的回调函数 */
@@ -319,8 +328,10 @@ export const VideoInfo = defineComponent<VideoInfoProps>(
 
     /**
      * 一次采样 tick：差分三个指标（码率 / 缓冲秒数 / FPS）并重绘三张图
-     * - 码率：webkitDecodedByteCount 差分（Chrome 扩展，非 Chrome 内核
-     *   无该字段 → 码率曲线保持空图「等待数据...」）
+     * - 码率：优先读流媒体插件的原生实例（hls.js/dash.js 当前选中
+     *   清晰度的静态码率，见 readNativeBitrate）；无实例（原生播放 /
+     *   flv.js）时回退 webkitDecodedByteCount 差分（Chrome 扩展，
+     *   非 Chrome 内核无该字段 → 码率曲线保持空图「等待数据...」）
      * - 缓冲：buffered 末段与当前播放位置的差（缓冲秒数）
      * - FPS / 丢帧：getVideoPlaybackQuality 标准接口的帧计数差分
      */
@@ -368,8 +379,19 @@ export const VideoInfo = defineComponent<VideoInfoProps>(
         lastDroppedFrames = dropped;
       }
 
-      // 码率（Chrome 扩展属性，差分估算解码码率）
-      if (hasDecodedBytes(videoEl)) {
+      // 码率：优先读流媒体插件的原生实例（hls.js/dash.js 静态码率，
+      // 与播放器实际选中的清晰度一致）；无实例时回退 Chrome 扩展属性差分
+      const nativeBitrate = readNativeBitrate(props.getNativePlayer?.() ?? null);
+      if (nativeBitrate) {
+        pushPoint(bitrateData, {
+          timestamp: now,
+          totalBitrate: nativeBitrate.totalBitrate,
+          videoBitrate: nativeBitrate.videoBitrate,
+          audioBitrate: nativeBitrate.audioBitrate,
+        });
+        // 原生实例数据源生效期间同步刷新差分基线，切换回差分时不产生跳变点
+        lastDecodedBytes = null;
+      } else if (hasDecodedBytes(videoEl)) {
         const bytes = videoEl.webkitDecodedByteCount;
         if (typeof bytes === "number") {
           if (lastDecodedBytes !== null && elapsed > 0) {

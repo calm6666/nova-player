@@ -4,9 +4,11 @@
  * ============================================
  * 渲染投票卡片到互动容器：问题文案 + 选项列表
  * 投票后展示结果：
- * - 根加 -voted 类（scss 控制全部百分比角标 opacity 0.9）
- * - 选中行加 -selected 类（scss 控制该行百分比角标高亮）
- * - 进度条宽度与百分比文本由状态信号响应式更新
+ * - 根加 -voted 类（scss 控制全部百分比角标 opacity 0.9）与
+ *   -selected 类（voteFont 文案闪变动画 + 未选项 buffer 灰色填充）
+ * - 选中行加 -selected/-select 类（角标透明度 / buffer 蓝色填充）
+ * - buffer 宽度投票后内联写入选项占比，由 CSS transition: width 1s
+ *   从 0 平滑过渡到占比，百分比文本由状态信号响应式更新
  * 右上角带两半环倒计时关闭按钮（100% → 0 随播放推进消隐，点击即关闭）
  *
  * 响应式写法：class/style 直接绑定动态表达式（内部读取 signal.value），
@@ -18,7 +20,7 @@
  * - bindDrag 为 undefined 时不绑定拖拽（展示模式不传）
  */
 
-import { h, signal } from "@/core";
+import { h, signal, For } from "@/core";
 import type { Signal } from "@/core";
 import type { VNode } from "@/types";
 import type { ActiveCardEntry, InteractionVote, VoteOption } from "./types";
@@ -40,6 +42,10 @@ const CLASS_NAMES = {
   HL_VOTE_AN_PERCENT: "nova-danmaku-x-vote-an-percent",
   HL_VOTE_AN_SELECTED: "nova-danmaku-x-vote-an-selected",
   HL_VOTE_AN_VOTED: "nova-danmaku-x-vote-an-voted",
+  /** 根元素投票后标记：驱动 voteFont 文案闪变动画 + 未选项 buffer 灰色填充 */
+  HL_VOTE_SELECTED: "nova-danmaku-x-selected",
+  /** 选中行标记：驱动该行 buffer 蓝色填充 */
+  HL_VOTE_AN_SELECT: "nova-danmaku-x-select",
   HL_SHOW: "nova-danmaku-x-show",
 } as const;
 
@@ -53,13 +59,23 @@ export interface VoteCardState {
   votedIndex: Signal<number>;
   /** 总票数（驱动各选项进度条宽度与百分比文本） */
   totalVotes: Signal<number>;
+  /**
+   * 选项列表（For 控制流的渲染源）：按引用 diff，
+   * 编辑增删选项时插件层原位 push/截断后写入新数组，
+   * For 仅对差异行创建/销毁 DOM，既有行全部复用
+   */
+  optionsSignal: Signal<VoteOption[]>;
 }
 
-/** 创建投票卡片的初始交互状态 */
-export function createVoteCardState(): VoteCardState {
+/**
+ * 创建投票卡片的初始交互状态
+ * @param options - 初始选项列表（浅拷贝入信号，选项对象引用与数据源一致）
+ */
+export function createVoteCardState(options: VoteOption[]): VoteCardState {
   return {
     votedIndex: signal(-1),
     totalVotes: signal(0),
+    optionsSignal: signal([...options]),
   };
 }
 
@@ -119,16 +135,20 @@ function computePercent(votes: number, totalVotes: number): number {
  * ```
  *
  * 响应式点：
- * - 行类名：选中行追加 -selected 类（直接表达式，编译器追踪 votedIndex）
- * - buffer 样式：未投票为空串（回落 scss 默认 26px），投票后为百分比宽度
- * - 选项文案：读取 contentVersion 的显式 getter（updateCardContent 精准更新）
+ * - 行类名：选中行追加 -selected（角标透明度）与 -select（buffer 蓝色）
+ *   类，直接表达式编译器追踪 votedIndex
+ * - buffer 样式：未投票为空串（回落 scss 默认 width 0），投票后内联
+ *   写入选项占比，CSS transition: width 1s, border-radius 0s 1s
+ *   从 0 平滑过渡到占比（圆角在 1s 宽度动画完成刻才切换为全圆角）
+ * - 选项文案：读取 optionsVersion 的显式 getter（updateCardContent 的
+ *   字段级细腻更新——只驱动选项行，不触碰 question）
  * - 百分比角标：投票后显示 "N%"（零参箭头函数响应式文本）
  *
  * @param option - 选项数据（optionText / votes）
  * @param index - 选项下标（字母下标 = 65 + index）
  * @param state - 交互状态信号集合
  * @param options - 渲染选项
- * @param contentVersion - 条目内容版本号（文案编辑的响应式驱动源）
+ * @param optionsVersion - 选项文案版本号（optionTexts 编辑的响应式驱动源）
  * @returns 选项行 VNode
  */
 function renderVoteOption(
@@ -136,55 +156,71 @@ function renderVoteOption(
   index: number,
   state: VoteCardState,
   options: VoteCardOptions,
-  contentVersion: Signal<number>,
+  optionsVersion: Signal<number>,
 ): VNode {
   return h(
     "div",
     {
       "data-index": index,
-      // 行类名直接表达式：选中行追加 -selected 类（互斥，未选中时仅基础类）
+      // 行类名直接表达式：选中行追加 -selected（角标透明度）与
+      // -select（buffer 蓝色填充）类，未选中时仅基础类
       class:
         state.votedIndex.value === index
-          ? `${CLASS_NAMES.HL_VOTE_AN} ${CLASS_NAMES.HL_VOTE_AN_SELECTED}`
+          ? `${CLASS_NAMES.HL_VOTE_AN} ${CLASS_NAMES.HL_VOTE_AN_SELECTED} ${CLASS_NAMES.HL_VOTE_AN_SELECT}`
           : CLASS_NAMES.HL_VOTE_AN,
       onClick: options.onVoteSelect
         ? (e: Event): void => {
             e.stopPropagation();
             // 已投票后不再响应（插件层校验的渲染层兜底）
             if (state.votedIndex.value >= 0) return;
-            options.onVoteSelect?.(index);
+            // 实时反查下标：For 复用行时闭包 index 可能与列表错位
+            //（选项仅尾部增删，正常场景两者一致，反查为兜底）
+            const liveIndex = state.optionsSignal.value.indexOf(option);
+            if (liveIndex >= 0) options.onVoteSelect?.(liveIndex);
           }
         : undefined,
     },
-    // 进度条底 + buffer（投票后宽度为该选项百分比，scss 自带 width 1s 过渡）
+    // 进度条底 + buffer（投票后宽度内联写入占比，CSS transition 从 0 过渡）
     h(
       "div",
       { class: CLASS_NAMES.HL_VOTE_AN_BG },
       h("div", {
         class: CLASS_NAMES.HL_VOTE_AN_BG_BUFFER,
-        // 直接表达式：未投票返回空串（不设置内联属性，回落 scss 默认 26px），
-        // 投票后增量更新 width（响应式 style 的 prevStyleProps 机制自动清理旧值）
+        // 直接表达式：未投票返回空串（不设置内联属性，回落 scss 默认
+        // width 0）；投票后内联写入选项占比（响应式 style 的
+        // prevStyleProps 机制增量更新），scss 的
+        // transition: width 1s, border-radius 0s 1s 使宽度从 0 平滑
+        // 过渡到占比、圆角在宽度动画完成（1s）那一刻才从 4px 0 0 4px
+        // 瞬时切换为 4px（100% 满宽时右角补圆）
         style:
           state.votedIndex.value < 0
             ? ""
-            : `width: ${computePercent(option.votes ?? 0, state.totalVotes.value)}%;`,
+            : (() => {
+                const percent = computePercent(
+                  option.votes ?? 0,
+                  state.totalVotes.value,
+                );
+                return `width: ${percent}%;
+              border-radius: ${percent == 100 ? "4px;" : "4px 0 0 4px;"}`;
+              })(),
       }),
     ),
     // 选项文案：字母下标（A/B/C...）+ 选项文本
-    // 选项文本为读取 contentVersion 的显式 getter（updateCardContent 精准更新）
+    // 选项文本为读取 optionsVersion 的显式 getter（字段级细腻更新：
+    // optionTexts 编辑只驱动选项行，question 不受影响）
     h(
       "div",
       { class: CLASS_NAMES.HL_VOTE_AN_TEXT },
       h(
         "div",
         { class: CLASS_NAMES.HL_VOTE_AN_TEXT_INDEX },
-        String.fromCharCode(65 + index),
+        // String.fromCharCode(65 + index),
       ),
       h(
         "div",
         { class: CLASS_NAMES.HL_VOTE_AN_TEXT_DOC },
         (): string => {
-          void contentVersion.value;
+          void optionsVersion.value;
           return option.optionText;
         },
       ),
@@ -238,10 +274,12 @@ export function renderVoteCard(
             entry.dragCleanup = bindDrag(el) ?? null;
           }
         : undefined,
-      // 根类名直接表达式：显隐过渡类 + 投票后 -voted 类（scss 控制百分比角标透明度）
+      // 根类名直接表达式：显隐过渡类 + 投票后 -voted 类（百分比角标透明度）
+      // 与 -selected 类（voteFont 文案闪变 + 未选项 buffer 灰色填充）
       class: [
         CLASS_NAMES.HL_VOTE,
         state.votedIndex.value >= 0 ? CLASS_NAMES.HL_VOTE_AN_VOTED : "",
+        state.votedIndex.value >= 0 ? CLASS_NAMES.HL_VOTE_SELECTED : "",
         entry.show.value ? CLASS_NAMES.HL_SHOW : "",
       ]
         .filter((name: string): boolean => name !== "")
@@ -265,11 +303,19 @@ export function renderVoteCard(
         return item.question;
       },
     ),
-    // 选项列表（选项集合在卡片创建时固定，静态展开即可；
-    // 选项数量变化由插件层重建条目承接）
-    ...item.options.map(
-      (option: VoteOption, index: number): VNode =>
-        renderVoteOption(option, index, state, options, entry.contentVersion),
-    ),
+    // 选项列表（For 按引用 diff）：编辑增删选项时插件层原位变更
+    // optionsSignal，仅差异行创建/销毁 DOM，既有行及其文本/进度条
+    // 响应式更新全部复用（卡片 DOM 不销毁重建）
+    h(For, {
+      each: state.optionsSignal,
+      render: (option: VoteOption, index: number): VNode =>
+        renderVoteOption(
+          option,
+          index,
+          state,
+          options,
+          entry.optionsVersion,
+        ),
+    }),
   );
 }

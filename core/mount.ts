@@ -231,7 +231,12 @@ export function materialize(vnode: VNode | string): Node {
   if (vnode.__reactive !== undefined) {
     const textNode = document.createTextNode("");
     const dispose = effect(() => {
-      textNode.textContent = vnode.__reactive!.get();
+      const next = vnode.__reactive!.get();
+      // 值比较（细腻更新）：依赖 signal 变化但文本值未变时不写 DOM，
+      // 避免 textContent 被无谓重设（相同值重设仍会触发 DOM 变更记录）
+      if (textNode.textContent !== next) {
+        textNode.textContent = next;
+      }
     });
     if (!vnode._cleanups) vnode._cleanups = [];
     vnode._cleanups.push(dispose);
@@ -525,13 +530,77 @@ function createMockNode(vnode: VNode | string): Node {
 type FlowAnchor = Text | Comment;
 
 /**
- * For 组件初始化：key-based 列表精准更新
+ * 计算最长递增子序列（LIS），返回参与 LIS 的原数组索引集合
  *
- * 维护 Map<key, {vnode, el}> 映射，effect 监听 each() 变化：
- * - 新 key：调用 render → materialize → insertBefore(anchor)
- * - 移除 key：destroy(vnode) → Map.delete
- * - 移动 key：insertBefore 重排（DOM 自动从原位置摘除，不重建 vnode）
- * - 现有 key：不重新 render，依赖内部 signal 更新（细粒度响应式）
+ * 用途：For 中间区间的「移动最小化」——oldIndexOfNew 中处于 LIS 的
+ * 复用节点保持 DOM 原位不动，其余复用节点才需要 insertBefore 移动。
+ *
+ * 经典 O(n log n) 二分实现（patience sorting 变体）：
+ * - tailsIdx[l]：长度为 l+1 的递增子序列中「结尾值最小」的元素索引
+ *   （结尾值越小，后续元素越可能延长序列，贪心最优）
+ * - prevIdx[i]：元素 i 在 LIS 构造链上的前驱索引（用于回溯还原完整序列）
+ * - 值为 -1 的位置（新 mount 槽位）不参与计算，永远视为「需要处理」
+ *
+ * @param values - 值数组（-1 表示无值，其余应为互异的非负数）
+ * @returns 参与 LIS 的索引集合（处于其中的位置无需移动）
+ */
+function computeLisIndices(values: number[]): Set<number> {
+  /** 结果：LIS 命中的索引集合 */
+  const result = new Set<number>();
+  const len = values.length;
+  if (len === 0) return result;
+
+  /** tailsIdx[l] = 长度为 l+1 的递增子序列的结尾元素索引 */
+  const tailsIdx: number[] = [];
+  /** 前驱索引链（回溯用，-1 表示链头） */
+  const prevIdx: number[] = new Array<number>(len).fill(-1);
+
+  for (let i = 0; i < len; i++) {
+    const v = values[i];
+    // -1 = 新 mount 槽位，不参与「保持原位」序列
+    if (v < 0) continue;
+
+    // 二分查找第一个结尾值 >= v 的槽位（严格递增：等值替换不延长）
+    let lo = 0;
+    let hi = tailsIdx.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (values[tailsIdx[mid]] < v) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > 0) prevIdx[i] = tailsIdx[lo - 1];
+    if (lo === tailsIdx.length) tailsIdx.push(i);
+    else tailsIdx[lo] = i;
+  }
+
+  // 从 LIS 结尾元素回溯出整条命中链
+  let cursor = tailsIdx.length > 0 ? tailsIdx[tailsIdx.length - 1] : -1;
+  while (cursor !== -1) {
+    result.add(cursor);
+    cursor = prevIdx[cursor];
+  }
+  return result;
+}
+
+/**
+ * For 组件初始化：key-based 列表区间精准更新
+ *
+ * 维护 Map<key, {vnode, el}> 映射 + 旧 key 顺序快照，effect 监听 each() 变化，
+ * 按三步区间算法只处理真正变化的区间（头尾同步区零操作）：
+ *
+ * 1. 头部同步（公共前缀）：旧新列表头部 key 相同的原位跳过
+ * 2. 尾部同步（公共后缀）：旧新列表尾部 key 相同的原位跳过
+ * 3. 中间区间 diff：头尾夹逼后仅剩的变化区间——
+ *    - 消失 key：destroy(vnode) → Map.delete
+ *    - 新增 key：render → materialize → insertBefore → 生命周期
+ *    - 复用 key：不重新 render（依赖内部 signal 细粒度更新），
+ *      通过最长递增子序列（LIS）最小化移动——只有不在 LIS 中的
+ *      复用节点才 insertBefore 重排（DOM 自动从原位置摘除，不重建 vnode）
+ *
+ * 对比旧的全量遍历：每次重跑对列表中所有 key 执行 Map 查找 + 无条件
+ * insertBefore（O(n) 次 DOM 调用）；大列表（如几百集选集）在
+ * 「追加/删除单集」「同 key 重新赋值」等场景下，头尾同步可跳过
+ * 绝大部分元素，中间区间通常只有个位数节点需要处理。
  *
  * @param vnode - flow VNode（__flow.type === 'for'）
  * @param anchor - 控制流锚点（子 DOM 在其前方插入）
@@ -544,6 +613,11 @@ function initFor(vnode: VNode, anchor: FlowAnchor): () => void {
 
   // key → { vnode, el } 映射（key 类型为 unknown：支持 string/number/object 引用）
   const entries = new Map<unknown, { vnode: VNode; el: Node }>();
+  /**
+   * 上一次列表的 key 顺序快照（每轮 effect 末尾更新）
+   * 头尾同步扫描依赖「有序」数组——Map 只有哈希查找，没有顺序信息
+   */
+  let oldKeys: unknown[] = [];
 
   const effectDispose = effect((): void => {
     const parent = anchor.parentNode;
@@ -551,39 +625,160 @@ function initFor(vnode: VNode, anchor: FlowAnchor): () => void {
 
     const eachGetter = flow.each;
     const items = eachGetter ? eachGetter() : [];
-    const newKeys = new Set<unknown>();
+    const newLen = items.length;
+    const oldLen = oldKeys.length;
 
-    // 遍历新 items，创建/移动节点
-    for (let i = 0; i < items.length; i++) {
+    // 新列表的 key 数组（区间判断 / 复用查找 / 顺序快照共用）
+    const newKeys: unknown[] = new Array<unknown>(newLen);
+    for (let i = 0; i < newLen; i++) {
       const item = items[i];
       // 无 keyFn 时用 item 引用作为 key（Solid <For> 语义）
-      const key = keyFn ? keyFn(item, i) : item;
-      newKeys.add(key);
+      newKeys[i] = keyFn ? keyFn(item, i) : item;
+    }
 
-      const existing = entries.get(key);
-      if (existing) {
-        // 现有 key：移动到正确位置（insertBefore 自动从原位置摘除）
-        parent.insertBefore(existing.el, anchor);
-      } else if (renderFn) {
-        // 新 key：调用 render → materialize → insertBefore
-        const childVNode = renderFn(item, i);
+    // ============================================
+    // 第 1 步：头部同步（公共前缀，原位保留 → 零操作）
+    // ============================================
+    let start = 0;
+    while (
+      start < oldLen &&
+      start < newLen &&
+      oldKeys[start] === newKeys[start]
+    ) {
+      start++;
+    }
+
+    // ============================================
+    // 第 2 步：尾部同步（公共后缀，原位保留 → 零操作）
+    // ============================================
+    let oldEnd = oldLen - 1;
+    let newEnd = newLen - 1;
+    while (
+      oldEnd >= start &&
+      newEnd >= start &&
+      oldKeys[oldEnd] === newKeys[newEnd]
+    ) {
+      oldEnd--;
+      newEnd--;
+    }
+
+    // ============================================
+    // 第 3 步：中间区间（唯一可能产生 DOM 操作的区域）
+    // oldKeys[start..oldEnd] 与 newKeys[start..newEnd]
+    // ============================================
+    const oldCount = oldEnd - start + 1;
+    const newCount = newEnd - start + 1;
+
+    if (newCount > 0 && oldCount === 0 && renderFn) {
+      // ============================================
+      // 3A. 纯新增（含首挂载 / 头尾同步后的中间追加）
+      //
+      // 中间区间没有可复用节点，全部是新 mount：
+      // 正序遍历 + 固定参照（尾部同步区首节点或锚点），逐个插到参照
+      // 之前自然形成正序——与旧实现的 mount 顺序（render / onMounted
+      // 按列表正序触发）保持一致，组件侧观察不到顺序差异
+      // ============================================
+      const tailEntry =
+        newEnd + 1 < newLen ? entries.get(newKeys[newEnd + 1]) : undefined;
+      const tailRef: Node = tailEntry !== undefined ? tailEntry.el : anchor;
+
+      for (let j = 0; j < newCount; j++) {
+        const newIndex = start + j;
+        const item = items[newIndex];
+        const childVNode = renderFn(item, newIndex);
         childVNode.__parent = vnode;
         const el = materialize(childVNode);
         // ★ 就地补发生命周期（同 mountFlowChild：列表项不在静态树 children 递归范围）
         invokeLifecycle(childVNode, "onBeforeMount");
-        parent.insertBefore(el, anchor);
+        parent.insertBefore(el, tailRef);
         invokeLifecycle(childVNode, "onMounted");
-        entries.set(key, { vnode: childVNode, el });
+        entries.set(newKeys[newIndex], { vnode: childVNode, el });
+      }
+    } else if (oldCount > 0) {
+      // ============================================
+      // 3B. 中间区间含旧节点（复用 / 删除 / 移动 / 混合新增）
+      // ============================================
+      /**
+       * 新中间区间的 key → 相对索引映射（复用判定）
+       * 与 Vue 同约定：key 在列表内必须唯一；重复 key 属病态用法，
+       * 此处保留首个出现位置，后续重复位置按新 mount 处理（不崩溃）
+       */
+      const newKeyToIndex = new Map<unknown, number>();
+      for (let j = 0; j < newCount; j++) {
+        const key = newKeys[start + j];
+        if (!newKeyToIndex.has(key)) newKeyToIndex.set(key, j);
+      }
+
+      /**
+       * oldIndexOfNew[j]：新中间相对位置 j 复用的旧中间相对索引
+       * -1 表示该位置是新增（旧列表无此 key）
+       */
+      const oldIndexOfNew: number[] = new Array<number>(newCount).fill(-1);
+
+      // 3B.1 遍历旧中间区间：key 已消失 → destroy；仍存在 → 记录复用位置
+      for (let i = 0; i < oldCount; i++) {
+        const key = oldKeys[start + i];
+        const target = newKeyToIndex.get(key);
+        if (target === undefined) {
+          const entry = entries.get(key);
+          if (entry !== undefined) {
+            destroy(entry.vnode);
+            entries.delete(key);
+          }
+        } else {
+          oldIndexOfNew[target] = i;
+        }
+      }
+
+      // 3B.2 移动最小化：双向都有剩余时计算 LIS——
+      //      处于 LIS 的复用节点保持 DOM 原位，其余复用节点才需要移动
+      const stableSet =
+        newCount > 0 ? computeLisIndices(oldIndexOfNew) : null;
+
+      // 3B.3 逆序遍历新中间区间：mount 新节点 / 移动非 LIS 的复用节点
+      //      逆序的必要性：处理位置 j 时，j+1（新列表下一个位置）必然
+      //      已就位——要么是原位保留的尾部同步区，要么是本轮刚
+      //      mount / 移动的节点，因此总能拿到有效的 insertBefore 参照；
+      //      正序无法保证（后续位置可能是尚未移动的复用节点）
+      for (let j = newCount - 1; j >= 0; j--) {
+        const newIndex = start + j;
+        const key = newKeys[newIndex];
+
+        // 参照元素：新列表下一个位置（newIndex+1）的 DOM；
+        // 越界说明尾部同步区为空，退回控制流锚点（子 DOM 本就在 anchor 之前）
+        const nextEntry =
+          newIndex + 1 < newLen
+            ? entries.get(newKeys[newIndex + 1])
+            : undefined;
+        const refEl: Node = nextEntry !== undefined ? nextEntry.el : anchor;
+
+        if (oldIndexOfNew[j] === -1) {
+          // 新 key：render → materialize → 生命周期 → 插入
+          if (renderFn) {
+            const item = items[newIndex];
+            const childVNode = renderFn(item, newIndex);
+            childVNode.__parent = vnode;
+            const el = materialize(childVNode);
+            // ★ 就地补发生命周期（同 mountFlowChild：列表项不在静态树 children 递归范围）
+            invokeLifecycle(childVNode, "onBeforeMount");
+            parent.insertBefore(el, refEl);
+            invokeLifecycle(childVNode, "onMounted");
+            entries.set(key, { vnode: childVNode, el });
+          }
+        } else if (stableSet === null || !stableSet.has(j)) {
+          // 复用 key 但不在 LIS：移动到正确位置
+          // （insertBefore 自动从原位置摘除，不重建 vnode）
+          const entry = entries.get(key);
+          if (entry !== undefined) {
+            parent.insertBefore(entry.el, refEl);
+          }
+        }
+        // 复用且在 LIS 中：原位不动，零操作
       }
     }
 
-    // 移除不再存在的 key
-    for (const [key, entry] of entries) {
-      if (!newKeys.has(key)) {
-        destroy(entry.vnode);
-        entries.delete(key);
-      }
-    }
+    // 本轮列表顺序成为下一轮 diff 的「旧」基准
+    oldKeys = newKeys;
   });
 
   return () => {

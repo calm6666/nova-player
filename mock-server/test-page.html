@@ -176,6 +176,38 @@
     <pre id="dmOut">发送结果会显示在这里，同时右侧 SSE 窗口应该立刻出现这条弹幕。</pre>
   </div>
 
+  <!-- 2b. 往 list.so 历史弹幕池添加（实时进测试接口） -->
+  <div class="panel">
+    <h2>添加历史弹幕（POST /danmaku/history → list.so）</h2>
+    <div class="hint" style="margin-bottom:8px">
+      和左边那块的分工：左边走<strong>实时链路</strong>（广播给 SSE/WS，不进 list.so）；
+      这条写进 <code>/x/v1/dm/list.so</code> 的弹幕池 —— 播放器<strong>重拉 list.so 立刻可见</strong>（重启服务后复原）。
+    </div>
+    <div class="row">
+      <input id="hdText" style="flex:1;min-width:180px" placeholder="往 list.so 里加一条……" value="自测页加进历史池的弹幕">
+      <input id="hdTime" type="number" style="width:90px" value="30" title="timeSec：弹幕出现在视频的第几秒">
+      <span class="hint">s</span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <select id="hdMode">
+        <option value="1">1 滚动</option>
+        <option value="4">4 底部</option>
+        <option value="5">5 顶部</option>
+      </select>
+      <select id="hdSize">
+        <option value="18">18 小</option>
+        <option value="25" selected>25 标准</option>
+      </select>
+      <input id="hdColor" type="color" value="#fb7299" title="颜色">
+      <button id="hdAdd">添加到 list.so</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="hdVerify">重拉 list.so 验证</button>
+      <span class="hint">手动添加的弹幕 rowId 从 100001 起（随机弹幕是 1~1000），验证时只列出这些。</span>
+    </div>
+    <pre id="hdOut">添加结果 / 验证输出显示在这里。</pre>
+  </div>
+
   <!-- 3. SSE 流 -->
   <div class="panel">
     <h2>SSE 弹幕流（GET /danmaku/stream）</h2>
@@ -234,6 +266,94 @@
     <pre id="wsOut">上行的原始消息和连接状态会显示在这里。</pre>
   </div>
 
+  <!-- 5b. 交互卡片编辑 -->
+  <div class="panel wide">
+    <h2>交互卡片编辑（GET /x/player/interaction · POST /api/interaction/upsert · delete）</h2>
+    <div class="hint" style="margin-bottom:8px">
+      四类卡片（guide 点赞关注 / link 外链 / vote 投票 / score 评分），<b>top/left 是百分比</b>（相对播放区内缩 9.6% 后的内容区），
+      timeStart/timeEnd 是秒。保存后播放器<b>重拉 /x/player/interaction 立刻可见</b>（默认数据照 hili-player demo，重启服务复原）。
+    </div>
+    <div style="display:grid; grid-template-columns: 340px 1fr; gap:16px">
+      <!-- 左：表单 -->
+      <div>
+        <div class="row" style="margin-bottom:8px">
+          <select id="icKind">
+            <option value="guide">guide 点赞关注</option>
+            <option value="link">link 外链</option>
+            <option value="vote">vote 投票</option>
+            <option value="score">score 评分</option>
+          </select>
+          <span id="icEditing" class="hint"></span>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <span class="hint" style="width:70px">top %</span>
+          <input id="icTop" type="number" style="width:80px" value="50">
+          <span class="hint" style="width:70px;margin-left:8px">left %</span>
+          <input id="icLeft" type="number" style="width:80px" value="50">
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <span class="hint" style="width:70px">开始 s</span>
+          <input id="icStart" type="number" style="width:80px" value="2">
+          <span class="hint" style="width:70px;margin-left:8px">结束 s</span>
+          <input id="icEnd" type="number" style="width:80px" value="12">
+        </div>
+        <!-- guide 专属 -->
+        <div class="row icOnly ic-guide" style="margin-bottom:8px">
+          <span class="hint" style="width:70px">type</span>
+          <select id="icGuideType">
+            <option value="1">1 三连 + 关注</option>
+            <option value="2">2 只有三连</option>
+            <option value="3">3 只有关注</option>
+          </select>
+        </div>
+        <!-- link 专属 -->
+        <div class="row icOnly ic-link" style="margin-bottom:8px">
+          <span class="hint" style="width:70px">文案</span>
+          <input id="icLinkContent" style="flex:1" value="这是一个什么视频">
+        </div>
+        <!-- vote 专属 -->
+        <div class="icOnly ic-vote" style="margin-bottom:8px">
+          <div class="row" style="margin-bottom:8px">
+            <span class="hint" style="width:70px">问题</span>
+            <input id="icQuestion" style="flex:1" value="投一票">
+          </div>
+          <div class="row" style="align-items:flex-start">
+            <span class="hint" style="width:70px">选项</span>
+            <textarea id="icOptions" rows="4" style="flex:1;background:#0e0f16;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font:13px/1.6 Consolas,monospace">选项一|3
+选项二|1</textarea>
+          </div>
+          <div class="hint" style="margin-left:70px">每行一个选项，格式「文案|票数」。</div>
+        </div>
+        <!-- score 专属 -->
+        <div class="row icOnly ic-score" style="margin-bottom:8px">
+          <span class="hint" style="width:70px">标题</span>
+          <input id="icTitle" style="flex:1" value="给个评分吧">
+          <select id="icScoreType" style="margin-left:8px">
+            <option value="1">1 星星</option>
+            <option value="2">2 爱心</option>
+            <option value="3">3 柠檬</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="icSave">保存（新增 / 修改）</button>
+          <button id="icReset">清空表单</button>
+        </div>
+        <pre id="icOut">保存 / 删除结果会显示在这里。</pre>
+      </div>
+      <!-- 右：现有卡片列表 -->
+      <div>
+        <div class="row" style="margin-bottom:8px">
+          <button id="icReload">刷新列表</button>
+          <span class="hint">点「编辑」把卡片填进左边表单，改完点「保存」。</span>
+        </div>
+        <table>
+          <thead><tr><th>类别</th><th>id</th><th>位置/时间窗</th><th>内容</th><th>操作</th></tr></thead>
+          <tbody id="icTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- 6. 缩略图 -->
   <div class="panel wide">
     <h2>预览缩略图（GET /videoshot/preview.bin，前 20 张）</h2>
@@ -246,6 +366,31 @@
     </div>
     <div id="thumbs"></div>
     <pre id="thumbOut">加载中…</pre>
+  </div>
+
+  <!-- 6b. 雪碧图预览模式（与 preview.bin 并列的第二种数据源） -->
+  <div class="panel wide">
+    <h2>雪碧图预览模式（GET /videoshot/sprite.jpg）</h2>
+    <div class="hint" style="margin-bottom:8px">
+      和上面的 preview.bin（逐帧 data URL 列表）并列的<strong>第二种预览数据源</strong>：一张真实图片。
+      参数从 <code>/videoshot/index.json</code> 的 <code>pvdata</code> 拿（B 站形状）：
+      <code>img_x_len × img_y_len</code> 网格、每格 <code>img_x_size × img_y_size</code>；
+      取第 t 秒的帧 = 切片下标 <code>Math.floor(t / 5)</code> →
+      列 <code>下标 % img_x_len</code>、行 <code>Math.floor(下标 / img_x_len)</code>。
+      两种模式按需取用（雪碧图 = 一次 HTTP 拿全部帧；bin = 无需知道尺寸直接当 img src）。
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <span id="spriteState" class="badge warn">加载中…</span>
+      <span class="hint" id="spriteInfo"></span>
+      <button id="spriteLoad">（重新）加载雪碧图</button>
+    </div>
+    <div id="spriteWrap" style="display:none; position:relative; border:1px solid var(--line); border-radius:6px; background:#0e0f16; padding:8px">
+      <img id="spriteImg" style="width:100%; display:block; border-radius:4px" alt="雪碧图">
+      <!-- 裁切演示光标：鼠标在图上左右移动，框住的格子随时间轴变化 -->
+      <div id="spriteCursor" style="position:absolute; border:2px solid var(--pink); border-radius:2px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.35)"></div>
+      <div class="hint" style="margin-top:6px">把鼠标放到图上移动：粉色框是「当前秒」对应的格子（演示播放器的裁切取帧）。<span id="spritePos"></span></div>
+    </div>
+    <pre id="spriteOut">雪碧图状态与参数会显示在这里。</pre>
   </div>
 
 </div>
@@ -337,6 +482,7 @@ function renderEnv() {
 const APIS = [
   { name: 'GET /x/player/v2', url: '/x/player/v2?aid=' + CFG.aid + '&cid=' + CFG.cid, desc: '进度条节点 view_points，from/to 单位是秒', kind: 'json' },
   { name: 'GET /x/player/pbp', url: '/x/player/pbp?aid=' + CFG.aid + '&cid=' + CFG.cid, desc: '高能进度条曲线，data 是 0~1 数组', kind: 'json' },
+  { name: 'GET /x/player/interaction', url: '/x/player/interaction?aid=' + CFG.aid + '&cid=' + CFG.cid, desc: '交互卡片（guide/link/vote/score 四类，编辑看下面的面板）', kind: 'json' },
   { name: 'GET /x/v1/dm/list.so', url: '/x/v1/dm/list.so?oid=' + CFG.cid, desc: '历史弹幕 XML（B 站 list.so 形状）', kind: 'text' },
   { name: 'GET /danmaku/since', url: '/danmaku/since?seq=0', desc: '长轮询兜底（没有新弹幕时会挂 25 秒，别急）', kind: 'json' },
   // WS 不能用 fetch 请求，所以 kind 单独标一类：点了只打印地址和消息格式，真正验证走下面的 WebSocket 面板
@@ -420,6 +566,239 @@ document.getElementById('dmSend').onclick = async () => {
     dmOut.textContent += '\n\n← 失败：' + err;
   }
 };
+
+// ---------------------------------------------------------------------------
+// 添加历史弹幕（写进 list.so 的弹幕池，不广播）
+// ---------------------------------------------------------------------------
+const hdOut = document.getElementById('hdOut');
+document.getElementById('hdAdd').onclick = async () => {
+  const payload = {
+    text: document.getElementById('hdText').value,
+    // 【注意这里是秒】addHistoryDanmaku 里 normalizeTimeMs 两个口径都认，这里选播放器口径
+    timeSec: Number(document.getElementById('hdTime').value) || 0,
+    mode: Number(document.getElementById('hdMode').value),
+    fontSize: Number(document.getElementById('hdSize').value),
+    color: parseInt(document.getElementById('hdColor').value.slice(1), 16),
+  };
+  hdOut.textContent = 'POST ' + BASE + '/danmaku/history\n' + JSON.stringify(payload, null, 2);
+  try {
+    const resp = await fetch(BASE + '/danmaku/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    hdOut.textContent += '\n\n← HTTP ' + resp.status + ' ' + (await resp.text())
+      + '\n\n点下面的「重拉 list.so 验证」确认这条已经进接口。';
+  } catch (err) {
+    hdOut.textContent += '\n\n← 失败：' + err;
+  }
+};
+
+// 验证：重新拉 list.so，把 rowId>=100001 的（手动加的）列出来。
+// 用 DOMParser 解析 <d p="时间,模式,字号,颜色,发送时间戳,弹幕池,用户,行号">文本</d>，
+// 和播放器（QML 的 loadXmlTextAsync / 浏览器的 DOMParser）读的是同一份 XML。
+document.getElementById('hdVerify').onclick = async () => {
+  try {
+    const xml = await fetch(BASE + '/x/v1/dm/list.so?oid=' + CFG.cid).then((r) => r.text());
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    const all = Array.from(doc.querySelectorAll('d'));
+    const manual = all.filter((el) => {
+      const rowId = Number(el.getAttribute('p').split(',')[7]);
+      return rowId >= 100001;
+    });
+    hdOut.textContent = 'GET /x/v1/dm/list.so → 共 ' + all.length + ' 条，其中手动添加 ' + manual.length + ' 条：\n'
+      + (manual.length === 0 ? '（还没有手动添加的弹幕）'
+        : manual.map((el) => {
+          const p = el.getAttribute('p').split(',');
+          return '  rowId=' + p[7] + '  ' + Number(p[0]).toFixed(1) + 's  mode=' + p[1]
+            + '  #' + Number(p[3]).toString(16).toUpperCase().padStart(6, '0')
+            + '  "' + el.textContent + '"';
+        }).join('\n'));
+  } catch (err) {
+    hdOut.textContent = '验证失败：' + err;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// 交互卡片编辑（四类：guide / link / vote / score）
+// ---------------------------------------------------------------------------
+const icOut = document.getElementById('icOut');
+const icEditing = document.getElementById('icEditing');
+const IC_KINDS = ['guide', 'link', 'vote', 'score'];
+let icEditingId = ''; // 空 = 新增；非空 = 修改这张卡（服务端按 id 原位替换）
+
+/* 按类别显示/隐藏专属字段组（.ic-guide / .ic-link / .ic-vote / .ic-score） */
+function icSyncKindSections() {
+  const kind = document.getElementById('icKind').value;
+  for (const k of IC_KINDS) {
+    document.querySelectorAll('.ic-' + k).forEach((el) => {
+      el.style.display = (k === kind) ? '' : 'none';
+    });
+  }
+}
+
+document.getElementById('icKind').onchange = () => {
+  icEditingId = ''; // 换类别 = 放弃当前编辑（不同类别的字段没法互转）
+  icEditing.textContent = '';
+  icSyncKindSections();
+};
+
+/* 从表单收集卡片（和 server 的 sanitizeInteractionCard 白名单一一对应） */
+function icCollectForm() {
+  const kind = document.getElementById('icKind').value;
+  const card = {
+    top: Number(document.getElementById('icTop').value),
+    left: Number(document.getElementById('icLeft').value),
+    timeStart: Number(document.getElementById('icStart').value),
+    timeEnd: Number(document.getElementById('icEnd').value),
+  };
+  if (kind === 'guide') {
+    card.type = Number(document.getElementById('icGuideType').value);
+  } else if (kind === 'link') {
+    card.linkContent = document.getElementById('icLinkContent').value;
+  } else if (kind === 'vote') {
+    card.question = document.getElementById('icQuestion').value;
+    // textarea 一行一个「文案|票数」，这里拆回对象数组（服务端收的就是这个形状）
+    card.options = document.getElementById('icOptions').value.split('\n')
+      .map((line) => line.trim()).filter(Boolean)
+      .map((line) => {
+        const [text, votes] = line.split('|');
+        return { optionText: (text || '').trim(), votes: Number(votes) || 0 };
+      });
+  } else {
+    card.title = document.getElementById('icTitle').value;
+    card.scoreType = Number(document.getElementById('icScoreType').value);
+  }
+  if (icEditingId) card.id = icEditingId;
+  return { kind, card };
+}
+
+document.getElementById('icSave').onclick = async () => {
+  const { kind, card } = icCollectForm();
+  const action = icEditingId ? '（修改 ' + icEditingId + '）' : '（新增，id 由服务端分配）';
+  try {
+    const resp = await fetch(BASE + '/api/interaction/upsert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, card }),
+    });
+    const json = await resp.json();
+    icOut.textContent = 'POST /api/interaction/upsert ' + action
+      + '\n' + JSON.stringify(card, null, 2)
+      + '\n\n← HTTP ' + resp.status + ' ' + JSON.stringify(json);
+    if (json.code === 0) {
+      icEditingId = '';
+      icEditing.textContent = '';
+      await loadInteractionCards();
+    }
+  } catch (err) {
+    icOut.textContent = '保存失败：' + err;
+  }
+};
+
+document.getElementById('icReset').onclick = () => {
+  icEditingId = '';
+  icEditing.textContent = '';
+  document.getElementById('icTop').value = '50';
+  document.getElementById('icLeft').value = '50';
+  document.getElementById('icStart').value = '2';
+  document.getElementById('icEnd').value = '12';
+  document.getElementById('icGuideType').value = '1';
+  document.getElementById('icLinkContent').value = '这是一个什么视频';
+  document.getElementById('icQuestion').value = '投一票';
+  document.getElementById('icOptions').value = '选项一|3\n选项二|1';
+  document.getElementById('icTitle').value = '给个评分吧';
+  document.getElementById('icScoreType').value = '1';
+};
+
+/* 把一张卡填进表单（点「编辑」） */
+function icFillForm(kind, card) {
+  icEditingId = card.id;
+  icEditing.textContent = '正在修改 ' + card.id + '（保存后生效）';
+  document.getElementById('icKind').value = kind;
+  icSyncKindSections();
+  document.getElementById('icTop').value = card.top;
+  document.getElementById('icLeft').value = card.left;
+  document.getElementById('icStart').value = card.timeStart;
+  document.getElementById('icEnd').value = card.timeEnd;
+  if (kind === 'guide') {
+    document.getElementById('icGuideType').value = String(card.type);
+  } else if (kind === 'link') {
+    document.getElementById('icLinkContent').value = card.linkContent || '';
+  } else if (kind === 'vote') {
+    document.getElementById('icQuestion').value = card.question || '';
+    document.getElementById('icOptions').value = (card.options || [])
+      .map((o) => o.optionText + '|' + o.votes).join('\n');
+  } else {
+    document.getElementById('icTitle').value = card.title || '';
+    document.getElementById('icScoreType').value = String(card.scoreType);
+  }
+}
+
+async function icDelete(kind, id) {
+  try {
+    const resp = await fetch(BASE + '/api/interaction/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, id }),
+    });
+    icOut.textContent = 'POST /api/interaction/delete（' + kind + '/' + id + '）\n← HTTP '
+      + resp.status + ' ' + (await resp.text());
+    if (icEditingId === id) { // 删的正是正在编辑的那张：退出编辑态，避免保存成「复活」
+      icEditingId = '';
+      icEditing.textContent = '';
+    }
+    await loadInteractionCards();
+  } catch (err) {
+    icOut.textContent = '删除失败：' + err;
+  }
+}
+
+async function loadInteractionCards() {
+  const tbody = document.getElementById('icTable');
+  try {
+    const data = (await fetch(BASE + '/api/interaction/list').then((r) => r.json())).data;
+    tbody.innerHTML = '';
+    for (const kind of IC_KINDS) {
+      for (const card of data[kind] || []) {
+        let content = '';
+        if (kind === 'guide') {
+          content = 'type=' + card.type + '（' + (card.type === 1 ? '三连+关注' : card.type === 2 ? '只三连' : '只关注') + '）';
+        } else if (kind === 'link') {
+          content = escapeHtml(card.linkContent || '');
+        } else if (kind === 'vote') {
+          content = escapeHtml(card.question || '') + '　选项：'
+            + (card.options || []).map((o) => escapeHtml(o.optionText) + '×' + o.votes).join(' / ');
+        } else {
+          content = escapeHtml(card.title || '') + '　scoreType=' + card.scoreType;
+        }
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + kind + '</td><td class="mono">' + escapeHtml(card.id) + '</td>'
+          + '<td class="mono">top ' + card.top + '% / left ' + card.left + '% · '
+          + card.timeStart + 's ~ ' + card.timeEnd + 's</td>'
+          + '<td>' + content + '</td><td></td>';
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '编辑';
+        editBtn.onclick = () => icFillForm(kind, card);
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '删除';
+        delBtn.style.marginLeft = '6px';
+        delBtn.onclick = () => icDelete(kind, card.id);
+        tr.lastElementChild.append(editBtn, delBtn);
+        tbody.appendChild(tr);
+      }
+    }
+    if (tbody.children.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="hint">（还没有卡片，用左边表单加一张）</td></tr>';
+    }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="5" class="hint">加载失败：' + escapeHtml(String(err)) + '</td></tr>';
+  }
+}
+
+document.getElementById('icReload').onclick = () => loadInteractionCards();
+icSyncKindSections();
+loadInteractionCards();
 
 // ---------------------------------------------------------------------------
 // SSE 流
@@ -704,6 +1083,90 @@ async function loadThumbs() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 雪碧图预览模式（/videoshot/sprite.jpg + index.json 的 pvdata 参数）
+// ---------------------------------------------------------------------------
+// 【和 loadThumbs 的分工】那边验证的是 preview.bin（逐帧 data URL）这条数据源，
+// 这里验证的是雪碧图（一张真图 + 裁切参数）这条 —— 播放器两种都能吃，
+// 自测页把两条并排摆出来，接口对不对一眼分开。
+// 鼠标悬停演示的是播放器的取格算法：x 比例 → 秒 → 切片下标 → 列/行 → 格子坐标。
+const spriteOut = document.getElementById('spriteOut');
+const spriteStateEl = document.getElementById('spriteState');
+const spriteInfoEl = document.getElementById('spriteInfo');
+const spriteWrap = document.getElementById('spriteWrap');
+const spriteImg = document.getElementById('spriteImg');
+const spriteCursor = document.getElementById('spriteCursor');
+const spritePos = document.getElementById('spritePos');
+let spriteGeo = null; // { xLen, yLen, xSize, ySize, frameCount }
+
+async function loadSprite() {
+  spriteStateEl.className = 'badge warn';
+  spriteStateEl.textContent = '加载中…';
+  try {
+    // index.json 先拿参数（B 站 pvdata 形状）；请求它也会顺带触发服务端抽帧/拼图
+    const idx = await fetch(BASE + '/videoshot/index.json').then((r) => r.json());
+    const pv = (idx.data && idx.data.pvdata) || {};
+    const sp = (idx.data && idx.data.sprite) || {};
+    const frameCount = (idx.data && idx.data.frames && idx.data.frames.count) || 0;
+
+    // 再拉图片本体。404（没 --video / 生成失败）要明确写出来，不能只留一片空白
+    const resp = await fetch(BASE + '/videoshot/sprite.jpg');
+    if (!resp.ok) {
+      spriteStateEl.className = 'badge err';
+      spriteStateEl.textContent = '不可用（HTTP ' + resp.status + '）';
+      spriteOut.textContent = 'GET /videoshot/sprite.jpg → HTTP ' + resp.status + '\n'
+        + '常见原因：未提供 --video、ffmpeg 不可用。\n\nindex.json 的说明：\n'
+        + JSON.stringify(idx.data && idx.data.mock, null, 2);
+      spriteWrap.style.display = 'none';
+      return;
+    }
+    const blob = await resp.blob();
+    spriteImg.src = URL.createObjectURL(blob);
+
+    spriteGeo = {
+      xLen: pv.img_x_len || sp.xLen || 5,
+      yLen: pv.img_y_len || sp.yLen || 1,
+      xSize: pv.img_x_size || sp.xSize || 160,
+      ySize: pv.img_y_size || sp.ySize || 90,
+      frameCount,
+    };
+    spriteStateEl.className = 'badge ok';
+    spriteStateEl.textContent = '已加载';
+    spriteInfoEl.textContent = (blob.size / 1024).toFixed(0) + ' KB · '
+      + spriteGeo.xLen + 'x' + spriteGeo.yLen + ' 格 · 每格 ' + spriteGeo.xSize + 'x' + spriteGeo.ySize
+      + ' · 共 ' + frameCount + ' 帧';
+    spriteWrap.style.display = '';
+    spriteOut.textContent = 'GET /videoshot/index.json 的 pvdata：\n' + JSON.stringify(pv, null, 2)
+      + '\n\nGET /videoshot/sprite.jpg → ' + blob.size + ' 字节';
+  } catch (err) {
+    spriteStateEl.className = 'badge err';
+    spriteStateEl.textContent = '加载失败';
+    spriteOut.textContent = String(err);
+  }
+}
+
+// 鼠标在雪碧图上移动：x 比例 → 秒 → 下标 → 列/行，粉色框套住那个格子（遮罩压暗其它格子）
+spriteWrap.addEventListener('mousemove', (ev) => {
+  if (!spriteGeo) return;
+  const rect = spriteImg.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width));
+  const second = ratio * CFG.duration;
+  const cellIndex = Math.min(spriteGeo.frameCount - 1, Math.floor(second / 5));
+  const col = cellIndex % spriteGeo.xLen;
+  const row = Math.floor(cellIndex / spriteGeo.xLen);
+  // 图是按宽度 100% 显示的：格子的屏幕尺寸按比例换算
+  const cellW = rect.width / spriteGeo.xLen;
+  const cellH = rect.height / spriteGeo.yLen;
+  spriteCursor.style.left = (col * cellW) + 'px';
+  spriteCursor.style.top = (row * cellH) + 'px';
+  spriteCursor.style.width = cellW + 'px';
+  spriteCursor.style.height = cellH + 'px';
+  spritePos.textContent = '　t=' + second.toFixed(1) + 's → 下标 ' + cellIndex
+    + ' → 第 ' + col + ' 列 / 第 ' + row + ' 行';
+});
+
+document.getElementById('spriteLoad').onclick = loadSprite;
+
 // 启动顺序：先读 /healthz 拿到真实片长和 aid/cid，再去请求依赖这些参数的接口，
 // 否则 view_points 的百分比、aid/cid 都会用兜底值算错。
 (async () => {
@@ -719,6 +1182,8 @@ async function loadThumbs() {
     document.getElementById('vpList').textContent = '加载失败：' + err;
   });
   await loadThumbs().catch((err) => { document.getElementById('thumbOut').textContent = '加载失败：' + err; });
+  // 雪碧图面板：preview.bin 那边已经在服务端触发了抽帧，这里通常直接命中缓存
+  await loadSprite().catch((err) => { spriteOut.textContent = '加载失败：' + err; });
 })();
 </script>
 </body>

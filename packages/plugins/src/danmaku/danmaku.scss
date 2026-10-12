@@ -220,6 +220,13 @@
   height: 100%;
   pointer-events: none;
   overflow: hidden;
+  // 弹幕显示区域裁剪：--area-clip 为底部需裁掉的百分比（0% = 全屏显示），
+  // 由 DOMEngine 在构造与区域配置变化时写入（B 站同款观感）：
+  // 区域缩小为 50% 时，在飞弹幕超出上半屏的部分立即被裁剪不可见，
+  // 配合 TrackManager.initTracks 的区域轨道重建（新弹幕只分配区域内轨道），
+  // 双机制共同保证「设置面板显示区域」即时完整生效
+  clip-path: inset(0 0 var(--area-clip, 0%) 0);
+  -webkit-clip-path: inset(0 0 var(--area-clip, 0%) 0);
 }
 
 /* 悬停弹幕置顶显示（原 injectCSSStyles 移植，并入类体系） */
@@ -372,7 +379,7 @@
     }
 
     .nova-player-dm-tip-copy {
-      left: 70px;
+      left: 66px;
     }
 
     .nova-player-dm-tip-recall {
@@ -381,7 +388,7 @@
 
     .nova-player-dm-tip-back,
     .nova-player-dm-tip-recall {
-      left: 120px;
+      left: 118px;
     }
     .nova-player-dm-tip-back:hover,
     .nova-player-dm-tip-copy:hover,

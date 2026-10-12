@@ -137,3 +137,39 @@ export function createPreviewProvider(
   return (time, duration): ProgressPreviewFrame | null =>
     resolveDemoPreviewFrame(source, time, duration);
 }
+
+/**
+ * 可变预览 Provider（运行期切换数据源用）
+ *
+ * 播放器的 previewProvider 在每次进度条悬停时同步调用（不缓存结果），
+ * 因此把数据源放在闭包外的可变槽里、provider 每次调用时读取当前值，
+ * 即可实现「不重建播放器、切换后下一次悬停立即生效」。
+ */
+export interface MutablePreviewProvider {
+  /** 播放器可消费的 provider（始终读取最新数据源） */
+  readonly provider: ProgressPreviewProvider;
+  /** 替换数据源：立即对后续悬停生效（null = 清空预览） */
+  setSource(source: DemoPreviewSource | string[] | null): void;
+}
+
+/**
+ * 创建可变预览 Provider
+ *
+ * 与 {@link createPreviewProvider} 的区别：数据源可以运行期替换
+ * （雪碧图 ↔ 逐帧 bin 切换），播放器实例与进度条控件全程复用。
+ *
+ * @param initial - 初始数据源；null 表示暂无预览（后续可 setSource 补上）
+ * @returns 带替换接口的 provider 持有器
+ */
+export function createMutablePreviewProvider(
+  initial: DemoPreviewSource | string[] | null,
+): MutablePreviewProvider {
+  let current = initial;
+  return {
+    provider: (time, duration): ProgressPreviewFrame | null =>
+      resolveDemoPreviewFrame(current, time, duration),
+    setSource(source: DemoPreviewSource | string[] | null): void {
+      current = source;
+    },
+  };
+}

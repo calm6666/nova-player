@@ -14,7 +14,10 @@ export const defaultControlConfig: ControlsConfig = {
   next: true,
   viewpoint: false,
   quality: true,
-  episodes: false,
+  // 选集按钮：普通模式由 CSS 隐藏（visibility/width），仅网页全屏 / 全屏
+  // 且播放列表长度 > 1 时显示；此处是「控件总开关」，默认必须开启，
+  // 否则 display:none 会在全屏下也把按钮整个禁掉（选集永远不可见）
+  episodes: true,
   setting: true,
   pip: true,
   wideScreen: true,

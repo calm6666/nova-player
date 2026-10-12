@@ -22,6 +22,7 @@ import {
   useReactiveState,
   signal,
   onEffect,
+  untracked,
   Show,
 } from "@/core";
 import type { Tooltip, ControlsConfig } from "@/nova/types";
@@ -197,6 +198,49 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         shadowApi?.setPermanent(permanent);
         pbpApi?.setPermanent(permanent);
       });
+
+      /**
+       * 播放列表索引变化兜底：切换视频时 prev/next 按钮可能被 Show 控制流
+       * 销毁（如切到第一集时上一个按钮卸载），若其 tip 正在显示，按钮销毁
+       * 后不会再有 mouseout 冒泡到委托容器，tip 会永久残留——这里在索引
+       * 变化时主动关闭两个按钮的 tip 并清理悬停状态
+       */
+      const playlistIndexSignal = useReactiveState(
+        stateMgr,
+        PlayerStateKeyEnum.PLAYLIST_INDEX,
+        lifecycle,
+      );
+      onEffect(lifecycle, () => {
+        // 读取建立依赖：索引变化（切换视频）时重跑
+        playlistIndexSignal.value;
+        // ★ 副作用必须包裹 untracked 阻断依赖追踪泄漏：
+        //   hideTip / emit("hideTooltip") 的同步调用链会一路延伸到
+        //   Tooltips.hideTooltip，其幂等守卫 `name in activePositionsSig.value`
+        //   会读取 Tooltips 内部的 tip 显示状态 signal——若不隔离，该 signal
+        //   会被收集为本 effect 的依赖，此后每次 tip 显示（openTip 写入
+        //   activePositionsSig）都会触发本 effect 重跑，立即关闭刚显示的
+        //   tip 并清空 hoveredTipBtn，表现为切换视频后 prev/next 的 tip
+        //   永远无法显示（首次切换时 Tooltips 已挂载、closeTip 真正执行，
+        //   污染订阅恰好在那一次重跑中建立）
+        untracked(() => {
+          if (hoveredTipBtn) {
+            const stale = hoveredTipBtn;
+            hoveredTipBtn = null;
+            hideTip(stale);
+          } else {
+            // 未悬停时也兜底关闭（tip 可能因按钮销毁而残留，悬停状态已丢失）
+            tooltipBtns
+              .filter((btn) => btn.name === "prev" || btn.name === "next")
+              .forEach((btn) => {
+                lifecycle.emit?.(ComponentEventEnum.STATE_CHANGE, {
+                  tooltip: btn,
+                  action: "hide",
+                });
+                lifecycle.emit?.("hideTooltip", btn);
+              });
+          }
+        });
+      });
     }
 
     /** 视频进度数据（currentTime 用于高能进度条重挂时恢复进度） */
@@ -233,6 +277,9 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       web: ".nova-player-ctrl-btn.nova-player-ctrl-web",
       full: ".nova-player-ctrl-btn.nova-player-ctrl-full",
     };
+
+    /** 当前悬停中的提示按钮（委托去重：按钮内部子元素间移动不重复触发） */
+    let hoveredTipBtn: Tooltip | null = null;
 
     // ============================================
     // DOM 元素引用（全部通过 ref 对象获取）
@@ -291,30 +338,91 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     // ============================================
 
     /**
-     * 初始化提示按钮的鼠标悬浮事件，延迟 300ms 显示/隐藏提示
-     * （C 类保留命令式：按钮由 LeftControls / RightControls 子组件渲染，
-     *   onMounted 阶段经 querySelector 检索后挂载原生事件，属一次性时序行为）
+     * 从事件目标解析命中的提示按钮（含命中元素本体）
+     *
+     * @param target - mouseover/mouseout 的事件目标
+     * @returns 命中的按钮描述；未命中任何提示按钮时返回 null
      */
-    const initTooltip = (): void => {
-      tooltipBtns.forEach((btn) => {
-        btn.element?.addEventListener("mouseenter", () => {
-          cancelRaf(inTimer!);
-          inTimer = rafTimeout(() => {
-            lifecycle.emit?.(ComponentEventEnum.STATE_CHANGE, {
-              tooltip: btn,
-              action: "show",
-            });
-            lifecycle.emit?.("showTooltip", btn);
-          }, 300);
-        });
-        btn.element?.addEventListener("mouseleave", () => {
-          cancelRaf(inTimer!);
+    const findTipBtnFromTarget = (target: EventTarget | null): Tooltip | null => {
+      if (!(target instanceof Element)) return null;
+      for (const btn of tooltipBtns) {
+        const selector = TOOLTIP_SELECTORS[btn.name] ?? "";
+        const element = selector
+          ? target.closest<HTMLElement>(selector)
+          : null;
+        if (element) {
+          return { element, name: btn.name, dataName: btn.dataName };
+        }
+      }
+      return null;
+    };
+
+    /**
+     * 隐藏指定提示按钮的 tip 并清理悬停状态
+     * @param btn - 要隐藏的按钮描述
+     */
+    const hideTip = (btn: Tooltip): void => {
+      if (inTimer !== null) {
+        cancelRaf(inTimer);
+        inTimer = null;
+      }
+      lifecycle.emit?.(ComponentEventEnum.STATE_CHANGE, {
+        tooltip: btn,
+        action: "hide",
+      });
+      lifecycle.emit?.("hideTooltip", btn);
+    };
+
+    /**
+     * 初始化提示按钮的鼠标悬浮事件，延迟 300ms 显示/立即隐藏提示
+     *
+     * 采用容器级事件委托（mouseover/mouseout + closest 匹配）而非逐按钮
+     * 绑定 mouseenter/mouseleave：prev/next 按钮由 LeftControls 内的 Show
+     * 控制流条件渲染，切换视频（如切到第一集）时按钮 DOM 会被销毁重建——
+     * 逐按钮绑定会让重建后的新按钮失去事件，且正在显示的 tip 因按钮销毁
+     * 而永远收不到 mouseleave，永久残留在屏幕上；委托到常驻的控制栏容器
+     * 则不受按钮销毁/重建影响（C 类保留命令式：跨子组件 DOM 的一次性时序行为）
+     *
+     * @param entity - 控制栏主体容器元素（六个提示按钮的共同祖先）
+     */
+    const initTooltip = (entity: HTMLDivElement): void => {
+      entity.addEventListener("mouseover", (event: MouseEvent) => {
+        const btn = findTipBtnFromTarget(event.target);
+        if (!btn) return;
+        // 去重：按钮内部子元素间移动（同一按钮）不重复触发
+        if (hoveredTipBtn && hoveredTipBtn.element === btn.element) return;
+        // 从其它按钮/空白处移入新按钮：撤销旧的待显示定时器并隐藏旧 tip
+        if (hoveredTipBtn) {
+          hideTip(hoveredTipBtn);
+        }
+        hoveredTipBtn = btn;
+        if (inTimer !== null) {
+          cancelRaf(inTimer);
+        }
+        inTimer = rafTimeout(() => {
+          inTimer = null;
           lifecycle.emit?.(ComponentEventEnum.STATE_CHANGE, {
             tooltip: btn,
-            action: "hide",
+            action: "show",
           });
-          lifecycle.emit?.("hideTooltip", btn);
-        });
+          lifecycle.emit?.("showTooltip", btn);
+        }, 300);
+      });
+
+      entity.addEventListener("mouseout", (event: MouseEvent) => {
+        const current = hoveredTipBtn;
+        if (!current || !current.element) return;
+        // 仅处理「离开当前悬停按钮」：事件目标在按钮内、
+        // 且相关目标（移入目的地）不在按钮内时才算真正离开
+        if (!(event.target instanceof Node) || !current.element.contains(event.target)) {
+          return;
+        }
+        const related = event.relatedTarget;
+        if (related instanceof Node && current.element.contains(related)) {
+          return;
+        }
+        hoveredTipBtn = null;
+        hideTip(current);
       });
     };
 
@@ -386,16 +494,11 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       pbpApi?.setPermanent(permanent);
 
       // 填充菜单配置：子组件（LeftControls / RightControls）先于父组件挂载，
-      // 此处控制条主体 DOM 已就绪，可直接在实体容器内检索各菜单挂载点
-      // （与既有实现 initMenu 的 querySelector 初始化方式一致）
+      // 此处控制条主体 DOM 已就绪，可在实体容器上挂载 tooltip 事件委托
+      // （与既有实现 initMenu 的容器级初始化方式一致）
       const entity = controlEntityRef.value;
       if (entity) {
-        tooltipBtns.forEach((btn) => {
-          btn.element = entity.querySelector<HTMLDivElement>(
-            TOOLTIP_SELECTORS[btn.name] ?? "",
-          );
-        });
-        initTooltip();
+        initTooltip(entity);
       }
 
       // 影子进度条显隐初始态（响应式 attr 已订阅 shadowShowSignal，自动驱动 data-shadow-show 属性）

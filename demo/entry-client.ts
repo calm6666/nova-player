@@ -96,8 +96,9 @@ import {
   type EnergyProgressData,
 } from "@/nova/utils/media/energyProgress";
 import {
-  createPreviewProvider,
+  createMutablePreviewProvider,
   type DemoPreviewSource,
+  type MutablePreviewProvider,
 } from "./preview-provider";
 
 /**
@@ -303,12 +304,14 @@ function appendDanmakuToList(item: DanmakuItem): void {
 let demoSegments: ProgressSegment[] = [];
 
 /**
- * 把当前 demoSegments 应用到播放器（setConfig 深合并 + 同步控件）
+ * 把当前 demoSegments 应用到播放器（仅 setConfig 深合并，不重建列表面板）
  *
  * 只拷贝 startTime / endTime / label 三个数据字段构造纯净对象，
  * 不把 element 等控件内部 DOM 字段带进新配置（由控件按新数据重建）。
+ * 行内编辑（改标题 / 起止时间）提交时调用：输入框已是最新显示，
+ * 无需重建面板，避免焦点丢失。
  */
-function applyDemoSegments(): void {
+function applyDemoSegmentsToPlayer(): void {
   playerInstance?.setConfig({
     progress: {
       segments: demoSegments.map((segment) => ({
@@ -318,14 +321,34 @@ function applyDemoSegments(): void {
       })),
     },
   });
+}
+
+/**
+ * 结构操作（增删分段）后的完整应用：应用到播放器 + 全量重建列表面板
+ */
+function applyDemoSegments(): void {
+  applyDemoSegmentsToPlayer();
   renderSegmentList();
 }
 
 /**
- * 全量重建分段列表面板
+ * 行内时间输入的解析与校验
  *
- * 每段渲染一行：标题 + 起止时间 + 删除按钮；
- * 删除按钮点击后 splice 该段并经 applyDemoSegments 应用到播放器。
+ * @returns 合法时返回数值；空输入返回 null（表示未修改）；非法返回 NaN
+ */
+function parseSegTimeInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const value = Number(trimmed);
+  return Number.isFinite(value) && value >= 0 ? value : Number.NaN;
+}
+
+/**
+ * 全量重建分段列表面板（行内可编辑）
+ *
+ * 每段渲染一行：标题输入 + 起始/结束秒数输入（change 提交，
+ * 校验失败回显原值并提示）+ 删除按钮；
+ * 结构操作（删除 / 添加）后调用本函数重建。
  */
 function renderSegmentList(): void {
   const panel = document.getElementById("segment-list");
@@ -334,23 +357,82 @@ function renderSegmentList(): void {
   if (demoSegments.length === 0) {
     const empty = document.createElement("p");
     empty.className = "seg-empty";
-    empty.textContent = "暂无分段（添加来源后自动拉取，或点「追加 30 秒分段」）";
+    empty.textContent = "暂无分段（添加来源后自动拉取，或在上方表单添加）";
     panel.appendChild(empty);
+    refreshSegPositionOptions();
     return;
   }
   demoSegments.forEach((segment, index) => {
     const row = document.createElement("div");
     row.className = "seg-item";
 
-    const label = document.createElement("span");
-    label.className = "seg-item-label";
-    label.textContent = segment.label || `分段 ${index + 1}`;
+    // 标题输入：change 提交（避免逐键重建），实时应用到播放器
+    const label = document.createElement("input");
+    label.className = "ice-input seg-item-label";
+    label.type = "text";
+    label.value = segment.label || `分段 ${index + 1}`;
+    label.addEventListener("change", () => {
+      const next = label.value.trim();
+      if (next === "") {
+        label.value = segment.label;
+        logAction("分段标题不能为空，已保留原值");
+        return;
+      }
+      segment.label = next;
+      logAction(`分段 #${index + 1} 标题 → "${next}"`);
+      applyDemoSegmentsToPlayer();
+      refreshSegPositionOptions();
+    });
 
-    const time = document.createElement("span");
-    time.className = "seg-item-time";
-    time.textContent = `${formatDanmakuTime(segment.startTime)} - ${formatDanmakuTime(
-      segment.endTime,
-    )}`;
+    // 起始时间输入：change 提交，校验 0 ≤ start < end
+    const start = document.createElement("input");
+    start.className = "ice-input ice-num";
+    start.type = "number";
+    start.step = "0.1";
+    start.min = "0";
+    start.value = String(segment.startTime);
+    start.addEventListener("change", () => {
+      const next = parseSegTimeInput(start.value);
+      if (next === null) {
+        start.value = String(segment.startTime);
+        return;
+      }
+      if (Number.isNaN(next) || next >= segment.endTime) {
+        start.value = String(segment.startTime);
+        logAction(
+          `起始时间非法（需 0 ≤ 起 < 终 ${segment.endTime}s），已保留原值`,
+        );
+        return;
+      }
+      segment.startTime = next;
+      logAction(`分段 #${index + 1} 起始 → ${next}s`);
+      applyDemoSegmentsToPlayer();
+    });
+
+    // 结束时间输入：change 提交，校验 end > start
+    const end = document.createElement("input");
+    end.className = "ice-input ice-num";
+    end.type = "number";
+    end.step = "0.1";
+    end.min = "0";
+    end.value = String(segment.endTime);
+    end.addEventListener("change", () => {
+      const next = parseSegTimeInput(end.value);
+      if (next === null) {
+        end.value = String(segment.endTime);
+        return;
+      }
+      if (Number.isNaN(next) || next <= segment.startTime) {
+        end.value = String(segment.endTime);
+        logAction(
+          `结束时间非法（需 > 起 ${segment.startTime}s），已保留原值`,
+        );
+        return;
+      }
+      segment.endTime = next;
+      logAction(`分段 #${index + 1} 结束 → ${next}s`);
+      applyDemoSegmentsToPlayer();
+    });
 
     const remove = document.createElement("button");
     remove.className = "seg-item-remove";
@@ -363,10 +445,49 @@ function renderSegmentList(): void {
     });
 
     row.appendChild(label);
-    row.appendChild(time);
+    row.appendChild(start);
+    row.appendChild(end);
     row.appendChild(remove);
     panel.appendChild(row);
   });
+  refreshSegPositionOptions();
+}
+
+/**
+ * 刷新添加表单的「插入位置」下拉选项
+ *
+ * 选项：末尾追加 / 插入到最前 / 在每一段之前插入；
+ * 重建后尽量保留原有选择（失效则回落到末尾追加）。
+ */
+function refreshSegPositionOptions(): void {
+  const select = document.getElementById("seg-add-pos");
+  if (!(select instanceof HTMLSelectElement)) return;
+  const previous = select.value;
+  select.replaceChildren();
+
+  const appendOption = (value: string, text: string): void => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = text;
+    select.appendChild(option);
+  };
+
+  // "end" 表示追加到末尾；数字表示插入到该下标之前（0 = 最前）
+  appendOption("end", "追加到末尾");
+  appendOption("0", "插入到最前");
+  demoSegments.forEach((segment, index) => {
+    const title = segment.label || `分段 ${index + 1}`;
+    appendOption(String(index), `在「${title}」之前`);
+  });
+
+  // 保留原选择（仍存在时），否则回落到末尾追加
+  const stillValid =
+    previous === "end" ||
+    (previous !== "" &&
+      Number.isInteger(Number(previous)) &&
+      Number(previous) >= 0 &&
+      Number(previous) <= demoSegments.length);
+  select.value = stillValid ? previous : "end";
 }
 
 /**
@@ -515,63 +636,123 @@ async function fetchPreviewFrames(): Promise<string[]> {
 }
 
 /**
- * 拉取预览数据源（雪碧图与逐帧两种都兼容）
+ * ============================================
+ * 预览图模式（雪碧图 ↔ 逐帧 bin）运行期切换
+ * ============================================
+ * 模式状态与数据拉取分离：
+ * - previewMode 是页面级状态（URL `?preview=frames` 定初值，点击切换按钮修改）；
+ * - 拉取按模式走对应接口，所选形态不可用时自动回退到另一形态
+ *   （回退结果同步到按钮高亮，用户能看出实际生效的是哪条路径）；
+ * - 数据源经可变 provider 注入播放器，切换模式不重建播放器实例。
+ */
+
+/** 预览图模式：雪碧图（sprite.jpg + pvdata 裁切）或逐帧（preview.bin data URL） */
+type PreviewMode = "sprite" | "frames";
+
+/** 预览图拉取结果：source 为最终可用的数据源，effective 为实际生效的形态 */
+interface PreviewFetchResult {
+  source: DemoPreviewSource | string[] | null;
+  effective: PreviewMode | "none";
+}
+
+/** 当前预览图模式（URL 参数定初值：`?preview=frames` 强制逐帧，默认雪碧图） */
+let previewMode: PreviewMode =
+  new URLSearchParams(location.search).get("preview") === "frames"
+    ? "frames"
+    : "sprite";
+
+/** 可变预览 provider：数据源运行期可替换（模式切换 / 播放器重建共用） */
+const previewProviderHandle: MutablePreviewProvider =
+  createMutablePreviewProvider(null);
+
+/** index.json 的 data 载荷（雪碧图切片参数 + 就绪状态，B 站形状） */
+interface SpriteIndexData {
+  pvdata?: {
+    img_url?: string;
+    img_x_len?: number;
+    img_y_len?: number;
+    img_x_size?: number;
+    img_y_size?: number;
+  };
+  index?: number[];
+  sprite?: { status?: string };
+}
+
+/** 判定是否为 index.json 的 data 载荷（类型谓词窄化，替代 as 断言） */
+function isSpriteIndexData(value: unknown): value is SpriteIndexData {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * 拉取雪碧图数据源
  *
  * 接口：GET http://127.0.0.1:9101/videoshot/index.json
- * 优先用雪碧图（pvdata 的 img_url + img_x_len/img_y_len/img_x_size/img_y_size，B 站形状）；
- * 拿不到雪碧图参数时回退到逐帧 preview.bin。
- * URL 带 `?preview=frames` 可强制走逐帧，便于对比两条路径。
+ * 取 pvdata 的 img_url + img_x_len/img_y_len/img_x_size/img_y_size；
+ * 只在服务端确认雪碧图可用（sprite.status === "ready"）时才返回数据源，
+ * 否则 img_url 可能指向 404，预览区会整块空白。
  *
- * @returns 预览数据源（由 createPreviewProvider 包装为播放器可消费的 provider）
+ * @returns 雪碧图数据源；不可用返回 null
  */
-async function fetchProgressPreview(): Promise<
-  DemoPreviewSource | string[] | null
-> {
-  const forceFrames =
-    new URLSearchParams(location.search).get("preview") === "frames";
-
-  let spriteSource: DemoPreviewSource | null = null;
+async function fetchSpritePreviewSource(): Promise<DemoPreviewSource | null> {
   try {
     const response = await fetch(`${MOCK_SERVER_BASE}/videoshot/index.json`);
-    if (response.ok) {
-      const payload = (await response.json()) as {
-        data?: {
-          pvdata?: {
-            img_url?: string;
-            img_x_len?: number;
-            img_y_len?: number;
-            img_x_size?: number;
-            img_y_size?: number;
-          };
-          index?: number[];
-          sprite?: { status?: string };
-        };
-      };
-      const pv = payload.data?.pvdata;
-      // 只在服务端确认雪碧图可用时才走雪碧图模式；否则 img_url 可能指向 404，
-      // 预览区会整块空白（逐帧 preview.bin 才是可用的那条路）
-      const spriteReady =
-        payload.data?.sprite?.status === "ready" &&
-        pv?.img_url?.includes("sprite") === true;
-      if (spriteReady && pv?.img_url && pv.img_x_len && pv.img_y_len) {
-        spriteSource = {
-          imgUrl: `${MOCK_SERVER_BASE}${pv.img_url}`,
-          imgXLen: pv.img_x_len,
-          imgYLen: pv.img_y_len,
-          imgXSize: pv.img_x_size,
-          imgYSize: pv.img_y_size,
-          sliceCount: payload.data?.index?.length,
-        };
-      }
+    if (!response.ok) return null;
+    const payload: unknown = await response.json();
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      !("data" in payload) ||
+      !isSpriteIndexData(payload.data)
+    ) {
+      return null;
     }
+    const pv = payload.data.pvdata;
+    const spriteReady =
+      payload.data.sprite?.status === "ready" &&
+      pv?.img_url?.includes("sprite") === true;
+    if (spriteReady && pv?.img_url && pv.img_x_len && pv.img_y_len) {
+      return {
+        imgUrl: `${MOCK_SERVER_BASE}${pv.img_url}`,
+        imgXLen: pv.img_x_len,
+        imgYLen: pv.img_y_len,
+        imgXSize: pv.img_x_size,
+        imgYSize: pv.img_y_size,
+        sliceCount: payload.data.index?.length,
+      };
+    }
+    return null;
   } catch {
-    spriteSource = null;
+    return null;
+  }
+}
+
+/**
+ * 按模式拉取预览数据源（另一形态自动回退）
+ *
+ * - sprite 模式：优先雪碧图；雪碧图未就绪时回退逐帧 preview.bin；
+ * - frames 模式：优先逐帧 preview.bin；空（mock 未带 --video）时回退雪碧图。
+ *
+ * @param mode - 想要的预览形态
+ * @returns 实际生效的数据源与形态（供按钮高亮同步 / 日志提示）
+ */
+async function fetchProgressPreview(
+  mode: PreviewMode,
+): Promise<PreviewFetchResult> {
+  if (mode === "sprite") {
+    const sprite = await fetchSpritePreviewSource();
+    if (sprite) return { source: sprite, effective: "sprite" };
+    const frames = await fetchPreviewFrames();
+    return frames.length > 0
+      ? { source: frames, effective: "frames" }
+      : { source: null, effective: "none" };
   }
 
-  if (spriteSource && !forceFrames) return spriteSource;
-
   const frames = await fetchPreviewFrames();
-  return frames.length > 0 ? frames : spriteSource;
+  if (frames.length > 0) return { source: frames, effective: "frames" };
+  const sprite = await fetchSpritePreviewSource();
+  return sprite
+    ? { source: sprite, effective: "sprite" }
+    : { source: null, effective: "none" };
 }
 
 /**
@@ -910,6 +1091,55 @@ const MEDIA_LIST: MediaItem[] = [];
 const OBJECT_URLS: string[] = [];
 
 // ============================================
+// 预览图模式切换按钮（雪碧图 ↔ 逐帧 bin）
+// ============================================
+
+/** 预览模式按钮 id → 模式值映射（按钮为 SSR 静态输出，水合后绑定事件） */
+const PREVIEW_MODE_BUTTONS: ReadonlyMap<string, PreviewMode> = new Map([
+  ["btn-preview-sprite", "sprite"],
+  ["btn-preview-frames", "frames"],
+]);
+
+/**
+ * 同步预览模式按钮高亮态
+ *
+ * @param effective - 实际生效的形态（拉取回退后可能不同于所选模式）；"none" 时全部熄灭
+ */
+function syncPreviewModeButtons(effective: PreviewMode | "none"): void {
+  for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
+    const button = document.getElementById(buttonId);
+    if (button) button.classList.toggle("active", mode === effective);
+  }
+}
+
+// 水合后先按所选模式同步一次高亮（纠正 SSR 的默认输出；
+// 拉取完成 / 播放器重建后由 effective 再纠正回退场景）
+syncPreviewModeButtons(previewMode);
+
+for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
+  const button = document.getElementById(buttonId);
+  if (!button) continue;
+  button.addEventListener("click", () => {
+    previewMode = mode;
+    // 每次点击都重新拉取：既是模式切换，也是所选形态不可用后的「重试」
+    void fetchProgressPreview(mode).then((result) => {
+      // 数据源换到可变 provider：下一次进度条悬停即用新形态，无需重建播放器
+      previewProviderHandle.setSource(result.source);
+      syncPreviewModeButtons(result.effective);
+      appEventBus.emit("ACTION_LOG", {
+        action:
+          result.effective === "none"
+            ? "预览图无可用数据（雪碧图未就绪且 preview.bin 为空）"
+            : "预览图切换为 " +
+              (result.effective === "sprite" ? "雪碧图模式" : "逐帧 bin 模式") +
+              (result.effective !== mode ? "（所选形态不可用，已回退）" : ""),
+        timestamp: Date.now(),
+      });
+    });
+  });
+}
+
+// ============================================
 // 交互卡片：展示 / 编辑双模式状态与配置组装
 // ============================================
 
@@ -1217,8 +1447,8 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
   if (demoSegments.length === 0) {
     demoSegments = await fetchProgressSegments();
   }
-  const [preview, energy, danmakuList] = await Promise.all([
-    fetchProgressPreview(),
+  const [previewResult, energy, danmakuList] = await Promise.all([
+    fetchProgressPreview(previewMode),
     fetchEnergyProgress(),
     fetchDanmakuList(),
   ]);
@@ -1226,6 +1456,11 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
   // mock 弹幕汇入页面弹幕列表面板（本地发送的经 onSendSuccess 追加）
   danmakuPanelList = danmakuList;
   renderDanmakuList();
+
+  // 预览数据源写入可变 provider（供本次及后续模式切换复用），
+  // 并按实际生效形态同步切换按钮高亮（所选形态不可用被回退时用户可见）
+  previewProviderHandle.setSource(previewResult.source);
+  syncPreviewModeButtons(previewResult.effective);
 
   const current = MEDIA_LIST[targetIndex];
   const config: PlayerConfig = {
@@ -1241,8 +1476,10 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
         label: segment.label,
       })),
       // 预览图 Provider：demo 侧自行实现获取逻辑（雪碧图裁切 / 逐帧 URL），
-      // 播放器只在进度条悬停时按时间调用（ProgressPreview API，解耦数据来源）
-      previewProvider: createPreviewProvider(preview),
+      // 播放器只在进度条悬停时按时间调用（ProgressPreview API，解耦数据来源）。
+      // 用可变 provider：数据源已在上面拉好写入 handle，模式切换按钮
+      // 运行期 setSource 即可换源，无需重建播放器实例
+      previewProvider: previewProviderHandle.provider,
       // 高能进度条数据 Provider：demo 侧拉取 /x/player/pbp 并归一化后注入，
       // 播放器只负责绘制曲线（数据获取与绘制彻底解耦）
       energyProvider: () => energy,
@@ -2116,28 +2353,80 @@ wireDemoButton("btn-sub-seek", () => {
 });
 
 // ============================================
-// 分段进度条 API 演示按钮（progress.segments 运行时编辑）
+// 分段进度条 API（progress.segments 运行时增删改）
 // ============================================
 
-// 追加 30 秒新段：从最后一段 endTime 顺延（列表空则 0 起步），label 自动编号
-wireDemoButton("btn-seg-add", () => {
-  const last = demoSegments[demoSegments.length - 1];
-  const startTime = last ? last.endTime : 0;
-  const label = `分段${demoSegments.length + 1}`;
-  demoSegments.push({ startTime, endTime: startTime + 30, label });
-  logAction(`追加分段 "${label}": ${startTime}s - ${startTime + 30}s`);
-  applyDemoSegments();
-});
+/**
+ * 一键取当前播放时间填入指定输入框
+ *
+ * @param inputId - 目标 number 输入框 id
+ * @param fieldLabel - 日志里的字段名（起始 / 结束）
+ */
+const fillCurrentTime = (inputId: string, fieldLabel: string): void => {
+  const player = currentPlayer();
+  if (!player) return;
+  const input = document.getElementById(inputId);
+  if (!(input instanceof HTMLInputElement)) return;
+  const time = player.getCurrentTime();
+  input.value = time.toFixed(1);
+  logAction(`${fieldLabel}时间已取当前播放时间: ${time.toFixed(1)}s`);
+};
 
-// 编辑末段标题：label 追加「(已编辑)」标记
-wireDemoButton("btn-seg-edit", () => {
-  const last = demoSegments[demoSegments.length - 1];
-  if (!last) {
-    logAction("暂无分段可编辑（先拉取或追加分段）");
+// 起始 / 结束时间「取当前」按钮
+wireDemoButton("btn-seg-start-now", () =>
+  fillCurrentTime("seg-add-start", "起始"),
+);
+wireDemoButton("btn-seg-end-now", () => fillCurrentTime("seg-add-end", "结束"));
+
+// 添加分段：读取表单（文字 / 起止 / 插入位置），校验后按位置插入
+wireDemoButton("btn-seg-add-form", () => {
+  const labelInput = document.getElementById("seg-add-label");
+  const startInput = document.getElementById("seg-add-start");
+  const endInput = document.getElementById("seg-add-end");
+  const posSelect = document.getElementById("seg-add-pos");
+  if (
+    !(labelInput instanceof HTMLInputElement) ||
+    !(startInput instanceof HTMLInputElement) ||
+    !(endInput instanceof HTMLInputElement) ||
+    !(posSelect instanceof HTMLSelectElement)
+  ) {
     return;
   }
-  last.label = `${last.label}(已编辑)`;
-  logAction(`编辑末段 label → "${last.label}"`);
+
+  // 默认值：起始 = 当前播放时间，结束 = 起始 + 30
+  const player = currentPlayer();
+  const startParsed = parseSegTimeInput(startInput.value);
+  const startTime =
+    startParsed !== null && !Number.isNaN(startParsed)
+      ? startParsed
+      : (player?.getCurrentTime() ?? 0);
+  const endParsed = parseSegTimeInput(endInput.value);
+  const endTime =
+    endParsed !== null && !Number.isNaN(endParsed) ? endParsed : startTime + 30;
+
+  // 校验：0 ≤ 起 < 终
+  if (startTime < 0 || endTime <= startTime) {
+    logAction(
+      `添加失败：时间非法（起 ${startTime}s / 终 ${endTime}s，需 0 ≤ 起 < 终）`,
+    );
+    return;
+  }
+
+  // 插入位置："end" 追加到末尾；数字为插入到该下标之前（0 = 最前）
+  const posValue = posSelect.value;
+  const insertIndex =
+    posValue === "end"
+      ? demoSegments.length
+      : Math.min(Math.max(Number(posValue) || 0, 0), demoSegments.length);
+
+  const label =
+    labelInput.value.trim() || `分段 ${demoSegments.length + 1}`;
+  demoSegments.splice(insertIndex, 0, { startTime, endTime, label });
+  logAction(
+    `插入分段 "${label}": ${startTime}s - ${endTime}s（位置 #${insertIndex + 1}，共 ${demoSegments.length} 段）`,
+  );
+  // 清空文字便于连续添加；时间保留（常用于在同一时间点附近连续微调）
+  labelInput.value = "";
   applyDemoSegments();
 });
 
@@ -2155,6 +2444,10 @@ wireDemoButton("btn-seg-apply", () => {
   logAction(`setConfig 运行时应用 ${demoSegments.length} 段分段`);
   applyDemoSegments();
 });
+
+// 初始渲染一次：未创建播放器时列表与「插入位置」下拉也有可用状态
+// （此时添加的分段存于 demoSegments，随首次 rebuildPlayer 注入配置）
+renderSegmentList();
 
 // ============================================
 // 播放器核心 API 演示按钮（VideoPlayer 公开方法全量）
@@ -3022,6 +3315,147 @@ function buildTypeSelect(
   return select;
 }
 
+/**
+ * 通用调度字段分组：时间窗（timeStart/timeEnd）+ 定位（top/left）
+ *
+ * 四类卡片共用，change 提交调 updateCardContent 的调度补丁：
+ * - 时间窗展示模式立即重算窗口归属（入窗显示 / 出窗移除）
+ * - 定位变更走条目重建（卡片 DOM 按 --top/--left 重渲染）
+ * 「取当前」按钮一键填入当前播放时间并立即应用。
+ */
+function buildScheduleFields(
+  api: InteractionPluginAPI,
+  type: CardType,
+  index: number,
+  item: { timeStart?: number; timeEnd?: number; top: number; left: number },
+): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+
+  // ── 时间窗起始 ──
+  const startInput = document.createElement("input");
+  startInput.className = "ice-input ice-num";
+  startInput.type = "number";
+  startInput.step = "0.1";
+  startInput.min = "0";
+  startInput.value = item.timeStart !== undefined ? String(item.timeStart) : "";
+  const applyStartTime = (): void => {
+    const next = parseSegTimeInput(startInput.value);
+    if (next === null || Number.isNaN(next)) {
+      startInput.value =
+        item.timeStart !== undefined ? String(item.timeStart) : "";
+      return;
+    }
+    item.timeStart = next;
+    api.updateCardContent(type, index, { timeStart: next });
+    logAction(`updateCardContent("${type}", ${index}, { timeStart: ${next} })`);
+  };
+  startInput.addEventListener("change", applyStartTime);
+  const startNow = document.createElement("button");
+  startNow.className = "ice-mini";
+  startNow.type = "button";
+  startNow.textContent = "取当前";
+  startNow.addEventListener("click", () => {
+    const player = currentPlayer();
+    if (!player) return;
+    startInput.value = player.getCurrentTime().toFixed(1);
+    applyStartTime();
+  });
+  fragment.appendChild(
+    buildIceField("起始(秒)", wrapFieldControls(startInput, startNow)),
+  );
+
+  // ── 时间窗结束 ──
+  const endInput = document.createElement("input");
+  endInput.className = "ice-input ice-num";
+  endInput.type = "number";
+  endInput.step = "0.1";
+  endInput.min = "0";
+  endInput.value = item.timeEnd !== undefined ? String(item.timeEnd) : "";
+  const applyEndTime = (): void => {
+    const next = parseSegTimeInput(endInput.value);
+    if (next === null || Number.isNaN(next)) {
+      endInput.value = item.timeEnd !== undefined ? String(item.timeEnd) : "";
+      return;
+    }
+    item.timeEnd = next;
+    api.updateCardContent(type, index, { timeEnd: next });
+    logAction(`updateCardContent("${type}", ${index}, { timeEnd: ${next} })`);
+  };
+  endInput.addEventListener("change", applyEndTime);
+  const endNow = document.createElement("button");
+  endNow.className = "ice-mini";
+  endNow.type = "button";
+  endNow.textContent = "取当前";
+  endNow.addEventListener("click", () => {
+    const player = currentPlayer();
+    if (!player) return;
+    endInput.value = player.getCurrentTime().toFixed(1);
+    applyEndTime();
+  });
+  fragment.appendChild(
+    buildIceField("结束(秒)", wrapFieldControls(endInput, endNow)),
+  );
+
+  // ── 定位（顶部 / 左侧百分比，一行两输入） ──
+  const topInput = document.createElement("input");
+  topInput.className = "ice-input ice-num";
+  topInput.type = "number";
+  topInput.step = "1";
+  topInput.min = "0";
+  topInput.max = "100";
+  topInput.value = String(item.top);
+  topInput.addEventListener("change", () => {
+    const next = parseSegTimeInput(topInput.value);
+    if (next === null || Number.isNaN(next) || next > 100) {
+      topInput.value = String(item.top);
+      return;
+    }
+    item.top = next;
+    api.updateCardContent(type, index, { top: next });
+    logAction(`updateCardContent("${type}", ${index}, { top: ${next} })`);
+  });
+  const leftInput = document.createElement("input");
+  leftInput.className = "ice-input ice-num";
+  leftInput.type = "number";
+  leftInput.step = "1";
+  leftInput.min = "0";
+  leftInput.max = "100";
+  leftInput.value = String(item.left);
+  leftInput.addEventListener("change", () => {
+    const next = parseSegTimeInput(leftInput.value);
+    if (next === null || Number.isNaN(next) || next > 100) {
+      leftInput.value = String(item.left);
+      return;
+    }
+    item.left = next;
+    api.updateCardContent(type, index, { left: next });
+    logAction(`updateCardContent("${type}", ${index}, { left: ${next} })`);
+  });
+  const posRow = document.createElement("div");
+  posRow.className = "ice-field-pair";
+  posRow.appendChild(topInput);
+  const posGap = document.createElement("span");
+  posGap.className = "ice-label ice-label-gap";
+  posGap.textContent = "左侧(%)";
+  posRow.appendChild(posGap);
+  posRow.appendChild(leftInput);
+  fragment.appendChild(buildIceField("顶部(%)", posRow));
+
+  return fragment;
+}
+
+/** 输入框 + 小按钮的行内组合（输入占余宽，按钮跟随其后） */
+function wrapFieldControls(
+  input: HTMLInputElement,
+  button: HTMLButtonElement,
+): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "ice-field-pair";
+  wrap.appendChild(input);
+  wrap.appendChild(button);
+  return wrap;
+}
+
 /** guide 卡片分组：类型下拉 → updateCardContent({ guideType }) */
 function buildGuideGroup(
   api: InteractionPluginAPI,
@@ -3029,6 +3463,8 @@ function buildGuideGroup(
   index: number,
 ): HTMLElement {
   const group = buildIceGroup(`点赞关注卡片 #${index}`, "guideThree", index);
+  // 通用调度字段：时间窗 + 定位
+  group.appendChild(buildScheduleFields(api, "guideThree", index, item));
   const select = buildTypeSelect(
     [
       { value: 1, label: "1 · 点赞" },
@@ -3055,6 +3491,8 @@ function buildLinkGroup(
   index: number,
 ): HTMLElement {
   const group = buildIceGroup(`外链卡片 #${index}`, "link", index);
+  // 通用调度字段：时间窗 + 定位
+  group.appendChild(buildScheduleFields(api, "link", index, item));
   const input = document.createElement("input");
   input.className = "ice-input";
   input.type = "text";
@@ -3074,6 +3512,8 @@ function buildVoteGroup(
   index: number,
 ): HTMLElement {
   const group = buildIceGroup(`投票卡片 #${index}`, "vote", index);
+  // 通用调度字段：时间窗 + 定位
+  group.appendChild(buildScheduleFields(api, "vote", index, item));
 
   // 问题输入：纯文本 patch，卡片 DOM 精准更新（面板不重建）
   const questionInput = document.createElement("input");
@@ -3150,6 +3590,8 @@ function buildScoreGroup(
   index: number,
 ): HTMLElement {
   const group = buildIceGroup(`评分卡片 #${index}`, "score", index);
+  // 通用调度字段：时间窗 + 定位
+  group.appendChild(buildScheduleFields(api, "score", index, item));
 
   const titleInput = document.createElement("input");
   titleInput.className = "ice-input";
@@ -3180,7 +3622,7 @@ function buildScoreGroup(
   return group;
 }
 
-/** 同步模式切换 UI：两个模式按钮高亮态 + 编辑工具行/内容面板显隐 */
+/** 同步模式切换 UI：两个模式按钮高亮态 + 内容面板显隐 */
 const syncInteractionUi = (): void => {
   const viewBtn = document.getElementById("btn-interaction-view");
   if (viewBtn) {
@@ -3190,12 +3632,8 @@ const syncInteractionUi = (): void => {
   if (editBtn) {
     editBtn.classList.toggle("mode-active", interactionMode === "edit");
   }
-  const editRow = document.getElementById("interaction-edit-row");
-  if (editRow) {
-    // 行容器为 flex 布局会覆盖 HTML hidden 属性，须用 is-hidden 类控制隐藏
-    editRow.classList.toggle("is-hidden", interactionMode !== "edit");
-  }
   // 内容编辑面板：仅编辑模式显示，显示时按插件当前数据渲染
+  // （添加卡片表单两模式均可用：addXxx API 按当前时间窗口即时同步）
   const panel = document.getElementById("interaction-content-panel");
   if (panel) {
     panel.classList.toggle("is-hidden", interactionMode !== "edit");
@@ -3234,8 +3672,105 @@ const setInteractionMode = (mode: InteractionPluginMode): void => {
 wireDemoButton("btn-interaction-view", () => setInteractionMode("interactive"));
 wireDemoButton("btn-interaction-edit", () => setInteractionMode("edit"));
 
-/** 运行期添加交互卡片（随机落点 + 默认时间窗 2-12 秒） */
-const addCard = (kind: "guide" | "link" | "vote" | "score"): void => {
+// ============================================
+// 运行期添加卡片表单（时间窗 / 定位 / 类型专属字段，两模式均可用）
+// ============================================
+
+/**
+ * 按下拉选择渲染类型专属字段
+ *
+ * guide：类型下拉（点赞/投币/收藏）
+ * link：文案输入
+ * vote：问题输入 + 选项多行文本（每行一个选项）
+ * score：标题输入 + 图标下拉
+ */
+const renderIceKindFields = (): void => {
+  const wrap = document.getElementById("ice-add-kind-fields");
+  const typeSelect = document.getElementById("ice-add-type");
+  if (!wrap || !(typeSelect instanceof HTMLSelectElement)) return;
+  wrap.replaceChildren();
+
+  if (typeSelect.value === "guide") {
+    const select = buildTypeSelect(
+      [
+        { value: 1, label: "1 · 点赞" },
+        { value: 2, label: "2 · 投币" },
+        { value: 3, label: "3 · 收藏" },
+      ],
+      1,
+    );
+    select.id = "ice-add-guide-type";
+    wrap.appendChild(buildIceField("类型", select));
+    return;
+  }
+
+  if (typeSelect.value === "link") {
+    const input = document.createElement("input");
+    input.className = "ice-input";
+    input.type = "text";
+    input.id = "ice-add-link-content";
+    input.placeholder = "外链文案（默认自动编号）";
+    wrap.appendChild(buildIceField("文案", input));
+    return;
+  }
+
+  if (typeSelect.value === "vote") {
+    const questionInput = document.createElement("input");
+    questionInput.className = "ice-input";
+    questionInput.type = "text";
+    questionInput.id = "ice-add-vote-question";
+    questionInput.value = "运行期新增投票？";
+    questionInput.placeholder = "投票问题";
+    wrap.appendChild(buildIceField("问题", questionInput));
+
+    const optionsArea = document.createElement("textarea");
+    optionsArea.className = "ice-input ice-textarea";
+    optionsArea.id = "ice-add-vote-options";
+    optionsArea.rows = 3;
+    optionsArea.value = "支持\n反对";
+    optionsArea.placeholder = "每行一个选项";
+    wrap.appendChild(buildIceField("选项", optionsArea));
+    return;
+  }
+
+  // score：标题 + 图标类型
+  const titleInput = document.createElement("input");
+  titleInput.className = "ice-input";
+  titleInput.type = "text";
+  titleInput.id = "ice-add-score-title";
+  titleInput.value = "运行期新增评分";
+  titleInput.placeholder = "评分标题";
+  wrap.appendChild(buildIceField("标题", titleInput));
+
+  const select = buildTypeSelect(
+    [
+      { value: 1, label: "1 · 星星" },
+      { value: 2, label: "2 · 爱心" },
+      { value: 3, label: "3 · 柠檬" },
+    ],
+    1,
+  );
+  select.id = "ice-add-score-type";
+  wrap.appendChild(buildIceField("图标", select));
+};
+
+// 类型切换 → 重渲类型专属字段；初始渲染一次（默认 guide）
+const iceTypeSelect = document.getElementById("ice-add-type");
+if (iceTypeSelect instanceof HTMLSelectElement) {
+  iceTypeSelect.addEventListener("change", renderIceKindFields);
+}
+renderIceKindFields();
+
+// 起始 / 结束时间「取当前」按钮（与分段表单共用 fillCurrentTime）
+wireDemoButton("btn-ice-start-now", () =>
+  fillCurrentTime("ice-add-start", "起始"),
+);
+wireDemoButton("btn-ice-end-now", () =>
+  fillCurrentTime("ice-add-end", "结束"),
+);
+
+// 添加卡片：读取表单（类型 / 时间窗 / 定位 / 类型专属字段）组装并调 addXxx
+wireDemoButton("btn-ice-add", () => {
   const player = currentPlayer();
   if (!player) return;
   const api = player.getPlugin<InteractionPluginAPI>("interaction");
@@ -3243,58 +3778,117 @@ const addCard = (kind: "guide" | "link" | "vote" | "score"): void => {
     logAction("InteractionPlugin 未注册，无法添加卡片");
     return;
   }
-  // 随机落点：控制在容器安全区内（top 20-60% / left 25-75%）
-  const top = Math.round(20 + Math.random() * 40);
-  const left = Math.round(25 + Math.random() * 50);
-  // 默认时间窗 2-12 秒：切回展示模式播放经过该区间即可看到新增卡片
-  const timeStart = 2;
-  const timeEnd = 12;
-  switch (kind) {
-    case "guide":
-      api.addGuide({ top, left, timeStart, timeEnd });
-      logAction(`编辑模式 addGuide: top ${top}% / left ${left}%`);
-      break;
-    case "link":
-      api.addLink({
-        top,
-        left,
-        timeStart,
-        timeEnd,
-        linkContent: `外部链接卡片 #${api.getStatus().linkList.length}`,
-      });
-      logAction(`编辑模式 addLink: top ${top}% / left ${left}%`);
-      break;
-    case "vote":
-      api.addVote({
-        top,
-        left,
-        timeStart,
-        timeEnd,
-        question: "运行期新增投票？",
-        options: [{ optionText: "支持" }, { optionText: "反对" }],
-      });
-      logAction(`编辑模式 addVote: top ${top}% / left ${left}%`);
-      break;
-    case "score":
-      api.addScore({
-        top,
-        left,
-        timeStart,
-        timeEnd,
-        title: "运行期新增评分",
-        scoreType: 1,
-      });
-      logAction(`编辑模式 addScore: top ${top}% / left ${left}%`);
-      break;
+  const typeSelect = document.getElementById("ice-add-type");
+  const startInput = document.getElementById("ice-add-start");
+  const endInput = document.getElementById("ice-add-end");
+  const topInput = document.getElementById("ice-add-top");
+  const leftInput = document.getElementById("ice-add-left");
+  if (
+    !(typeSelect instanceof HTMLSelectElement) ||
+    !(startInput instanceof HTMLInputElement) ||
+    !(endInput instanceof HTMLInputElement) ||
+    !(topInput instanceof HTMLInputElement) ||
+    !(leftInput instanceof HTMLInputElement)
+  ) {
+    return;
   }
-  // 结构变更：内容编辑面板全量重建（新增卡片分组出现）
-  renderInteractionContentPanel();
-};
 
-wireDemoButton("btn-add-guide", () => addCard("guide"));
-wireDemoButton("btn-add-link", () => addCard("link"));
-wireDemoButton("btn-add-vote", () => addCard("vote"));
-wireDemoButton("btn-add-score", () => addCard("score"));
+  // 时间窗：默认起 = 当前播放时间、终 = 起 + 10；定位默认 top 40 / left 50
+  const startParsed = parseSegTimeInput(startInput.value);
+  const timeStart =
+    startParsed !== null && !Number.isNaN(startParsed)
+      ? startParsed
+      : player.getCurrentTime();
+  const endParsed = parseSegTimeInput(endInput.value);
+  const timeEnd =
+    endParsed !== null && !Number.isNaN(endParsed) ? endParsed : timeStart + 10;
+  if (timeStart < 0 || timeEnd <= timeStart) {
+    logAction(
+      `添加失败：时间窗非法（起 ${timeStart}s / 终 ${timeEnd}s，需 0 ≤ 起 < 终）`,
+    );
+    return;
+  }
+  const topParsed = parseSegTimeInput(topInput.value);
+  const top =
+    topParsed !== null && !Number.isNaN(topParsed)
+      ? Math.min(Math.max(topParsed, 0), 100)
+      : 40;
+  const leftParsed = parseSegTimeInput(leftInput.value);
+  const left =
+    leftParsed !== null && !Number.isNaN(leftParsed)
+      ? Math.min(Math.max(leftParsed, 0), 100)
+      : 50;
+
+  switch (typeSelect.value) {
+    case "guide": {
+      const select = document.getElementById("ice-add-guide-type");
+      const raw = select instanceof HTMLSelectElement ? Number(select.value) : 1;
+      const guideType = raw === 2 || raw === 3 ? raw : 1;
+      api.addGuide({ top, left, timeStart, timeEnd, type: guideType });
+      logAction(
+        `addGuide: ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%（播放到该区间即可看到）`,
+      );
+      break;
+    }
+    case "link": {
+      const input = document.getElementById("ice-add-link-content");
+      const content =
+        input instanceof HTMLInputElement && input.value.trim() !== ""
+          ? input.value.trim()
+          : `外部链接卡片 #${api.getStatus().linkList.length + 1}`;
+      api.addLink({ top, left, timeStart, timeEnd, linkContent: content });
+      logAction(
+        `addLink "${content}": ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%`,
+      );
+      break;
+    }
+    case "vote": {
+      const questionInput = document.getElementById("ice-add-vote-question");
+      const optionsArea = document.getElementById("ice-add-vote-options");
+      const question =
+        questionInput instanceof HTMLInputElement && questionInput.value.trim() !== ""
+          ? questionInput.value.trim()
+          : "运行期新增投票？";
+      const optionTexts =
+        optionsArea instanceof HTMLTextAreaElement
+          ? optionsArea.value
+              .split("\n")
+              .map((line) => line.trim())
+              .filter((line) => line !== "")
+          : [];
+      const options =
+        optionTexts.length > 0
+          ? optionTexts.map((text) => ({ optionText: text }))
+          : [{ optionText: "支持" }, { optionText: "反对" }];
+      api.addVote({ top, left, timeStart, timeEnd, question, options });
+      logAction(
+        `addVote "${question}"（${options.length} 选项）: ${timeStart}s-${timeEnd}s`,
+      );
+      break;
+    }
+    case "score": {
+      const titleInput = document.getElementById("ice-add-score-title");
+      const select = document.getElementById("ice-add-score-type");
+      const title =
+        titleInput instanceof HTMLInputElement && titleInput.value.trim() !== ""
+          ? titleInput.value.trim()
+          : "运行期新增评分";
+      const raw = select instanceof HTMLSelectElement ? Number(select.value) : 1;
+      const scoreType = raw === 2 || raw === 3 ? raw : 1;
+      api.addScore({ top, left, timeStart, timeEnd, title, scoreType });
+      logAction(
+        `addScore "${title}": ${timeStart}s-${timeEnd}s top ${top}% / left ${left}%`,
+      );
+      break;
+    }
+    default:
+      return;
+  }
+  // 结构变更：编辑模式下面板全量重建（新增卡片分组出现）
+  if (interactionMode === "edit") {
+    renderInteractionContentPanel();
+  }
+});
 
 // 重置交互数据：四列表整体替换为初始数据（updateData 编辑分支立即重建常显条目）
 wireDemoButton("btn-interaction-reset", () => {
@@ -3310,7 +3904,8 @@ wireDemoButton("btn-interaction-reset", () => {
   renderInteractionContentPanel();
 });
 
-// 关闭指定卡片：closeCard 对活跃条目生效（数据列表不变）
+// 关闭首个卡片：按 vote → link → score 顺序找第一张可关闭的卡片
+// （closeCard 对活跃条目生效，数据列表不变；guide 卡片无关闭概念）
 wireDemoButton("btn-interaction-close", () => {
   const player = currentPlayer();
   if (!player) return;
@@ -3319,8 +3914,22 @@ wireDemoButton("btn-interaction-close", () => {
     logAction("InteractionPlugin 未注册，无法关闭卡片");
     return;
   }
-  api.closeCard("vote", 0);
-  logAction('closeCard("vote", 0): 投票卡片 #0 已关闭（卡片未从数据移除）');
+  const status = api.getStatus();
+  const candidates: { type: CardType; label: string; list: unknown[] }[] = [
+    { type: "vote", label: "投票", list: status.voteList },
+    { type: "link", label: "外链", list: status.linkList },
+    { type: "score", label: "评分", list: status.scoreList },
+  ];
+  for (const candidate of candidates) {
+    if (candidate.list.length > 0) {
+      api.closeCard(candidate.type, 0);
+      logAction(
+        `closeCard("${candidate.type}", 0): ${candidate.label}卡片 #0 已关闭（卡片未从数据移除）`,
+      );
+      return;
+    }
+  }
+  logAction("暂无可关闭的卡片（vote / link / score 列表均为空）");
 });
 
 // 获取交互容器：getContainer 查询插件挂载的层容器

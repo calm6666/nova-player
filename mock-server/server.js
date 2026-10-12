@@ -833,6 +833,53 @@ function acceptDanmaku(input, source) {
 }
 
 /* ---------------------------------------------------------------------------
+ * 10b. 手动往历史弹幕池（list.so 的数据源）添加一条
+ * ------------------------------------------------------------------------- */
+
+// 手动弹幕的 rowId 从 100001 起：随机弹幕占用 1..1000，错开以后在 XML / 验证输出里一眼能认出来
+let manualRowIdSeq = 100000;
+
+/**
+ * 【和 acceptDanmaku 的分工】两条链路改的是两个数据面：
+ *   - acceptDanmaku：实时链路（dmHistory + SSE/WS/长轮询广播），发出去的东西**不进 list.so**；
+ *   - addHistoryDanmaku：历史池（historyDanmaku → /x/v1/dm/list.so），插完清掉 XML 缓存，
+ *     播放器/自测页下一次拉 list.so 就能看到 —— 这就是「实时往测试接口添加弹幕」。
+ * 校验/截断/归一化全部复用 acceptDanmaku 那套（normalizeTimeMs/normalizeMode/…），
+ * 两个入口对字段的宽容度保持一致，不会出现「POST 发得出去、这里加不进去」的不对称。
+ *
+ * @param {object} input  至少含 text；可选 timeSec/timeMs/mode/fontSize/color/uid/speed
+ * @returns {{record?: object, error?: string}}
+ */
+function addHistoryDanmaku(input) {
+  const text = typeof input.text === 'string' ? input.text.trim() : '';
+  if (!text) return { error: 'text 不能为空' };
+
+  manualRowIdSeq += 1;
+  // 时间夹到 [0, 片长-0.1]：落在片尾之外的弹幕播放器永远不会显示，等于白加（和随机生成同一条约束）
+  const timePoint = Math.min(
+    Math.max(0, normalizeTimeMs(input) / 1000),
+    Math.max(0, DURATION - 0.1),
+  );
+  const record = makeDanmaku(
+    timePoint,
+    text.slice(0, DM_TEXT_LIMIT),
+    normalizeMode(input.mode),
+    normalizeFontSize(input.fontSize),
+    normalizeColor(input.color),
+    normalizeUid(input.uid),
+    manualRowIdSeq,
+    DM_SPEEDS.includes(input.speed) ? input.speed : 'moderate',
+  );
+
+  // 直接 push 再整体排序：千条量级 sort 是微秒级，比手写二分插入省一个易错的边界分支
+  historyDanmaku.push(record);
+  historyDanmaku.sort((a, b) => a.timePoint - b.timePoint);
+  danmakuXmlCache = null; // list.so 的 XML 是缓存一次的（见 danmakuXml），必须清掉才会带上新弹幕
+  log(`手动添加历史弹幕 rowId=${record.rowId} @${record.timePoint.toFixed(1)}s "${record.text}"（list.so 现共 ${historyDanmaku.length} 条）`);
+  return { record };
+}
+
+/* ---------------------------------------------------------------------------
  * 11. WebSocket 实时弹幕 /danmaku/ws（手写 RFC6455，零依赖）
  * ---------------------------------------------------------------------------
  * 【为什么已经有 SSE 了还要 WebSocket】
@@ -1442,6 +1489,128 @@ async function getSpriteFile() {
 }
 
 /* ---------------------------------------------------------------------------
+ * 12b. 交互卡片（guide/link/vote/score 四类，页面可增删改）
+ * ------------------------------------------------------------------------- */
+
+/*
+ * 【形状必须和播放器侧对齐】QtPlayer 的 InteractionLayer / hili-player 的交互插件读的都是：
+ *   { guideList: [{type, top, left, timeStart, timeEnd}],
+ *     linkList:  [{top, left, linkContent, timeStart, timeEnd}],
+ *     voteList:  [{top, left, question, options: [{optionText, votes}], timeStart, timeEnd}],
+ *     scoreList: [{top, left, title, scoreType, timeStart, timeEnd}] }
+ * top/left 是百分比（相对内容区）、timeStart/timeEnd 是秒。
+ * 播放器只读自己认识的字段，所以元素里多带一个 id（编辑用）不影响消费方。
+ */
+const INTERACTION_KINDS = ['guide', 'link', 'vote', 'score'];
+
+// 默认数据照 hili-player demo 页的 INITIAL_INTERACTION_DATA（demo/entry-client.ts）：
+// 四类各一条、时间窗错开（2-12 / 4-14 / 6-16 / 8-18），拖动进度条能依次看到四张卡。
+const interactionStore = {
+  guide: [
+    { id: 'card-g1', type: 1, top: 30, left: 50, timeStart: 2, timeEnd: 12 },
+  ],
+  link: [
+    { id: 'card-l1', top: 55, left: 35, linkContent: 'Demo external video', timeStart: 4, timeEnd: 14 },
+  ],
+  vote: [
+    {
+      id: 'card-v1',
+      top: 70,
+      left: 60,
+      question: 'Pick one',
+      options: [
+        { optionText: 'Option A', votes: 3 },
+        { optionText: 'Option B', votes: 1 },
+      ],
+      timeStart: 6,
+      timeEnd: 16,
+    },
+  ],
+  score: [
+    { id: 'card-s1', top: 45, left: 70, title: 'Rate it', scoreType: 1, timeStart: 8, timeEnd: 18 },
+  ],
+};
+
+// 手动新增卡片的 id 序号。从 100 起：内置默认卡占用 card-g1/l1/v1/s1 这几个号，
+// 从 0 递增会分出 card-v1 这种和默认卡同号的 id（自测时踩过），findIndex 就会命中两张。
+let interactionCardSeq = 100;
+
+function clampPercent(value, fallback) {
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.min(100, Math.max(0, num)) : fallback;
+}
+
+function clampSec(value, fallback) {
+  const num = Number(value);
+  return Number.isFinite(num) && num >= 0 ? Math.min(num, DURATION) : fallback;
+}
+
+function pickEnum(value, allowed, fallback) {
+  const num = Number(value);
+  return allowed.includes(num) ? num : fallback;
+}
+
+function sanitizeText(value, fallback) {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 200) : fallback;
+}
+
+/**
+ * 白名单清洗一张卡片：只留播放器认识的字段 + 全部数值夹到合法域。
+ * 【为什么要夹】页面输入框是自由文本：top=250%、timeEnd=-5 这类值不会被播放器拒收，
+ * 但会渲染到屏幕外/永远不显示，表现成「加了卡片却看不见」—— 在服务端就掐掉。
+ *
+ * @param {string} kind  guide | link | vote | score
+ * @param {object} input 页面提交的原始对象
+ * @returns {{card?: object, error?: string}}
+ */
+function sanitizeInteractionCard(kind, input) {
+  if (!INTERACTION_KINDS.includes(kind)) return { error: `kind 必须是 ${INTERACTION_KINDS.join(' / ')}` };
+  if (input === null || typeof input !== 'object') return { error: 'card 必须是对象' };
+
+  const card = {
+    id: sanitizeText(input.id, ''),
+    top: clampPercent(input.top, 50),
+    left: clampPercent(input.left, 50),
+    timeStart: clampSec(input.timeStart, 0),
+    timeEnd: clampSec(input.timeEnd, 10),
+  };
+  if (card.timeEnd <= card.timeStart) card.timeEnd = card.timeStart + 5; // 空窗口 = 永不显示，兜住
+
+  if (kind === 'guide') {
+    card.type = pickEnum(input.type, [1, 2, 3], 1);
+  } else if (kind === 'link') {
+    card.linkContent = sanitizeText(input.linkContent, '这是一个什么视频');
+  } else if (kind === 'vote') {
+    card.question = sanitizeText(input.question, '投一票');
+    // 选项：页面按「文案|票数」一行一个提交，这里转回对象数组；
+    // 空数组兜成一条占位（VoteCard 对 0 选项的高度算式会得到一张只有标题的卡，看着像 bug）
+    const rawOptions = Array.isArray(input.options) ? input.options : [];
+    card.options = rawOptions
+      .map((opt) => ({
+        optionText: sanitizeText(opt && opt.optionText, '选项'),
+        votes: Math.max(0, Math.round(Number(opt && opt.votes)) || 0),
+      }))
+      .slice(0, 8);
+    if (card.options.length === 0) card.options = [{ optionText: '选项一', votes: 0 }];
+  } else {
+    card.title = sanitizeText(input.title, '给个评分吧');
+    card.scoreType = pickEnum(input.scoreType, [1, 2, 3], 1);
+  }
+
+  return { card };
+}
+
+/** GET /x/player/interaction 的响应体（播放器形状：guideList/linkList/voteList/scoreList） */
+function interactionResponse() {
+  return {
+    guideList: interactionStore.guide,
+    linkList: interactionStore.link,
+    voteList: interactionStore.vote,
+    scoreList: interactionStore.score,
+  };
+}
+
+/* ---------------------------------------------------------------------------
  * 13. 路由
  * ------------------------------------------------------------------------- */
 
@@ -1661,6 +1830,39 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ---- 4c. 手动往历史弹幕池（list.so 数据源）添加一条 ----------------------
+  // 和 /danmaku/send 的区别见 addHistoryDanmaku 的注释：
+  // 这条改的是 list.so 那个数据面（不广播），播放器重拉 /x/v1/dm/list.so 立刻可见。
+  if (pathname === '/danmaku/history') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { code: -405, message: '请用 POST 提交弹幕' });
+      return;
+    }
+
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch (err) {
+      sendJson(res, 400, { code: -400, message: String(err.message) });
+      return;
+    }
+
+    const result = addHistoryDanmaku(body);
+    if (result.error) {
+      sendJson(res, 400, { code: -400, message: result.error });
+      return;
+    }
+    sendJson(res, 200, {
+      code: 0,
+      data: {
+        rowId: result.record.rowId,
+        timePoint: result.record.timePoint,
+        count: historyDanmaku.length, // /healthz 的 danmakuCount 用的同一个数组，天然同步
+      },
+    });
+    return;
+  }
+
   // ---- 4b. WebSocket 地址被当成普通 HTTP 访问 ---------------------------
   // 走到这里说明请求没带 Upgrade 头（带了的会被 server.on('upgrade') 接走）。
   // 最常见的两种错法：用浏览器直接打开 ws:// 地址，或者客户端把 ws:// 写成了 http://。
@@ -1863,6 +2065,92 @@ async function handleRequest(req, res) {
         },
       },
     });
+    return;
+  }
+
+  // ---- 8b. 交互卡片（播放器拉取 + 页面增删改）------------------------------
+  // GET /x/player/interaction：播放器形状（guideList/linkList/voteList/scoreList）。
+  // QtPlayer 的 Main.qml fetchProgressMetaFrom() 和 hili-player demo 都按这个约定拉。
+  if (pathname === '/x/player/interaction' && isGet) {
+    const { aid, cid } = pickIds(url);
+    const data = interactionResponse();
+    const total = data.guideList.length + data.linkList.length
+      + data.voteList.length + data.scoreList.length;
+    log(`GET /x/player/interaction aid=${aid || '-'} cid=${cid || '-'} → ${total} 张卡片`);
+    sendJson(res, 200, { code: 0, message: '0', data });
+    return;
+  }
+
+  // GET /api/interaction/list：编辑 UI 用（和 /x/player/interaction 同一份数据，
+  // 但按 kind 分组返回，页面渲染列表少做一次反转）
+  if (pathname === '/api/interaction/list' && isGet) {
+    sendJson(res, 200, { code: 0, message: '0', data: interactionStore });
+    return;
+  }
+
+  // POST /api/interaction/upsert：{ kind, card }。card.id 非空且存在 → 改；否则 → 增。
+  if (pathname === '/api/interaction/upsert') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { code: -405, message: '请用 POST 提交卡片' });
+      return;
+    }
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch (err) {
+      sendJson(res, 400, { code: -400, message: String(err.message) });
+      return;
+    }
+
+    const { card, error } = sanitizeInteractionCard(String(body.kind || ''), body.card);
+    if (error) {
+      sendJson(res, 400, { code: -400, message: error });
+      return;
+    }
+
+    const list = interactionStore[String(body.kind)];
+    const at = card.id ? list.findIndex((c) => c.id === card.id) : -1;
+    if (at >= 0) {
+      list[at] = card; // 修改：原位替换（保持顺序，播放器里叠放次序不变）
+      log(`交互卡片已修改 ${body.kind}/${card.id}`);
+    } else {
+      interactionCardSeq += 1;
+      card.id = `card-${body.kind[0]}${interactionCardSeq}`; // 新增：服务端分配 id，页面不用自己造
+      list.push(card);
+      log(`交互卡片已新增 ${body.kind}/${card.id}`);
+    }
+    sendJson(res, 200, { code: 0, data: { card } });
+    return;
+  }
+
+  // POST /api/interaction/delete：{ kind, id }
+  if (pathname === '/api/interaction/delete') {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { code: -405, message: '请用 POST 提交' });
+      return;
+    }
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch (err) {
+      sendJson(res, 400, { code: -400, message: String(err.message) });
+      return;
+    }
+
+    const kind = String(body.kind || '');
+    if (!INTERACTION_KINDS.includes(kind)) {
+      sendJson(res, 400, { code: -400, message: `kind 必须是 ${INTERACTION_KINDS.join(' / ')}` });
+      return;
+    }
+    const list = interactionStore[kind];
+    const at = list.findIndex((c) => c.id === String(body.id || ''));
+    if (at < 0) {
+      sendJson(res, 404, { code: -404, message: `没有 ${kind}/${body.id} 这张卡片` });
+      return;
+    }
+    const [removed] = list.splice(at, 1);
+    log(`交互卡片已删除 ${kind}/${removed.id}`);
+    sendJson(res, 200, { code: 0, data: { id: removed.id } });
     return;
   }
 

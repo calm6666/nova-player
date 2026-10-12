@@ -28,7 +28,9 @@
  *
  * 内容编辑 API（updateCardContent / removeCard）：
  * - 文本字段原地更新 + contentVersion 自增 → 响应式文本精准更新 DOM
- * - 结构字段（形态/图标/选项数量）变化 → 条目按新数据重建
+ * - 结构字段（形态/图标/选项数量）信号化驱动 → 类名/图标/选项行
+ *   按信号精准增删替换，卡片 DOM 全程复用（不销毁重建）
+ * - 定位字段（top/left）为渲染期静态 style → 条目重建（唯一重建路径）
  *
  * 使用方式：
  * import { InteractionPlugin } from '@lumina/plugins';
@@ -566,7 +568,8 @@ class InteractionPluginClass implements InteractionPluginAPI {
     const { listIndex, item: card } = item;
     // 状态按列表下标获取/创建，跨 DOM 重建保留
     const state =
-      this.guideStates.get(listIndex) ?? createGuideCardState();
+      this.guideStates.get(listIndex) ??
+      createGuideCardState(card.type ?? 1);
     this.guideStates.set(listIndex, state);
 
     // 编辑模式：仅传 bindDrag（业务回调缺省 → 点击监听不注册）
@@ -636,7 +639,8 @@ class InteractionPluginClass implements InteractionPluginAPI {
   private readonly renderVoteEntry = (item: unknown): VNode => {
     if (!isVoteEntry(item)) return h("div", {});
     const { listIndex, item: card } = item;
-    const state = this.voteStates.get(listIndex) ?? createVoteCardState();
+    const state =
+      this.voteStates.get(listIndex) ?? createVoteCardState(card.options);
     this.voteStates.set(listIndex, state);
 
     // 编辑模式：仅传 bindDrag（onVoteSelect/onClose 缺省 → 监听不注册）
@@ -660,9 +664,17 @@ class InteractionPluginClass implements InteractionPluginAPI {
           (sum: number, opt: VoteOption): number => sum + (opt.votes ?? 0),
           0,
         );
+        // buffer 宽度揭示由 CSS 过渡承接：投票信号写入后渲染层内联
+        // 选项占比，scss transition: width 1s 从 0 平滑生长到占比
+        //（选中行蓝色 / 未选行灰色由 -selected/-select 类的 CSS 驱动）
         this.eventBus?.emit(PlayerEventEnum.INTERACTION_VOTE_SELECT, {
           voteIndex: listIndex,
           optionIndex,
+        });
+        // 将所选答案作为弹幕发送：经 DANMAKU_SEND 事件进入弹幕插件的
+        // 发送链路（按用户弹幕设置组装颜色/模式后上屏，uid=1 标记本人）
+        this.eventBus?.emit(PlayerEventEnum.DANMAKU_SEND, {
+          text: option.optionText,
         });
       },
       onClose: (): void => {
@@ -679,7 +691,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
   private readonly renderScoreEntry = (item: unknown): VNode => {
     if (!isScoreEntry(item)) return h("div", {});
     const { listIndex, item: card } = item;
-    const state = this.scoreStates.get(listIndex) ?? createScoreCardState();
+    const state =
+      this.scoreStates.get(listIndex) ??
+      createScoreCardState(card.scoreType);
     this.scoreStates.set(listIndex, state);
 
     // 编辑模式：仅传 bindDrag（onScoreSelect/onClose 缺省 → 监听不注册）
@@ -871,6 +885,9 @@ class InteractionPluginClass implements InteractionPluginAPI {
       remaining: signal(1),
       // 内容版本号：文本编辑时自增驱动响应式文本更新
       contentVersion: signal(0),
+      // 选项文案版本号：optionTexts 编辑时自增（字段级细腻更新，
+      // 不触发 question 等其他文本字段的响应式 effect）
+      optionsVersion: signal(0),
       removeTimer: null,
       dragCleanup: null,
     };
@@ -1206,7 +1223,29 @@ class InteractionPluginClass implements InteractionPluginAPI {
   }
 
   /**
-   * 结构性变更的条目重建：移除旧条目后按新数据重建
+   * 自增条目的选项文案版本号（字段级细腻更新）
+   * 仅 vote 卡片的选项文案 getter 读取该信号建立依赖：
+   * 更新/增删选项时自增，question 等其他文本字段的
+   * effect 不被触发（同理，question 编辑也不触碰选项行）
+   */
+  private bumpEntryOptions<T>(
+    active: Signal<ActiveCardEntry<T>[]>,
+    listIndex: number,
+  ): void {
+    const entry = active.value.find(
+      (candidate: ActiveCardEntry<T>) => candidate.listIndex === listIndex,
+    );
+    if (entry !== undefined) {
+      entry.optionsVersion.value = entry.optionsVersion.value + 1;
+    }
+  }
+
+  /**
+   * 定位变更的条目重建：移除旧条目后按新数据重建
+   *
+   * 仅 applySchedulePatch 的 top/left 补丁使用（定位为渲染期静态 style
+   * 变量，重建是变更定位的最小可靠路径；内容/形态/图标/选项编辑均已
+   * 信号化，不再经过此方法）。
    *
    * 编辑模式：显隐口径与展示模式一致（时间窗驱动），唯一差异在编辑
    * 体验——仍在当前显示窗口内的卡片以显示态立即重建（不播淡入过渡，
@@ -1301,11 +1340,14 @@ class InteractionPluginClass implements InteractionPluginAPI {
   /**
    * 编辑卡片内容
    *
-   * 文本字段（linkContent / question / optionTexts 等长 / title）：
-   * 原地更新 + contentVersion 自增 → 响应式文本精准更新 DOM；
-   * 结构字段（guideType / scoreType / optionTexts 变长）：
-   * 类名变体、图标与选项行数为渲染期静态结构，条目按新数据重建；
-   * 调度字段（timeStart/timeEnd/top/left）：见 applySchedulePatch。
+   * 全部内容字段均不重建卡片 DOM（细腻更新）：
+   * - 文本字段（linkContent / question / optionTexts / title）：
+   *   原地更新 + contentVersion 自增 → 响应式文本精准更新 DOM
+   * - 结构字段（guideType / scoreType / optionTexts 变长）：
+   *   信号化驱动 —— 形态类名切换 / 图标按值替换 / 选项行按引用增删，
+   *   卡片 DOM 与交互状态全程复用（无闪烁、视频暂停时也即时生效）
+   * - 调度字段（timeStart/timeEnd/top/left）：见 applySchedulePatch
+   *  （其中 top/left 为渲染期静态 style，是内容编辑唯一的重建路径）
    *
    * @param type - 卡片类型
    * @param index - 卡片在对应数据列表中的下标
@@ -1325,7 +1367,11 @@ class InteractionPluginClass implements InteractionPluginAPI {
         );
         if (patch.guideType !== undefined && patch.guideType !== item.type) {
           item.type = patch.guideType;
-          this.rebuildEntry(ENTRY_PREFIX.guideThree, index, item, this.guideActive);
+          // 形态为根类名变体（三连/关注区 DOM 恒在、CSS 显隐）：
+          // 写入信号由类名表达式原位切换，卡片 DOM 不销毁重建；
+          // 卡片未挂载时无状态可写，数据已更新，下次创建按新形态渲染
+          const state = this.guideStates.get(index);
+          if (state) state.guideTypeSignal.value = patch.guideType;
         }
         return;
       }
@@ -1360,24 +1406,32 @@ class InteractionPluginClass implements InteractionPluginAPI {
           this.bumpEntryContent(this.voteActive, index);
         }
         if (patch.optionTexts !== undefined) {
-          const sameLength = patch.optionTexts.length === item.options.length;
-          if (sameLength) {
-            // 等长：原地改写各选项文案 + 版本号自增（不重建 DOM）
-            patch.optionTexts.forEach((text: string, i: number): void => {
-              const option = item.options[i];
-              if (option) option.optionText = text;
-            });
-            this.bumpEntryContent(this.voteActive, index);
-          } else {
-            // 变长：选项行数为渲染期静态结构，替换数组并重建条目
-            item.options = patch.optionTexts.map((text: string): VoteOption => {
-              const previous = item.options.find(
-                (candidate: VoteOption): boolean =>
-                  candidate.optionText === text,
-              );
-              return { optionText: text, votes: previous?.votes };
-            });
-            this.rebuildEntry(ENTRY_PREFIX.vote, index, item, this.voteActive);
+          const texts = patch.optionTexts;
+          const oldCount = item.options.length;
+          const overlap = Math.min(texts.length, oldCount);
+          // 重叠区间：原地改写文案（保留票数与对象引用 → For 复用既有行）
+          for (let i = 0; i < overlap; i += 1) {
+            const option = item.options[i];
+            if (option) option.optionText = texts[i];
+          }
+          // 尾部增删：新增选项 push 新对象 / 多余选项截断。
+          // 仅尾部操作保证既有选项位置与引用稳定，For 仅对差异行
+          // 创建/销毁 DOM，卡片 DOM 不销毁重建
+          for (let i = oldCount; i < texts.length; i += 1) {
+            item.options.push({ optionText: texts[i] });
+          }
+          if (oldCount > texts.length) {
+            item.options.length = texts.length;
+          }
+          // 字段级细腻更新：只自增选项文案版本号，question 等
+          // 其他文本字段的响应式 effect 不被触发
+          this.bumpEntryOptions(this.voteActive, index);
+          // 数量变化时同步选项信号：For 按引用 diff 精准增删行；
+          // 等长时数组内容未变信号无需重写，文案更新已由版本号驱动。
+          // 卡片未挂载时无状态可写，数据已更新，下次创建按新选项渲染
+          if (texts.length !== oldCount) {
+            const state = this.voteStates.get(index);
+            if (state) state.optionsSignal.value = [...item.options];
           }
         }
         return;
@@ -1398,8 +1452,11 @@ class InteractionPluginClass implements InteractionPluginAPI {
         }
         if (patch.scoreType !== undefined && patch.scoreType !== item.scoreType) {
           item.scoreType = patch.scoreType;
-          // 图标为渲染期静态结构，类型变化触发条目重建
-          this.rebuildEntry(ENTRY_PREFIX.score, index, item, this.scoreActive);
+          // 图标类型经单元素 For 渲染：写入 [新类型] 按值替换图标 VNode，
+          // 评分项容器/数值气泡/类名全部复用，卡片 DOM 不销毁重建；
+          // 卡片未挂载时无状态可写，数据已更新，下次创建按新图标渲染
+          const state = this.scoreStates.get(index);
+          if (state) state.scoreIconList.value = [patch.scoreType];
         }
         return;
       }

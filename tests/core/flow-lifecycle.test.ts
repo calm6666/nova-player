@@ -16,7 +16,7 @@
  * signal 变化仍能驱动 DOM 更新。
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   h,
   defineComponent,
@@ -237,5 +237,159 @@ describe('控制流（Show）生命周期', () => {
     state.set('app.value', 'v4');
     await flush();
     expect(container.querySelector('span')?.textContent).toBe('v4');
+  });
+});
+
+/**
+ * For 区间 diff 回归测试
+ *
+ * 覆盖头尾同步扫描 + 中间区间 keyed diff + LIS 移动最小化算法：
+ * - 同 key 新数组 / 尾部追加 / 中间删除：头尾同步区零操作（不重渲染、不移动 DOM）
+ * - 重排：只有不在 LIS 中的复用节点才 insertBefore
+ * - 混合变化 / 清空 / 无 keyFn：最终 DOM 顺序正确
+ */
+describe('控制流（For）区间 diff', () => {
+  /**
+   * 构建带 key 的字符串列表测试环境
+   * @returns container（宿主容器）/ itemsSig（列表 signal）/
+   *          renderedKeys（每次 mount 的 render 调用记录）/ order（当前 DOM 顺序）
+   */
+  const setupList = () => {
+    const container = document.createElement('div');
+    const itemsSig = signal<string[]>([]);
+    /** render 调用过的 key（仅新 mount 追加，复用不调用） */
+    const renderedKeys: string[] = [];
+
+    mount(
+      h(For, {
+        each: () => itemsSig.value,
+        key: (item: string): string => item,
+        render: (item: string) => {
+          renderedKeys.push(item);
+          return h('li', { class: `item-${item}` }, item);
+        },
+      }),
+      container,
+    );
+
+    /** 读取当前 DOM 顺序（li 文本拼接，如 "a,b,c"） */
+    const order = (): string =>
+      Array.from(container.querySelectorAll('li'))
+        .map((li) => li.textContent)
+        .join(',');
+
+    return { container, itemsSig, renderedKeys, order };
+  };
+
+  it('首挂载：按顺序渲染全部列表项', async () => {
+    const { itemsSig, renderedKeys, order } = setupList();
+    itemsSig.value = ['a', 'b', 'c'];
+    await flush();
+    expect(order()).toBe('a,b,c');
+    expect(renderedKeys).toEqual(['a', 'b', 'c']);
+  });
+
+  it('同 key 新数组重新赋值：头尾同步全命中，零重渲染零 DOM 移动', async () => {
+    const { container, itemsSig, renderedKeys, order } = setupList();
+    itemsSig.value = ['a', 'b', 'c', 'd', 'e'];
+    await flush();
+    expect(renderedKeys.length).toBe(5);
+
+    const insertSpy = vi.spyOn(container, 'insertBefore');
+    // 全新数组引用、相同 key 顺序（模拟列表整体重建，如重新拉取同页数据）
+    itemsSig.value = ['a', 'b', 'c', 'd', 'e'];
+    await flush();
+
+    expect(order()).toBe('a,b,c,d,e');
+    expect(renderedKeys.length).toBe(5); // 全部复用，不重新 render
+    expect(insertSpy).not.toHaveBeenCalled(); // 头尾同步：零 DOM 移动
+    insertSpy.mockRestore();
+  });
+
+  it('尾部追加：仅 mount 追加项，已有项零重渲染', async () => {
+    const { itemsSig, renderedKeys, order } = setupList();
+    itemsSig.value = ['a', 'b', 'c'];
+    await flush();
+    itemsSig.value = ['a', 'b', 'c', 'd', 'e'];
+    await flush();
+    expect(order()).toBe('a,b,c,d,e');
+    // 只有 d / e 是新 mount，a / b / c 复用
+    expect(renderedKeys).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  it('中间删除：不触发任何 mount，DOM 顺序保持正确', async () => {
+    const { itemsSig, renderedKeys, order } = setupList();
+    itemsSig.value = ['a', 'b', 'c', 'd', 'e'];
+    await flush();
+    // 删除中间的 b 和 d（头尾 a...e 同步跳过）
+    itemsSig.value = ['a', 'c', 'e'];
+    await flush();
+    expect(order()).toBe('a,c,e');
+    // 没有新 mount，只有 b / d 被 destroy
+    expect(renderedKeys).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  it('重排（末尾移到开头）：非 LIS 节点移动，DOM 顺序正确', async () => {
+    const { container, itemsSig, renderedKeys, order } = setupList();
+    itemsSig.value = ['a', 'b', 'c', 'd'];
+    await flush();
+    const insertSpy = vi.spyOn(container, 'insertBefore');
+    itemsSig.value = ['d', 'a', 'b', 'c'];
+    await flush();
+    expect(order()).toBe('d,a,b,c');
+    // 全部复用，无重渲染
+    expect(renderedKeys.length).toBe(4);
+    // LIS = [a,b,c] 原位不动，仅 d 移动 1 次
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+    insertSpy.mockRestore();
+  });
+
+  it('混合变化（删除 + 新增 + 重排）：最终 DOM 顺序与 key 一致', async () => {
+    const { itemsSig, order } = setupList();
+    itemsSig.value = ['a', 'b', 'c', 'd', 'e'];
+    await flush();
+    // 删 b / d，新增 x / y，e 移到 x 前面
+    itemsSig.value = ['a', 'e', 'x', 'c', 'y'];
+    await flush();
+    expect(order()).toBe('a,e,x,c,y');
+  });
+
+  it('清空列表：全部销毁', async () => {
+    const { itemsSig, order } = setupList();
+    itemsSig.value = ['a', 'b'];
+    await flush();
+    itemsSig.value = [];
+    await flush();
+    expect(order()).toBe('');
+  });
+
+  it('无 keyFn（item 引用作 key）：追加时已有项复用', async () => {
+    const container = document.createElement('div');
+    const itemA = { id: 'a' };
+    const itemB = { id: 'b' };
+    const itemsSig = signal<Array<{ id: string }>>([itemA]);
+    let renderCount = 0;
+
+    mount(
+      h(For, {
+        each: () => itemsSig.value,
+        render: (item: { id: string }) => {
+          renderCount += 1;
+          return h('li', {}, item.id);
+        },
+      }),
+      container,
+    );
+    await flush();
+    expect(renderCount).toBe(1);
+
+    // itemA 引用未变 → 复用；itemB 新引用 → mount
+    itemsSig.value = [itemA, itemB];
+    await flush();
+    expect(renderCount).toBe(2);
+    const texts = Array.from(container.querySelectorAll('li')).map(
+      (li) => li.textContent,
+    );
+    expect(texts).toEqual(['a', 'b']);
   });
 });

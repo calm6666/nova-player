@@ -118,6 +118,12 @@ export const LeftControls = defineComponent<
   const nextConfigSignal = signal<boolean>(true);
   const segmentsSignal = signal<boolean>(false);
 
+  /**
+   * 时间编辑态 Signal：true 时隐藏时间文本、显示 seek 输入框
+   * 通过响应式 style 绑定驱动两个元素切换（编译器包装为 __reactiveAttrs）
+   */
+  const timeEditingSignal = signal<boolean>(false);
+
   /** 从状态管理器读取当前时长与当前时间，用于章节按钮等非响应式路径的初始值 */
   const duration = state?.get(PlayerStateKeyEnum.DURATION) ?? 0;
   const currentTime = state?.get(PlayerStateKeyEnum.CURRENT_TIME) ?? 0;
@@ -134,6 +140,12 @@ export const LeftControls = defineComponent<
   const playOrPauseIconBtnRef = useTemplateRef<LottieIconApi>(
     lifecycle,
     "playOrPauseIconBtnRef",
+  );
+
+  /** 时间 seek 输入框 DOM 引用（进入编辑态时赋值 / focus / select） */
+  const timeSeekInputRef = useTemplateRef<HTMLInputElement>(
+    lifecycle,
+    "timeSeekInputRef",
   );
 
   // ============================================
@@ -194,6 +206,96 @@ export const LeftControls = defineComponent<
       playOrPauseIconBtnRef.value?.advanceSlot();
     }
     playOrPauseIconBtnRef.value?.play();
+  };
+
+  // ============================================
+  // 时间点击编辑（点击时间 → 显示 input → 校验格式 → seek）
+  // ============================================
+
+  /**
+   * 时间输入框的合法格式：可选小时位 + 分 + 秒
+   * - "12:34"     → 12 分 34 秒
+   * - "1:02:03"   → 1 小时 2 分 3 秒
+   * - 分 / 秒必须 ≤ 59（[0-5]?\d 两位内约束），小时位不限（由时长上限兜底）
+   */
+  const TIME_INPUT_PATTERN = /^(?:(\d+):)?([0-5]?\d):([0-5]\d)$/;
+
+  /**
+   * 解析时间输入字符串为秒数
+   * @param raw - 用户输入的原始字符串
+   * @returns 对应秒数；格式非法时返回 null
+   */
+  const parseTimeInput = (raw: string): number | null => {
+    const match = TIME_INPUT_PATTERN.exec(raw.trim());
+    if (!match) return null;
+    const hours = match[1] !== undefined ? Number.parseInt(match[1], 10) : 0;
+    const minutes = Number.parseInt(match[2], 10);
+    const seconds = Number.parseInt(match[3], 10);
+    return hours * 3600 + minutes * 60 + seconds;
+  };
+
+  /**
+   * 进入时间编辑态：隐藏时间文本、显示输入框
+   * 输入框初值取当前播放时间（是否带小时位与时间显示格式保持一致）
+   * rAF 等待响应式 style 应用到 DOM 后再 focus + select 全选
+   */
+  const enterTimeEditMode = (): void => {
+    if (timeEditingSignal.value) return;
+    timeEditingSignal.value = true;
+    requestAnimationFrame(() => {
+      const input = timeSeekInputRef.value;
+      // rAF 回调执行时可能已退出编辑态（快速点击场景），需再次确认
+      if (!input || !timeEditingSignal.value) return;
+      input.value = formatTime(
+        currentTimeSignal.value ?? 0,
+        (durationSignal.value ?? 0) >= 3600,
+      );
+      input.focus();
+      input.select();
+    });
+  };
+
+  /**
+   * 提交时间 seek：校验格式与时长上限
+   * - 格式非法或超出视频时长：仅退出编辑态，不 seek
+   * - 合法：退出编辑态并发射 seek 事件（父组件 Controls 转发给播放器）
+   */
+  const commitTimeSeek = (): void => {
+    if (!timeEditingSignal.value) return;
+    // 先读取输入值再翻转编辑态（翻转后输入框即将被 display:none 隐藏）
+    const raw = timeSeekInputRef.value?.value ?? "";
+    timeEditingSignal.value = false;
+    const seconds = parseTimeInput(raw);
+    if (seconds === null) return;
+    const total = durationSignal.value ?? 0;
+    if (total > 0 && seconds > total) return;
+    lifecycle.emit?.("seek", seconds);
+  };
+
+  /** 取消时间编辑（Esc）：仅退出编辑态，不 seek */
+  const cancelTimeEdit = (): void => {
+    timeEditingSignal.value = false;
+  };
+
+  /**
+   * 输入框失焦：点击输入框外部时提交 seek
+   * 守卫说明：Enter / Esc 提交会先置编辑态为 false，
+   * 随后 display:none 引发的连锁 blur 由该守卫拦截，避免重复 seek
+   */
+  const handleTimeInputBlur = (): void => {
+    if (!timeEditingSignal.value) return;
+    commitTimeSeek();
+  };
+
+  /** 输入框键盘事件：Enter 提交 seek，Escape 取消编辑 */
+  const handleTimeInputKeydown = (event: KeyboardEvent): void => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitTimeSeek();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      cancelTimeEdit();
+    }
   };
 
   /**
@@ -368,7 +470,12 @@ export const LeftControls = defineComponent<
       ),
     /** 渲染下一个按钮（Show 控制流包裹，同 prev） */
     next: () => h(Show, { when: isNextVisible }, nextButtonVNode()),
-    /** 渲染时间显示区域，包含当前时间和总时长（响应式文本，signal 变化自动更新 Text 节点） */
+    /**
+     * 渲染时间显示区域，包含 seek 输入框 + 当前时间/总时长文本
+     * - 响应式文本：signal 变化自动更新 Text 节点
+     * - 时间编辑：timeEditingSignal 驱动 input / label 的 display 切换
+     *   （style 对象内读取 .value，编译器包装为 __reactiveAttrs，signal 变化自动应用样式）
+     */
     time: () =>
       h(
         "div",
@@ -377,17 +484,31 @@ export const LeftControls = defineComponent<
           id: "playerCtrlTimeSeekInput",
           class: "nova-player-ctrl-time-seek",
           type: "text",
-          value: "0:00",
-          style: "display: none;",
+          ref: "timeSeekInputRef",
+          // 编辑态显示输入框，非编辑态隐藏（value 由 enterTimeEditMode 命令式赋值）
+          style: { display: timeEditingSignal.value ? "" : "none" },
+          onKeydown: handleTimeInputKeydown,
+          onBlur: handleTimeInputBlur,
         }),
         h(
           "div",
-          { class: "nova-player-ctrl-time-label" },
+          {
+            class: "nova-player-ctrl-time-label",
+            // 编辑态隐藏时间文本（与输入框互斥显示）
+            style: { display: timeEditingSignal.value ? "none" : "" },
+            // 点击时间进入编辑态
+            onClick: enterTimeEditMode,
+          },
           // 零参箭头函数 = 显式响应式 getter 协议（与 Solid 的 {() => expr} 一致）：
           // 编译器包装为 _reactiveText(() => formatTime(...))，mount 建 Text 节点 + effect，
           // currentTimeSignal 变化时自动更新 textContent，无需手动 el.textContent = ...
           h("span", { class: "nova-player-ctrl-time-current" }, () =>
-            formatTime(currentTimeSignal.value ?? 0),
+            // 时长 ≥ 1 小时强制带小时位（如 00:00:00），避免播放过程中
+            // 当前时间在 "MM:SS" / "HH:MM:SS" 之间来回切换
+            formatTime(
+              currentTimeSignal.value ?? 0,
+              (durationSignal.value ?? 0) >= 3600,
+            ),
           ),
           h("span", { class: "nova-player-ctrl-time-divide" }, "/"),
           h("span", { class: "nova-player-ctrl-time-duration" }, () =>

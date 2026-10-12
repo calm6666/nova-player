@@ -56,6 +56,16 @@ export const Slider = defineComponent<SliderProps>((props, lifecycle: ComponentL
   const step = props.step ?? 1;
 
   /**
+   * 是否为离散步长模式：带 dot 档位（marks）或显式 step 均视为离散
+   * 离散模式下拖动与点击统一走「绝对定位 + 档位吸附」：
+   * dot 直接跳到鼠标位置对应的最近档位，步长即相邻档位间距；
+   * 连续模式（无 marks 且 step 为 1）保持增量拖拽，dot 跟随鼠标移动量
+   */
+  const isDiscrete =
+    (props.marks !== null && props.marks !== undefined && props.marks.length > 0) ||
+    step !== 1;
+
+  /**
    * 响应式信号：当前滑块值 (0-100)
    * 驱动进度条宽度（响应式 style）与数值文本（_reactiveText），
    * 替代旧的 currentValue 变量 + updateProgressBar 命令式 DOM 更新
@@ -144,7 +154,8 @@ export const Slider = defineComponent<SliderProps>((props, lifecycle: ComponentL
     if (!isBrowser()) return;
     isDragging = true;
 
-    if (step === 1) {
+    // 增量拖拽（连续模式）才需要记录起点 X；离散模式拖动直接绝对定位吸附
+    if (!isDiscrete) {
       startX = event.clientX;
     }
 
@@ -163,7 +174,8 @@ export const Slider = defineComponent<SliderProps>((props, lifecycle: ComponentL
       return;
     }
 
-    if (step !== 1) {
+    if (isDiscrete) {
+      // 离散模式：绝对定位 + 档位吸附（带 marks 时吸附最近档位，步长 = 档位间距）
       valueSignal.value = calculateValueFromPosition(event.clientX);
     } else {
       /** 进度条容器的边界矩形 */

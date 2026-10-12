@@ -38,16 +38,62 @@ function hasPlayerInstance(video: HTMLVideoElement): video is VideoWithPlayer {
   return 'dash' in video || 'hls' in video || 'flv' in video;
 }
 
-function isDashPlayer(player: DashPlayer | HlsPlayer | FlvPlayer | null): player is DashPlayer {
-  return player !== null && 'getCurrentTrackFor' in player;
+function isDashPlayer(player: unknown): player is DashPlayer {
+  return typeof player === 'object' && player !== null && 'getCurrentTrackFor' in player;
 }
 
-function isHlsPlayer(player: DashPlayer | HlsPlayer | FlvPlayer | null): player is HlsPlayer {
-  return player !== null && 'levels' in player;
+function isHlsPlayer(player: unknown): player is HlsPlayer {
+  return typeof player === 'object' && player !== null && 'levels' in player;
 }
 
 function hasCodec(track: unknown): track is { codec?: string } {
   return typeof track === 'object' && track !== null && 'codec' in track;
+}
+
+/**
+ * 从原生播放器实例读取当前选中清晰度的静态码率
+ *
+ * 实例来源：StreamPlugin.getNativePlayer()（hls.js 的 Hls 实例 /
+ * dash.js 的 MediaPlayer 实例）；flv.js 与原生播放无静态码率概念，
+ * 返回 null 由调用方回退到其它采样方式（如 webkitDecodedByteCount 差分）。
+ *
+ * 读取逻辑与 MediaPlayerMonitor.collectBitrateData 的 DASH/HLS 分支一致。
+ *
+ * @param instance - 原生播放器实例（unknown，经类型谓词收窄）
+ * @returns 码率三元组（bps）；实例不可识别 / 未就绪时返回 null
+ */
+export function readNativeBitrate(
+  instance: unknown,
+): { totalBitrate: number; videoBitrate: number; audioBitrate: number } | null {
+  if (isDashPlayer(instance)) {
+    try {
+      const videoRepresentation = instance.getCurrentRepresentationForType?.('video');
+      const audioRepresentation = instance.getCurrentRepresentationForType?.('audio');
+      const videoBitrate = videoRepresentation?.bandwidth || 0;
+      const audioBitrate = audioRepresentation?.bandwidth || 0;
+      return { totalBitrate: videoBitrate + audioBitrate, videoBitrate, audioBitrate };
+    } catch (e) {
+      logger.error('Failed to read DASH bitrate:', e);
+      return null;
+    }
+  }
+  if (isHlsPlayer(instance)) {
+    try {
+      let videoBitrate = 0;
+      let audioBitrate = 0;
+      if (instance.levels && instance.currentLevel >= 0) {
+        videoBitrate = instance.levels[instance.currentLevel]?.bitrate || 0;
+      }
+      if (instance.audioTracks && instance.audioTrack >= 0) {
+        audioBitrate = instance.audioTracks[instance.audioTrack]?.bitrate || 0;
+      }
+      return { totalBitrate: videoBitrate + audioBitrate, videoBitrate, audioBitrate };
+    } catch (e) {
+      logger.error('Failed to read HLS bitrate:', e);
+      return null;
+    }
+  }
+  return null;
 }
 
 /** 默认配置 */

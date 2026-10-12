@@ -913,6 +913,12 @@ export class VideoPlayer
       /** 缓冲速度数据源（字节/秒）：流媒体插件统计优先，原生由 PlayerDocker 回退采样 */
       getStreamDownloadSpeed: () => this.getStreamDownloadSpeed(),
       /**
+       * 原生流媒体播放器实例提供者（dash.js / hls.js / flv.js 实例）：
+       * 由 PlayerDocker 转发给 VideoInfo，供码率曲线等统计监控读取库原生数据
+       */
+      getNativeStreamPlayer: () =>
+        this.streamMiddleware?.getActivePlugin()?.getNativePlayer?.() ?? null,
+      /**
        * 预览图提供者（progress.previewProvider 配置注入）
        * 进度条悬停时由 ProgressBar 按时间调用，数据获取逻辑完全由外部实现
        */

@@ -714,17 +714,17 @@ img {
       }
     }
 
-    .nova-player-ctrl-setting-box {
-      .nova-player-ctrl-setting-handoff-title,
-      .nova-player-ctrl-setting-aspect-title,
-      .nova-player-ctrl-setting-codec-title,
-      .nova-player-ctrl-setting-loudness-title,
-      .nova-player-ctrl-setting-others-title,
-      .nova-player-ctrl-setting-more-text,
-      .nova-player-ctrl-seting-menu-left .ui-switch-name {
-        font-size: 16px;
-      }
-    }
+    // .nova-player-ctrl-setting-box {
+    //   .nova-player-ctrl-setting-handoff-title,
+    //   .nova-player-ctrl-setting-aspect-title,
+    //   .nova-player-ctrl-setting-codec-title,
+    //   .nova-player-ctrl-setting-loudness-title,
+    //   .nova-player-ctrl-setting-others-title,
+    //   .nova-player-ctrl-setting-more-text,
+    //   .nova-player-ctrl-seting-menu-left .ui-switch-name {
+    //     font-size: 16px;
+    //   }
+    // }
 
     .nova-player-dm-setting-wrap {
       .nova-player-dm-setting-box {
@@ -819,6 +819,15 @@ img {
         .nova-player-top-left-title {
           margin-bottom: 12px;
           display: block;
+        }
+      }
+
+      .nova-player-ctrl-time {
+        .nova-player-ctrl-time-seek {
+          font-size: 14px;
+          height: 30px;
+          line-height: 30px;
+          width: 100px;
         }
       }
 

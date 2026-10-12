@@ -251,6 +251,8 @@
             border-radius: 2px;
             cursor: pointer;
             width: 134px;
+            color: #fff;
+            font-size: 12px;
 
             &:hover {
               background: hsla(0, 0%, 100%, 0.4);
@@ -397,6 +399,7 @@
           padding-top: 10px;
           position: relative;
           text-align: left;
+          font-size: 12px;
 
           .nova-player-dm-setting-left-more-text {
             display: inline-block;
@@ -456,6 +459,7 @@
           height: 32px;
           line-height: 32px;
           text-align: left;
+          font-size: 12px;
 
           .nova-player-dm-setting-right-more-text {
             display: inline-block;
@@ -703,6 +707,7 @@
           line-height: 16px;
           margin-bottom: 4px;
           text-align: left;
+          font-size: 12px;
         }
 
         .nova-player-dm-setting-right-reset {

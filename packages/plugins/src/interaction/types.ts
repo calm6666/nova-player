@@ -89,23 +89,24 @@ export interface InteractionCard {
  * 卡片内容编辑补丁（updateCardContent 的入参）
  *
  * 按卡片类型提供对应字段，未提供的字段保持原值：
- * - 文本字段（linkContent / question / optionTexts 等长 / title）：
+ * - 文本字段（linkContent / question / optionTexts / title）：
  *   原地更新 + contentVersion 自增 → 渲染层响应式文本精准更新 DOM
  * - 结构字段（guideType / scoreType / optionTexts 变长）：
- *   条目按新数据重建（类名/图标/选项行数为渲染期静态结构）
+ *   信号化精准更新（形态类名切换 / 图标按值替换 / 选项行按引用增删），
+ *   卡片 DOM 复用不重建
  */
 export interface CardContentPatch {
-  /** guideThree：卡片形态（1=三连+关注 2=仅三连 3=仅关注） */
+  /** guideThree：卡片形态（1=三连+关注 2=仅三连 3=仅关注），信号切换类名不重建 */
   guideType?: 1 | 2 | 3;
   /** link：外链文案 */
   linkContent?: string;
   /** vote：问题文案 */
   question?: string;
-  /** vote：全部选项文案（长度变化触发条目重建） */
+  /** vote：全部选项文案（长度变化时尾部增删选项行，不重建卡片） */
   optionTexts?: string[];
   /** score：标题文案 */
   title?: string;
-  /** score：图标类型（触发条目重建） */
+  /** score：图标类型（信号替换图标，不重建卡片） */
   scoreType?: InteractionType;
   /**
    * 时间窗起点（秒，四类卡片通用）：
@@ -145,6 +146,13 @@ export interface ActiveCardEntry<T> {
    * 修改文本后自增版本号 → 文本节点精准更新（无需重建 DOM）
    */
   contentVersion: Signal<number>;
+  /**
+   * 选项文案版本号（vote 卡片专用，字段级细腻更新）
+   * 选项文案的渲染 getter 读该信号而非 contentVersion：
+   * updateCardContent 更新 optionTexts 时只自增此版本号，
+   * question 等其他文本字段的 effect 不被触发（反之亦然）
+   */
+  optionsVersion: Signal<number>;
   /** 淡出过渡结束后移除 DOM 的定时器句柄（幂等防重入） */
   removeTimer: number | null;
   /** 编辑模式拖拽绑定的清理函数（条目移除时调用） */

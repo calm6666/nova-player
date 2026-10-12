@@ -975,10 +975,24 @@ export class CanvasEngine {
     // 如果没有可见弹幕，直接返回
     if (visibleItems.length === 0) return;
 
+    // 显示区域硬裁剪（与 DOM 引擎的 clip-path 同一语义，B 站同款观感）：
+    // 区域缩小（如 50%）时，在飞弹幕超出区域的部分立即被裁掉——
+    // 仅靠 initTracks 重建轨道只约束新弹幕的轨道分配，在飞弹幕仍按
+    // 原 y 继续绘制，用户侧表现为「区域设置不生效」
+    const area = Math.min(1, Math.max(0.05, this.config.area));
+    const areaHeight = Math.floor(this.height * area);
+
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, this.width, areaHeight);
+    this.ctx.clip();
+
     // 每帧只贴精灵位图（drawImage），不再逐条 fillText，字体已在精灵里栅格化好了
     for (const item of visibleItems) {
       this.drawItem(item);
     }
+
+    this.ctx.restore();
 
     // 应用防挡遮罩
     this.applyMask();

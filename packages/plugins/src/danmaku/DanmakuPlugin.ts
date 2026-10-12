@@ -375,7 +375,7 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
       state.get(PlayerStateKeyEnum.DANMAKU_SPEED) ?? 1,
     );
     this.manager.setDensity(state.get(PlayerStateKeyEnum.DANMAKU_DENSITY) ?? 1);
-    this.applyArea(state.get(PlayerStateKeyEnum.DANMAKU_AREA) ?? 100);
+    this.applyArea(state.get(PlayerStateKeyEnum.DANMAKU_AREA) ?? 75);
     this.applyFontSize(state.get(PlayerStateKeyEnum.DANMAKU_FONT_SIZE) ?? 50);
     this.manager.setAutoScale(
       state.get(PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN) ?? true,

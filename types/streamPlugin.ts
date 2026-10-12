@@ -335,4 +335,15 @@ export interface StreamPlugin extends Plugin {
    * @param limits - 上限/下限（像素高度）
    */
   applyLimits?(limits: { max?: number; min?: number }): void;
+
+  /**
+   * 获取底层原生播放器实例（dash.js / hls.js / flv.js）
+   *
+   * 供统计监控（如 VideoInfo 的码率曲线）读取库原生实时数据；
+   * 返回值具体形态由各流媒体库决定（调用方配合类型谓词使用），
+   * 因此此处收窄为 unknown 以避免公共类型依赖具体库。
+   *
+   * @returns 原生播放器实例；插件未就绪 / 原生播放（非流媒体模式）返回 null
+   */
+  getNativePlayer?(): unknown;
 }

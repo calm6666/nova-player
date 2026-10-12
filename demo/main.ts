@@ -470,6 +470,25 @@ const PlayerSection = defineComponent(() => {
         },
         "i18n 状态",
       ),
+      // 预览图模式切换：雪碧图（sprite.jpg + pvdata 裁切）↔ 逐帧（preview.bin data URL）
+      // 点击不重建播放器：demo 侧用可变 provider 运行期替换数据源，下次悬停即生效
+      // （active 高亮由 entry-client 水合后按当前模式 / 回退结果同步，SSR 默认雪碧图）
+      h(
+        "button",
+        {
+          id: "btn-preview-sprite",
+          class: "btn-locale active",
+        },
+        "预览·雪碧图",
+      ),
+      h(
+        "button",
+        {
+          id: "btn-preview-frames",
+          class: "btn-locale",
+        },
+        "预览·逐帧bin",
+      ),
       h(
         "button",
         {
@@ -606,9 +625,9 @@ const PlayerSection = defineComponent(() => {
         ),
       ),
     ),
-    // 交互卡片：展示 / 编辑双模式切换
+    // 交互卡片：展示 / 编辑双模式切换 + 运行期添加表单
     // 展示模式（默认）：卡片按时间窗口纯展示，注册全部交互监听
-    // 编辑模式：卡片常驻可拖拽、运行期添加四类卡片，点击类监听不注册
+    // 编辑模式：卡片常驻可拖拽，点击类监听不注册
     // 切换实现：mode 为构造期配置 → 卸载旧实例 + 携带数据快照重建
     h(
       "section",
@@ -632,40 +651,99 @@ const PlayerSection = defineComponent(() => {
           "编辑模式",
         ),
       ),
+      // 运行期添加卡片表单（两模式均可用）：时间窗可手填或一键取当前
+      // 播放时间，类型专属字段由 entry-client 按下拉选择动态渲染
       h(
         "div",
         {
-          id: "interaction-edit-row",
-          class: "demo-btn-row is-hidden",
+          id: "interaction-add-form",
+          class: "ice-form",
         },
         h(
-          "button",
-          { id: "btn-add-guide", class: "btn" },
-          "+ 点赞关注卡片",
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "卡片类型"),
+          h(
+            "select",
+            { id: "ice-add-type", class: "ice-select" },
+            h("option", { value: "guide" }, "点赞关注卡片"),
+            h("option", { value: "link" }, "外链卡片"),
+            h("option", { value: "vote" }, "投票卡片"),
+            h("option", { value: "score" }, "评分卡片"),
+          ),
         ),
         h(
-          "button",
-          { id: "btn-add-link", class: "btn" },
-          "+ 外链卡片",
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "起始(秒)"),
+          h("input", {
+            id: "ice-add-start",
+            class: "ice-input ice-num",
+            type: "number",
+            step: "0.1",
+            min: "0",
+            placeholder: "默认当前时间",
+          }),
+          h(
+            "button",
+            { id: "btn-ice-start-now", class: "ice-mini", type: "button" },
+            "取当前",
+          ),
         ),
         h(
-          "button",
-          { id: "btn-add-vote", class: "btn" },
-          "+ 投票卡片",
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "结束(秒)"),
+          h("input", {
+            id: "ice-add-end",
+            class: "ice-input ice-num",
+            type: "number",
+            step: "0.1",
+            min: "0",
+            placeholder: "默认起始+10",
+          }),
+          h(
+            "button",
+            { id: "btn-ice-end-now", class: "ice-mini", type: "button" },
+            "取当前",
+          ),
         ),
         h(
-          "button",
-          { id: "btn-add-score", class: "btn" },
-          "+ 评分卡片",
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "顶部(%)"),
+          h("input", {
+            id: "ice-add-top",
+            class: "ice-input ice-num",
+            type: "number",
+            step: "1",
+            min: "0",
+            max: "100",
+            placeholder: "40",
+          }),
+          h("span", { class: "ice-label ice-label-gap" }, "左侧(%)"),
+          h("input", {
+            id: "ice-add-left",
+            class: "ice-input ice-num",
+            type: "number",
+            step: "1",
+            min: "0",
+            max: "100",
+            placeholder: "50",
+          }),
         ),
+        // 类型专属字段容器：entry-client 按下拉选择动态渲染
+        // （guide 类型 / link 文案 / vote 问题+选项 / score 标题+图标）
+        h("div", { id: "ice-add-kind-fields" }),
         h(
           "button",
-          { id: "btn-interaction-dump", class: "btn" },
-          "导出交互数据",
+          { id: "btn-ice-add", class: "btn", type: "button" },
+          "添加卡片",
         ),
       ),
       // 通用工具行（展示 / 编辑两模式均可用）：
-      // updateData 重置 / closeCard 关闭指定卡片 / getContainer 查询容器
+      // updateData 重置 / closeCard 关闭首个卡片 / getContainer 查询容器 /
+      // getStatus 导出数据
       h(
         "div",
         {
@@ -680,17 +758,22 @@ const PlayerSection = defineComponent(() => {
         h(
           "button",
           { id: "btn-interaction-close", class: "btn" },
-          "关闭投票卡片#0",
+          "关闭首个卡片",
         ),
         h(
           "button",
           { id: "btn-interaction-container", class: "btn" },
           "获取交互容器",
         ),
+        h(
+          "button",
+          { id: "btn-interaction-dump", class: "btn" },
+          "导出交互数据",
+        ),
       ),
       // 内容编辑面板：仅编辑模式显示，entry-client 水合后按
-      // getStatus() 动态渲染每张卡片的文本编辑表单（input 实时调
-      // updateCardContent，结构操作后全量重建面板）
+      // getStatus() 动态渲染每张卡片的编辑表单（时间窗 / 定位 / 文本，
+      // change 提交调 updateCardContent，结构操作后全量重建面板）
       h("div", {
         id: "interaction-content-panel",
         class: "interaction-content-panel is-hidden",
@@ -790,7 +873,10 @@ const PlayerSection = defineComponent(() => {
     ),
     // 分段进度条运行时编辑：分段数据经构造配置 progress.segments 传入，
     // 运行时更新走 player.setConfig({ progress: { segments } }) 深合并，
-    // 播放器内部 syncSegmentsToControls 同步到进度条控件
+    // 播放器内部 syncSegmentsToControls 同步到进度条控件；
+    // 添加表单支持手填时间点 / 一键取当前播放时间 / 选择插入位置
+    // （末尾追加 / 开头插入 / 在指定段之前），列表行内可直接改
+    // 标题与起止时间（change 提交，实时生效）
     h(
       "section",
       {
@@ -804,16 +890,6 @@ const PlayerSection = defineComponent(() => {
         },
         h(
           "button",
-          { id: "btn-seg-add", class: "btn" },
-          "追加 30 秒分段",
-        ),
-        h(
-          "button",
-          { id: "btn-seg-edit", class: "btn" },
-          "末段标记已编辑",
-        ),
-        h(
-          "button",
           { id: "btn-seg-reset", class: "btn" },
           "重新拉取分段",
         ),
@@ -823,8 +899,76 @@ const PlayerSection = defineComponent(() => {
           "应用分段 (setConfig)",
         ),
       ),
+      // 添加分段表单：文字 / 起止时间（取当前播放时间）/ 插入位置
+      h(
+        "div",
+        {
+          id: "segment-add-form",
+          class: "ice-form",
+        },
+        h(
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "分段文字"),
+          h("input", {
+            id: "seg-add-label",
+            class: "ice-input",
+            type: "text",
+            placeholder: "默认「分段N」",
+          }),
+        ),
+        h(
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "起始(秒)"),
+          h("input", {
+            id: "seg-add-start",
+            class: "ice-input ice-num",
+            type: "number",
+            step: "0.1",
+            min: "0",
+            placeholder: "默认当前时间",
+          }),
+          h(
+            "button",
+            { id: "btn-seg-start-now", class: "ice-mini", type: "button" },
+            "取当前",
+          ),
+        ),
+        h(
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "结束(秒)"),
+          h("input", {
+            id: "seg-add-end",
+            class: "ice-input ice-num",
+            type: "number",
+            step: "0.1",
+            min: "0",
+            placeholder: "默认起始+30",
+          }),
+          h(
+            "button",
+            { id: "btn-seg-end-now", class: "ice-mini", type: "button" },
+            "取当前",
+          ),
+        ),
+        h(
+          "div",
+          { class: "ice-field" },
+          h("span", { class: "ice-label" }, "插入位置"),
+          // 选项由 entry-client 按 demoSegments 动态维护
+          // （末尾追加 / 插入到最前 / 在指定段之前）
+          h("select", { id: "seg-add-pos", class: "ice-select" }),
+        ),
+        h(
+          "button",
+          { id: "btn-seg-add-form", class: "btn", type: "button" },
+          "添加分段",
+        ),
+      ),
       // 分段列表面板：entry-client 水合后按 demoSegments 渲染
-      // （标题 + 起止时间 + 删除按钮），任何编辑操作后全量重建
+      // （标题 / 起止时间行内编辑 + 删除按钮），结构操作后全量重建
       h("div", { id: "segment-list", class: "seg-list-panel" }),
     ),
     // 播放器核心 API 全量演示（VideoPlayer 公开方法）：

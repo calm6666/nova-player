@@ -344,7 +344,7 @@ export const defaultRuntimeState: RuntimeState = {
   danmakuOpacity: 1,
   danmakuSpeed: 1,
   danmakuDensity: 0.5,
-  danmakuArea: 50,
+  danmakuArea: 75,
   danmakuFontSize: 50,
   danmakuColor: "#FFFFFF",
   danmakuMode: 1,

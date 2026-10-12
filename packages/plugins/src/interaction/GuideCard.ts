@@ -3,7 +3,8 @@
  * GuideCard — 点赞关注卡片（纯响应式 VNode 组件）
  * ============================================
  * 渲染点赞/投币/收藏/关注卡片到互动容器
- * 根类名固定为 nova-danmaku-x-editor，type 决定隐藏三连或关注区域
+ * 根类名固定为 nova-danmaku-x-editor，形态（type）经 guideTypeSignal
+ * 驱动根类名变体切换（三连/关注区 DOM 恒在、CSS 显隐，编辑不重建卡片）
  * 关注按钮通过 no-follow / following 两个互斥类切换「关注 / 已关注」
  *
  * 响应式写法：class/style 直接绑定动态表达式（内部读取 signal.value），
@@ -18,7 +19,11 @@
 import { h, signal } from "@/core";
 import type { Signal } from "@/core";
 import type { VNode } from "@/types";
-import type { ActiveCardEntry, InteractionGuideThree } from "./types";
+import type {
+  ActiveCardEntry,
+  InteractionGuideThree,
+  InteractionType,
+} from "./types";
 
 // ============================================
 // 图标（每次调用产生新 VNode，避免多实例共享同一 VNode 对象）
@@ -100,6 +105,11 @@ const CLASS_NAMES = {
 
 /** 点赞关注卡片的交互状态信号集合 */
 export interface GuideCardState {
+  /**
+   * 卡片形态（1=三连+关注 2=仅三连 3=仅关注）：驱动根类名变体切换，
+   * 三连区/关注区 DOM 恒在、CSS 显隐，形态编辑不重建卡片
+   */
+  guideTypeSignal: Signal<InteractionType>;
   /** 点赞激活态 */
   likeActive: Signal<boolean>;
   /** 投币激活态 */
@@ -115,9 +125,13 @@ export interface GuideCardState {
  *
  * likeActive 初始为 true：对齐旧 GuidePlugin 的渲染行为（点赞图标硬编码挂 is_active 类，
  * 视频播放到该卡片时间点时默认展示「已点赞」状态）
+ *
+ * @param guideType - 初始卡片形态（数据 type 缺省时按 1 处理，与
+ *   渲染表达式的兜底分支语义一致）
  */
-export function createGuideCardState(): GuideCardState {
+export function createGuideCardState(guideType: InteractionType): GuideCardState {
   return {
+    guideTypeSignal: signal(guideType),
     likeActive: signal(true),
     coinActive: signal(false),
     collectActive: signal(false),
@@ -185,12 +199,13 @@ export function renderGuideCard(
             entry.dragCleanup = bindDrag(el) ?? null;
           }
         : undefined,
-      // 根类名直接表达式：显隐过渡类 + type 变体类（type=2 隐藏关注，type=3 隐藏三连）
+      // 根类名直接表达式：显隐过渡类 + 形态变体类（读 guideTypeSignal，
+      // 形态编辑时插件层写信号 → 类名原位切换，2 隐藏关注 / 3 隐藏三连）
       class: [
         CLASS_NAMES.HL_EDITOR,
-        item.type === 2
+        state.guideTypeSignal.value === 2
           ? CLASS_NAMES.HL_EDITOR_NO_FOLLOW
-          : item.type === 3
+          : state.guideTypeSignal.value === 3
             ? CLASS_NAMES.HL_EDITOR_NO_GUIDE_THREE
             : "",
         entry.show.value ? CLASS_NAMES.HL_SHOW : "",

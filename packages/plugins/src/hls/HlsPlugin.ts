@@ -1066,6 +1066,16 @@ export class HlsPlugin implements StreamPlugin {
   }
 
   /**
+   * 获取底层 hls.js 播放器实例
+   * 供统计监控（如 VideoInfo 的码率曲线）读取库原生实时数据
+   *
+   * @returns hls.js 实例；未加载 / 已销毁 / Safari 原生 HLS 模式返回 null
+   */
+  getNativePlayer(): unknown {
+    return this.hlsPlayer;
+  }
+
+  /**
    * 获取当前流媒体配置
    * @returns 流媒体配置，未加载返回 null
    */
