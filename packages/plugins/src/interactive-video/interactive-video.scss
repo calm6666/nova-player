@@ -32,25 +32,31 @@
   // ============================================
 
   .nova-player-interaction-story {
-    // 底部居中悬浮的半透明胶囊条
+    // 底部悬浮的半透明胶囊条定位层：全宽（left:0 + right:0），
+    // 内容经 justify-content 居中 —— 不能用 left:50% + translateX
+    // 的 shrink-to-fit 方案（其可用宽度 = 播放器宽 - 50% 偏移，
+    // 整条换行收缩链会被压到一半宽度，圆点提前换行）
     position: absolute;
-    left: 50%;
+    left: 0;
+    right: 0;
     bottom: 70px;
     display: flex;
     align-items: center;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 20px;
-    transform: translateX(-50%);
-    z-index: 48;
+    justify-content: center;
+    background: transparent;
     pointer-events: none;
 
-    // 节点圆点外层：宽度由内容撑开（换行容器的外壳）
+    // 节点圆点外层：宽度由内容撑开（换行容器的外壳）；
+    // 胶囊条视觉（黑底 + 圆角）落在这层 —— story 已改为全宽定位层
     .nova-player-interaction-oval-wrap {
       display: inline-block;
       width: auto;
       height: auto;
       margin: 0 auto;
       vertical-align: middle;
+      padding: 0 5px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 20px;
 
       // 节点圆点行（flex-wrap 换行容器）：最大宽度由插件按播放器
       // 宽度内联（80%），放不下的圆点自动换到下一行、每行居中，

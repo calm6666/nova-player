@@ -135,15 +135,14 @@ function computeWrapLayout(layerWidth: number, count: number): {
  * @param layerWidth - 播放器（互动层）当前宽度（px）
  * @param count - 路径节点数
  * @param index - 目标圆点的路径下标
- * @returns storyLeft（胶囊条左缘在播放器中的 x）/ dotCenterX（圆点中心
- *          在播放器中的 x）/ dotTopY（圆点顶相对胶囊条顶的 y）
+ * @returns dotCenterX（圆点中心在播放器中的 x）/ dotTopY（圆点顶
+ *          相对胶囊条顶的 y）
  */
 function computeDotPosition(
   layerWidth: number,
   count: number,
   index: number,
 ): {
-  storyLeft: number;
   dotCenterX: number;
   dotTopY: number;
 } {
@@ -154,17 +153,41 @@ function computeDotPosition(
   const rowCount = Math.min(cols, count - row * cols);
   /** 所在行内容宽（每行独立居中） */
   const rowWidth = rowCount * STORY_DOT_SIZE + (rowCount - 1) * STORY_DOT_GAP;
-  /** 胶囊条整体水平居中 */
-  const storyLeft = (layerWidth - contentWidth) / 2;
+  /** 胶囊条整体水平居中（内容区中心 = 播放器中心） */
+  const contentLeft = (layerWidth - contentWidth) / 2;
   return {
-    storyLeft,
     dotCenterX:
-      storyLeft +
+      contentLeft +
       (contentWidth - rowWidth) / 2 +
       col * (STORY_DOT_SIZE + STORY_DOT_GAP) +
       STORY_DOT_SIZE / 2,
     dotTopY: row * (STORY_DOT_SIZE + STORY_DOT_GAP),
   };
+}
+
+/**
+ * 悬停卡片中心的层坐标 X（纯函数，响应式表达式内调用）
+ *
+ * 默认对齐圆点中心；圆点太靠边时按播放器左右边界向内收窄（clamp），
+ * 保证卡片不被遮挡。
+ *
+ * @param layerWidth - 播放器（互动层）当前宽度（px）
+ * @param count - 路径节点数
+ * @param index - 目标圆点的路径下标
+ * @returns 卡片中心在播放器中的 x
+ */
+function computeHoverCardX(
+  layerWidth: number,
+  count: number,
+  index: number,
+): number {
+  const { dotCenterX } = computeDotPosition(layerWidth, count, index);
+  /** 卡片半宽 + 边缘最小留白 */
+  const minX = STORY_CARD_WIDTH / 2 + STORY_CARD_EDGE_PADDING;
+  return Math.min(
+    Math.max(dotCenterX, minX),
+    Math.max(minX, layerWidth - minX),
+  );
 }
 
 // ============================================
@@ -274,39 +297,32 @@ function renderHoverItem(
 ): VNode {
   if (!isStoryEntry(item)) return h("div", {});
 
-  /**
-   * 圆点位置（表达式内重算：播放器宽度 / 节点数变化时原位更新）
-   * —— storyLeft 为胶囊条左缘在播放器中的 x（hover-wrap 定位基准）
-   */
-  const { storyLeft, dotCenterX, dotTopY } = computeDotPosition(
-    layerWidth.value,
-    entries.value.length,
-    item.index,
-  );
-  /**
-   * 卡片中心 clamp 到播放器边界内（卡片半宽 + 边缘留白）：
-   * 默认对齐圆点中心，仅太靠边时向内收窄
-   */
-  const halfCard = STORY_CARD_WIDTH / 2;
-  const cardCenterX = Math.min(
-    Math.max(dotCenterX, halfCard + STORY_CARD_EDGE_PADDING),
-    Math.max(
-      halfCard + STORY_CARD_EDGE_PADDING,
-      layerWidth.value - halfCard - STORY_CARD_EDGE_PADDING,
-    ),
-  );
-
   return h(
     "div",
     {
       class: "nova-player-interaction-hover-item",
-      // display 表达式：hover 信号翻转时原位切换显隐；
-      // left + translateX(-50%)：卡片中心对齐圆点中心（clamp 后）；
-      // top：悬在圆点所在行上方 27px（换行后按行动态跟随）
+      // 【left / top 必须是表达式内计算】在回调体内先解构再拼字符串
+      // 是创建时的静态快照 —— 全屏切换 / 窗口缩放导致的换行行列
+      // 变化永远不会更新（第二排圆点的卡片会停留在第一排位置）；
+      // 写成属性表达式（读取 layerWidth / entries 信号）后编译器
+      // 持续追踪、原位更新。
+      // 坐标基准：hover-wrap 挂在全宽 story 的左上角 = 播放器左缘，
+      // left 即卡片中心的层坐标（clamp 后）；top 悬在圆点所在行
+      // 上方 27px（换行后按行动态跟随）
       style: {
         display: item.hover.value ? "block" : "none",
-        left: `${cardCenterX - storyLeft}px`,
-        top: `${dotTopY - 27}px`,
+        left: `${computeHoverCardX(
+          layerWidth.value,
+          entries.value.length,
+          item.index,
+        )}px`,
+        top: `${
+          computeDotPosition(
+            layerWidth.value,
+            entries.value.length,
+            item.index,
+          ).dotTopY - 27
+        }px`,
         transform: "translateX(-50%)",
       },
     },
