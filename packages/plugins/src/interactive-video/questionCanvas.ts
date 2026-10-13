@@ -118,8 +118,9 @@ function loadBgImage(url: string): HTMLImageElement | undefined {
 // ============================================
 
 /**
- * 计算选项按钮命中矩形（纵向排列、整体居中）
- * 布局参数：按钮 300×52、纵向间距 20、题目文案高 36（存在时）
+ * 计算选项按钮命中矩形（横向流式排列、每行居中、整体垂直居中）
+ * 布局参数：按钮 300×52、间距 20（行内 / 行间一致）、题目文案高 36（存在时）
+ * 一行放不下时自动换到下一行，每行按该行实际按钮数水平居中
  *
  * @param question - 分支选择配置
  * @returns 按钮组整体区域（题目行 + 全部按钮；无配置时为 null）
@@ -134,29 +135,43 @@ function layoutOptionRects(question: InteractiveQuestion): {
   const rect = containerElement.getBoundingClientRect();
   const options = question.options;
 
-  // 按钮布局参数
+  // 按钮布局参数（横向流式：一行放不下自动换行，行内 / 行间间距一致）
   const buttonWidth = 300;
   const buttonHeight = 52;
   const gap = 20;
   const titleHeight = question.title ? 36 : 0;
 
-  // 按钮组整体高度（含题目行）
-  const totalHeight =
-    options.length * buttonHeight +
-    (options.length - 1) * gap +
-    titleHeight;
+  // 每行可容纳的按钮数（容器过窄时至少 1 个：单按钮独占一行）
+  const columns = Math.max(
+    1,
+    Math.floor((rect.width + gap) / (buttonWidth + gap)),
+  );
+  // 总行数（按每行满载向上取整，末行可能不满）
+  const rows = Math.ceil(options.length / columns);
+
+  // 按钮组整体高度（题目行 + 各行按钮 + 行间距）
+  const totalHeight = rows * buttonHeight + (rows - 1) * gap + titleHeight;
 
   // 垂直居中起点
   const startY = Math.max(0, (rect.height - totalHeight) / 2);
-  const startX = (rect.width - buttonWidth) / 2;
 
-  // 选项矩形（题目行之下；缩放动画前的基准矩形）
-  optionRects = options.map((_, index) => ({
-    x: startX,
-    y: startY + titleHeight + index * (buttonHeight + gap),
-    width: buttonWidth,
-    height: buttonHeight,
-  }));
+  // 选项矩形（横向流式排列：每行按实际按钮数水平居中，题目行之下；
+  // 缩放动画前的基准矩形）
+  optionRects = options.map((_, index) => {
+    /** 所在行号与行内下标 */
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    /** 该行实际按钮数（末行可能不满 columns 个） */
+    const rowCount = Math.min(columns, options.length - row * columns);
+    /** 该行内容总宽（含行内间距），居中排布的起点据此计算 */
+    const rowWidth = rowCount * buttonWidth + (rowCount - 1) * gap;
+    return {
+      x: (rect.width - rowWidth) / 2 + column * (buttonWidth + gap),
+      y: startY + titleHeight + row * (buttonHeight + gap),
+      width: buttonWidth,
+      height: buttonHeight,
+    };
+  });
 
   return { startY, height: totalHeight };
 }
@@ -349,8 +364,8 @@ function drawQuestion(state: QuestionState | null): void {
     roundRectPath(canvasCtx, baseRect, 8);
     canvasCtx.fill();
 
-    // 3. 描边（悬停高亮 #00A1D6 / 常态白 80%）
-    canvasCtx.strokeStyle = isHover ? "#00A1D6" : "rgba(255, 255, 255, 0.8)";
+    // 3. 描边（白色边框恒定不变色：悬停反馈只保留平滑放大，边框不变成蓝色）
+    canvasCtx.strokeStyle = "rgba(255, 255, 255, 0.8)";
     canvasCtx.lineWidth = isHover ? 2 : 1.5;
     roundRectPath(canvasCtx, baseRect, 8);
     canvasCtx.stroke();

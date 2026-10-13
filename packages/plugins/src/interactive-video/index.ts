@@ -45,7 +45,7 @@
 
 import { h, Fragment, signal, mount, destroy } from "@/core";
 import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import type { VNode, PlayerSource } from "@/types";
 import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
 import { PlayerEventEnum } from "@/core/events";
 import { t } from "@/core";
@@ -93,8 +93,28 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
   /** 播放器实例引用（install 后可用） */
   private player: VideoPlayer | null = null;
 
+  /**
+   * avid → 已解析播放源的缓存（resolveVideo 的结果按 avid 记账）：
+   * 同一节点回看 / 重播直接命中，不再重复请求 playurl
+   */
+  private readonly videoSourceCache = new Map<string, PlayerSource>();
+
+  /**
+   * 正在异步解析视频源的节点 id（防过期请求）：
+   * resolveVideo 走网络时用户可能又选了新分支，解析完成后校验
+   * 该标记——已被更新的切换请求取代则丢弃本次解析结果
+   */
+  private pendingVideoNodeId: string | null = null;
+
   /** 互动视频 VNode 树根（mountRoot 构建，uninstall 销毁） */
   private rootVNode: VNode | null = null;
+
+  /**
+   * 播放器根容器（.nova-player-container）：data-ctrl-hidden /
+   * data-interactive-ended 属性协议的载体，initAfterMounted 时定位。
+   * 播完锁定（handleEnded）与解锁（clearEndedLock）都写在这上面
+   */
+  private playerRoot: HTMLElement | null = null;
 
   // ==================== 响应式 UI 状态 ====================
 
@@ -182,6 +202,14 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
         this.handleEnded();
       }),
     );
+
+    // 订阅 PLAY：起播时解除播完锁定（选分支切源 / 重播 / 业务重新 load
+    // 都会经过起播，兜底恢复控制栏联动与片尾面板的正常行为）
+    this.unsubscribers.push(
+      events.on(PlayerEventEnum.PLAY, (): void => {
+        this.clearEndedLock();
+      }),
+    );
   }
 
   /**
@@ -190,6 +218,9 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
   uninstall(): void {
     this.unsubscribers.forEach((unsub) => unsub());
     this.unsubscribers.length = 0;
+
+    // 解除播完锁定（插件卸载后播放器继续使用时不残留锁定态）
+    this.clearEndedLock();
 
     this.cleanups.forEach((cleanup) => cleanup());
     this.cleanups.length = 0;
@@ -222,6 +253,10 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
       ".nova-player-interaction-wrap",
     );
     if (!wrap) return;
+
+    // 定位播放器根容器（播完锁定的属性协议载体，见 handleEnded /
+    // clearEndedLock）：从互动层容器上溯，兼容 player.el 为任意祖先的场景
+    this.playerRoot = wrap.closest<HTMLElement>(".nova-player-container");
 
     // 一次性构建全部互动视频 VNode 树（后续状态变化走信号更新）
     this.rootVNode = h(
@@ -273,7 +308,7 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
     const player = this.player;
     const startNode = this.pathTracker.getNode(this.config.startNodeId);
     if (startNode && player && !player.getConfig().src) {
-      void player.load(startNode.video);
+      void this.loadNodeVideo(this.config.startNodeId, startNode);
     }
   }
 
@@ -332,8 +367,14 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
 
     // 播放进入窗口起点：显示分支选择 + 驱动倒计时比例
     if (time >= question.timeStart) {
-      // 相同引用赋值：已显示时信号内部跳过通知，无副作用
-      this.questionState.value = { question, ended: false };
+      // 仅在实质变化时赋值（首次显示 / 上次为播完模式 / 更换题目）：
+      // signal 以 !== 做引用比较，每次赋新对象字面量都会触发通知，
+      // 让 renderQuestion 的 effect 重跑——悬停下标与缩放动画状态被
+      // 反复重置，悬停放大永远起不来（TIME_UPDATE 周期远短于动画）
+      const current = this.questionState.peek();
+      if (!current || current.question !== question || current.ended) {
+        this.questionState.value = { question, ended: false };
+      }
 
       // 倒计时比例 = 剩余时间 / 窗口总时长（CSS transition 平滑过渡）
       const windowDuration = question.timeEnd - question.timeStart;
@@ -385,6 +426,16 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
     // 播完场景：剧情进度条与其它 UI 随控制栏一起收起，只留问题 / 重播
     this.storyVisible.value = false;
 
+    // 播完锁定：根容器标记互动播完态——PlayerDocker.showControls 据此
+    // 不再随鼠标移入唤起顶栏 / 控制栏，插件样式据此隐藏片尾推荐面板
+    // （片尾面板 z-index 55 高于问题画布 48，不隐藏会覆盖画布拦截一切
+    // 悬停 / 点击）；同时直接置 data-ctrl-hidden 立即收起可能显示中的
+    // 控制栏。选分支切源 / 重播 / 起播时由 clearEndedLock 解除
+    if (this.playerRoot) {
+      this.playerRoot.setAttribute("data-interactive-ended", "true");
+      this.playerRoot.setAttribute("data-ctrl-hidden", "true");
+    }
+
     if (question && !this.hasSelected()) {
       // 播完弹选择：不启动倒计时（等用户选择）；ended = true 让 canvas
       // 绘制视频最后一帧作为问题背景
@@ -395,6 +446,15 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
 
     // 路径走完：显示重播按钮（replayVisible 信号驱动）
     this.replayVisible.value = true;
+  }
+
+  /**
+   * 解除播完锁定：移除根容器上的互动播完标记，
+   * 恢复控制栏随鼠标移入显示与片尾面板的正常行为
+   * （切分支 switchToNode / 起播 PLAY 事件 / 卸载 uninstall 时调用）
+   */
+  private clearEndedLock(): void {
+    this.playerRoot?.removeAttribute("data-interactive-ended");
   }
 
   /**
@@ -439,12 +499,63 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
     this.replayVisible.value = false;
     this.storyVisible.value = true;
 
-    // 换源加载（复用同一 video 元素与整棵 DOM）：load 内部有竞态守卫
-    // （loadToken）+ pendingSeek 机制，loadedmetadata 后统一应用起播时间
-    // 与 attemptAutoplay（含自动播放策略静音兜底），比 setConfig + 立即
-    // play() 的时序可靠；HLS / DASH 源由 streamMiddleware 分发到对应
-    // 流媒体插件加载
-    void this.player.load(node.video, {
+    // 解除播完锁定（进入新节点播放，恢复控制栏联动与片尾面板行为）
+    this.clearEndedLock();
+
+    // 换源加载（复用同一 video 元素与整棵 DOM）：节点视频源可能是
+    // avid 引用（需经 resolveVideo 异步解析），交给 loadNodeVideo 统一处理
+    void this.loadNodeVideo(nodeId, node);
+  }
+
+  /**
+   * 解析节点视频源并加载到播放器
+   * avid 引用节点经 resolveVideo 异步换取真实播放源（结果按 avid 缓存），
+   * 解析完成后按 pendingVideoNodeId 校验——异步期间用户又选了新分支时
+   * 丢弃过期结果；直接给 video 的节点同步加载（不进异步路径）
+   *
+   * @param nodeId - 目标节点 id（过期校验用）
+   * @param node - 目标节点配置
+   */
+  private async loadNodeVideo(
+    nodeId: string,
+    node: InteractiveNode,
+  ): Promise<void> {
+    if (!this.player) return;
+
+    // 进入即标记最新请求（必须在任何 await 之前：之后若有更新的
+    // 切换请求覆盖此标记，本次解析结果就会被过期校验丢弃）
+    this.pendingVideoNodeId = nodeId;
+
+    // 静态配置场景（节点直接给 video）：同步加载，无需异步解析
+    if (node.video) {
+      void this.player.load(node.video, {
+        autoplay: this.config.autoPlay ?? true,
+      });
+      return;
+    }
+
+    // avid 引用场景：经 resolveVideo 异步解析（playurl 请求）
+    const resolver = this.config.resolveVideo;
+    const avid = node.avid;
+    if (!avid || !resolver) {
+      // 既无 video 又无（avid + resolveVideo）：配置不完整，中止并提示
+      console.warn(
+        `[interactiveVideo] 节点 ${nodeId} 缺少视频源：请提供 video 或（avid + resolveVideo）`,
+      );
+      return;
+    }
+
+    // 缓存命中：同一节点回看 / 重播直接复用，不重复请求 playurl
+    const cached = this.videoSourceCache.get(avid);
+    const source = cached ?? (await resolver(node));
+    if (!cached) {
+      this.videoSourceCache.set(avid, source);
+    }
+
+    // 过期校验：异步解析期间已被更新的切换请求取代则丢弃本次结果
+    if (this.pendingVideoNodeId !== nodeId || !this.player) return;
+
+    void this.player.load(source, {
       autoplay: this.config.autoPlay ?? true,
     });
   }

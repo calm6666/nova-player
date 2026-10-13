@@ -359,3 +359,31 @@
     }
   }
 }
+
+// ============================================
+// 问题 / 重播显示中：片尾推荐面板不出现
+// （ENDED 时 PlayerDocker 的 STATE 订阅会调 showEndWrap，但片尾面板
+// z-index 55 高于问题画布 48，会全屏覆盖画布拦截一切悬停 / 点击——
+// active 标志可见期间直接压住片尾面板，保证问题可交互）
+// ============================================
+
+.nova-player-container:has(.nova-player-interaction-active) {
+  .nova-player-ending-wrap {
+    display: none;
+  }
+}
+
+// ============================================
+// 互动播完锁定态：顶栏 / 控制栏 / 片尾面板全部隐藏
+// （data-interactive-ended 由插件 handleEnded 设置、切分支 / 重播 /
+// 起播时清除；配合 PlayerDocker.showControls 的锁定早退，鼠标移入
+// 不再唤起控制栏，播完只剩问题画布与重播按钮可见可交互）
+// ============================================
+
+.nova-player-container[data-interactive-ended] {
+  .nova-player-top-wrap,
+  .nova-player-control-wrap,
+  .nova-player-ending-wrap {
+    display: none;
+  }
+}

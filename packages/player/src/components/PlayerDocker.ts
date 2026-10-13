@@ -1593,6 +1593,12 @@ export const PlayerDocker = defineComponent<
     position: "video" | "control" | "top" = "video",
   ): void => {
     if (!playerContainerRef.value) return;
+    // 互动视频播完锁定（插件 handleEnded 已设 data-interactive-ended）：
+    // 顶栏 / 控制栏不再随鼠标移入唤起，只留问题画布与重播按钮可交互；
+    // 插件切分支 / 重播 / 起播时清除该属性，控制栏联动随之恢复
+    if (playerContainerRef.value.hasAttribute("data-interactive-ended")) {
+      return;
+    }
     playerContainerRef.value.setAttribute("data-ctrl-hidden", "false");
     playerContainerRef.value.classList.remove("state-no-cursor");
     controlsApi.showControl?.();
