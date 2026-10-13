@@ -33,6 +33,9 @@ desktop.ini
 .chrome-tmp/
 # mock-server 运行时拉取的媒体缓存（测试视频/雪碧图二进制）：不入库
 mock-server/.cache/
+# 互动视频演示用的测试视频（ffmpeg 生成的二进制，共约 36MB）：不入库，
+# 需要时用 ffmpeg testsrc2 重新生成（data.json 引用 n1/n2a/n2b/n3.mp4）
+mock-server/interactive/videos/
 # IDE 工具会话目录
 .trae/
 # 早期独立播放器演示页（已废弃，主 demo 在 demo/ 根）

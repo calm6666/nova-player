@@ -493,6 +493,145 @@ this.previewImage.src = this.videoshot[currTime + 1];
 
 自测脚本靠它等服务就绪、取片长，并断言 `danmakuCount === 1000`。
 
+### 7b. 互动视频（分支剧情）
+
+三个静态资源路由 + 一个数据路由，全部从 `mock-server/interactive/` 目录出：
+
+| 路由 | 说明 |
+| --- | --- |
+| `GET /interactive/data.json` | 互动视频结构（每次请求重读文件，**改完保存即生效，不用重启服务**） |
+| `GET /interactive/videos/<文件名>` | 节点视频（mp4/webm/m3u8/mpd，支持 HTTP Range，seek 必需） |
+| `GET /interactive/covers/<文件名>` | 节点封面（jpg/png/webp） |
+| `GET /interactive/images/<文件名>` | 分支选择答案背景图（jpg/png/webp） |
+
+目录结构与数据文件：
+
+```
+mock-server/interactive/
+  data.json      ← 剧情结构（节点 / 分支 / 时间窗），改这个文件换剧情
+  videos/        ← 节点视频（n1.mp4、n2a.mp4 …… 与 data.json 里 video 字段对应）
+  covers/        ← 节点封面（n1.jpg …… 与 cover 字段对应）
+  images/        ← 答案背景图（bg-default.png 已内置，question.background 可换）
+```
+
+`data.json` 字段（形状与互动视频插件 `InteractiveVideoPluginConfig` 对齐）：
+
+```jsonc
+{
+  "code": 0, "message": "0",
+  "data": {
+    "startNodeId": "n1",        // 入口节点 id
+    "autoPlay": true,           // 分支切换后是否自动续播
+    "nodes": {
+      "n1": {
+        "title": "第一章 深夜的岔路",          // 剧情进度条悬停卡片标题
+        "cover": "/interactive/covers/n1.jpg", // 悬停卡片封面
+        "video": "/interactive/videos/n1.mp4", // 节点视频（相对本服务）
+        "duration": 30,                        // 视频时长（秒，与实际一致）
+        "question": {                          // 缺省 = 终点节点，播完出重播按钮
+          "timeStart": 26, "timeEnd": 31,      // 分支选择时间窗（秒）
+          "title": "往哪边走？",                // 可选：题目文案
+          "background": "/interactive/images/bg-default.png", // 可选：答案按钮背景图
+          "defaultOptionIndex": 0,             // 倒计时归零自动选的项
+          "options": [
+            { "label": "A", "text": "进入森林", "targetNodeId": "n2a" },
+            { "label": "B", "text": "沿河前进", "targetNodeId": "n2b" }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+#### 用 ffmpeg 准备自己的视频
+
+一段长视频切成多段（每个节点一段，`-c copy` 无损且秒级完成）：
+
+```bash
+# 1. 切段：按剧情分支点切（起止时间按自己的素材改）
+ffmpeg -ss 00:00:00 -to 00:00:30 -i source.mp4 -c copy interactive/videos/n1.mp4
+ffmpeg -ss 00:00:30 -to 00:01:00 -i source.mp4 -c copy interactive/videos/n2a.mp4
+ffmpeg -ss 00:01:00 -to 00:01:25 -i source.mp4 -c copy interactive/videos/n2b.mp4
+ffmpeg -ss 00:01:25 -to 00:01:40 -i source.mp4 -c copy interactive/videos/n3.mp4
+
+# 2. 每段取第 2 秒画面当封面（宽 234 与悬停卡片一致）
+ffmpeg -i interactive/videos/n1.mp4 -ss 2 -vframes 1 -vf scale=234:-1 interactive/covers/n1.jpg
+
+# 3. 查每段实际时长（填进 data.json 的 duration）
+ffprobe -v error -show_entries format=duration -of csv=p=0 interactive/videos/n1.mp4
+```
+
+#### DASH（.mpd）与多清晰度的 video 字段写法
+
+`video` 字段与播放器 `PlayerSource` 同构，三种形态按场景选：
+
+**① DASH / HLS（推荐，多清晰度场景）—— 一个清单 URL 字符串：**
+
+```jsonc
+{ "video": "/interactive/videos/n1.mpd" }   // DASH：.mpd 后缀自动识别
+{ "video": "/interactive/videos/n1.m3u8" }  // HLS：.m3u8 后缀自动识别
+```
+
+⚠️ **DASH/HLS 不要在 JSON 里列举清晰度**：多清晰度由 MPD/m3u8 清单里的
+Representation/Variant 描述，播放器加载清单后**运行时自动发现全部档位**
+并走 ABR 自适应。JSON 里只需要给清单地址，给多了反而会被忽略。
+
+**② MP4 多文件多清晰度 —— 渐进式变体数组（仅 MP4 场景）：**
+
+```jsonc
+{
+  "video": [
+    { "url": "/interactive/videos/n1_1080p.mp4", "label": "1080P 高清", "height": 1080, "bitrate": 5000000 },
+    { "url": "/interactive/videos/n1_720p.mp4",  "label": "720P 高清",  "height": 720,  "bitrate": 2800000 },
+    { "url": "/interactive/videos/n1_480p.mp4",  "label": "480P 清晰",  "height": 480,  "bitrate": 1400000 }
+  ]
+}
+```
+
+**③ MP4 单文件 —— 字符串**（即上文 data.json 的默认示例）。
+
+**用 ffmpeg 打包多清晰度 DASH**（一次输出 3 档 + 1 音轨，产物是
+`n1.mpd` + `init-stream*.m4s` + `chunk-stream*.m4s`，全部放
+`interactive/videos/` 同目录即可，分片路由已覆盖 `.m4s`/`.ts`）：
+
+```bash
+ffmpeg -i source.mp4 ^
+  -filter_complex "[0:v]split=3[v1][v2][v3];[v1]scale=1920:1080[o1];[v2]scale=1280:720[o2];[v3]scale=854:480[o3]" ^
+  -map "[o1]" -c:v:0 libx264 -b:v:0 5000k ^
+  -map "[o2]" -c:v:1 libx264 -b:v:1 2800k ^
+  -map "[o3]" -c:v:2 libx264 -b:v:2 1400k ^
+  -map a:0 -c:a aac -b:a 128k ^
+  -f dash -use_template 1 -use_timeline 1 ^
+  -adaptation_sets "id=0,streams=0,1,2 id=1,streams=a" ^
+  interactive/videos/n1.mpd
+```
+
+（Linux/macOS 把行尾 `^` 换成 `\`。）
+产物里 MPD 引用同目录的 init/chunk 分片，播放器请求
+`/interactive/videos/chunk-stream0-00001.m4s` 时命中媒体路由，无需改任何配置。
+
+多清晰度 DASH 的 `data.json` 节点示例：
+
+```jsonc
+"n1": {
+  "title": "第一章 深夜的岔路",
+  "cover": "/interactive/covers/n1.jpg",
+  "video": "/interactive/videos/n1.mpd",
+  "duration": 30,
+  "question": { ... }
+}
+```
+
+改数据的三个要点：
+1. `duration` 填 ffprobe 查到的真实时长；
+2. `question.timeStart / timeEnd` 必须落在该节点视频时长内
+   （一般 `timeEnd` 略大于视频时长，让问题在结尾弹出；播放器播完
+   ENDED 后也会弹出问题并定格最后一帧）；
+3. `options[].targetNodeId` 必须指向 `nodes` 里存在的节点 id，
+   没选中的分支节点可以继续带自己的 `question` 形成多级分支。
+
+
 ### 8. `GET /` —— 自测页
 
 原生 HTML/CSS/JS（无框架），包含：**怎么用**说明、运行环境（片长、弹幕条数与速度档分布、WS 连接数、ffmpeg 状态）、

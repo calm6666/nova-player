@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "message": "0",
+  "data": {
+    "videoId": "demo-interactive-001",
+    "title": "互动视频演示：深夜的岔路",
+    "startNodeId": "n1",
+    "autoPlay": true,
+    "nodes": {
+      "n1": {
+        "id": "n1",
+        "title": "第一章 深夜的岔路",
+        "cover": "/interactive/covers/n1.jpg",
+        "video": "/interactive/videos/n1.mp4",
+        "duration": 30,
+        "question": {
+          "timeStart": 26,
+          "timeEnd": 31,
+          "title": "往哪边走？",
+          "background": "/interactive/images/bg-default.png",
+          "defaultOptionIndex": 0,
+          "options": [
+            { "label": "A", "text": "进入森林", "targetNodeId": "n2a" },
+            { "label": "B", "text": "沿河前进", "targetNodeId": "n2b" }
+          ]
+        }
+      },
+      "n2a": {
+        "id": "n2a",
+        "title": "第二章 森林深处",
+        "cover": "/interactive/covers/n2a.jpg",
+        "video": "/interactive/videos/n2a.mp4",
+        "duration": 20
+      },
+      "n2b": {
+        "id": "n2b",
+        "title": "第二章 河流尽头",
+        "cover": "/interactive/covers/n2b.jpg",
+        "video": "/interactive/videos/n2b.mp4",
+        "duration": 25,
+        "question": {
+          "timeStart": 21,
+          "timeEnd": 26,
+          "title": "桥断了，怎么办？",
+          "background": "/interactive/images/bg-default.png",
+          "defaultOptionIndex": 1,
+          "options": [
+            { "label": "A", "text": "涉水过河", "targetNodeId": "n3" },
+            { "label": "B", "text": "绕路找桥", "targetNodeId": "n3" }
+          ]
+        }
+      },
+      "n3": {
+        "id": "n3",
+        "title": "终章 黎明",
+        "cover": "/interactive/covers/n3.jpg",
+        "video": "/interactive/videos/n3.mp4",
+        "duration": 15
+      }
+    }
+  }
+}

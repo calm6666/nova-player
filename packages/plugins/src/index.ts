@@ -92,6 +92,17 @@ export type {
   InteractionPluginAPI,
 } from './interaction';
 
+// 导出互动视频插件（分支剧情视频）- 使用工厂函数
+export { InteractiveVideoPlugin } from './interactive-video';
+export type {
+  InteractiveVideoPluginConfig,
+  InteractiveVideoPluginAPI,
+  InteractiveNode,
+  InteractiveQuestion,
+  InteractiveOption,
+  VisitedNode,
+} from './interactive-video';
+
 // 导出音效插件 - 使用工厂函数
 export { AudioEffectPlugin, createAudioEffectPlugin } from './audioeffect';
 export type { AudioEffectPluginConfig, AudioEffectPluginAPI } from './audioeffect';

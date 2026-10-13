@@ -1,0 +1,361 @@
+/**
+ * ============================================
+ * 互动视频插件样式（nova-player-interaction-*）
+ * ============================================
+ * 随插件分发（?inline 运行时注入），不进播放器样式包。
+ * 承载剧情进度条 / 分支选择 / 倒计时 / 重播等内容。
+ *
+ * 显隐约定：整个互动视频 DOM 随控制栏一起显示 / 隐藏
+ * （.nova-player-container[data-ctrl-hidden] 驱动，见文件末尾规则）。
+ */
+
+// ============================================
+// 根容器
+// ============================================
+
+.nova-player-interaction-wrap {
+  // 覆盖整个视频区域，作为子容器的定位基准；
+  // 自身不拦截事件，交互由各子元素自行开启（pointer-events: auto）
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  // 随控制栏显隐的淡入淡出过渡（配合 data-ctrl-hidden 规则）
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+
+  // 激活标志元素（问题 / 重播显示中时可见）：仅供文件末尾的
+  // :has(.nova-player-interaction-active) 联动例外做判定，
+  // 零尺寸不参与布局、不渲染任何内容
+  > .nova-player-interaction-active {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  // ============================================
+  // 剧情进度条（已看节点圆点 + 悬停卡片）
+  // ============================================
+
+  .nova-player-interaction-story {
+    // 底部居中悬浮的半透明胶囊条
+    position: absolute;
+    left: 50%;
+    bottom: 70px;
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    transform: translateX(-50%);
+    z-index: 48;
+    pointer-events: none;
+
+    // 节点圆点外层：限制最大宽度，超出横向收起
+    .nova-player-interaction-oval-wrap {
+      display: inline-block;
+      width: auto;
+      height: auto;
+      max-width: 400px;
+      margin: 0 auto;
+      overflow: hidden;
+      vertical-align: middle;
+
+      // 节点圆点行：宽度由插件按节点数设置，切换节点时平滑过渡
+      .nova-player-interaction-oval {
+        width: auto;
+        height: 40px;
+        margin-left: 0;
+        transition: 0.6s ease-out;
+
+        // 单个节点圆点（正在看 = 位置图标 / 已看完 = 打勾图标，由插件注入）
+        .nova-player-interaction-oval-item {
+          position: relative;
+          float: left;
+          width: 40px;
+          height: 40px;
+          margin: 0 5px;
+          fill: #fff;
+          cursor: pointer;
+          // 覆盖 story 的 pointer-events: none，使圆点可交互
+          pointer-events: auto;
+
+          // 圆点内圈（normal / hover 双图标叠放）
+          .nova-player-interaction-oval-round {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 36px;
+            height: 36px;
+            border-radius: 20px;
+
+            // 双图标层：normal 常态显示，hover 悬停时由插件切换
+            .small {
+              position: absolute;
+              width: 36px;
+              height: 36px;
+
+              &.hover {
+                display: none;
+              }
+            }
+          }
+
+          // 悬停态：显示 hover 图标、隐藏 normal 图标
+          &.hover {
+            .nova-player-interaction-oval-round .small {
+              &.normal {
+                display: none;
+              }
+
+              &.hover {
+                display: block;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 悬停卡片挂载点：零尺寸定位基准，卡片以绝对定位向外展开
+    .nova-player-interaction-hover-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+
+      // 单个悬停卡片（默认隐藏，悬停对应圆点时由插件显示）
+      .nova-player-interaction-hover-item {
+        position: absolute;
+        display: none;
+        width: 119px;
+        height: 20px;
+        margin-left: -35px;
+        margin-top: -27px;
+        background-color: #fff;
+        box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.5);
+
+        // 卡片标题条背景
+        .nova-player-interaction-background {
+          position: absolute;
+          width: 100%;
+          height: 20px;
+          background-color: #fff;
+          z-index: 2;
+        }
+
+        // 卡片标题文本（单行溢出省略）
+        .nova-player-interaction-text {
+          position: relative;
+          max-width: 119px;
+          padding: 0 10px;
+          overflow: hidden;
+          color: #222;
+          font-size: 12px;
+          line-height: 20px;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          z-index: 2;
+        }
+
+        // 卡片下方的小三角箭头（双层描边实现）
+        .nova-player-interaction-label {
+          position: absolute;
+
+          // 内层三角（纯白）
+          .nova-player-interaction-label-one {
+            position: absolute;
+            top: -1px;
+            left: 0;
+            width: 0;
+            height: 0;
+            border-top: 5px solid #fff;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            z-index: 1;
+          }
+
+          // 外层三角（覆盖边缘，形成描边效果）
+          .nova-player-interaction-label-two {
+            position: absolute;
+            top: 0;
+            left: -1px;
+            width: 0;
+            height: 0;
+            border-top: 6px solid #fff;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            z-index: 1;
+          }
+        }
+
+        // 节点视频封面（悬浮在标题条上方）
+        .nova-player-interaction-cover {
+          position: absolute;
+          top: -65px;
+          left: 3px;
+          width: 117px;
+          height: 73px;
+          border: 1px solid #fff;
+
+          img {
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+
+  // ============================================
+  // 分支选择容器（插件插入透明 canvas 绘制选项）
+  // ============================================
+
+  .nova-player-interaction-question {
+    // 全屏居中布局，canvas 由插件按容器尺寸创建
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 48;
+    // 容器自身不拦截事件，仅 canvas 可交互（避免空容器挡住播放器点击）
+    pointer-events: none;
+
+    canvas {
+      // 画布全透明，选项按钮 / 背景图均由 canvas 绘制
+      pointer-events: auto;
+    }
+  }
+
+  // ============================================
+  // 特殊节点容器
+  // ============================================
+
+  .nova-player-interaction-special {
+    position: absolute;
+    z-index: 48;
+  }
+
+  // ============================================
+  // 隐藏节点容器
+  // ============================================
+
+  .nova-player-interaction-hidden {
+    position: absolute;
+    bottom: 67px;
+    left: 50%;
+    display: inline-block;
+    width: fit-content;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    transform: translateX(-50%);
+    align-items: center;
+    z-index: 48;
+    pointer-events: none;
+  }
+
+  // ============================================
+  // 倒计时进度条（贴底全宽）
+  // ============================================
+
+  .nova-player-interaction-countdown {
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    z-index: 49;
+
+    // 倒计时剩余进度（宽度由 ratio 信号驱动 100% → 0；
+    // transition 抹平 TIME_UPDATE 上报周期的阶梯感）
+    .nova-player-interaction-countdown-bar {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      opacity: 0.8;
+      transition: width 0.5s linear;
+    }
+  }
+
+  // ============================================
+  // 重播按钮（互动视频播完后显示）
+  // ============================================
+
+  .nova-player-interaction-replay {
+    position: absolute;
+    top: 5%;
+    right: 7%;
+    display: inline-flex;
+    height: 26px;
+    color: #fff;
+    font-size: 16px;
+    line-height: 26px;
+    opacity: 0.7;
+    text-shadow: 1px 1px 2px #222;
+    cursor: pointer;
+    z-index: 49;
+
+    // 覆盖 wrap 的 pointer-events: none，使按钮可交互
+    pointer-events: auto;
+
+    .nova-player-interaction-replay-icon {
+      display: inline-block;
+      width: 26px;
+      height: 26px;
+      margin-right: 4px;
+      filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.4));
+
+      svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
+}
+
+// ============================================
+// 屏幕模式适配：全屏 / 网页全屏下控制栏更高，剧情进度条随之上移
+// ============================================
+
+.nova-player-container[data-screen="full"],
+.nova-player-container[data-screen="web"] {
+  .nova-player-interaction-wrap {
+    .nova-player-interaction-story {
+      bottom: 98px;
+    }
+  }
+}
+
+// ============================================
+// 控制栏联动显隐：控制栏隐藏时整个互动视频 DOM 同步隐藏
+// （data-ctrl-hidden 由 PlayerDocker 的 showControls / hideControls 切换）
+// ============================================
+
+.nova-player-container[data-ctrl-hidden="true"] {
+  .nova-player-interaction-wrap {
+    opacity: 0;
+    visibility: hidden;
+    // 隐藏期间禁用交互，避免透明状态下误触 canvas 选项
+    pointer-events: none;
+
+    // 激活例外：播完弹出问题 / 显示重播时，控制栏与其余 UI 收起，
+    // 但问题（含定格画布）与重播按钮必须保持可见可点。
+    // 标志元素 .nova-player-interaction-active 由插件信号驱动显隐
+    // （问题或重播显示中 = block），:has 命中时覆盖上方的隐藏规则。
+    &:has(> .nova-player-interaction-active) {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+  }
+}

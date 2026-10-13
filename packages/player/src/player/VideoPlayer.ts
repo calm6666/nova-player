@@ -941,6 +941,10 @@ export class VideoPlayer
       onNext: () => {
         void this.next();
       },
+      /** 错误面板点击「刷新」：重载当前视频（清错误态 + 重新加载） */
+      onRetry: () => {
+        this.reload();
+      },
       /** 选集面板点击某一集：按列表下标切集（UI → 播放列表） */
       onEplistChange: (index: number) => {
         void this.switchTo(index);
@@ -1636,6 +1640,16 @@ export class VideoPlayer
    */
   getConfig(): Readonly<PlayerConfig> {
     return this.props;
+  }
+
+  /**
+   * 视频元素访问器（只读）
+   *
+   * 供插件等外部消费方读取视频元素（如互动视频插件在 ENDED 后把
+   * 最后一帧绘制到 canvas 上）；元素在 MOUNTED 前不可用，返回 null
+   */
+  get video(): HTMLVideoElement | null {
+    return this.videoEl;
   }
 
   /**

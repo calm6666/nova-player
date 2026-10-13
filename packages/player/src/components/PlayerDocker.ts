@@ -32,6 +32,10 @@ import { Tooltips } from "@/nova/components/Tooltips";
 import { RowDm } from "@/nova/components/RowDm";
 import { SubtitleLayer } from "@/nova/components/SubtitleLayer";
 import { InteractionLayer } from "@/nova/components/InteractionLayer";
+import { InteractiveVideoLayer } from "@/nova/components/InteractiveVideoLayer";
+import type { InteractiveVideoLayerAPI } from "@/nova/components/InteractiveVideoLayer";
+import { ErrorSign } from "@/nova/components/ErrorSign";
+import type { ErrorSignAPI, ErrorSignInfo } from "@/nova/components/ErrorSign";
 import { Dialog } from "@/nova/components/Dialog";
 import { Context as ContextMenu } from "@/nova/components/Context";
 import {
@@ -293,6 +297,12 @@ export type PlayerDockerEvents = {
   hideDmTip: { element: HTMLElement };
   subtitleLayerMounted: SubtitleLayerAPI;
   interactionLayerMounted: InteractionLayerAPI;
+  /** 互动视频层容器挂载完成，回传根容器引用（互动视频插件注入点） */
+  interactiveVideoLayerMounted: InteractiveVideoLayerAPI;
+  /** 错误面板挂载完成，回传 show / hide API */
+  errorSignMounted: ErrorSignAPI;
+  /** 错误面板点击「刷新」按钮（由 VideoPlayer 落地为 reload()） */
+  retry: undefined;
   dialogMounted: DialogAPI;
   pipToggle: undefined;
   prev: undefined;
@@ -677,6 +687,56 @@ export const PlayerDocker = defineComponent<
     );
   };
 
+  /**
+   * 订阅事件总线上的错误相关事件，驱动错误面板（ErrorSign）显隐：
+   * - ERROR：显示错误面板并填充错误信息（错误码 / 出错主机名 /
+   *   网络类错误时附带本地网络权限提示）
+   * - ERROR_RECOVERY：备用源切换成功，隐藏错误面板
+   * - LOADED_METADATA：重新加载成功（刷新按钮 → reload），隐藏错误面板
+   * 订阅返回的解绑函数统一交给 cleanupFns（teardown 释放）
+   */
+  const setupErrorEventSubscriptions = (): void => {
+    if (!props.events) return;
+
+    cleanupFns.push(
+      props.events.on(
+        PlayerEventEnum.ERROR,
+        (payload: { error: unknown; code?: number; message?: string }) => {
+          /** 从当前视频源 URL 提取出错主机名（解析失败返回 undefined） */
+          const host = (() => {
+            try {
+              const url =
+                videoRef.value?.currentSrc || videoRef.value?.src || "";
+              return url ? new URL(url).host : undefined;
+            } catch {
+              return undefined;
+            }
+          })();
+
+          errorSignApi.show?.({
+            message: payload.message,
+            code: payload.code,
+            host,
+            // 网络错误（MediaError.code === 2）时附带本地网络权限提示
+            showLocalNetworkTip: payload.code === 2,
+          });
+        },
+      ),
+    );
+
+    cleanupFns.push(
+      props.events.on(PlayerEventEnum.ERROR_RECOVERY, () => {
+        errorSignApi.hide?.();
+      }),
+    );
+
+    cleanupFns.push(
+      props.events.on(PlayerEventEnum.LOADED_METADATA, () => {
+        errorSignApi.hide?.();
+      }),
+    );
+  };
+
   // ============================================
   // 控制栏 API（延迟初始化后赋值）
   // ============================================
@@ -743,6 +803,20 @@ export const PlayerDocker = defineComponent<
   const interactionApi: {
     /** 互动层容器元素 */
     container?: HTMLElement | null;
+  } = {};
+
+  /** 互动视频层容器 API，由 InteractiveVideoLayer 组件挂载后填充 */
+  const interactiveVideoApi: {
+    /** 互动视频根容器元素（互动视频插件的注入点） */
+    wrap?: HTMLElement | null;
+  } = {};
+
+  /** 错误面板组件 API，由 ErrorSign 组件挂载后填充 */
+  const errorSignApi: {
+    /** 显示错误面板并填充错误信息 */
+    show?: (info?: ErrorSignInfo) => void;
+    /** 隐藏错误面板 */
+    hide?: () => void;
   } = {};
 
   /** 快捷键面板 API，由 HotkeyPanel 组件挂载后填充 */
@@ -1995,6 +2069,8 @@ export const PlayerDocker = defineComponent<
     initEvent();
     // 订阅事件总线上的时序类媒体事件（WAITING / CAN_PLAY / SEEKING / SEEKED）
     setupVideoEventSubscriptions();
+    // 订阅错误相关事件（ERROR / ERROR_RECOVERY / LOADED_METADATA），驱动错误面板显隐
+    setupErrorEventSubscriptions();
     // 订阅清晰度切换事件（补充档位展示名）
     setupQualityEvents();
     // 订阅配置中心的动态变化（progress.segments / interaction.keyboard）
@@ -2330,6 +2406,15 @@ export const PlayerDocker = defineComponent<
               }
             },
           }),
+          // 互动视频层容器（仅一个空的 .nova-player-interaction-wrap，
+          // 剧情进度条 / 分支选择等内容由互动视频插件注入；位于控制栏之前）
+          h(InteractiveVideoLayer, {
+            onInteractiveVideoLayerMounted: (data: InteractiveVideoLayerAPI) => {
+              interactiveVideoApi.wrap = data.wrap;
+              lifecycle.emit?.("interactiveVideoLayerMounted", data);
+              props.events?.emit("interactiveVideoLayerMounted", data);
+            },
+          }),
           // 视频控制栏
           h(Controls, {
             duration: readDuration(),
@@ -2442,6 +2527,18 @@ export const PlayerDocker = defineComponent<
               progressBarApi.updateBuffer = api.updateBuffer;
               progressBarApi.setDuration = api.setDuration;
               progressBarApi.rebuildSegments = api.rebuildSegments;
+            },
+          }),
+          // 错误面板（视频区域内最后一个容器：加载 / 播放失败时覆盖整个播放器；
+          // 显隐由上方 setupErrorEventSubscriptions 订阅 ERROR / ERROR_RECOVERY 驱动）
+          h(ErrorSign, {
+            onErrorSignMounted: (api: ErrorSignAPI) => {
+              errorSignApi.show = api.show;
+              errorSignApi.hide = api.hide;
+            },
+            // 点击「刷新」按钮 → 上抛 retry 事件（由 VideoPlayer 落地为 reload()）
+            onRetry: () => {
+              lifecycle.emit?.("retry");
             },
           }),
         ),

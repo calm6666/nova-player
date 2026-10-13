@@ -124,6 +124,20 @@ export { InteractionLayer } from './InteractionLayer';
 /** 交互层组件 Props 类型 */
 export type { InteractionLayerProps } from './InteractionLayer';
 
+/** 互动视频层组件（仅空容器，内容与样式由互动视频插件注入） */
+export { InteractiveVideoLayer } from './InteractiveVideoLayer';
+/** 互动视频层 API 类型（暴露根容器引用给插件） */
+export type { InteractiveVideoLayerAPI } from './InteractiveVideoLayer';
+
+/** 错误面板组件 */
+export { ErrorSign } from './ErrorSign';
+/** 错误面板组件 Props / API / 错误信息类型 */
+export type {
+  ErrorSignProps,
+  ErrorSignAPI,
+  ErrorSignInfo,
+} from './ErrorSign';
+
 /** 字幕层组件 */
 export { SubtitleLayer } from './SubtitleLayer';
 /** 字幕层组件 Props 及字幕位置类型 */

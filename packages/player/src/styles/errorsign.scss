@@ -1,0 +1,166 @@
+/**
+ * ============================================
+ * 播放器错误面板样式（nova-player-error-sign）
+ * ============================================
+ * 视频加载 / 播放失败时覆盖整个播放器的错误提示面板。
+ * 样式与既有实现（Nova 播放器错误面板）对齐，采用 SCSS 嵌套组织。
+ */
+
+.nova-player-error-sign {
+  // 覆盖整个播放器：绝对定位 + 全宽高，居中纵向排布
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  // 深色底遮盖视频画面
+  background-color: #18191c;
+  color: #fff;
+  text-align: center;
+  // 高于控制栏（z-index: 75），阻止一切底层交互
+  z-index: 76;
+
+  // ============================================
+  // 错误内容区：主信息 + 详细信息 + 本地网络权限提示
+  // ============================================
+
+  .nova-player-error-sign-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  // 主错误信息
+  .nova-player-error-sign-message {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 28px;
+  }
+
+  // 详细信息（错误码 / 展示 ID / 主机名）
+  .nova-player-error-sign-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  // 错误码行
+  .nova-player-error-sign-code {
+    color: #9499a0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 24px;
+  }
+
+  // 展示 ID / 出错主机名行（长文本换行）
+  .nova-player-error-sign-displayid,
+  .nova-player-error-sign-host {
+    max-width: 600px;
+    color: #61666d;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 17px;
+    word-break: break-all;
+  }
+
+  // ============================================
+  // 本地网络访问权限提示（默认隐藏，网络类错误时显示）
+  // ============================================
+
+  .nova-player-error-sign-local-network-tip {
+    // 默认显示（与既有实现一致：内联 display:none 时由下方属性选择器规则隐藏）
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    max-width: 600px;
+    padding: 20px;
+    background: hsla(0, 0%, 100%, 0.05);
+    border: 1px solid hsla(0, 0%, 100%, 0.1);
+    border-radius: 8px;
+    text-align: left;
+  }
+
+  // 内联隐藏（style="display: none"）时保持不显示：
+  // showLocalNetworkTip 为 false 时组件设置内联 display:none，
+  // 该规则以更高特异性覆盖上面的 display:flex
+  .nova-player-error-sign-local-network-tip[style*="display: none"] {
+    display: none;
+  }
+
+  // 提示文案区
+  .nova-player-error-sign-local-network-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  // 提示标题
+  .nova-player-error-sign-local-network-title {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 24px;
+  }
+
+  // 提示步骤列表
+  .nova-player-error-sign-local-network-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    p {
+      margin: 0;
+      color: hsla(0, 0%, 100%, 0.8);
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 20px;
+    }
+  }
+
+  // 本地网络权限开启示意图
+  .nova-player-error-sign-local-network-image {
+    display: flex;
+    flex-shrink: 0;
+    width: 260px;
+    height: auto;
+    align-items: center;
+    justify-content: center;
+
+    img,
+    svg {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  // ============================================
+  // 刷新按钮
+  // ============================================
+
+  .nova-player-error-sign-retry-btn {
+    min-width: 190px;
+    height: 40px;
+    padding: 7px 36px;
+    background: var(--nova-player-primary-color, #00a1d6);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 22px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+}

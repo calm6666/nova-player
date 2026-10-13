@@ -437,6 +437,54 @@ function sendBinary(res, status, buf, contentType) {
   res.end(buf);
 }
 
+// 互动视频的媒体文件（mp4/m3u8/mpd/封面图）走流式响应：
+// 视频必须支持 HTTP Range（拖进度条 seek 时浏览器只请求片段，不支持 Range
+// 的服务器会让 seek 直接失效/整文件重下），图片顺带走同一出口。
+function sendMediaFile(req, res, file, contentType) {
+  const stat = statSafe(file);
+  if (!stat || !stat.isFile()) {
+    sendJson(res, 404, { code: -404, message: `文件不存在：${path.basename(file)}` });
+    return;
+  }
+  const size = stat.size;
+  let start = 0;
+  let end = size - 1;
+  let status = 200;
+  /** @type {Record<string, string>} */
+  const headers = {
+    ...CORS,
+    'Content-Type': contentType,
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'no-store',
+  };
+
+  const range = req.headers.range;
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(String(range).trim());
+    if (m) {
+      if (m[1] === '' && m[2] !== '') {
+        // bytes=-N：最后 N 个字节
+        start = Math.max(0, size - Number.parseInt(m[2], 10));
+      } else {
+        if (m[1] !== '') start = Number.parseInt(m[1], 10);
+        if (m[2] !== '') end = Number.parseInt(m[2], 10);
+      }
+      if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= size) {
+        res.writeHead(416, { ...CORS, 'Content-Range': `bytes */${size}` });
+        res.end();
+        return;
+      }
+      end = Math.min(end, size - 1);
+      status = 206;
+      headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
+    }
+  }
+
+  headers['Content-Length'] = String(end - start + 1);
+  res.writeHead(status, headers);
+  fs.createReadStream(file, { start, end }).pipe(res);
+}
+
 // 请求里的 aid/cid 优先，其次才是启动参数。两者不一致时只提示、不拦截：
 // mock 数据和 aid/cid 无关，写死校验只会白白挡住前端调试。
 function pickIds(url) {
@@ -1329,13 +1377,25 @@ async function buildPreview() {
 
   const cacheDir = path.join(CACHE_ROOT, previewCacheKey());
   const cacheFile = path.join(cacheDir, 'preview.bin');
+  const spriteFile = path.join(cacheDir, 'sprite.jpg');
 
-  // 命中缓存就直接返回：抽帧是整个服务里唯一的重活，第二次启动应该毫秒级完成
+  // 命中缓存就直接返回：抽帧是整个服务里唯一的重活，第二次启动应该毫秒级完成。
+  // 【注意】必须 preview.bin 和 sprite.jpg 都在才算命中：preview.bin 有缓存但
+  //   雪碧图缺失（旧版本跑出的缓存 / 上次拼图失败）时如果直接 return，
+  //   getSpriteFile() 里的重试永远走不到抽帧（previewInFlight 拿到的是缓存结果），
+  //   雪碧图就死锁在 404。此时要落到下面的完整流程重新抽帧，顺带补出雪碧图。
   try {
     const cached = await fsp.readFile(cacheFile);
-    if (cached.length > 0) {
+    const spriteReady = statSafe(spriteFile);
+    if (cached.length > 0 && spriteReady && spriteReady.size > 0) {
       log(`preview.bin 命中缓存：${cacheFile}（${cached.length} 字节）`);
       return cached;
+    }
+    if (cached.length > 0) {
+      log(`preview.bin 有缓存但雪碧图缺失，重新抽帧补雪碧图：${spriteFile}`);
+      // 同步雪碧图状态，避免 index.json 在补生成期间误报 ready
+      spriteState.status = 'unavailable';
+      spriteState.message = '雪碧图缓存缺失，正在补生成';
     }
   } catch {
     // 缓存不存在，继续往下抽帧
@@ -1391,7 +1451,6 @@ async function buildPreview() {
   // 雪碧图：用同一次抽帧得到的 jpg 拼一张 tile=NxM 的大图（不额外抽帧）。
   // 必须在删除 framesDir 之前做，否则要再抽一遍视频。
   const geo = spriteGeometry();
-  const spriteFile = path.join(cacheDir, 'sprite.jpg');
   try {
     await runFfmpeg([
       '-hide_banner',
@@ -2096,6 +2155,62 @@ async function handleRequest(req, res) {
         },
       },
     });
+    return;
+  }
+
+  // ---- 8a. 互动视频（分支剧情）----------------------------------------------
+  // 数据文件 mock-server/interactive/data.json：形状与互动视频插件的
+  // InteractiveVideoPluginConfig 对齐（nodes/startNodeId/autoPlay + 每节点的
+  // question 分支配置）。每次请求都重读文件——改完数据保存即生效，不用重启服务。
+  // 节点视频放 interactive/videos/，封面放 covers/，答案背景图放 images/。
+  // 视频路由支持 HTTP Range（seek 必需），m3u8/mpd 同样从 videos/ 出。
+  if (pathname === '/interactive/data.json' && isGet) {
+    try {
+      const raw = await fsp.readFile(path.join(__dirname, 'interactive', 'data.json'), 'utf8');
+      sendJson(res, 200, JSON.parse(raw));
+    } catch (err) {
+      sendJson(res, 500, {
+        code: -500,
+        message: `interactive/data.json 读取失败：${String(err.message)}`,
+      });
+    }
+    return;
+  }
+
+  const interactiveMedia = /^\/interactive\/(videos|covers|images)\/([A-Za-z0-9._-]+)$/.exec(pathname);
+  if (interactiveMedia && isGet) {
+    const kind = interactiveMedia[1];
+    const name = interactiveMedia[2];
+    // 文件名白名单 [A-Za-z0-9._-] 天然挡掉 ../ 目录穿越；再按后缀限定内容类型
+    const ext = path.extname(name).toLowerCase();
+    const type = {
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.m3u8': 'application/vnd.apple.mpegurl',
+      '.ts': 'video/mp2t',
+      // DASH 分片：ffmpeg -f dash 的产物（init-stream*.m4s / chunk-stream*.m4s），
+      // MPD 以相对路径引用它们，播放器会拼到 mpd 同目录下请求
+      '.m4s': 'video/iso.segment',
+      '.mpd': 'application/dash+xml',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+    }[ext];
+    if (!type) {
+      sendJson(res, 400, { code: -400, message: `不支持的文件类型：${name}` });
+      return;
+    }
+    const file = path.join(__dirname, 'interactive', kind, name);
+    if (kind === 'videos') {
+      sendMediaFile(req, res, file, type);
+    } else {
+      try {
+        sendBinary(res, 200, await fsp.readFile(file), type);
+      } catch {
+        sendJson(res, 404, { code: -404, message: `文件不存在：${name}` });
+      }
+    }
     return;
   }
 
