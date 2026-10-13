@@ -283,36 +283,21 @@ export class DashPlugin implements StreamPlugin {
 
     const source = config.url;
 
-    // 步骤 5：创建 dash.js 播放器实例
-    this.dashPlayer = MediaPlayer().create();
-
-    // 步骤 6：应用用户自定义设置
-    if (this.pluginConfig.streaming) {
-      // 将 boolean 类型的 autoSwitchBitrate 转换为 dash.js 要求的 { audio, video } 格式
-      const autoSwitchBitrate = this.pluginConfig.streaming.abr?.autoSwitchBitrate;
-      const normalizedAutoSwitchBitrate: { audio?: boolean; video?: boolean } | undefined =
-        autoSwitchBitrate === undefined
-          ? undefined
-          : typeof autoSwitchBitrate === 'boolean'
-            ? { audio: autoSwitchBitrate, video: autoSwitchBitrate }
-            : autoSwitchBitrate;
-
-      const streamingSettings = {
-        abr: {
-          ...this.pluginConfig.streaming.abr,
-          autoSwitchBitrate: normalizedAutoSwitchBitrate,
-        },
-        buffer: this.pluginConfig.streaming.buffer,
-      };
-      this.dashPlayer.updateSettings({
-        streaming: streamingSettings,
-      });
+    // 步骤 5：获取 dash.js 播放器实例——已创建则复用（互动视频分支切换 /
+    // 换源场景不销毁重建实例，dash.js 的 initialize / attachSource 均支持
+    // 重复调用换源：内部控制器只初始化一次，attachSource 会先卸载旧流）
+    if (!this.dashPlayer) {
+      this.dashPlayer = MediaPlayer().create();
+      // 绑定 dash.js 内置事件：事件是实例级的，只在创建时绑定一次，
+      // 复用换源不重复绑定（避免回调重复触发、统计事件多报）
+      this.bindEvents();
     }
 
-    // 步骤 7：绑定 dash.js 内置事件
-    this.bindEvents();
+    // 步骤 6：应用用户自定义设置（每次 load 都应用——复用换源时把上一个
+    // 视频手动选档残留的 ABR 关闭状态恢复成插件默认配置）
+    this.applyStreamingSettings();
 
-    // 步骤 8：根据源类型选择加载模式
+    // 步骤 7：根据源类型选择加载模式
     if (typeof source === 'string' && source.split('?')[0].toLowerCase().endsWith('.json')) {
       // ===== JSON Manifest 模式 =====
       // 先 fetch JSON，再转换为 dash.js 清单对象注入
@@ -320,20 +305,21 @@ export class DashPlugin implements StreamPlugin {
     } else if (typeof source === 'string') {
       // ===== URL 字符串模式 =====
 
-      // 步骤 8a：初始化播放器（绑定视频元素、设置源、不自动播放）
+      // 步骤 7a：初始化播放器（绑定视频元素、设置源、不自动播放；
+      // dash.js 的 initialize 幂等——控制器只初始化一次，重复调用只重绑 view）
       this.dashPlayer.initialize(this.videoElement, source, false);
 
-      // 步骤 8b：附加源 URL
+      // 步骤 7b：附加源 URL（attachSource 支持重复调用：先卸载旧流再加载新源）
       this.dashPlayer.attachSource(source);
 
       logger.info('DASH 流加载成功 (URL模式):', source);
     } else {
       // ===== 对象注入模式 =====
 
-      // 步骤 8c：初始化播放器（绑定视频元素、不设置源、不自动播放）
+      // 步骤 7c：初始化播放器（绑定视频元素、不设置源、不自动播放）
       this.dashPlayer.initialize(this.videoElement, '', false);
 
-      // 步骤 8d：转换清单对象为 dash.js 可识别的清单对象
+      // 步骤 7d：转换清单对象为 dash.js 可识别的清单对象
       if (!isMediaManifest(source)) {
         const msg = '清单对象缺少 duration 或 video 字段';
         logger.error(msg);
@@ -342,24 +328,54 @@ export class DashPlugin implements StreamPlugin {
       }
       const dashManifest = manifestToDash(source);
 
-      // 步骤 8e：设置 url 和 baseUri（dash.js 内部依赖）
+      // 步骤 7e：设置 url 和 baseUri（dash.js 内部依赖）
       const pageUrl = globalThis.location?.href ?? '';
       dashManifest.url = pageUrl;
       dashManifest.baseUri = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
 
-      // 步骤 8f：注入清单对象
+      // 步骤 7f：注入清单对象
       this.dashPlayer.attachSource(dashManifest);
 
       logger.info('DASH 流加载成功 (对象注入模式): [清单对象]');
     }
 
-    // 步骤 9：发射加载完成事件
+    // 步骤 8：发射加载完成事件
     this.streamEventBus.emit(StreamPluginEventEnum.LOAD_COMPLETE, { url: source });
 
-    // 步骤 10：如果有起始时间，跳转到指定位置
+    // 步骤 9：如果有起始时间，跳转到指定位置
     if (config.startTime && config.startTime > 0) {
       this.seek(config.startTime);
     }
+  }
+
+  /**
+   * 应用流媒体自定义设置到 dash.js 实例
+   * 把插件配置里的 streaming.abr / streaming.buffer 转换成 dash.js 的
+   * settings 形状后 updateSettings；每次 load 都调用——复用实例换源时
+   * 用默认配置覆盖上一个视频手动选档残留的 ABR 关闭状态
+   */
+  private applyStreamingSettings(): void {
+    if (!this.dashPlayer || !this.pluginConfig.streaming) return;
+
+    // 将 boolean 类型的 autoSwitchBitrate 转换为 dash.js 要求的 { audio, video } 格式
+    const autoSwitchBitrate = this.pluginConfig.streaming.abr?.autoSwitchBitrate;
+    const normalizedAutoSwitchBitrate: { audio?: boolean; video?: boolean } | undefined =
+      autoSwitchBitrate === undefined
+        ? undefined
+        : typeof autoSwitchBitrate === 'boolean'
+          ? { audio: autoSwitchBitrate, video: autoSwitchBitrate }
+          : autoSwitchBitrate;
+
+    const streamingSettings = {
+      abr: {
+        ...this.pluginConfig.streaming.abr,
+        autoSwitchBitrate: normalizedAutoSwitchBitrate,
+      },
+      buffer: this.pluginConfig.streaming.buffer,
+    };
+    this.dashPlayer.updateSettings({
+      streaming: streamingSettings,
+    });
   }
 
   /**

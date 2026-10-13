@@ -2214,6 +2214,182 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ---- 8c. 互动视频（华强买瓜：剧情树 + playurl 播放地址解析）----------------
+  // 【设计对齐 B 站互动视频的标准做法】剧情树与播放地址拆成两级接口：
+  //   · 先拉剧情树 —— 节点只带 avid 引用，不含任何播放地址；
+  //   · 分支切换时前端再按需拿 avid 请求 playurl（协议 + 返回格式二选一）。
+  //     88 个节点不必一次性解析全部播放地址，只解析实际播到的分支。
+  //
+  // GET /api/interactive/story?interactiveId=huaqiang
+  //   读 interactive/<interactiveId>/story.json（后端格式：节点带 avid + 源文件名），
+  //   转成前端互动视频插件格式（InteractiveVideoPluginConfig.nodes 的形状）：
+  //     · 节点字段 nodeId → id（camelCase，与 InteractiveNode 类型对齐）
+  //     · cover 补全为完整 URL（story.json 存的是 mock-server 相对路径）
+  //     · 不带 video：播放地址由 playurl 接口按 avid + 协议 + 格式解析，
+  //       前端给插件配 resolveVideo 回调按需换取
+  //   每次请求都重读文件——改完剧情树保存即生效，不用重启服务。
+  //
+  // GET /api/interactive/playurl?avid=av1000001&protocol=hls|dash&format=url|json
+  //   读转码脚本（transcode_huaqiang.py）生成的聚合清单
+  //   interactive/<interactiveId>/manifest.json：
+  //     · format=url  → data.playUrl 是 MinIO 上的 index.m3u8 / index.mpd 地址
+  //     · format=json → data.manifest 是 SegmentBase 单文件模式的 MediaManifest
+  //       对象（对象直接喂给播放器即可播放，不用再走一次网络清单）
+  //   顺带返回 qualities 清晰度表（每清晰度一个 representation id，
+  //   与「每个清晰度一个 id」的转码设计对应，给前端展示/切换用）。
+  if (pathname === '/api/interactive/story' && isGet) {
+    const interactiveId = url.searchParams.get('interactiveId') || 'huaqiang';
+    // interactiveId 直接拼文件路径，白名单挡掉 ../ 目录穿越
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(interactiveId)) {
+      sendJson(res, 400, { code: -400, message: 'interactiveId 只允许字母/数字/下划线/连字符' });
+      return;
+    }
+    let story;
+    try {
+      const raw = await fsp.readFile(
+        path.join(__dirname, 'interactive', interactiveId, 'story.json'),
+        'utf8',
+      );
+      story = JSON.parse(raw);
+    } catch (err) {
+      const notFound = String(err.code) === 'ENOENT';
+      sendJson(res, notFound ? 404 : 500, {
+        code: notFound ? -404 : -500,
+        message: notFound
+          ? `剧情树不存在：interactive/${interactiveId}/story.json`
+          : `story.json 读取失败：${String(err.message)}`,
+      });
+      return;
+    }
+
+    // 封面/静态资源补全前缀：优先取请求 Host（多端口实例都对），兜底本机回环
+    const publicBase = `http://${req.headers.host || '127.0.0.1'}`;
+    const nodes = {};
+    for (const [nodeId, node] of Object.entries(story.nodes)) {
+      nodes[nodeId] = {
+        id: node.nodeId,
+        avid: node.avid,
+        title: node.title,
+        cover: String(node.cover).startsWith('http')
+          ? node.cover
+          : publicBase + node.cover,
+        duration: node.duration,
+        question: node.question,
+      };
+    }
+    log(`GET /api/interactive/story ${interactiveId} → ${Object.keys(nodes).length} 个节点`);
+    sendJson(res, 200, {
+      code: 0,
+      message: '0',
+      data: {
+        interactiveId: story.interactiveId,
+        title: story.title,
+        desc: story.desc,
+        version: story.version,
+        startNodeId: story.startNodeId,
+        autoPlay: true,
+        nodes,
+      },
+    });
+    return;
+  }
+
+  if (pathname === '/api/interactive/playurl' && isGet) {
+    const avid = url.searchParams.get('avid') || '';
+    const protocol = url.searchParams.get('protocol') || '';
+    const format = url.searchParams.get('format') || 'url';
+    const interactiveId = url.searchParams.get('interactiveId') || 'huaqiang';
+    if (!avid) {
+      sendJson(res, 400, { code: -400, message: '缺少 avid 参数' });
+      return;
+    }
+    if (protocol !== 'hls' && protocol !== 'dash') {
+      sendJson(res, 400, { code: -400, message: 'protocol 只允许 hls / dash' });
+      return;
+    }
+    if (format !== 'url' && format !== 'json') {
+      sendJson(res, 400, { code: -400, message: 'format 只允许 url / json' });
+      return;
+    }
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(interactiveId)) {
+      sendJson(res, 400, { code: -400, message: 'interactiveId 只允许字母/数字/下划线/连字符' });
+      return;
+    }
+
+    // 聚合清单由转码脚本生成；不存在 = 转码还没跑，给出可操作的提示
+    let index;
+    try {
+      const raw = await fsp.readFile(
+        path.join(__dirname, 'interactive', interactiveId, 'manifest.json'),
+        'utf8',
+      );
+      index = JSON.parse(raw);
+    } catch (err) {
+      const notFound = String(err.code) === 'ENOENT';
+      sendJson(res, notFound ? 503 : 500, {
+        code: notFound ? -503 : -500,
+        message: notFound
+          ? `manifest.json 不存在：请先运行 转码脚本/transcode_huaqiang.py 生成 ${interactiveId} 的聚合清单`
+          : `manifest.json 读取失败：${String(err.message)}`,
+      });
+      return;
+    }
+    const entry = index.videos[avid];
+    if (!entry) {
+      sendJson(res, 404, {
+        code: -404,
+        message: `avid=${avid} 还没转码（不在 manifest.json 里）`,
+      });
+      return;
+    }
+    const proto = entry[protocol];
+    if (!proto) {
+      sendJson(res, 404, {
+        code: -404,
+        message: `avid=${avid} 缺少 ${protocol} 产物`,
+      });
+      return;
+    }
+
+    // 清晰度名按高度映射成 B 站风格文案（1080 → 高清 1080P ……）
+    const qualityText = (height) => {
+      if (height >= 2160) return '超清 4K';
+      if (height >= 1080) return '高清 1080P';
+      if (height >= 720) return '高清 720P';
+      if (height >= 480) return '清晰 480P';
+      if (height >= 360) return '流畅 360P';
+      return `流畅 ${height}P`;
+    };
+    // 清晰度表：从清单对象的视频轨提取（每清晰度一个 representation id）
+    const qualities = (proto.manifest?.video ?? []).map((rep) => ({
+      id: rep.id,
+      text: qualityText(Number(rep.height) || 0),
+      width: rep.width,
+      height: rep.height,
+      bandwidth: rep.bandwidth,
+      codecs: rep.codecs,
+    }));
+
+    const data = {
+      avid,
+      protocol,
+      format,
+      playUrl: proto.url,
+      qualities,
+    };
+    // format=json：把 SegmentBase 单文件模式的清单对象一并返回
+    //（前端拿对象直接喂给播放器即可播放，无需再拉网络清单）
+    if (format === 'json') {
+      data.manifest = proto.manifest;
+    }
+    log(
+      `GET /api/interactive/playurl avid=${avid} protocol=${protocol}`
+        + ` format=${format} → ${qualities.length} 档清晰度`,
+    );
+    sendJson(res, 200, { code: 0, message: '0', data });
+    return;
+  }
+
   // ---- 8b. 交互卡片（播放器拉取 + 页面增删改）------------------------------
   // GET /x/player/interaction：播放器形状（guideList/linkList/voteList/scoreList/scoreSumList）。
   // QtPlayer 的 Main.qml fetchProgressMetaFrom() 和 hili-player demo 都按这个约定拉。

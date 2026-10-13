@@ -751,6 +751,25 @@
   color: var(--text-primary, #e0e0e0);
 }
 
+/* 互动视频状态行：剧情树加载进度 / 生效组合 / 接口报错信息 */
+.hq-status {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary, #9e9e9e);
+  word-break: break-all;
+  white-space: pre-line;
+}
+
+/* 协议 / 格式选中态：与交互卡片模式按钮共用 mode-active 高亮 */
+#btn-hq-protocol-hls.mode-active,
+#btn-hq-protocol-dash.mode-active,
+#btn-hq-format-url.mode-active,
+#btn-hq-format-json.mode-active {
+  border-color: var(--accent, #4f8cff);
+  color: #000;
+}
+
 .source-row {
   display: flex;
   align-items: center;

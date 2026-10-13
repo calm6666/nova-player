@@ -23,8 +23,19 @@ export interface InteractiveNode {
   title: string;
   /** 节点视频封面图 URL（剧情进度条悬停卡片显示） */
   cover: string;
-  /** 节点视频源（与播放器 src 同构：字符串 / 多清晰度数组 / HLS 清单对象） */
-  video: PlayerSource;
+  /**
+   * 节点视频源（与播放器 src 同构：字符串 / 多清晰度数组 / HLS 清单对象）。
+   * 与 avid 至少提供一个：静态配置场景直接给 video；后端剧情树场景只给
+   * avid 引用，由插件配置的 resolveVideo 回调按需解析成真实播放源
+   */
+  video?: PlayerSource;
+  /**
+   * 视频 avid 引用（后端互动视频的标准做法：剧情树节点只带 avid，
+   * 分支切换时前端再拿 avid 请求 playurl 换取播放地址）。
+   * 配置了 resolveVideo 时优先走 avid 解析；缓存按 avid 记账，
+   * 同一节点回看 / 重播不重复请求
+   */
+  avid?: string;
   /** 视频总时长（秒，用于分支时间窗判定） */
   duration: number;
   /** 分支点配置：到达时间窗弹出分支选择（无则该节点为直线播放） */
@@ -84,6 +95,13 @@ export interface InteractiveVideoPluginConfig {
   startNodeId: string;
   /** 选择分支后是否自动续播（默认 true） */
   autoPlay?: boolean;
+  /**
+   * 视频源解析器（可选）：节点带 avid 引用且未直接给 video 时，
+   * 插件在首次加载该节点前调用它换取真实播放源（如按 avid 请求
+   * playurl 接口，按协议 + 格式返回 URL 或清单对象）。
+   * 解析结果按 avid 缓存在插件内，同一节点回看 / 重播不重复调用
+   */
+  resolveVideo?: (node: InteractiveNode) => Promise<PlayerSource> | PlayerSource;
   /** 业务回调：选择了某分支 */
   onOptionSelect?: (nodeId: string, optionIndex: number) => void;
   /** 业务回调：观看路径变化（剧情进度条数据源更新） */

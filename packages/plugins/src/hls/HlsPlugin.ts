@@ -128,6 +128,15 @@ export class HlsPlugin implements StreamPlugin {
   /** hls.js 播放器实例 */
   private hlsPlayer: Hls | null = null;
 
+  /**
+   * 当前 hls.js 实例创建时的 autoStartLoad 配置
+   * URL 模式创建的实例为 true（loadSource 拉完清单自动开始加载），
+   * 对象注入模式创建的实例为 false（由 loadManifest / startLoad 显式启动）。
+   * 复用实例换源时据此判断是否需要手动补 startLoad（fork 版 loadSource
+   * 完成清单加载后按 autoStartLoad 决定是否自动开始加载分片）。
+   */
+  private hlsAutoStartLoad = true;
+
   /** 视频元素（从播放器获取） */
   videoElement: HTMLVideoElement | null = null;
 
@@ -341,119 +350,162 @@ export class HlsPlugin implements StreamPlugin {
       // ============================================
       // URL 字符串模式
       // ============================================
-      // 1. 创建 Hls 实例（autoStartLoad 默认 true）
-      this.hlsPlayer = new Hls({
-        startLevel: this.pluginConfig.startLevel,
-        abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
-        abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
-        maxBufferLength: this.pluginConfig.maxBufferLength,
-        maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
-        liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
-        fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
-      });
+      if (this.hlsPlayer) {
+        // 复用已有实例换源（互动视频分支切换 / 换视频场景不销毁重建）：
+        // fork 版 loadSource 支持重复调用（内部 stopLoad + MediaSource 重建）；
+        // 事件在实例创建时已绑定，不重复绑定
+        this.hlsPlayer.loadSource(source);
+        // 实例来自对象注入路径（autoStartLoad=false）时，loadSource 拉完
+        // 清单后不会自动开始加载分片，手动补一次 startLoad
+        if (!this.hlsAutoStartLoad) {
+          this.hlsPlayer.startLoad();
+        }
+      } else {
+        // 1. 创建 Hls 实例（autoStartLoad 默认 true）
+        this.hlsPlayer = new Hls({
+          startLevel: this.pluginConfig.startLevel,
+          abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
+          abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
+          maxBufferLength: this.pluginConfig.maxBufferLength,
+          maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
+          liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
+          fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
+        });
+        this.hlsAutoStartLoad = true;
 
-      // 2. 绑定视频元素
-      this.hlsPlayer.attachMedia(this.videoElement);
+        // 2. 绑定视频元素
+        this.hlsPlayer.attachMedia(this.videoElement);
 
-      // 3. 加载 URL 源
-      this.hlsPlayer.loadSource(source);
+        // 3. 加载 URL 源
+        this.hlsPlayer.loadSource(source);
 
-      // 4. 绑定 hls.js 事件
-      this.bindEvents();
+        // 4. 绑定 hls.js 事件（实例级，只在创建时绑定一次）
+        this.bindEvents();
+      }
 
       logger.info('HLS 流加载成功:', source);
     } else if (isMediaManifest(source)) {
       // ============================================
       // 对象注入模式（MediaManifest）
       // ============================================
-      // 1. 创建 Hls 实例，autoStartLoad 必须设为 false
-      this.hlsPlayer = new Hls({
-        autoStartLoad: false,
-        startLevel: this.pluginConfig.startLevel,
-        abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
-        abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
-        maxBufferLength: this.pluginConfig.maxBufferLength,
-        maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
-        liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
-        fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
-      });
-
-      // 2. 绑定视频元素
-      this.hlsPlayer.attachMedia(this.videoElement);
-
-      // 3. 绑定 hls.js 事件（在 MEDIA_ATTACHED 之前绑定，确保不遗漏事件）
-      this.bindEvents();
-
-      // 4. 等待 MEDIA_ATTACHED 事件后，转换清单并注入
-      const doManifestInjection = (): void => {
-        if (!this.hlsPlayer) return;
-
-        // 4a. 转换清单对象
-        const hlsData = manifestToHls(source as MediaManifest);
-
-        // 5. 加载清单
+      if (this.hlsPlayer) {
+        // 复用已有实例换源：video 元素已 attach，无需等待 MEDIA_ATTACHED，
+        // 直接转换注入——fork 版 loadManifest 支持重复调用（内部 stopLoad +
+        // MediaSource 重建）且自带 startLoad(0) 启动加载
+        const hlsData = manifestToHls(source);
         this.hlsPlayer.loadManifest(hlsData.variants, hlsData.audioGroups);
 
-        // 6. 开始加载片段
-        this.hlsPlayer.startLoad();
+        logger.info('HLS 流加载成功（对象注入模式·复用实例）');
+      } else {
+        // 1. 创建 Hls 实例，autoStartLoad 必须设为 false
+        this.hlsPlayer = new Hls({
+          autoStartLoad: false,
+          startLevel: this.pluginConfig.startLevel,
+          abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
+          abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
+          maxBufferLength: this.pluginConfig.maxBufferLength,
+          maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
+          liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
+          fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
+        });
+        this.hlsAutoStartLoad = false;
 
-        logger.info('HLS 流加载成功（对象注入模式）');
-      };
+        // 2. 绑定视频元素
+        this.hlsPlayer.attachMedia(this.videoElement);
 
-      // 等待 MEDIA_ATTACHED 事件
-      this.hlsPlayer.once(Hls.Events.MEDIA_ATTACHED, () => {
-        doManifestInjection();
-      });
-    } else if (isManifestObject(source)) {
-      // ============================================
-      // 对象注入模式（直接传入 ManifestVariant[] + ManifestAudioGroup[]）
-      // ============================================
-      // 1. 创建 Hls 实例，autoStartLoad 必须设为 false
-      this.hlsPlayer = new Hls({
-        autoStartLoad: false,
-        startLevel: this.pluginConfig.startLevel,
-        abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
-        abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
-        maxBufferLength: this.pluginConfig.maxBufferLength,
-        maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
-        liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
-        fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
-      });
+        // 3. 绑定 hls.js 事件（在 MEDIA_ATTACHED 之前绑定，确保不遗漏事件）
+        this.bindEvents();
 
-      // 2. 绑定视频元素
-      this.hlsPlayer.attachMedia(this.videoElement);
+        // 4. 等待 MEDIA_ATTACHED 事件后，转换清单并注入
+        const doManifestInjection = (): void => {
+          if (!this.hlsPlayer) return;
 
-      // 3. 绑定 hls.js 事件
-      this.bindEvents();
+          // 4a. 转换清单对象
+          const hlsData = manifestToHls(source as MediaManifest);
 
-      // 4. 等待 MEDIA_ATTACHED 事件后，直接注入 variants 和 audioGroups
-      const doDirectInjection = (): void => {
-        if (!this.hlsPlayer) return;
-
-        const manifestSource = source as ManifestSourceObject;
-        if (manifestSource.variants && Array.isArray(manifestSource.variants)) {
           // 5. 加载清单
-          this.hlsPlayer.loadManifest(
-            manifestSource.variants,
-            manifestSource.audioGroups,
-          );
+          this.hlsPlayer.loadManifest(hlsData.variants, hlsData.audioGroups);
 
           // 6. 开始加载片段
           this.hlsPlayer.startLoad();
 
-          logger.info('HLS 流加载成功（对象注入模式 - 直接传入）');
+          logger.info('HLS 流加载成功（对象注入模式）');
+        };
+
+        // 等待 MEDIA_ATTACHED 事件
+        this.hlsPlayer.once(Hls.Events.MEDIA_ATTACHED, () => {
+          doManifestInjection();
+        });
+      }
+    } else if (isManifestObject(source)) {
+      // ============================================
+      // 对象注入模式（直接传入 ManifestVariant[] + ManifestAudioGroup[]）
+      // ============================================
+      if (this.hlsPlayer) {
+        // 复用已有实例换源：video 元素已 attach，无需等待 MEDIA_ATTACHED，
+        // 直接注入——fork 版 loadManifest 支持重复调用且自带 startLoad(0)
+        const manifestSource = source as ManifestSourceObject;
+        if (manifestSource.variants && Array.isArray(manifestSource.variants)) {
+          this.hlsPlayer.loadManifest(
+            manifestSource.variants,
+            manifestSource.audioGroups,
+          );
+          logger.info('HLS 流加载成功（对象注入模式 - 直接传入·复用实例）');
         } else {
           const msg = '清单对象缺少 variants 字段';
           logger.error(msg);
           this.streamEventBus.emit(StreamPluginEventEnum.ERROR, { message: msg });
           return;
         }
-      };
+      } else {
+        // 1. 创建 Hls 实例，autoStartLoad 必须设为 false
+        this.hlsPlayer = new Hls({
+          autoStartLoad: false,
+          startLevel: this.pluginConfig.startLevel,
+          abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
+          abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
+          maxBufferLength: this.pluginConfig.maxBufferLength,
+          maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
+          liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
+          fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
+        });
+        this.hlsAutoStartLoad = false;
 
-      // 等待 MEDIA_ATTACHED 事件
-      this.hlsPlayer.once(Hls.Events.MEDIA_ATTACHED, () => {
-        doDirectInjection();
-      });
+        // 2. 绑定视频元素
+        this.hlsPlayer.attachMedia(this.videoElement);
+
+        // 3. 绑定 hls.js 事件
+        this.bindEvents();
+
+        // 4. 等待 MEDIA_ATTACHED 事件后，直接注入 variants 和 audioGroups
+        const doDirectInjection = (): void => {
+          if (!this.hlsPlayer) return;
+
+          const manifestSource = source as ManifestSourceObject;
+          if (manifestSource.variants && Array.isArray(manifestSource.variants)) {
+            // 5. 加载清单
+            this.hlsPlayer.loadManifest(
+              manifestSource.variants,
+              manifestSource.audioGroups,
+            );
+
+            // 6. 开始加载片段
+            this.hlsPlayer.startLoad();
+
+            logger.info('HLS 流加载成功（对象注入模式 - 直接传入）');
+          } else {
+            const msg = '清单对象缺少 variants 字段';
+            logger.error(msg);
+            this.streamEventBus.emit(StreamPluginEventEnum.ERROR, { message: msg });
+            return;
+          }
+        };
+
+        // 等待 MEDIA_ATTACHED 事件
+        this.hlsPlayer.once(Hls.Events.MEDIA_ATTACHED, () => {
+          doDirectInjection();
+        });
+      }
     } else {
       const msg = '不支持的源类型';
       logger.error(msg);
@@ -534,27 +586,34 @@ export class HlsPlugin implements StreamPlugin {
         return;
       }
 
-      // 创建 Hls 实例（autoStartLoad 必须设为 false）
-      this.hlsPlayer = new Hls({
-        autoStartLoad: false,
-        startLevel: this.pluginConfig.startLevel,
-        abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
-        abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
-        maxBufferLength: this.pluginConfig.maxBufferLength,
-        maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
-        liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
-        fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
-      });
-
-      this.hlsPlayer.attachMedia(this.videoElement!);
-      this.bindEvents();
-
       // 转换清单对象
       const hlsData = manifestToHls(manifest);
 
-      // 加载清单
-      this.hlsPlayer.loadManifest(hlsData.variants, hlsData.audioGroups);
-      this.hlsPlayer.startLoad();
+      if (this.hlsPlayer) {
+        // 复用已有实例换源：video 元素已 attach，直接注入
+        //（fork 版 loadManifest 支持重复调用且自带 startLoad(0)）
+        this.hlsPlayer.loadManifest(hlsData.variants, hlsData.audioGroups);
+      } else {
+        // 创建 Hls 实例（autoStartLoad 必须设为 false）
+        this.hlsPlayer = new Hls({
+          autoStartLoad: false,
+          startLevel: this.pluginConfig.startLevel,
+          abrEwmaFastLive: this.pluginConfig.abrEwmaFastLive,
+          abrEwmaSlowLive: this.pluginConfig.abrEwmaSlowLive,
+          maxBufferLength: this.pluginConfig.maxBufferLength,
+          maxMaxBufferLength: this.pluginConfig.maxMaxBufferLength,
+          liveSyncDurationCount: this.pluginConfig.liveSyncDurationCount,
+          fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
+        });
+        this.hlsAutoStartLoad = false;
+
+        this.hlsPlayer.attachMedia(this.videoElement!);
+        this.bindEvents();
+
+        // 加载清单
+        this.hlsPlayer.loadManifest(hlsData.variants, hlsData.audioGroups);
+        this.hlsPlayer.startLoad();
+      }
 
       logger.info('HLS 流加载成功 (JSON Manifest模式)');
       this.streamEventBus.emit(StreamPluginEventEnum.LOAD_COMPLETE, { url });
@@ -754,6 +813,8 @@ export class HlsPlugin implements StreamPlugin {
       this.hlsPlayer.stopLoad();
       this.hlsPlayer.destroy();
       this.hlsPlayer = null;
+      // 复位 autoStartLoad 标记（下次 load 走全新创建路径时重新记录）
+      this.hlsAutoStartLoad = true;
     }
     this.config = null;
     this.stats = {};

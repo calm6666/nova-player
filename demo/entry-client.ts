@@ -57,6 +57,12 @@ import type {
   EQPresetName,
   ReverbPresetName,
 } from "@/lumina/plugins/audioeffect";
+import { InteractiveVideoPlugin } from "@/lumina/plugins/interactive-video";
+import type {
+  InteractiveNode,
+  InteractiveVideoPluginConfig,
+} from "@/lumina/plugins/interactive-video";
+import type { MediaManifestSource } from "@/types/streamPlugin";
 import type {
   InteractionPluginAPI,
   InteractionPluginConfig,
@@ -1241,6 +1247,205 @@ const makeInteractionConfig = (): InteractionPluginConfig => {
   return config;
 };
 
+// ==================== 互动视频（华强买瓜）====================
+// 数据链路（对齐 B 站互动视频标准做法）：
+//   1. GET /api/interactive/story → 剧情树（88 节点，节点只带 avid 引用）
+//   2. 起始节点播放源经 /api/interactive/playurl 解析，作为播放列表条目
+//      的 src 起播（播放器按 URL 后缀 / 清单对象自动分发 HLS/DASH 插件）
+//   3. 分支切换由互动视频插件驱动：switchToNode → resolveVideo 回调
+//      → playurl 接口按（avid + 协议 + 格式）按需解析（插件内按 avid 缓存）
+// playurl 的两种返回格式：
+//   - format=url  → data.playUrl 是 MinIO 上的 index.m3u8 / index.mpd 地址
+//   - format=json → data.manifest 是 SegmentBase 单文件模式清单对象，
+//     直接喂给播放器即可播放（对象注入模式，零网络清单请求）
+
+/** 互动视频协议选择（HLS / DASH，按钮切换） */
+let hqProtocol: "hls" | "dash" = "hls";
+
+/** 互动视频 playurl 格式选择（URL / JSON，按钮切换） */
+let hqFormat: "url" | "json" = "url";
+
+/**
+ * 互动视频插件配置（拉取剧情树后写入；rebuildPlayer → collectPlugins
+ * 读取非空时把互动视频插件挂进新播放器实例）
+ */
+let interactiveVideoConfig: InteractiveVideoPluginConfig | null = null;
+
+/** 剧情树接口响应 data 的节点形状（与 InteractiveNode 对齐，cover 已由服务端补全为完整 URL） */
+interface HuaqiangStoryNode {
+  id: string;
+  avid: string;
+  title: string;
+  cover: string;
+  duration: number;
+  question?: InteractiveNode["question"];
+}
+
+/** 剧情树接口响应 data 形状 */
+interface HuaqiangStoryData {
+  interactiveId: string;
+  title: string;
+  desc: string;
+  version: number;
+  startNodeId: string;
+  autoPlay: boolean;
+  nodes: Record<string, HuaqiangStoryNode>;
+}
+
+/** playurl 接口响应 data 形状（format=json 时 manifest 为清单对象） */
+interface HuaqiangPlayUrlData {
+  avid: string;
+  protocol: string;
+  format: string;
+  playUrl: string;
+  manifest?: MediaManifestSource;
+  /** 清晰度表（每清晰度一个 representation id，展示用） */
+  qualities?: Array<{ id: string | number; text: string; height: number }>;
+}
+
+/** 写互动视频状态行（剧情树加载进度 / 生效组合 / 接口报错信息） */
+function setHuaqiangStatus(text: string): void {
+  const el = document.getElementById("hq-status");
+  if (el) el.textContent = text;
+}
+
+/** 同步协议 / 格式按钮选中态高亮（mode-active 与交互卡片模式按钮同风格） */
+function syncHuaqiangButtons(): void {
+  const pairs: Array<[string, boolean]> = [
+    ["btn-hq-protocol-hls", hqProtocol === "hls"],
+    ["btn-hq-protocol-dash", hqProtocol === "dash"],
+    ["btn-hq-format-url", hqFormat === "url"],
+    ["btn-hq-format-json", hqFormat === "json"],
+  ];
+  pairs.forEach(([id, active]) => {
+    document.getElementById(id)?.classList.toggle("mode-active", active);
+  });
+  setHuaqiangStatus(
+    `当前组合：${hqProtocol.toUpperCase()} × ${hqFormat.toUpperCase()}` +
+      `（${hqFormat === "json" ? "清单对象直接注入播放器" : "m3u8/mpd 地址播放"}）`,
+  );
+}
+
+/**
+ * 拉取剧情树（mock-server /api/interactive/story）
+ *
+ * @returns 剧情树 data（88 节点 + 起始节点 id）
+ */
+async function fetchHuaqiangStory(): Promise<HuaqiangStoryData> {
+  const response = await fetch(
+    `${MOCK_SERVER_BASE}/api/interactive/story?interactiveId=huaqiang`,
+  );
+  const payload = (await response.json()) as {
+    code: number;
+    message: string;
+    data?: HuaqiangStoryData;
+  };
+  if (payload.code !== 0 || !payload.data) {
+    throw new Error(payload.message || `HTTP ${response.status}`);
+  }
+  return payload.data;
+}
+
+/**
+ * playurl 解析器（互动视频插件 resolveVideo 回调）：
+ * 按节点 avid + 当前协议 / 格式选择请求 /api/interactive/playurl
+ * - format=url  → 返回 m3u8 / mpd 地址（字符串源）
+ * - format=json → 返回 SegmentBase 清单对象（对象注入模式）
+ *
+ * @param node - 分支目标节点（带 avid 引用）
+ * @returns 可直接交给 player.load 的播放源
+ */
+async function resolveHuaqiangVideo(
+  node: InteractiveNode,
+): Promise<PlayerSource> {
+  const avid = node.avid ?? "";
+  const params = new URLSearchParams({
+    avid,
+    protocol: hqProtocol,
+    format: hqFormat,
+  });
+  const response = await fetch(
+    `${MOCK_SERVER_BASE}/api/interactive/playurl?${params.toString()}`,
+  );
+  const payload = (await response.json()) as {
+    code: number;
+    message: string;
+    data?: HuaqiangPlayUrlData;
+  };
+  if (payload.code !== 0 || !payload.data) {
+    throw new Error(
+      `avid=${avid} playurl 解析失败：${payload.message || `HTTP ${response.status}`}`,
+    );
+  }
+  if (hqFormat === "json") {
+    if (!payload.data.manifest) {
+      throw new Error(`avid=${avid} playurl 未返回清单对象`);
+    }
+    logAction(
+      `互动分支 playurl(json·${hqProtocol}): ${payload.data.qualities?.length ?? 0} 档清晰度`,
+    );
+    return payload.data.manifest;
+  }
+  logAction(`互动分支 playurl(url·${hqProtocol}): ${payload.data.playUrl}`);
+  return payload.data.playUrl;
+}
+
+/**
+ * 播放互动视频（协议 × 格式组合生效）：
+ * 拉剧情树 → 组装插件配置（resolveVideo 闭包捕获当前组合）→ 解析起始
+ * 节点播放源 → 加入播放列表并重建播放器（collectPlugins 挂互动插件）
+ */
+async function playHuaqiangInteractive(): Promise<void> {
+  try {
+    setHuaqiangStatus("正在拉取剧情树…");
+    const story = await fetchHuaqiangStory();
+
+    // 组装互动视频插件配置：节点带 avid 引用，分支切换按需解析播放地址；
+    // 缓存由插件内部按 avid 记账（同一节点回看不重复请求 playurl）
+    interactiveVideoConfig = {
+      nodes: story.nodes,
+      startNodeId: story.startNodeId,
+      autoPlay: true,
+      resolveVideo: resolveHuaqiangVideo,
+      onOptionSelect: (nodeId, index) => {
+        const node = story.nodes[nodeId];
+        logAction(
+          `互动分支选择: ${node?.title ?? nodeId} → ${story.nodes[node.question?.options[index]?.targetNodeId ?? ""]?.title ?? "?"}`,
+        );
+      },
+    };
+
+    // 起始节点播放源先解析一次，作为播放列表条目的 src 起播
+    //（播放器按 URL 后缀 / 清单对象内容自动分发 HLS/DASH 插件）
+    const startNode = story.nodes[story.startNodeId];
+    if (!startNode) {
+      throw new Error(`剧情树缺少起始节点 ${story.startNodeId}`);
+    }
+    setHuaqiangStatus(
+      `剧情树就绪（${Object.keys(story.nodes).length} 节点），正在解析起始节点播放源…`,
+    );
+    const startSource = await resolveHuaqiangVideo(startNode);
+
+    // 加入播放列表并重建播放器（rebuildPlayer → collectPlugins 读取
+    // interactiveVideoConfig 挂载互动视频插件）
+    MEDIA_LIST.push({
+      title: `互动视频 · ${story.title}（${hqProtocol.toUpperCase()}×${hqFormat.toUpperCase()}）`,
+      src: startSource,
+    });
+    renderSourceList();
+    await rebuildPlayer(MEDIA_LIST.length - 1);
+
+    setHuaqiangStatus(
+      `正在播放互动视频「${story.title}」：${Object.keys(story.nodes).length} 节点 · ` +
+        `${hqProtocol.toUpperCase()} × ${hqFormat.toUpperCase()}`,
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setHuaqiangStatus(`互动视频加载失败：${msg}`);
+    logAction(`互动视频加载失败: ${msg}`);
+  }
+}
+
 function collectPlugins(source?: PlayerSource): Plugin[] {
   // 模式 B 当前激活的服务端轨 id（activateTrack 写入，fetch 读取）
   let activeRemoteTrack = "zh-ai";
@@ -1298,6 +1503,11 @@ function collectPlugins(source?: PlayerSource): Plugin[] {
     // 运行时 API 经 getPluginAPI("audioEffect") 获取
     AudioEffectPlugin(),
   ];
+  // 互动视频插件：剧情树已拉取时挂载（华强买瓜 demo）。节点带 avid 引用，
+  // 分支切换由插件经 resolveVideo → playurl 接口按需解析播放地址
+  if (interactiveVideoConfig) {
+    list.push(InteractiveVideoPlugin(interactiveVideoConfig));
+  }
   const text =
     typeof source === "string" ? source : JSON.stringify(source ?? "");
   if (/\.m3u8(\?|$)/i.test(text)) {
@@ -1684,6 +1894,40 @@ const wireDemoButton = (id: string, handler: () => void): void => {
   const button = document.getElementById(id);
   if (button) button.addEventListener("click", handler);
 };
+
+// ============================================
+// 互动视频（华强买瓜）按钮绑定：协议 / 格式切换 + 播放
+// ============================================
+
+// 协议切换：HLS / DASH（切换后仅更新选中态，下次播放生效）
+wireDemoButton("btn-hq-protocol-hls", () => {
+  hqProtocol = "hls";
+  syncHuaqiangButtons();
+});
+
+wireDemoButton("btn-hq-protocol-dash", () => {
+  hqProtocol = "dash";
+  syncHuaqiangButtons();
+});
+
+// playurl 格式切换：URL（m3u8/mpd 地址）/ JSON（清单对象直接注入播放器）
+wireDemoButton("btn-hq-format-url", () => {
+  hqFormat = "url";
+  syncHuaqiangButtons();
+});
+
+wireDemoButton("btn-hq-format-json", () => {
+  hqFormat = "json";
+  syncHuaqiangButtons();
+});
+
+// 播放互动视频：拉剧情树 → 解析起始节点源 → 重建播放器（挂互动视频插件）
+wireDemoButton("btn-hq-play", () => {
+  void playHuaqiangInteractive();
+});
+
+// 水合后设置按钮初始选中态与状态行文案（默认 HLS × URL）
+syncHuaqiangButtons();
 
 wireDemoButton("btn-danmaku-toggle", () => {
   const player = currentPlayer();

@@ -1,0 +1,1945 @@
+{
+  "interactiveId": "huaqiang",
+  "title": "华强买瓜",
+  "desc": "「你这瓜保熟吗？」——双视角互动重演经典名场面：扮演华强砍价劈瓜，或扮演摊主经营瓜摊，共 88 段剧情、5 种结局。",
+  "version": 1,
+  "startNodeId": "n01",
+  "nodes": {
+    "n01": {
+      "nodeId": "n01",
+      "avid": "av1000001",
+      "title": "开场：华强买瓜",
+      "cover": "/interactive/covers/av1000001.jpg",
+      "source": "选择角色.mp4",
+      "duration": 10.518,
+      "question": {
+        "timeStart": 6.5,
+        "timeEnd": 12.5,
+        "title": "你想体验谁的买瓜故事？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "华强：买瓜的顾客",
+            "targetNodeId": "n02"
+          },
+          {
+            "text": "摊主：卖瓜的老板",
+            "targetNodeId": "n12"
+          }
+        ]
+      }
+    },
+    "n02": {
+      "nodeId": "n02",
+      "avid": "av1000002",
+      "title": "你是刘华强",
+      "cover": "/interactive/covers/av1000002.jpg",
+      "source": "选择华强.mp4",
+      "duration": 10.681,
+      "question": {
+        "timeStart": 7,
+        "timeEnd": 12.7,
+        "title": "你带着两个小弟，踱到了瓜摊前。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n03"
+          }
+        ]
+      }
+    },
+    "n03": {
+      "nodeId": "n03",
+      "avid": "av1000003",
+      "title": "问价",
+      "cover": "/interactive/covers/av1000003.jpg",
+      "source": "华强问价.mp4",
+      "duration": 18.297,
+      "question": {
+        "timeStart": 13.3,
+        "timeEnd": 20.3,
+        "title": "「老板，这瓜多少钱一斤？」摊主开价：30块一斤。你的反应——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「30？你这瓜皮是金子做的？」",
+            "targetNodeId": "n04"
+          },
+          {
+            "text": "不还价，直接买",
+            "targetNodeId": "n07"
+          }
+        ]
+      }
+    },
+    "n04": {
+      "nodeId": "n04",
+      "avid": "av1000004",
+      "title": "嫌贵",
+      "cover": "/interactive/covers/av1000004.jpg",
+      "source": "嫌贵.mp4",
+      "duration": 12.91,
+      "question": {
+        "timeStart": 8,
+        "timeEnd": 14.9,
+        "title": "你把瓜翻来覆去地看，就是不掏钱。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "等摊主让步",
+            "targetNodeId": "n05"
+          },
+          {
+            "text": "磨什么嘴皮子，转身走人",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n05": {
+      "nodeId": "n05",
+      "avid": "av1000005",
+      "title": "降价到15块一斤",
+      "cover": "/interactive/covers/av1000005.jpg",
+      "source": "降价到15块一斤.mp4",
+      "duration": 3.297,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 5.3,
+        "title": "摊主松口：降价到15块一斤。买吗？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "15块，成交",
+            "targetNodeId": "n07"
+          },
+          {
+            "text": "继续砍：两块钱一斤！",
+            "targetNodeId": "n06"
+          },
+          {
+            "text": "不要了，走",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n06": {
+      "nodeId": "n06",
+      "avid": "av1000006",
+      "title": "两块钱一斤",
+      "cover": "/interactive/covers/av1000006.jpg",
+      "source": "两块钱一斤.mp4",
+      "duration": 3.367,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 5.4,
+        "title": "「两块钱一斤卖不卖？」摊主被气笑了：不卖！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "罢了罢了，按15块买",
+            "targetNodeId": "n07"
+          },
+          {
+            "text": "不买了，走",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n07": {
+      "nodeId": "n07",
+      "avid": "av1000007",
+      "title": "购买",
+      "cover": "/interactive/covers/av1000007.jpg",
+      "source": "购买.mp4",
+      "duration": 5.642,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 7.6,
+        "title": "钱货两讫，接下来该挑瓜了。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n18"
+          }
+        ]
+      }
+    },
+    "n08": {
+      "nodeId": "n08",
+      "avid": "av1000008",
+      "title": "直接走",
+      "cover": "/interactive/covers/av1000008.jpg",
+      "source": "直接走.mp4",
+      "duration": 14.721,
+      "question": {
+        "timeStart": 9.7,
+        "timeEnd": 16.7,
+        "title": "你拉着小弟，头也不回地走了。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n09"
+          }
+        ]
+      }
+    },
+    "n09": {
+      "nodeId": "n09",
+      "avid": "av1000009",
+      "title": "「走。」",
+      "cover": "/interactive/covers/av1000009.jpg",
+      "source": "走。.mp4",
+      "duration": 1.091,
+      "question": {
+        "timeStart": 0.5,
+        "timeEnd": 3.1,
+        "title": "一个「走」字出口，尘土飞扬。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n10"
+          }
+        ]
+      }
+    },
+    "n10": {
+      "nodeId": "n10",
+      "avid": "av1000010",
+      "title": "结局：不欢而散",
+      "cover": "/interactive/covers/av1000010.jpg",
+      "source": "走.mp4",
+      "duration": 25.054
+    },
+    "n11": {
+      "nodeId": "n11",
+      "avid": "av1000011",
+      "title": "结局：拎回家的瓜，是生的",
+      "cover": "/interactive/covers/av1000011.jpg",
+      "source": "吃生瓜.mp4",
+      "duration": 24.729
+    },
+    "n12": {
+      "nodeId": "n12",
+      "avid": "av1000012",
+      "title": "你是瓜摊老板",
+      "cover": "/interactive/covers/av1000012.jpg",
+      "source": "选择摊主.mp4",
+      "duration": 8.962,
+      "question": {
+        "timeStart": 4,
+        "timeEnd": 11,
+        "title": "你的瓜摊，今天第一天出摊。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n13"
+          }
+        ]
+      }
+    },
+    "n13": {
+      "nodeId": "n13",
+      "avid": "av1000013",
+      "title": "顾客上门",
+      "cover": "/interactive/covers/av1000013.jpg",
+      "source": "问价.mp4",
+      "duration": 16.579,
+      "question": {
+        "timeStart": 11.6,
+        "timeEnd": 18.6,
+        "title": "一个平头男人踱到摊前：「老板，瓜怎么卖？」你开价——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "30块一斤",
+            "targetNodeId": "n14"
+          },
+          {
+            "text": "15块一斤",
+            "targetNodeId": "n15"
+          }
+        ]
+      }
+    },
+    "n14": {
+      "nodeId": "n14",
+      "avid": "av1000014",
+      "title": "30块一斤",
+      "cover": "/interactive/covers/av1000014.jpg",
+      "source": "30块一斤.mp4",
+      "duration": 5.526,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 7.5,
+        "title": "「30块一斤。」平头男人眉头一皱。你让价吗？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "降到15块一斤",
+            "targetNodeId": "n05"
+          },
+          {
+            "text": "不降价",
+            "targetNodeId": "n16"
+          }
+        ]
+      }
+    },
+    "n15": {
+      "nodeId": "n15",
+      "avid": "av1000015",
+      "title": "15块一斤",
+      "cover": "/interactive/covers/av1000015.jpg",
+      "source": "15块一斤.mp4",
+      "duration": 5.503,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 7.5,
+        "title": "「15块一斤，实在价。」他却还价：「我看着给，两块。」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "两块钱就两块钱，交个朋友",
+            "targetNodeId": "n06"
+          },
+          {
+            "text": "不惯着他，不降价",
+            "targetNodeId": "n16"
+          }
+        ]
+      }
+    },
+    "n16": {
+      "nodeId": "n16",
+      "avid": "av1000016",
+      "title": "不降价",
+      "cover": "/interactive/covers/av1000016.jpg",
+      "source": "不降价.mp4",
+      "duration": 33.251,
+      "question": {
+        "timeStart": 28.3,
+        "timeEnd": 35.3,
+        "title": "你咬死价格寸步不让。他冷笑三声，拂袖而去——那眼神，不像善茬。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n17"
+          }
+        ]
+      }
+    },
+    "n17": {
+      "nodeId": "n17",
+      "avid": "av1000017",
+      "title": "第二天再来",
+      "cover": "/interactive/covers/av1000017.jpg",
+      "source": "第二天再来.mp4",
+      "duration": 15.232,
+      "question": {
+        "timeStart": 10.2,
+        "timeEnd": 17.2,
+        "title": "第二天，他还是来了。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n62"
+          }
+        ]
+      }
+    },
+    "n18": {
+      "nodeId": "n18",
+      "avid": "av1000018",
+      "title": "挑瓜",
+      "cover": "/interactive/covers/av1000018.jpg",
+      "source": "挑瓜.mp4",
+      "duration": 38.684,
+      "question": {
+        "timeStart": 33.7,
+        "timeEnd": 40.7,
+        "title": "你把瓜堆翻了个底朝天。选好了吗？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "就手里这个",
+            "targetNodeId": "n25"
+          },
+          {
+            "text": "再挑一个",
+            "targetNodeId": "n19"
+          }
+        ]
+      }
+    },
+    "n19": {
+      "nodeId": "n19",
+      "avid": "av1000019",
+      "title": "再挑一个",
+      "cover": "/interactive/covers/av1000019.jpg",
+      "source": "再挑一个1.mp4",
+      "duration": 4.922,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 6.9,
+        "title": "「这个不行，换一个。」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n20"
+          }
+        ]
+      }
+    },
+    "n20": {
+      "nodeId": "n20",
+      "avid": "av1000020",
+      "title": "再挑一个·二",
+      "cover": "/interactive/covers/av1000020.jpg",
+      "source": "再挑一个2.mp4",
+      "duration": 14.953,
+      "question": {
+        "timeStart": 10,
+        "timeEnd": 17,
+        "title": "摊主的脸越来越黑。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "就这个",
+            "targetNodeId": "n25"
+          },
+          {
+            "text": "继续挑",
+            "targetNodeId": "n21"
+          }
+        ]
+      }
+    },
+    "n21": {
+      "nodeId": "n21",
+      "avid": "av1000021",
+      "title": "挑瓜·二",
+      "cover": "/interactive/covers/av1000021.jpg",
+      "source": "挑瓜2.mp4",
+      "duration": 30.766,
+      "question": {
+        "timeStart": 25.8,
+        "timeEnd": 32.8,
+        "title": "你挑瓜的架势，像在验钞。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "快点挑，就这个",
+            "targetNodeId": "n24"
+          },
+          {
+            "text": "再挑最后一个",
+            "targetNodeId": "n22"
+          }
+        ]
+      }
+    },
+    "n22": {
+      "nodeId": "n22",
+      "avid": "av1000022",
+      "title": "「你到底要不要？」",
+      "cover": "/interactive/covers/av1000022.jpg",
+      "source": "你到底要不要.mp4",
+      "duration": 21.269,
+      "question": {
+        "timeStart": 16.3,
+        "timeEnd": 23.3,
+        "title": "摊主忍无可忍：「你到底要不要？」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "要！就这个",
+            "targetNodeId": "n25"
+          },
+          {
+            "text": "再看看",
+            "targetNodeId": "n23"
+          },
+          {
+            "text": "不要了，走",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n23": {
+      "nodeId": "n23",
+      "avid": "av1000023",
+      "title": "「你要不要吧！」",
+      "cover": "/interactive/covers/av1000023.jpg",
+      "source": "你要不要吧.mp4",
+      "duration": 23.707,
+      "question": {
+        "timeStart": 18.7,
+        "timeEnd": 25.7,
+        "title": "摊主把刀往案板上一拍：「你要不要吧！」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "要！就这个",
+            "targetNodeId": "n25"
+          },
+          {
+            "text": "不要了！",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n24": {
+      "nodeId": "n24",
+      "avid": "av1000024",
+      "title": "快速挑瓜",
+      "cover": "/interactive/covers/av1000024.jpg",
+      "source": "快速挑瓜.mp4",
+      "duration": 3.158,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 5.2,
+        "title": "三秒挑完，快、准、狠。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n25"
+          }
+        ]
+      }
+    },
+    "n25": {
+      "nodeId": "n25",
+      "avid": "av1000025",
+      "title": "挑定一个",
+      "cover": "/interactive/covers/av1000025.jpg",
+      "source": "挑一个.mp4",
+      "duration": 9.497,
+      "question": {
+        "timeStart": 4.5,
+        "timeEnd": 11.5,
+        "title": "瓜，挑定了。要不要问问保熟？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「你这瓜保熟吗？」",
+            "targetNodeId": "n26"
+          },
+          {
+            "text": "什么都不问，拎起就走",
+            "targetNodeId": "n11"
+          }
+        ]
+      }
+    },
+    "n26": {
+      "nodeId": "n26",
+      "avid": "av1000026",
+      "title": "保熟吗",
+      "cover": "/interactive/covers/av1000026.jpg",
+      "source": "保熟吗.mp4",
+      "duration": 32.624,
+      "question": {
+        "timeStart": 27.6,
+        "timeEnd": 34.6,
+        "title": "「你这瓜保熟吗？」摊主怎么接话？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "拍胸脯：「都是熟的！」",
+            "targetNodeId": "n27"
+          },
+          {
+            "text": "「生熟都有，看手气。」",
+            "targetNodeId": "n28"
+          },
+          {
+            "text": "破罐破摔：「我这都是生的。」",
+            "targetNodeId": "n29"
+          }
+        ]
+      }
+    },
+    "n27": {
+      "nodeId": "n27",
+      "avid": "av1000027",
+      "title": "都是熟的",
+      "cover": "/interactive/covers/av1000027.jpg",
+      "source": "都是熟的.mp4",
+      "duration": 8.847,
+      "question": {
+        "timeStart": 3.8,
+        "timeEnd": 10.8,
+        "title": "「都是熟的，不熟你找我！」你信他的保证吗？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "信了，付钱拎走",
+            "targetNodeId": "n11"
+          },
+          {
+            "text": "「那你劈开看看！」",
+            "targetNodeId": "n30"
+          }
+        ]
+      }
+    },
+    "n28": {
+      "nodeId": "n28",
+      "avid": "av1000028",
+      "title": "生熟都有",
+      "cover": "/interactive/covers/av1000028.jpg",
+      "source": "生熟都有.mp4",
+      "duration": 13.258,
+      "question": {
+        "timeStart": 8.3,
+        "timeEnd": 15.3,
+        "title": "「生熟都有，全凭手气。」你举起手里的瓜——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「那这个呢？」",
+            "targetNodeId": "n31"
+          }
+        ]
+      }
+    },
+    "n29": {
+      "nodeId": "n29",
+      "avid": "av1000029",
+      "title": "我这都是生的",
+      "cover": "/interactive/covers/av1000029.jpg",
+      "source": "我这都是生的.mp4",
+      "duration": 11.354,
+      "question": {
+        "timeStart": 6.4,
+        "timeEnd": 13.4,
+        "title": "敢卖生瓜，还敢承认？！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「不熟你自己吃！」",
+            "targetNodeId": "n34"
+          },
+          {
+            "text": "「你这瓜有问题！」",
+            "targetNodeId": "n32"
+          }
+        ]
+      }
+    },
+    "n30": {
+      "nodeId": "n30",
+      "avid": "av1000030",
+      "title": "「保熟！」",
+      "cover": "/interactive/covers/av1000030.jpg",
+      "source": "保熟.mp4",
+      "duration": 30.72,
+      "question": {
+        "timeStart": 25.7,
+        "timeEnd": 32.7,
+        "title": "「保熟！熟我要了，不熟你吞了它。」刀，递了过去。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "摊主一咬牙：劈！",
+            "targetNodeId": "n36"
+          },
+          {
+            "text": "摊主不敢劈，转身再挑一个",
+            "targetNodeId": "n59"
+          }
+        ]
+      }
+    },
+    "n31": {
+      "nodeId": "n31",
+      "avid": "av1000031",
+      "title": "「这个保熟。」",
+      "cover": "/interactive/covers/av1000031.jpg",
+      "source": "保熟。.mp4",
+      "duration": 15.464,
+      "question": {
+        "timeStart": 10.5,
+        "timeEnd": 17.5,
+        "title": "「这个保熟。」赌一把？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "劈开验瓜",
+            "targetNodeId": "n36"
+          },
+          {
+            "text": "不信，换一个挑",
+            "targetNodeId": "n59"
+          }
+        ]
+      }
+    },
+    "n32": {
+      "nodeId": "n32",
+      "avid": "av1000032",
+      "title": "瓜有问题",
+      "cover": "/interactive/covers/av1000032.jpg",
+      "source": "瓜有问题.mp4",
+      "duration": 10.89,
+      "question": {
+        "timeStart": 5.9,
+        "timeEnd": 12.9,
+        "title": "「你这瓜有问题！」摊主急了。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「我的瓜是熟的！」",
+            "targetNodeId": "n33"
+          },
+          {
+            "text": "「不换！爱要不要！」",
+            "targetNodeId": "n54"
+          },
+          {
+            "text": "「行行行，给你换。」",
+            "targetNodeId": "n53"
+          }
+        ]
+      }
+    },
+    "n33": {
+      "nodeId": "n33",
+      "avid": "av1000033",
+      "title": "熟的",
+      "cover": "/interactive/covers/av1000033.jpg",
+      "source": "熟的.mp4",
+      "duration": 30.743,
+      "question": {
+        "timeStart": 25.7,
+        "timeEnd": 32.7,
+        "title": "「我的瓜，个个都是熟的！」他赌咒发誓。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "当场劈开验证",
+            "targetNodeId": "n36"
+          },
+          {
+            "text": "信了，拎走",
+            "targetNodeId": "n11"
+          }
+        ]
+      }
+    },
+    "n34": {
+      "nodeId": "n34",
+      "avid": "av1000034",
+      "title": "不熟自己吃",
+      "cover": "/interactive/covers/av1000034.jpg",
+      "source": "不熟自己吃.mp4",
+      "duration": 7.802,
+      "question": {
+        "timeStart": 2.8,
+        "timeEnd": 9.8,
+        "title": "「不熟你自己吃！」摊主被逼当众吃起了生瓜。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n35"
+          }
+        ]
+      }
+    },
+    "n35": {
+      "nodeId": "n35",
+      "avid": "av1000035",
+      "title": "吃了生瓜",
+      "cover": "/interactive/covers/av1000035.jpg",
+      "source": "吃了生瓜.mp4",
+      "duration": 24.752,
+      "question": {
+        "timeStart": 19.8,
+        "timeEnd": 26.8,
+        "title": "生瓜下肚，全场哗然。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「赔我一个熟瓜！」",
+            "targetNodeId": "n53"
+          },
+          {
+            "text": "「今天算你走运。」",
+            "targetNodeId": "n09"
+          }
+        ]
+      }
+    },
+    "n36": {
+      "nodeId": "n36",
+      "avid": "av1000036",
+      "title": "劈瓜",
+      "cover": "/interactive/covers/av1000036.jpg",
+      "source": "劈瓜.mp4",
+      "duration": 15.836,
+      "question": {
+        "timeStart": 10.8,
+        "timeEnd": 17.8,
+        "title": "瓜，放在了案板中央。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n37"
+          }
+        ]
+      }
+    },
+    "n37": {
+      "nodeId": "n37",
+      "avid": "av1000037",
+      "title": "手起刀落",
+      "cover": "/interactive/covers/av1000037.jpg",
+      "source": "劈瓜1.mp4",
+      "duration": 24.125,
+      "question": {
+        "timeStart": 19.1,
+        "timeEnd": 26.1,
+        "title": "手起——刀落——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n38"
+          }
+        ]
+      }
+    },
+    "n38": {
+      "nodeId": "n38",
+      "avid": "av1000038",
+      "title": "瓜开两半",
+      "cover": "/interactive/covers/av1000038.jpg",
+      "source": "劈瓜2.mp4",
+      "duration": 2.786,
+      "question": {
+        "timeStart": 0.5,
+        "timeEnd": 4.8,
+        "title": "瓜开两半！命运此刻揭晓——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "是熟的！",
+            "targetNodeId": "n39"
+          },
+          {
+            "text": "是生的……",
+            "targetNodeId": "n42"
+          }
+        ]
+      }
+    },
+    "n39": {
+      "nodeId": "n39",
+      "avid": "av1000039",
+      "title": "劈开熟的",
+      "cover": "/interactive/covers/av1000039.jpg",
+      "source": "劈开熟的.mp4",
+      "duration": 23.011,
+      "question": {
+        "timeStart": 18,
+        "timeEnd": 25,
+        "title": "红瓤黑籽，汁水四溢！真是熟的！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "当场吃瓜",
+            "targetNodeId": "n40"
+          },
+          {
+            "text": "付钱拎瓜，深藏功与名",
+            "targetNodeId": "n41"
+          }
+        ]
+      }
+    },
+    "n40": {
+      "nodeId": "n40",
+      "avid": "av1000040",
+      "title": "吃熟瓜",
+      "cover": "/interactive/covers/av1000040.jpg",
+      "source": "吃熟瓜.mp4",
+      "duration": 15.929,
+      "question": {
+        "timeStart": 10.9,
+        "timeEnd": 17.9,
+        "title": "「真甜。」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n41"
+          }
+        ]
+      }
+    },
+    "n41": {
+      "nodeId": "n41",
+      "avid": "av1000041",
+      "title": "结局：成功",
+      "cover": "/interactive/covers/av1000041.jpg",
+      "source": "成功.mp4",
+      "duration": 15.905
+    },
+    "n42": {
+      "nodeId": "n42",
+      "avid": "av1000042",
+      "title": "吞了生瓜",
+      "cover": "/interactive/covers/av1000042.jpg",
+      "source": "吞了生瓜.mp4",
+      "duration": 24.752,
+      "question": {
+        "timeStart": 19.8,
+        "timeEnd": 26.8,
+        "title": "白瓤生瓜。摊主愿赌服输，被逼吞了下去。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n43"
+          }
+        ]
+      }
+    },
+    "n43": {
+      "nodeId": "n43",
+      "avid": "av1000043",
+      "title": "吞了生瓜·二",
+      "cover": "/interactive/covers/av1000043.jpg",
+      "source": "吞了生瓜2.mp4",
+      "duration": 24.427,
+      "question": {
+        "timeStart": 19.4,
+        "timeEnd": 26.4,
+        "title": "摊主吞完生瓜，面如死灰。事情，还没完——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "大喊「杀人啦」，聚众围观",
+            "targetNodeId": "n44"
+          },
+          {
+            "text": "摊主爆发：「你找茬是不是！」",
+            "targetNodeId": "n45"
+          },
+          {
+            "text": "见好就收，走",
+            "targetNodeId": "n09"
+          }
+        ]
+      }
+    },
+    "n44": {
+      "nodeId": "n44",
+      "avid": "av1000044",
+      "title": "大声呼喊",
+      "cover": "/interactive/covers/av1000044.jpg",
+      "source": "大声呼喊.mp4",
+      "duration": 18.599,
+      "question": {
+        "timeStart": 13.6,
+        "timeEnd": 20.6,
+        "title": "「杀人啦——！」人群围拢。摊主——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「你找茬是不是？！」",
+            "targetNodeId": "n45"
+          },
+          {
+            "text": "认怂：「我给你换个熟的。」",
+            "targetNodeId": "n53"
+          }
+        ]
+      }
+    },
+    "n45": {
+      "nodeId": "n45",
+      "avid": "av1000045",
+      "title": "「你找茬是不是？」",
+      "cover": "/interactive/covers/av1000045.jpg",
+      "source": "你找茬是不是.mp4",
+      "duration": 23.707,
+      "question": {
+        "timeStart": 18.7,
+        "timeEnd": 25.7,
+        "title": "剑拔弩张。你的手，按向了刀——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "一刀劈了他的瓜",
+            "targetNodeId": "n47"
+          },
+          {
+            "text": "劈向老板！",
+            "targetNodeId": "n46"
+          },
+          {
+            "text": "收手，走人",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n46": {
+      "nodeId": "n46",
+      "avid": "av1000046",
+      "title": "劈老板",
+      "cover": "/interactive/covers/av1000046.jpg",
+      "source": "劈老板.mp4",
+      "duration": 25.054,
+      "question": {
+        "timeStart": 20.1,
+        "timeEnd": 27.1,
+        "title": "刀光一闪——千钧一发，收手还来得及！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "丢刀，跑",
+            "targetNodeId": "n08"
+          },
+          {
+            "text": "收不住了",
+            "targetNodeId": "n51"
+          }
+        ]
+      }
+    },
+    "n47": {
+      "nodeId": "n47",
+      "avid": "av1000047",
+      "title": "「你敢劈我瓜？！」",
+      "cover": "/interactive/covers/av1000047.jpg",
+      "source": "你敢劈我瓜4.mp4",
+      "duration": 22.918,
+      "question": {
+        "timeStart": 17.9,
+        "timeEnd": 24.9,
+        "title": "摊主怒吼：「你敢劈我瓜？！」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n48"
+          }
+        ]
+      }
+    },
+    "n48": {
+      "nodeId": "n48",
+      "avid": "av1000048",
+      "title": "对峙",
+      "cover": "/interactive/covers/av1000048.jpg",
+      "source": "你敢劈我瓜5.mp4",
+      "duration": 22.918,
+      "question": {
+        "timeStart": 17.9,
+        "timeEnd": 24.9,
+        "title": "他挡在瓜摊前，寸步不让。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "再劈一刀",
+            "targetNodeId": "n49"
+          },
+          {
+            "text": "带小弟撤离",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n49": {
+      "nodeId": "n49",
+      "avid": "av1000049",
+      "title": "瓜，四分五裂",
+      "cover": "/interactive/covers/av1000049.jpg",
+      "source": "你敢劈我瓜6.mp4",
+      "duration": 22.686,
+      "question": {
+        "timeStart": 17.7,
+        "timeEnd": 24.7,
+        "title": "「咔嚓——」瓜，四分五裂。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n50"
+          }
+        ]
+      }
+    },
+    "n50": {
+      "nodeId": "n50",
+      "avid": "av1000050",
+      "title": "「你劈我瓜……」",
+      "cover": "/interactive/covers/av1000050.jpg",
+      "source": "你劈我瓜.mp4",
+      "duration": 22.918,
+      "question": {
+        "timeStart": 17.9,
+        "timeEnd": 24.9,
+        "title": "摊主瘫坐在一地瓜瓤里。事已至此，收手吗？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "扬长而去",
+            "targetNodeId": "n09"
+          },
+          {
+            "text": "「十一，拿起刀。」",
+            "targetNodeId": "n51"
+          }
+        ]
+      }
+    },
+    "n51": {
+      "nodeId": "n51",
+      "avid": "av1000051",
+      "title": "十一，拿起刀",
+      "cover": "/interactive/covers/av1000051.jpg",
+      "source": "十一 拿起刀.mp4",
+      "duration": 1.23,
+      "question": {
+        "timeStart": 0.5,
+        "timeEnd": 3.2,
+        "title": "十一上前一步，接过了刀。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n52"
+          }
+        ]
+      }
+    },
+    "n52": {
+      "nodeId": "n52",
+      "avid": "av1000052",
+      "title": "结局：第一天，你劈我瓜？死",
+      "cover": "/interactive/covers/av1000052.jpg",
+      "source": "11  第一天，你劈我瓜？死.mp4",
+      "duration": 23.87
+    },
+    "n53": {
+      "nodeId": "n53",
+      "avid": "av1000053",
+      "title": "换熟瓜",
+      "cover": "/interactive/covers/av1000053.jpg",
+      "source": "换熟瓜.mp4",
+      "duration": 37.454,
+      "question": {
+        "timeStart": 32.5,
+        "timeEnd": 39.5,
+        "title": "摊主赔笑，换上一个「保熟」的瓜。这次——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "再劈开验一次",
+            "targetNodeId": "n36"
+          },
+          {
+            "text": "信他，拎走",
+            "targetNodeId": "n11"
+          },
+          {
+            "text": "不换了，我自己重挑",
+            "targetNodeId": "n55"
+          }
+        ]
+      }
+    },
+    "n54": {
+      "nodeId": "n54",
+      "avid": "av1000054",
+      "title": "不换",
+      "cover": "/interactive/covers/av1000054.jpg",
+      "source": "不换.mp4",
+      "duration": 18.204,
+      "question": {
+        "timeStart": 13.2,
+        "timeEnd": 20.2,
+        "title": "「不换！爱要不要！」摊主死活不换。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "劈他的瓜！",
+            "targetNodeId": "n47"
+          },
+          {
+            "text": "认栽，走人",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n55": {
+      "nodeId": "n55",
+      "avid": "av1000055",
+      "title": "重挑",
+      "cover": "/interactive/covers/av1000055.jpg",
+      "source": "重挑.mp4",
+      "duration": 27.771,
+      "question": {
+        "timeStart": 22.8,
+        "timeEnd": 29.8,
+        "title": "你在瓜堆里重新挑了起来。摊主——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "让你挑",
+            "targetNodeId": "n56"
+          },
+          {
+            "text": "「挑什么挑，不重挑！」",
+            "targetNodeId": "n57"
+          }
+        ]
+      }
+    },
+    "n56": {
+      "nodeId": "n56",
+      "avid": "av1000056",
+      "title": "重新挑",
+      "cover": "/interactive/covers/av1000056.jpg",
+      "source": "重新挑.mp4",
+      "duration": 8.034,
+      "question": {
+        "timeStart": 3,
+        "timeEnd": 10,
+        "title": "「行，让你重挑。」你转身，重新走向瓜堆。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n59"
+          }
+        ]
+      }
+    },
+    "n57": {
+      "nodeId": "n57",
+      "avid": "av1000057",
+      "title": "不重挑",
+      "cover": "/interactive/covers/av1000057.jpg",
+      "source": "不重挑.mp4",
+      "duration": 11.958,
+      "question": {
+        "timeStart": 7,
+        "timeEnd": 14,
+        "title": "「不重挑？」你眯起了眼。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "摊主死硬到底",
+            "targetNodeId": "n58"
+          },
+          {
+            "text": "摊主认怂",
+            "targetNodeId": "n56"
+          }
+        ]
+      }
+    },
+    "n58": {
+      "nodeId": "n58",
+      "avid": "av1000058",
+      "title": "僵持",
+      "cover": "/interactive/covers/av1000058.jpg",
+      "source": "不重挑。.mp4",
+      "duration": 4.086,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 6.1,
+        "title": "你的手，按上了摊主的瓜刀。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "冲突爆发！",
+            "targetNodeId": "n45"
+          },
+          {
+            "text": "忍了，走人",
+            "targetNodeId": "n08"
+          }
+        ]
+      }
+    },
+    "n59": {
+      "nodeId": "n59",
+      "avid": "av1000059",
+      "title": "转身挑瓜",
+      "cover": "/interactive/covers/av1000059.jpg",
+      "source": "转身挑瓜.mp4",
+      "duration": 37.941,
+      "question": {
+        "timeStart": 32.9,
+        "timeEnd": 39.9,
+        "title": "你转过身，目光扫过整个瓜堆。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "就这个了",
+            "targetNodeId": "n25"
+          },
+          {
+            "text": "再看看",
+            "targetNodeId": "n60"
+          }
+        ]
+      }
+    },
+    "n60": {
+      "nodeId": "n60",
+      "avid": "av1000060",
+      "title": "转身挑瓜·二",
+      "cover": "/interactive/covers/av1000060.jpg",
+      "source": "转身挑瓜1.mp4",
+      "duration": 38.197,
+      "question": {
+        "timeStart": 33.2,
+        "timeEnd": 40.2,
+        "title": "摊主的耐心，到了极限。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "就这个",
+            "targetNodeId": "n61"
+          },
+          {
+            "text": "继续挑",
+            "targetNodeId": "n22"
+          }
+        ]
+      }
+    },
+    "n61": {
+      "nodeId": "n61",
+      "avid": "av1000061",
+      "title": "最后一个瓜",
+      "cover": "/interactive/covers/av1000061.jpg",
+      "source": "转身挑瓜。.mp4",
+      "duration": 22.732,
+      "question": {
+        "timeStart": 17.7,
+        "timeEnd": 24.7,
+        "title": "最后一个瓜，你把它抱在了怀里。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "问问保熟",
+            "targetNodeId": "n26"
+          },
+          {
+            "text": "直接买走",
+            "targetNodeId": "n11"
+          }
+        ]
+      }
+    },
+    "n62": {
+      "nodeId": "n62",
+      "avid": "av1000062",
+      "title": "第二天",
+      "cover": "/interactive/covers/av1000062.jpg",
+      "source": "第二天.mp4",
+      "duration": 25.124,
+      "question": {
+        "timeStart": 20.1,
+        "timeEnd": 27.1,
+        "title": "第二天。华强带着小弟，堵在了摊前。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n63"
+          }
+        ]
+      }
+    },
+    "n63": {
+      "nodeId": "n63",
+      "avid": "av1000063",
+      "title": "第二天·对峙",
+      "cover": "/interactive/covers/av1000063.jpg",
+      "source": "第二天2.mp4",
+      "duration": 16.463,
+      "question": {
+        "timeStart": 11.5,
+        "timeEnd": 18.5,
+        "title": "华强撂下狠话：「瓜不保熟，我天天来。」你——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "让小弟赶走他",
+            "targetNodeId": "n64"
+          },
+          {
+            "text": "亲自送瓜赔罪",
+            "targetNodeId": "n68"
+          }
+        ]
+      }
+    },
+    "n64": {
+      "nodeId": "n64",
+      "avid": "av1000064",
+      "title": "让小弟赶走华强",
+      "cover": "/interactive/covers/av1000064.jpg",
+      "source": "让小弟赶走华强.mp4",
+      "duration": 19.853,
+      "question": {
+        "timeStart": 14.9,
+        "timeEnd": 21.9,
+        "title": "你雇的小弟上前，拦住了华强。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n65"
+          }
+        ]
+      }
+    },
+    "n65": {
+      "nodeId": "n65",
+      "avid": "av1000065",
+      "title": "十一现身",
+      "cover": "/interactive/covers/av1000065.jpg",
+      "source": "让小弟赶走华强2.mp4",
+      "duration": 12.376,
+      "question": {
+        "timeStart": 7.4,
+        "timeEnd": 14.4,
+        "title": "华强身边站出一个沉默的年轻人——十一。你的小弟——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "一起上，赶走他",
+            "targetNodeId": "n67"
+          },
+          {
+            "text": "腿软了",
+            "targetNodeId": "n66"
+          }
+        ]
+      }
+    },
+    "n66": {
+      "nodeId": "n66",
+      "avid": "av1000066",
+      "title": "小弟被震慑",
+      "cover": "/interactive/covers/av1000066.jpg",
+      "source": "小弟被震慑.mp4",
+      "duration": 19.853,
+      "question": {
+        "timeStart": 14.9,
+        "timeEnd": 21.9,
+        "title": "被十一一个眼神镇住，没人敢上前。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "赔笑递上熟瓜",
+            "targetNodeId": "n53"
+          },
+          {
+            "text": "眼睁睁看华强劈了瓜摊",
+            "targetNodeId": "n50"
+          }
+        ]
+      }
+    },
+    "n67": {
+      "nodeId": "n67",
+      "avid": "av1000067",
+      "title": "小弟赶走了华强",
+      "cover": "/interactive/covers/av1000067.jpg",
+      "source": "小弟赶走了华强.mp4",
+      "duration": 15.209,
+      "question": {
+        "timeStart": 10.2,
+        "timeEnd": 17.2,
+        "title": "华强被赶走了，临走留下一句：「明天，我还会来。」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "第三天，暴雨",
+            "targetNodeId": "n70"
+          },
+          {
+            "text": "第三天，大雪",
+            "targetNodeId": "n71"
+          }
+        ]
+      }
+    },
+    "n68": {
+      "nodeId": "n68",
+      "avid": "av1000068",
+      "title": "送瓜",
+      "cover": "/interactive/covers/av1000068.jpg",
+      "source": "送瓜.mp4",
+      "duration": 31.462,
+      "question": {
+        "timeStart": 26.5,
+        "timeEnd": 33.5,
+        "title": "你把最熟的瓜捧到华强面前。他——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "收下了",
+            "targetNodeId": "n41"
+          },
+          {
+            "text": "把瓜砸在地上",
+            "targetNodeId": "n69"
+          }
+        ]
+      }
+    },
+    "n69": {
+      "nodeId": "n69",
+      "avid": "av1000069",
+      "title": "不成功",
+      "cover": "/interactive/covers/av1000069.jpg",
+      "source": "不成功.mp4",
+      "duration": 14.28,
+      "question": {
+        "timeStart": 9.3,
+        "timeEnd": 16.3,
+        "title": "瓜砸了一地。华强：「明天见。」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "第三天，暴雨",
+            "targetNodeId": "n70"
+          },
+          {
+            "text": "第三天，大雪",
+            "targetNodeId": "n71"
+          }
+        ]
+      }
+    },
+    "n70": {
+      "nodeId": "n70",
+      "avid": "av1000070",
+      "title": "第三天·暴雨",
+      "cover": "/interactive/covers/av1000070.jpg",
+      "source": "第三天下雨2.mp4",
+      "duration": 15.348,
+      "question": {
+        "timeStart": 10.3,
+        "timeEnd": 17.3,
+        "title": "第三天，暴雨倾盆。还出摊吗？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "冒雨出摊",
+            "targetNodeId": "n72"
+          },
+          {
+            "text": "收摊躲雨",
+            "targetNodeId": "n74"
+          }
+        ]
+      }
+    },
+    "n71": {
+      "nodeId": "n71",
+      "avid": "av1000071",
+      "title": "第三天·大雪",
+      "cover": "/interactive/covers/av1000071.jpg",
+      "source": "第三天下雪2.mp4",
+      "duration": 13.932,
+      "question": {
+        "timeStart": 8.9,
+        "timeEnd": 15.9,
+        "title": "第三天，大雪封街。还出摊吗？",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "冒雪出摊",
+            "targetNodeId": "n75"
+          },
+          {
+            "text": "收摊躲雪",
+            "targetNodeId": "n77"
+          }
+        ]
+      }
+    },
+    "n72": {
+      "nodeId": "n72",
+      "avid": "av1000072",
+      "title": "下雨不收摊",
+      "cover": "/interactive/covers/av1000072.jpg",
+      "source": "下雨不收摊1.mp4",
+      "duration": 26.772,
+      "question": {
+        "timeStart": 21.8,
+        "timeEnd": 28.8,
+        "title": "雨幕中，一个熟悉的身影远远出现。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n73"
+          }
+        ]
+      }
+    },
+    "n73": {
+      "nodeId": "n73",
+      "avid": "av1000073",
+      "title": "雨中盯梢",
+      "cover": "/interactive/covers/av1000073.jpg",
+      "source": "下雨不收摊2.mp4",
+      "duration": 14.559,
+      "question": {
+        "timeStart": 9.6,
+        "timeEnd": 16.6,
+        "title": "他在雨里盯了你一整天，没动手。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n78"
+          }
+        ]
+      }
+    },
+    "n74": {
+      "nodeId": "n74",
+      "avid": "av1000074",
+      "title": "下雨收摊",
+      "cover": "/interactive/covers/av1000074.jpg",
+      "source": "下雨收摊2.mp4",
+      "duration": 4.527,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 6.5,
+        "title": "你冒雨收摊，回家了。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n78"
+          }
+        ]
+      }
+    },
+    "n75": {
+      "nodeId": "n75",
+      "avid": "av1000075",
+      "title": "下雪不收摊",
+      "cover": "/interactive/covers/av1000075.jpg",
+      "source": "下雪不收摊1.mp4",
+      "duration": 25.124,
+      "question": {
+        "timeStart": 20.1,
+        "timeEnd": 27.1,
+        "title": "雪地里，一串脚印延伸到摊前。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n76"
+          }
+        ]
+      }
+    },
+    "n76": {
+      "nodeId": "n76",
+      "avid": "av1000076",
+      "title": "雪中盯梢",
+      "cover": "/interactive/covers/av1000076.jpg",
+      "source": "下雪不收摊2.mp4",
+      "duration": 10.96,
+      "question": {
+        "timeStart": 6,
+        "timeEnd": 13,
+        "title": "盯梢的人站成了雪人，还是没动手。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n78"
+          }
+        ]
+      }
+    },
+    "n77": {
+      "nodeId": "n77",
+      "avid": "av1000077",
+      "title": "下雪收摊",
+      "cover": "/interactive/covers/av1000077.jpg",
+      "source": "下雪收摊2.mp4",
+      "duration": 4.55,
+      "question": {
+        "timeStart": 1,
+        "timeEnd": 6.6,
+        "title": "你收摊回家，雪一直下。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n78"
+          }
+        ]
+      }
+    },
+    "n78": {
+      "nodeId": "n78",
+      "avid": "av1000078",
+      "title": "第四天",
+      "cover": "/interactive/covers/av1000078.jpg",
+      "source": "第四天.mp4",
+      "duration": 16.718,
+      "question": {
+        "timeStart": 11.7,
+        "timeEnd": 18.7,
+        "title": "第四天。江湖传言：明天，华强亲自来。这一夜——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "守着瓜摊，提高警惕",
+            "targetNodeId": "n80"
+          },
+          {
+            "text": "该睡就睡，兵来将挡",
+            "targetNodeId": "n79"
+          }
+        ]
+      }
+    },
+    "n79": {
+      "nodeId": "n79",
+      "avid": "av1000079",
+      "title": "警惕",
+      "cover": "/interactive/covers/av1000079.jpg",
+      "source": "警惕.mp4",
+      "duration": 9.195,
+      "question": {
+        "timeStart": 4.2,
+        "timeEnd": 11.2,
+        "title": "半夜，瓜摊方向传来窸窣声——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "冲出去！",
+            "targetNodeId": "n82"
+          },
+          {
+            "text": "太困了，接着睡",
+            "targetNodeId": "n83"
+          }
+        ]
+      }
+    },
+    "n80": {
+      "nodeId": "n80",
+      "avid": "av1000080",
+      "title": "提高警惕",
+      "cover": "/interactive/covers/av1000080.jpg",
+      "source": "提高警惕.mp4",
+      "duration": 9.938,
+      "question": {
+        "timeStart": 4.9,
+        "timeEnd": 11.9,
+        "title": "深夜，瓜摊边黑影闪动！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "蹑手蹑脚跟上去",
+            "targetNodeId": "n81"
+          },
+          {
+            "text": "装睡，暗中观察",
+            "targetNodeId": "n83"
+          }
+        ]
+      }
+    },
+    "n81": {
+      "nodeId": "n81",
+      "avid": "av1000081",
+      "title": "警惕提高",
+      "cover": "/interactive/covers/av1000081.jpg",
+      "source": "警惕提高.mp4",
+      "duration": 10.495,
+      "question": {
+        "timeStart": 5.5,
+        "timeEnd": 12.5,
+        "title": "黑影察觉动静，撒腿就跑——是华强的小弟！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "追！",
+            "targetNodeId": "n82"
+          },
+          {
+            "text": "目送他消失",
+            "targetNodeId": "n83"
+          }
+        ]
+      }
+    },
+    "n82": {
+      "nodeId": "n82",
+      "avid": "av1000082",
+      "title": "被发现",
+      "cover": "/interactive/covers/av1000082.jpg",
+      "source": "被发现.mp4",
+      "duration": 9.194,
+      "question": {
+        "timeStart": 4.2,
+        "timeEnd": 11.2,
+        "title": "你撞了个正着，他落荒而逃——地上掉着一枚吸铁石？！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n84"
+          }
+        ]
+      }
+    },
+    "n83": {
+      "nodeId": "n83",
+      "avid": "av1000083",
+      "title": "没被发现",
+      "cover": "/interactive/covers/av1000083.jpg",
+      "source": "没被发现.mp4",
+      "duration": 54.613,
+      "question": {
+        "timeStart": 49.6,
+        "timeEnd": 56.6,
+        "title": "天亮了。瓜一个不少，只是每个瓜上都有吸铁石吸过的印子……他们在验你的生熟！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n84"
+          }
+        ]
+      }
+    },
+    "n84": {
+      "nodeId": "n84",
+      "avid": "av1000084",
+      "title": "第五天",
+      "cover": "/interactive/covers/av1000084.jpg",
+      "source": "第五天.mp4",
+      "duration": 17.647,
+      "question": {
+        "timeStart": 12.6,
+        "timeEnd": 19.6,
+        "title": "第五天。华强带着十一，站在了摊前。",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "「我的瓜全是熟的，随便验！」",
+            "targetNodeId": "n85"
+          },
+          {
+            "text": "擦汗：「给我两分钟……」",
+            "targetNodeId": "n86"
+          }
+        ]
+      }
+    },
+    "n85": {
+      "nodeId": "n85",
+      "avid": "av1000085",
+      "title": "没有吸铁石",
+      "cover": "/interactive/covers/av1000085.jpg",
+      "source": "没有吸铁石.mp4",
+      "duration": 20.201,
+      "question": {
+        "timeStart": 15.2,
+        "timeEnd": 22.2,
+        "title": "「什么吸铁石？我的瓜从来不用那玩意！」吸铁石贴上瓜面——纹丝不动。全是熟瓜！",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n87"
+          }
+        ]
+      }
+    },
+    "n86": {
+      "nodeId": "n86",
+      "avid": "av1000086",
+      "title": "两分钟",
+      "cover": "/interactive/covers/av1000086.jpg",
+      "source": "两分钟.mp4",
+      "duration": 17.461,
+      "question": {
+        "timeStart": 12.5,
+        "timeEnd": 19.5,
+        "title": "华强冷笑：「两分钟，把生瓜给我清干净。」你——",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "真的把生瓜全搬走",
+            "targetNodeId": "n87"
+          },
+          {
+            "text": "嘴硬：「我的瓜没问题」",
+            "targetNodeId": "n88"
+          }
+        ]
+      }
+    },
+    "n87": {
+      "nodeId": "n87",
+      "avid": "av1000087",
+      "title": "结局：第五天GE",
+      "cover": "/interactive/covers/av1000087.jpg",
+      "source": "第五天GE.mp4",
+      "duration": 14.35
+    },
+    "n88": {
+      "nodeId": "n88",
+      "avid": "av1000088",
+      "title": "第五天BE",
+      "cover": "/interactive/covers/av1000088.jpg",
+      "source": "第五天BE.mp4",
+      "duration": 30.325,
+      "question": {
+        "timeStart": 25.3,
+        "timeEnd": 32.3,
+        "title": "华强的眼神冷了下来：「看来你是记吃不记打。」",
+        "defaultOptionIndex": 0,
+        "options": [
+          {
+            "text": "继续",
+            "targetNodeId": "n51"
+          }
+        ]
+      }
+    }
+  }
+}

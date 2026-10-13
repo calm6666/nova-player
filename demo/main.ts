@@ -625,6 +625,54 @@ const PlayerSection = defineComponent(() => {
         ),
       ),
     ),
+    // 互动视频（华强买瓜）：协议（HLS/DASH）× playurl 格式（URL/JSON）选择 +
+    // 播放按钮。剧情树来自 mock-server /api/interactive/story（88 节点，带 avid
+    // 引用）；分支切换由互动视频插件驱动，播放地址经 /api/interactive/playurl
+    // 按（avid + 所选协议 + 所选格式）按需解析（对齐 B 站互动视频标准做法）
+    h(
+      "section",
+      {
+        class: "source-card",
+      },
+      h(
+        "h3",
+        { class: "source-card-title" },
+        "互动视频 · 华强买瓜（协议 × playurl 格式）",
+      ),
+      h(
+        "div",
+        {
+          class: "demo-btn-row",
+        },
+        h(
+          "button",
+          { id: "btn-hq-protocol-hls", class: "btn" },
+          "协议：HLS",
+        ),
+        h(
+          "button",
+          { id: "btn-hq-protocol-dash", class: "btn" },
+          "协议：DASH",
+        ),
+        h(
+          "button",
+          { id: "btn-hq-format-url", class: "btn" },
+          "格式：URL",
+        ),
+        h(
+          "button",
+          { id: "btn-hq-format-json", class: "btn" },
+          "格式：JSON",
+        ),
+        h(
+          "button",
+          { id: "btn-hq-play", class: "btn" },
+          "播放互动视频",
+        ),
+      ),
+      // 状态行：剧情树加载进度 / 协议格式生效组合 / 接口报错信息
+      h("div", { id: "hq-status", class: "hq-status" }, "未加载剧情树"),
+    ),
     // 交互卡片：展示 / 编辑双模式切换 + 运行期添加表单
     // 展示模式（默认）：卡片按时间窗口纯展示，注册全部交互监听
     // 编辑模式：卡片常驻可拖拽，点击类监听不注册
