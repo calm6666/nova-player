@@ -43,7 +43,7 @@
  * ]
  */
 
-import { h, Fragment, signal, mount, destroy } from "@/core";
+import { h, Fragment, signal, mount, destroy, effect } from "@/core";
 import type { Signal } from "@/core";
 import type { VNode, PlayerSource } from "@/types";
 import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
@@ -123,6 +123,13 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
 
   /** 剧情进度条显隐 */
   private readonly storyVisible: Signal<boolean> = signal(false);
+
+  /**
+   * 互动层宽度（ResizeObserver 驱动）：剧情进度条圆点尺寸 /
+   * 悬停卡片定位的动态变换依据 —— 全屏 / 非全屏 / 窗口缩放 /
+   * 播放器尺寸不同都经此信号自动重算（对齐 Qt 端的层宽绑定）
+   */
+  private readonly layerWidth: Signal<number> = signal(0);
 
   /** 分支选择配置（null = 隐藏并清空画布；ended = 播完弹出，画最后一帧背景） */
   private readonly questionState: Signal<{
@@ -258,24 +265,50 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
     // clearEndedLock）：从互动层容器上溯，兼容 player.el 为任意祖先的场景
     this.playerRoot = wrap.closest<HTMLElement>(".nova-player-container");
 
+    // 互动层宽度观察：全屏 / 非全屏 / 窗口缩放时驱动剧情进度条
+    // （圆点尺寸 / 悬停卡片定位）动态重算（对齐 Qt 端的层宽绑定）
+    this.layerWidth.value = wrap.clientWidth;
+    const layerResizeObserver = new ResizeObserver((): void => {
+      this.layerWidth.value = wrap.clientWidth;
+    });
+    layerResizeObserver.observe(wrap);
+    this.cleanups.push((): void => {
+      layerResizeObserver.disconnect();
+    });
+
+    // 激活态联动（问题 / 重播显示中 = 激活）：在 wrap 根容器上切换
+    // nova-player-interaction-active 类。CSS 依据该类让整个互动层脱离
+    // 「随控制栏隐藏」的联动（播完弹问题时控制栏收起但问题可点）、
+    // 并压住片尾面板。
+    // 【不能用 :has(> marker) + display:none 方案】":has" 是结构性选择器，
+    // marker 元素只要挂在 DOM 里就永远命中（display:none 不影响匹配），
+    // 会导致激活例外永久生效（story 永不随控制栏隐藏）。
+    // 类的真实存在 / 缺席才是可被选择器正确感知的激活态。
+    const disposeActive = effect((): void => {
+      const active =
+        this.questionState.value !== null || this.replayVisible.value;
+      wrap.classList.toggle("nova-player-interaction-active", active);
+    });
+    this.cleanups.push((): void => {
+      disposeActive();
+      wrap.classList.remove("nova-player-interaction-active");
+    });
+
     // 一次性构建全部互动视频 VNode 树（后续状态变化走信号更新）
     this.rootVNode = h(
       Fragment,
       null,
-      // 激活标志元素（零尺寸）：问题 / 重播显示中时置为可见，
-      // CSS :has(.nova-player-interaction-active) 据此让整个互动层
-      // 脱离「随控制栏隐藏」的联动（播完弹问题时控制栏收起但问题可点）
-      h("div", {
-        class: "nova-player-interaction-active",
-        style: {
-          display:
-            this.questionState.value !== null || this.replayVisible.value
-              ? "block"
-              : "none",
+      // 剧情进度条（For 控制流，storyEntries 信号驱动；layerWidth
+      // 驱动换行布局 / 悬停卡片定位随播放器宽度动态变换；
+      // 点击已看完的圆点跳回对应节点重新观看）
+      renderStoryBar(
+        this.storyEntries,
+        this.storyVisible,
+        this.layerWidth,
+        (index): void => {
+          this.handleStorySeek(index);
         },
-      }),
-      // 剧情进度条（For 控制流，storyEntries 信号驱动）
-      renderStoryBar(this.storyEntries, this.storyVisible),
+      ),
       // 分支选择（questionState 信号驱动显隐 + canvas effect 重绘；
       // videoGetter 供播完弹出时绘制视频最后一帧）
       renderQuestion(
@@ -591,31 +624,69 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
   /**
    * 重建剧情进度条节点信号（整组替换，For 按 id diff 增删）
    *
-   * 嵌套结构整体替换触发更新（浅层信号对嵌套对象属性赋值不通知，
-   * 整组重建条目数组是框架推荐的更新方式）
+   * 【必须复用同 id 旧条目】For 按 key 复用已存在条目的 DOM、不重跑
+   * render 回调 —— 已看完节点的图标切换（位置 → 打勾）靠条目身上的
+   * isCurrent 信号驱动。若每次都创建全新条目对象，effect 闭包捕获的
+   * 仍是旧对象，新对象的信号变化永远到不了 DOM（已播放节点会一直
+   * 显示位置图标）。因此：同 id 条目保留原对象、原位更新信号值；
+   * 仅新增条目创建新对象（悬停态一并复位）
    */
   private rebuildStoryEntries(): void {
     /** 当前观看路径快照 */
     const path = this.pathTracker.getPath();
 
-    // 过滤无配置节点并重排下标（保持 left 定位连续）
-    this.storyEntries.value = path.flatMap((visited, rawIndex): Array<StoryNodeEntry> => {
-      /** 节点配置（异常 id 容错跳过） */
-      const node = this.pathTracker.getNode(visited.nodeId);
-      if (!node) return [];
+    /** 重建前的旧条目表（id → 条目），同 id 复用以保留信号引用 */
+    const previous = new Map(
+      this.storyEntries.peek().map((entry) => [entry.id, entry]),
+    );
 
-      return [
-        {
-          // 稳定 key：路径下标 + 节点 id（同节点可重复出现在路径上）
-          id: `story-${rawIndex}-${visited.nodeId}`,
-          index: rawIndex,
-          node,
-          // 最后一项 = 正在观看（位置图标），其余为已看完（打勾图标）
-          isCurrent: rawIndex === path.length - 1,
-          hover: signal(false),
-        },
-      ];
-    });
+    // 过滤无配置节点并重排下标（保持 left 定位连续）
+    this.storyEntries.value = path.flatMap(
+      (visited, rawIndex): Array<StoryNodeEntry> => {
+        /** 节点配置（异常 id 容错跳过） */
+        const node = this.pathTracker.getNode(visited.nodeId);
+        if (!node) return [];
+
+        /** 稳定 key：路径下标 + 节点 id（同节点可重复出现在路径上） */
+        const id = `story-${rawIndex}-${visited.nodeId}`;
+        /** 同 id 旧条目（复用信号引用；最后一项 = 正在观看） */
+        const reused = previous.get(id);
+        if (reused) {
+          // 原位更新：isCurrent 信号驱动圆点图标切换
+          // （位置 / 打勾），无需重建 DOM
+          reused.isCurrent.value = rawIndex === path.length - 1;
+          return [reused];
+        }
+
+        return [
+          {
+            id,
+            index: rawIndex,
+            node,
+            isCurrent: signal(rawIndex === path.length - 1),
+            hover: signal(false),
+          },
+        ];
+      },
+    );
+  }
+
+  /**
+   * 点击剧情进度条圆点跳转（跳回已看完的节点重新观看）
+   *
+   * 当前节点（路径末项）无需跳转；越界下标容错直接忽略。
+   * switchToNode 内部经 pathTracker.jumpTo 对路径中已存在的节点
+   * 做截断重置（该节点之后的路径丢弃、其选择状态复位），
+   * 再清理残留 UI 并切换片源 —— 与分支选择 / 重播同一条链路。
+   *
+   * @param index - 点击的圆点在路径中的下标
+   */
+  private handleStorySeek(index: number): void {
+    /** 当前观看路径快照 */
+    const path = this.pathTracker.getPath();
+    const target = path[index];
+    if (!target || index === path.length - 1) return;
+    this.switchToNode(target.nodeId);
   }
 
   /** 当前节点的分支配置（无分支返回 undefined） */

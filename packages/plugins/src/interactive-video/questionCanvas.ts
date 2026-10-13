@@ -45,6 +45,29 @@ export interface QuestionState {
 const HOVER_SCALE_TARGET = 1.07;
 const HOVER_SCALE_EASE = 0.22;
 
+/** 选项按钮基础宽度（宽度富余时用；窄播放器按容器比例缩小） */
+const BUTTON_BASE_WIDTH = 300;
+/** 选项按钮宽度下限（再窄文字放不下） */
+const BUTTON_MIN_WIDTH = 200;
+/** 选项按钮高度（与宽度无关，恒定） */
+const BUTTON_HEIGHT = 52;
+
+/**
+ * 按容器宽度计算选项按钮宽度（播放器尺寸自适应：
+ * 全屏 / 非全屏 / 窗口缩放时按钮组始终居中放得下）
+ *
+ * @param containerWidth - 容器 CSS 宽度
+ * @returns 按钮宽度（px）
+ */
+function computeButtonWidth(containerWidth: number): number {
+  return Math.round(
+    Math.min(
+      BUTTON_BASE_WIDTH,
+      Math.max(BUTTON_MIN_WIDTH, containerWidth * 0.78),
+    ),
+  );
+}
+
 // ============================================
 // 模块内部绘制状态（闭包持有，随 VNode 挂载初始化）
 // ============================================
@@ -119,7 +142,8 @@ function loadBgImage(url: string): HTMLImageElement | undefined {
 
 /**
  * 计算选项按钮命中矩形（横向流式排列、每行居中、整体垂直居中）
- * 布局参数：按钮 300×52、间距 20（行内 / 行间一致）、题目文案高 36（存在时）
+ * 布局参数：按钮宽度按容器自适应（300 → 200 下限）、高 52、
+ * 间距 20（行内 / 行间一致）、题目文案高 36（存在时）
  * 一行放不下时自动换到下一行，每行按该行实际按钮数水平居中
  *
  * @param question - 分支选择配置
@@ -136,8 +160,8 @@ function layoutOptionRects(question: InteractiveQuestion): {
   const options = question.options;
 
   // 按钮布局参数（横向流式：一行放不下自动换行，行内 / 行间间距一致）
-  const buttonWidth = 300;
-  const buttonHeight = 52;
+  const buttonWidth = computeButtonWidth(rect.width);
+  const buttonHeight = BUTTON_HEIGHT;
   const gap = 20;
   const titleHeight = question.title ? 36 : 0;
 
@@ -308,11 +332,12 @@ function drawQuestion(state: QuestionState | null): void {
   // ── 按钮组布局 ──
   const groupRect = layoutOptionRects(question);
 
-  // 题目文案（可选，按钮组上方居中）
+  // 题目文案（可选，按钮组上方居中；字号随按钮宽度同步缩放）
   if (question.title && groupRect) {
     canvasCtx.fillStyle = "#fff";
+    const buttonWidth = computeButtonWidth(rect.width);
     canvasCtx.font =
-      '600 18px "PingFang SC", "Microsoft YaHei", sans-serif';
+      `600 ${Math.max(14, Math.round(18 * buttonWidth / BUTTON_BASE_WIDTH))}px "PingFang SC", "Microsoft YaHei", sans-serif`;
     canvasCtx.textAlign = "center";
     canvasCtx.textBaseline = "middle";
     // 阴影提升在画面上的可读性
@@ -357,23 +382,19 @@ function drawQuestion(state: QuestionState | null): void {
       }, true);
     }
 
-    // 2. 半透明黑遮罩（保证文字可读；悬停时减淡突出高亮）
+    // 2. 半透明黑遮罩（保证文字可读；悬停时减淡突出高亮；
+    //    悬停反馈 = 平滑放大 + 遮罩减淡，不绘制任何外框边框）
     canvasCtx.fillStyle = isHover
       ? "rgba(0, 0, 0, 0.35)"
       : "rgba(0, 0, 0, 0.55)";
     roundRectPath(canvasCtx, baseRect, 8);
     canvasCtx.fill();
 
-    // 3. 描边（白色边框恒定不变色：悬停反馈只保留平滑放大，边框不变成蓝色）
-    canvasCtx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-    canvasCtx.lineWidth = isHover ? 2 : 1.5;
-    roundRectPath(canvasCtx, baseRect, 8);
-    canvasCtx.stroke();
-
-    // 4. 选项文字（前缀 + 文案，居中；悬停高亮）
-    canvasCtx.fillStyle = isHover ? "#00A1D6" : "#fff";
+    // 3. 选项文字（前缀 + 文案，居中；恒定白色 —— 悬停不变色，
+    //    悬停反馈只保留平滑放大与遮罩减淡）
+    canvasCtx.fillStyle = "#fff";
     canvasCtx.font =
-      '500 16px "PingFang SC", "Microsoft YaHei", sans-serif';
+      `500 ${Math.max(13, Math.round(16 * baseRect.width / BUTTON_BASE_WIDTH))}px "PingFang SC", "Microsoft YaHei", sans-serif`;
     canvasCtx.textAlign = "center";
     canvasCtx.textBaseline = "middle";
     canvasCtx.fillText(
@@ -463,9 +484,11 @@ function getPointerPosition(event: MouseEvent): { x: number; y: number } {
  * @param y - 画布 y 坐标（CSS 像素）
  */
 function hitTest(x: number, y: number): number {
+  /** 命中矩形实际宽度（窄播放器下按钮已缩小，按首个矩形实测） */
+  const actualWidth = optionRects[0]?.width ?? BUTTON_BASE_WIDTH;
   /** 放大目标下的半向外扩量（宽高各外扩 ~5px） */
-  const expandX = (300 * (HOVER_SCALE_TARGET - 1)) / 2;
-  const expandY = (52 * (HOVER_SCALE_TARGET - 1)) / 2;
+  const expandX = (actualWidth * (HOVER_SCALE_TARGET - 1)) / 2;
+  const expandY = (BUTTON_HEIGHT * (HOVER_SCALE_TARGET - 1)) / 2;
 
   for (let index = 0; index < optionRects.length; index += 1) {
     const optionRect = optionRects[index];

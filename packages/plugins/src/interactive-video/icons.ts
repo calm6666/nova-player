@@ -60,7 +60,9 @@ export function renderCheckIcon(isHover: boolean): VNode {
       "data-pointer": "none",
       viewBox: "0 0 36 36",
     },
-    h("g", { transform: "translate(7 6)" },
+    // fill="none" 必须保留：两条 path 均为纯描边（无 fill 属性），
+    // 缺省时默认填充黑色会把对勾与外弧糊成黑块
+    h("g", { fill: "none", "fill-rule": "evenodd", transform: "translate(7 6)" },
       h("circle", {
         cx: "10",
         cy: "12",
