@@ -632,8 +632,10 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
    * 仅新增条目创建新对象（悬停态一并复位）
    */
   private rebuildStoryEntries(): void {
-    /** 当前观看路径快照 */
+    /** 当前观看路径快照（完整历史：回看跳转不截断） */
     const path = this.pathTracker.getPath();
+    /** 当前游标（正在观看的节点在路径中的下标） */
+    const cursor = this.pathTracker.getCursorIndex();
 
     /** 重建前的旧条目表（id → 条目），同 id 复用以保留信号引用 */
     const previous = new Map(
@@ -649,12 +651,12 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
 
         /** 稳定 key：路径下标 + 节点 id（同节点可重复出现在路径上） */
         const id = `story-${rawIndex}-${visited.nodeId}`;
-        /** 同 id 旧条目（复用信号引用；最后一项 = 正在观看） */
+        /** 同 id 旧条目（复用信号引用；游标项 = 正在观看） */
         const reused = previous.get(id);
         if (reused) {
           // 原位更新：isCurrent 信号驱动圆点图标切换
           // （位置 / 打勾），无需重建 DOM
-          reused.isCurrent.value = rawIndex === path.length - 1;
+          reused.isCurrent.value = rawIndex === cursor;
           return [reused];
         }
 
@@ -663,7 +665,7 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
             id,
             index: rawIndex,
             node,
-            isCurrent: signal(rawIndex === path.length - 1),
+            isCurrent: signal(rawIndex === cursor),
             hover: signal(false),
           },
         ];
@@ -672,12 +674,13 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
   }
 
   /**
-   * 点击剧情进度条圆点跳转（跳回已看完的节点重新观看）
+   * 点击剧情进度条圆点跳转（跳回已看过的节点重新观看）
    *
-   * 当前节点（路径末项）无需跳转；越界下标容错直接忽略。
+   * 当前节点（游标项）无需跳转；越界下标容错直接忽略。
    * switchToNode 内部经 pathTracker.jumpTo 对路径中已存在的节点
-   * 做截断重置（该节点之后的路径丢弃、其选择状态复位），
-   * 再清理残留 UI 并切换片源 —— 与分支选择 / 重播同一条链路。
+   * 仅移动游标不截断历史 —— 已看过的圆点全部保留在剧情条上，
+   * 之后仍可再次点击跳转；清理残留 UI 并切换片源 —— 与分支
+   * 选择 / 重播同一条链路。
    *
    * @param index - 点击的圆点在路径中的下标
    */
@@ -685,7 +688,7 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
     /** 当前观看路径快照 */
     const path = this.pathTracker.getPath();
     const target = path[index];
-    if (!target || index === path.length - 1) return;
+    if (!target || index === this.pathTracker.getCursorIndex()) return;
     this.switchToNode(target.nodeId);
   }
 
@@ -695,11 +698,9 @@ class InteractiveVideoPluginClass implements InteractiveVideoPluginAPI {
       ?.question;
   }
 
-  /** 当前节点是否已选择过分支（路径末项 selectedOptionIndex >= 0） */
+  /** 当前节点是否已选择过分支（游标项 selectedOptionIndex >= 0） */
   private hasSelected(): boolean {
-    const path = this.pathTracker.getPath();
-    if (path.length === 0) return false;
-    return path[path.length - 1].selectedOptionIndex >= 0;
+    return this.pathTracker.hasSelected();
   }
 }
 
