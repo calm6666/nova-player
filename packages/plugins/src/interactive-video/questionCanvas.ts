@@ -307,19 +307,36 @@ function drawQuestion(state: QuestionState | null): void {
   canvasCtx.clearRect(0, 0, rect.width, rect.height);
   if (!question) return;
 
-  // ── 播完模式：视频最后一帧铺满 + 全屏遮罩（问题浮在定格画面上）──
+  // ── 播完模式：黑底 + 视频最后一帧 contain 居中 + 全屏遮罩 ──
   if (state?.ended) {
     const video = videoGetter?.();
     if (video && video.videoWidth > 0) {
-      drawSourceCover(
-        canvasCtx,
-        video,
-        video.videoWidth,
-        video.videoHeight,
-        { x: 0, y: 0, width: rect.width, height: rect.height },
-        false,
+      /*
+       * 画面区域必须与视频播放时完全一致（播放 = contain 居中 + 黑边），
+       * 之前 cover 放大裁剪铺满会把画面裁掉一圈、和播放看到的对不上
+       * （用户实测"截图感觉不对"）。做法：黑色底先铺满（上下 / 左右
+       * 铺不满的区域纯黑填充），再按 contain 等比把最后一帧居中画上。
+       */
+      canvasCtx.fillStyle = "#000000";
+      canvasCtx.fillRect(0, 0, rect.width, rect.height);
+      /** contain 等比缩放比（取较小值保证画面完整不裁剪） */
+      const containScale = Math.min(
+        rect.width / video.videoWidth,
+        rect.height / video.videoHeight,
       );
-      // 半透明黑遮罩：压暗定格画面，突出问题按钮
+      /** 居中绘制的画面矩形（比例变化 / 容器尺寸变化时重算重绘） */
+      const drawWidth = video.videoWidth * containScale;
+      const drawHeight = video.videoHeight * containScale;
+      const offsetX = (rect.width - drawWidth) / 2;
+      const offsetY = (rect.height - drawHeight) / 2;
+      canvasCtx.drawImage(
+        video,
+        offsetX,
+        offsetY,
+        drawWidth,
+        drawHeight,
+      );
+      // 半透明黑遮罩：压暗定格画面，突出问题按钮（黑边叠遮罩仍是纯黑）
       canvasCtx.fillStyle = "rgba(0, 0, 0, 0.45)";
       canvasCtx.fillRect(0, 0, rect.width, rect.height);
     } else {
