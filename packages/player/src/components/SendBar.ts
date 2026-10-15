@@ -578,7 +578,15 @@ export const SendBar = defineComponent<SendBarProps>(
               placeholder:
                 props.placeholder || t("player.ui.sendbar.placeholder_default"),
               autocomplete: "off",
-              style: { display: props.showLoginTip ? "none" : "block" },
+              // 未登录显示登录提示、弹幕关闭显示「已关闭弹幕」，
+              // 两种状态都隐藏输入框（读信号响应式驱动，同上方
+              // 弹幕类型按钮的 display 写法）
+              style: {
+                display:
+                  props.showLoginTip || !isDanmakuEnabledSignal.value
+                    ? "none"
+                    : "block",
+              },
               ref: "inputRef",
               onFocus: handleInputFocus,
               onBlur: handleInputBlur,
