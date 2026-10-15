@@ -1941,7 +1941,19 @@ export const PlayerDocker = defineComponent<
     );
 
     // --- mousemove on perch → 显示控制栏并重置自动隐藏（与既有实现一致） ---
-    const onMouseMovePerch = (): void => {
+    // 悬停带 data-ctrl-hold 标记的插件浮层（如互动剧情条）时例外：
+    // 与悬停控制栏 / 顶栏同语义 —— 仅显示、取消待执行的自动隐藏，
+    // 杜绝「悬停剧情条静止 3 秒 → 控制栏隐藏把整个互动层一并藏起 →
+    // 鼠标微动立即唤起」的显隐循环闪烁。标记为通用协议，
+    // 任何插件 / 外部浮层声明该属性即可获得悬停保持行为。
+    const onMouseMovePerch = (event: MouseEvent): void => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-ctrl-hold]")
+      ) {
+        showControls("control");
+        return;
+      }
       showControls("video");
     };
     perch.addEventListener("mousemove", onMouseMovePerch);

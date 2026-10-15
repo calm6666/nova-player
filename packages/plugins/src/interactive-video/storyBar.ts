@@ -378,6 +378,11 @@ export function renderStoryBar(
     "div",
     {
       class: "nova-player-interaction-story",
+      // 悬停保持控制栏协议标记：PlayerDocker 的 perch mousemove 命中
+      // 该标记时按「悬停控制栏」语义处理（显示但不自动隐藏），避免
+      // 悬停剧情条期间控制栏 3 秒自动隐藏把整个互动层一并藏起、
+      // 鼠标微动又立刻唤起的显隐循环闪烁
+      "data-ctrl-hold": "",
       // display 表达式：visible 信号驱动显隐
       style: { display: visible.value ? "flex" : "none" },
     },

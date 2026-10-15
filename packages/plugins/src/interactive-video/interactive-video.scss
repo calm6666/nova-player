@@ -57,6 +57,10 @@
       padding: 0 5px;
       background: rgba(0, 0, 0, 0.3);
       border-radius: 20px;
+      // 覆盖 story 根层的 pointer-events: none：胶囊黑底区域（含圆点
+      // 间隙 / 内边距）也可悬停 —— 鼠标停在间隙上同样命中
+      // data-ctrl-hold 保持控制栏，不落入 3 秒自动隐藏的闪烁循环
+      pointer-events: auto;
 
       // 节点圆点行（flex-wrap 换行容器）：最大宽度由插件按播放器
       // 宽度内联（80%），放不下的圆点自动换到下一行、每行居中，
