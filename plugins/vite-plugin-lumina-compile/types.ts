@@ -83,6 +83,8 @@ export interface TransformContext {
   compileAttrs: boolean;
   /** 静态提升变量计数器 */
   hoistedCount: number;
+  /** 静态 attrs 提升常量计数器（_hoisted_attrs_N） */
+  hoistedAttrsCount: number;
   /** export default 改写临时变量计数器 */
   defaultExportCount: number;
   /** 当前文件名 */

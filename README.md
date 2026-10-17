@@ -22,7 +22,8 @@
 | **三套流媒体** | HLS（fork 版 hls.js，独立子模块仓库 `packages/plugins/hls`，支持 URL 与清单对象注入）、DASH（dashjs）、FLV（flv.js） |
 | **完整画质链路** | 原生多文件 / HLS / DASH 三源统一档位模型；`auto` / `manual` 双模式、ABR、切换生命周期（requested → rendered / failed，10s 超时兜底） |
 | **弹幕双引擎** | DOM 与 Canvas 可切换，含轨道管理、对象池、增量调度与预取 |
-| **字幕** | SRT / ASS / WebVTT 解析与渲染 |
+| **弹幕智能防挡** | 外部遮罩 provider 或本地语义分割（MediaPipe ImageSegmenter，Web Worker + GPU delegate，懒加载不阻塞主线程），开关持久化 |
+| **字幕** | SRT / ASS / WebVTT 解析与渲染；样式语义化持久化 |
 | **互动插件** | 引导 / 投票 / 评分 / 外链四个子插件，二分查找 + 增量 diff，编辑态拖拽 |
 | **SSR + Hydration** | 服务端可输出占位符或完整结构，客户端可激活 |
 | **播放列表** | 换源复用同一个 `video` 元素与整棵 DOM |
@@ -169,7 +170,17 @@ const player = new VideoPlayer({
   interaction: { keyboard: true },
   quality:     { mode: 'auto' },
   progress:    { segments: [{ startTime: 0, endTime: 90, label: 'OP' }] },
-  danmaku:     { enabled: true, url: '/danmaku/1.xml', opacity: 0.8, fontSize: 24, area: 0.75 },
+  danmaku:     {
+    enabled: true, url: '/danmaku/1.xml', opacity: 0.8, fontSize: 24, area: 0.75,
+    // 弹幕智能防挡（可选）：用户在弹幕设置面板勾选后生效，开关持久化
+    mask: {
+      // 方式一：外部遮罩 provider（优先）——按更新间隔回调，返回当前时间遮罩
+      // provider: async (currentTime) => ({ maskImage: `/api/mask?t=${currentTime}` }),
+      // 方式二：本地语义分割——懒加载 MediaPipe ImageSegmenter（Web Worker 推理，
+      // GPU/WebGL delegate 自动启用，主线程零阻塞；模型按需下载）
+      localModel: { modelUrl: '/mediapipe/models/selfie_multiclass_256x256.tflite', threshold: 0.25 },
+    },
+  },
   subtitle:    { enabled: true, list: [{ lang: 'zh-CN', label: '中文', url: '/sub/1.vtt', isDefault: true }] },
   plugins:     { /* ... */ },
   storage:     { /* ... */ },

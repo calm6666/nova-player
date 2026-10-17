@@ -1,0 +1,2310 @@
+{
+  "interactiveId": "huaqiang",
+  "seed": 20261015,
+  "generatedBy": "tools/gen-interactive-cards.mjs",
+  "rules": {
+    "overlap": "时间槽内不重叠（槽之间天然不相交）",
+    "guide": "每个视频最多一张",
+    "scoreSum": "必须存在 score 才生成",
+    "duration": "所有卡片落在 [0, 视频时长] 内",
+    "stable": "同 seed 同结果（每个 avid 独立种子 hash(seed:avid)）"
+  },
+  "frameIntervalSec": 5,
+  "durations": {
+    "av1000001": {
+      "seconds": 10.4,
+      "source": "index.mpd",
+      "nodeId": "n01"
+    },
+    "av1000002": {
+      "seconds": 10.5,
+      "source": "index.mpd",
+      "nodeId": "n02"
+    },
+    "av1000003": {
+      "seconds": 18.2,
+      "source": "index.mpd",
+      "nodeId": "n03"
+    },
+    "av1000004": {
+      "seconds": 12.8,
+      "source": "index.mpd",
+      "nodeId": "n04"
+    },
+    "av1000005": {
+      "seconds": 3.2,
+      "source": "index.mpd",
+      "nodeId": "n05"
+    },
+    "av1000006": {
+      "seconds": 3.3,
+      "source": "index.mpd",
+      "nodeId": "n06"
+    },
+    "av1000007": {
+      "seconds": 5.6,
+      "source": "index.mpd",
+      "nodeId": "n07"
+    },
+    "av1000008": {
+      "seconds": 14.7,
+      "source": "index.mpd",
+      "nodeId": "n08"
+    },
+    "av1000009": {
+      "seconds": 1,
+      "source": "index.mpd",
+      "nodeId": "n09"
+    },
+    "av1000010": {
+      "seconds": 24.9,
+      "source": "index.mpd",
+      "nodeId": "n10"
+    },
+    "av1000011": {
+      "seconds": 24.7,
+      "source": "index.mpd",
+      "nodeId": "n11"
+    },
+    "av1000012": {
+      "seconds": 8.8,
+      "source": "index.mpd",
+      "nodeId": "n12"
+    },
+    "av1000013": {
+      "seconds": 16.5,
+      "source": "index.mpd",
+      "nodeId": "n13"
+    },
+    "av1000014": {
+      "seconds": 5.4,
+      "source": "index.mpd",
+      "nodeId": "n14"
+    },
+    "av1000015": {
+      "seconds": 5.4,
+      "source": "index.mpd",
+      "nodeId": "n15"
+    },
+    "av1000016": {
+      "seconds": 33.2,
+      "source": "index.mpd",
+      "nodeId": "n16"
+    },
+    "av1000017": {
+      "seconds": 15.1,
+      "source": "index.mpd",
+      "nodeId": "n17"
+    },
+    "av1000018": {
+      "seconds": 38.6,
+      "source": "index.mpd",
+      "nodeId": "n18"
+    },
+    "av1000019": {
+      "seconds": 4.9,
+      "source": "index.mpd",
+      "nodeId": "n19"
+    },
+    "av1000020": {
+      "seconds": 14.9,
+      "source": "index.mpd",
+      "nodeId": "n20"
+    },
+    "av1000021": {
+      "seconds": 30.7,
+      "source": "index.mpd",
+      "nodeId": "n21"
+    },
+    "av1000022": {
+      "seconds": 21.2,
+      "source": "index.mpd",
+      "nodeId": "n22"
+    },
+    "av1000023": {
+      "seconds": 23.6,
+      "source": "index.mpd",
+      "nodeId": "n23"
+    },
+    "av1000024": {
+      "seconds": 3.1,
+      "source": "index.mpd",
+      "nodeId": "n24"
+    },
+    "av1000025": {
+      "seconds": 9.4,
+      "source": "index.mpd",
+      "nodeId": "n25"
+    },
+    "av1000026": {
+      "seconds": 32.6,
+      "source": "index.mpd",
+      "nodeId": "n26"
+    },
+    "av1000027": {
+      "seconds": 8.8,
+      "source": "index.mpd",
+      "nodeId": "n27"
+    },
+    "av1000028": {
+      "seconds": 13.2,
+      "source": "index.mpd",
+      "nodeId": "n28"
+    },
+    "av1000029": {
+      "seconds": 11.3,
+      "source": "index.mpd",
+      "nodeId": "n29"
+    },
+    "av1000030": {
+      "seconds": 30.6,
+      "source": "index.mpd",
+      "nodeId": "n30"
+    },
+    "av1000031": {
+      "seconds": 15.4,
+      "source": "index.mpd",
+      "nodeId": "n31"
+    },
+    "av1000032": {
+      "seconds": 10.8,
+      "source": "index.mpd",
+      "nodeId": "n32"
+    },
+    "av1000033": {
+      "seconds": 30.7,
+      "source": "index.mpd",
+      "nodeId": "n33"
+    },
+    "av1000034": {
+      "seconds": 7.7,
+      "source": "index.mpd",
+      "nodeId": "n34"
+    },
+    "av1000035": {
+      "seconds": 24.6,
+      "source": "index.mpd",
+      "nodeId": "n35"
+    },
+    "av1000036": {
+      "seconds": 15.8,
+      "source": "index.mpd",
+      "nodeId": "n36"
+    },
+    "av1000037": {
+      "seconds": 24,
+      "source": "index.mpd",
+      "nodeId": "n37"
+    },
+    "av1000038": {
+      "seconds": 2.7,
+      "source": "index.mpd",
+      "nodeId": "n38"
+    },
+    "av1000039": {
+      "seconds": 22.9,
+      "source": "index.mpd",
+      "nodeId": "n39"
+    },
+    "av1000040": {
+      "seconds": 15.9,
+      "source": "index.mpd",
+      "nodeId": "n40"
+    },
+    "av1000041": {
+      "seconds": 15.8,
+      "source": "index.mpd",
+      "nodeId": "n41"
+    },
+    "av1000042": {
+      "seconds": 24.7,
+      "source": "index.mpd",
+      "nodeId": "n42"
+    },
+    "av1000043": {
+      "seconds": 24.3,
+      "source": "index.mpd",
+      "nodeId": "n43"
+    },
+    "av1000044": {
+      "seconds": 18.5,
+      "source": "index.mpd",
+      "nodeId": "n44"
+    },
+    "av1000045": {
+      "seconds": 23.6,
+      "source": "index.mpd",
+      "nodeId": "n45"
+    },
+    "av1000046": {
+      "seconds": 25,
+      "source": "index.mpd",
+      "nodeId": "n46"
+    },
+    "av1000047": {
+      "seconds": 22.8,
+      "source": "index.mpd",
+      "nodeId": "n47"
+    },
+    "av1000048": {
+      "seconds": 22.8,
+      "source": "index.mpd",
+      "nodeId": "n48"
+    },
+    "av1000049": {
+      "seconds": 22.6,
+      "source": "index.mpd",
+      "nodeId": "n49"
+    },
+    "av1000050": {
+      "seconds": 22.8,
+      "source": "index.mpd",
+      "nodeId": "n50"
+    },
+    "av1000051": {
+      "seconds": 1.2,
+      "source": "index.mpd",
+      "nodeId": "n51"
+    },
+    "av1000052": {
+      "seconds": 23.8,
+      "source": "index.mpd",
+      "nodeId": "n52"
+    },
+    "av1000053": {
+      "seconds": 37.4,
+      "source": "index.mpd",
+      "nodeId": "n53"
+    },
+    "av1000054": {
+      "seconds": 18,
+      "source": "index.mpd",
+      "nodeId": "n54"
+    },
+    "av1000055": {
+      "seconds": 27.7,
+      "source": "index.mpd",
+      "nodeId": "n55"
+    },
+    "av1000056": {
+      "seconds": 8,
+      "source": "index.mpd",
+      "nodeId": "n56"
+    },
+    "av1000057": {
+      "seconds": 11.9,
+      "source": "index.mpd",
+      "nodeId": "n57"
+    },
+    "av1000058": {
+      "seconds": 4,
+      "source": "index.mpd",
+      "nodeId": "n58"
+    },
+    "av1000059": {
+      "seconds": 37.9,
+      "source": "index.mpd",
+      "nodeId": "n59"
+    },
+    "av1000060": {
+      "seconds": 38.1,
+      "source": "index.mpd",
+      "nodeId": "n60"
+    },
+    "av1000061": {
+      "seconds": 22.7,
+      "source": "index.mpd",
+      "nodeId": "n61"
+    },
+    "av1000062": {
+      "seconds": 25.1,
+      "source": "index.mpd",
+      "nodeId": "n62"
+    },
+    "av1000063": {
+      "seconds": 16.4,
+      "source": "index.mpd",
+      "nodeId": "n63"
+    },
+    "av1000064": {
+      "seconds": 19.8,
+      "source": "index.mpd",
+      "nodeId": "n64"
+    },
+    "av1000065": {
+      "seconds": 12.3,
+      "source": "index.mpd",
+      "nodeId": "n65"
+    },
+    "av1000066": {
+      "seconds": 19.7,
+      "source": "index.mpd",
+      "nodeId": "n66"
+    },
+    "av1000067": {
+      "seconds": 15.1,
+      "source": "index.mpd",
+      "nodeId": "n67"
+    },
+    "av1000068": {
+      "seconds": 31.3,
+      "source": "index.mpd",
+      "nodeId": "n68"
+    },
+    "av1000069": {
+      "seconds": 14.2,
+      "source": "index.mpd",
+      "nodeId": "n69"
+    },
+    "av1000070": {
+      "seconds": 15.3,
+      "source": "index.mpd",
+      "nodeId": "n70"
+    },
+    "av1000071": {
+      "seconds": 13.9,
+      "source": "index.mpd",
+      "nodeId": "n71"
+    },
+    "av1000072": {
+      "seconds": 26.6,
+      "source": "index.mpd",
+      "nodeId": "n72"
+    },
+    "av1000073": {
+      "seconds": 14.5,
+      "source": "index.mpd",
+      "nodeId": "n73"
+    },
+    "av1000074": {
+      "seconds": 4.4,
+      "source": "index.mpd",
+      "nodeId": "n74"
+    },
+    "av1000075": {
+      "seconds": 25,
+      "source": "index.mpd",
+      "nodeId": "n75"
+    },
+    "av1000076": {
+      "seconds": 10.9,
+      "source": "index.mpd",
+      "nodeId": "n76"
+    },
+    "av1000077": {
+      "seconds": 4.4,
+      "source": "index.mpd",
+      "nodeId": "n77"
+    },
+    "av1000078": {
+      "seconds": 16.6,
+      "source": "index.mpd",
+      "nodeId": "n78"
+    },
+    "av1000079": {
+      "seconds": 9.1,
+      "source": "index.mpd",
+      "nodeId": "n79"
+    },
+    "av1000080": {
+      "seconds": 9.9,
+      "source": "index.mpd",
+      "nodeId": "n80"
+    },
+    "av1000081": {
+      "seconds": 10.4,
+      "source": "index.mpd",
+      "nodeId": "n81"
+    },
+    "av1000082": {
+      "seconds": 9,
+      "source": "index.mpd",
+      "nodeId": "n82"
+    },
+    "av1000083": {
+      "seconds": 54.5,
+      "source": "index.mpd",
+      "nodeId": "n83"
+    },
+    "av1000084": {
+      "seconds": 17.6,
+      "source": "index.mpd",
+      "nodeId": "n84"
+    },
+    "av1000085": {
+      "seconds": 20.1,
+      "source": "index.mpd",
+      "nodeId": "n85"
+    },
+    "av1000086": {
+      "seconds": 17.4,
+      "source": "index.mpd",
+      "nodeId": "n86"
+    },
+    "av1000087": {
+      "seconds": 14.3,
+      "source": "index.mpd",
+      "nodeId": "n87"
+    },
+    "av1000088": {
+      "seconds": 30.2,
+      "source": "index.mpd",
+      "nodeId": "n88"
+    }
+  },
+  "cards": {
+    "av1000001": [],
+    "av1000002": [],
+    "av1000003": [],
+    "av1000004": [],
+    "av1000005": [],
+    "av1000006": [],
+    "av1000007": [],
+    "av1000008": [],
+    "av1000009": [],
+    "av1000010": [
+      {
+        "id": "av1000010-c1",
+        "kind": "vote",
+        "avid": "av1000010",
+        "top": 75,
+        "left": 39,
+        "timeStart": 0.7,
+        "timeEnd": 8.2,
+        "question": {
+          "title": "这一刀砍不砍？",
+          "options": [
+            {
+              "label": "A",
+              "text": "先问问",
+              "targetNodeId": "n19",
+              "votes": 295
+            },
+            {
+              "label": "B",
+              "text": "给个面子",
+              "targetNodeId": "n54",
+              "votes": 477
+            },
+            {
+              "label": "C",
+              "text": "算了",
+              "targetNodeId": "n78",
+              "votes": 282
+            }
+          ]
+        }
+      }
+    ],
+    "av1000011": [
+      {
+        "id": "av1000011-c2",
+        "kind": "guide",
+        "avid": "av1000011",
+        "top": 38,
+        "left": 56,
+        "timeStart": 16.8,
+        "timeEnd": 24.2,
+        "question": {
+          "title": "别忘了三连",
+          "options": [
+            {
+              "label": "A",
+              "text": "下次一定",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000012": [],
+    "av1000013": [
+      {
+        "id": "av1000013-c1",
+        "kind": "vote",
+        "avid": "av1000013",
+        "top": 64,
+        "left": 21,
+        "timeStart": 1.1,
+        "timeEnd": 4.2,
+        "question": {
+          "title": "这一刀砍不砍？",
+          "options": [
+            {
+              "label": "A",
+              "text": "再等等",
+              "targetNodeId": "n10",
+              "votes": 967
+            },
+            {
+              "label": "B",
+              "text": "砍他",
+              "targetNodeId": "n08",
+              "votes": 669
+            },
+            {
+              "label": "C",
+              "text": "报警",
+              "targetNodeId": "n20",
+              "votes": 798
+            }
+          ]
+        }
+      }
+    ],
+    "av1000014": [],
+    "av1000015": [],
+    "av1000016": [
+      {
+        "id": "av1000016-c1",
+        "kind": "vote",
+        "avid": "av1000016",
+        "top": 42,
+        "left": 52,
+        "timeStart": 2.4,
+        "timeEnd": 6.7,
+        "question": {
+          "title": "接下来怎么走？",
+          "options": [
+            {
+              "label": "A",
+              "text": "报警",
+              "targetNodeId": "n58",
+              "votes": 941
+            },
+            {
+              "label": "B",
+              "text": "砍他",
+              "targetNodeId": "n30",
+              "votes": 525
+            },
+            {
+              "label": "C",
+              "text": "自己上",
+              "targetNodeId": "n20",
+              "votes": 565
+            },
+            {
+              "label": "D",
+              "text": "先问问",
+              "targetNodeId": "n36",
+              "votes": 645
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000016-c2",
+        "kind": "score",
+        "avid": "av1000016",
+        "top": 72,
+        "left": 68,
+        "timeStart": 10.8,
+        "timeEnd": 15.2,
+        "question": {
+          "title": "给这一段打个分",
+          "options": [
+            {
+              "label": "A",
+              "text": "很有味道",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 100
+      },
+      {
+        "id": "av1000016-c3",
+        "kind": "score",
+        "avid": "av1000016",
+        "top": 14,
+        "left": 17,
+        "timeStart": 24.9,
+        "timeEnd": 32.4,
+        "question": {
+          "title": "给这一段打个分",
+          "options": [
+            {
+              "label": "A",
+              "text": "一般般",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 100
+      }
+    ],
+    "av1000017": [
+      {
+        "id": "av1000017-c1",
+        "kind": "vote",
+        "avid": "av1000017",
+        "top": 21,
+        "left": 34,
+        "timeStart": 9.4,
+        "timeEnd": 12.4,
+        "question": {
+          "title": "这一刀砍不砍？",
+          "options": [
+            {
+              "label": "A",
+              "text": "报警",
+              "targetNodeId": "n56",
+              "votes": 249
+            },
+            {
+              "label": "B",
+              "text": "给个面子",
+              "targetNodeId": "n25",
+              "votes": 109
+            },
+            {
+              "label": "C",
+              "text": "算了",
+              "targetNodeId": "n50",
+              "votes": 97
+            }
+          ]
+        }
+      }
+    ],
+    "av1000018": [
+      {
+        "id": "av1000018-c1",
+        "kind": "score",
+        "avid": "av1000018",
+        "top": 53,
+        "left": 13,
+        "timeStart": 5.2,
+        "timeEnd": 7.5,
+        "question": {
+          "title": "这段剧情几分？",
+          "options": [
+            {
+              "label": "A",
+              "text": "很有味道",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 5
+      },
+      {
+        "id": "av1000018-c2",
+        "kind": "scoreSum",
+        "avid": "av1000018",
+        "top": 20,
+        "left": 38,
+        "timeStart": 12.4,
+        "timeEnd": 16.4,
+        "question": {
+          "title": "本视频评分总结",
+          "options": [
+            {
+              "label": "A",
+              "text": "中规中矩",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "average": 4.2,
+        "total": 1
+      },
+      {
+        "id": "av1000018-c3",
+        "kind": "vote",
+        "avid": "av1000018",
+        "top": 26,
+        "left": 57,
+        "timeStart": 21.7,
+        "timeEnd": 28.9,
+        "question": {
+          "title": "接下来怎么走？",
+          "options": [
+            {
+              "label": "A",
+              "text": "算了",
+              "targetNodeId": "n22",
+              "votes": 877
+            },
+            {
+              "label": "B",
+              "text": "报警",
+              "targetNodeId": "n30",
+              "votes": 526
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000018-c4",
+        "kind": "vote",
+        "avid": "av1000018",
+        "top": 74,
+        "left": 30,
+        "timeStart": 36.1,
+        "timeEnd": 38.4,
+        "question": {
+          "title": "华强该怎么办？",
+          "options": [
+            {
+              "label": "A",
+              "text": "算了",
+              "targetNodeId": "n44",
+              "votes": 912
+            },
+            {
+              "label": "B",
+              "text": "转身就走",
+              "targetNodeId": "n50",
+              "votes": 781
+            },
+            {
+              "label": "C",
+              "text": "给个面子",
+              "targetNodeId": "n55",
+              "votes": 800
+            },
+            {
+              "label": "D",
+              "text": "自己上",
+              "targetNodeId": "n09",
+              "votes": 361
+            }
+          ]
+        }
+      }
+    ],
+    "av1000019": [],
+    "av1000020": [],
+    "av1000021": [
+      {
+        "id": "av1000021-c1",
+        "kind": "vote",
+        "avid": "av1000021",
+        "top": 49,
+        "left": 70,
+        "timeStart": 21.6,
+        "timeEnd": 29.5,
+        "question": {
+          "title": "接下来怎么走？",
+          "options": [
+            {
+              "label": "A",
+              "text": "砍他",
+              "targetNodeId": "n59",
+              "votes": 959
+            },
+            {
+              "label": "B",
+              "text": "算了",
+              "targetNodeId": "n32",
+              "votes": 14
+            },
+            {
+              "label": "C",
+              "text": "先问问",
+              "targetNodeId": "n82",
+              "votes": 467
+            }
+          ]
+        }
+      }
+    ],
+    "av1000022": [],
+    "av1000023": [
+      {
+        "id": "av1000023-c1",
+        "kind": "guide",
+        "avid": "av1000023",
+        "top": 77,
+        "left": 72,
+        "timeStart": 14.9,
+        "timeEnd": 23.4,
+        "question": {
+          "title": "点赞投币收藏",
+          "options": [
+            {
+              "label": "A",
+              "text": "已三连",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000024": [],
+    "av1000025": [
+      {
+        "id": "av1000025-c1",
+        "kind": "guide",
+        "avid": "av1000025",
+        "top": 59,
+        "left": 56,
+        "timeStart": 2.3,
+        "timeEnd": 8.3,
+        "question": {
+          "title": "点赞投币收藏",
+          "options": [
+            {
+              "label": "A",
+              "text": "点赞投币收藏",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000026": [],
+    "av1000027": [],
+    "av1000028": [
+      {
+        "id": "av1000028-c1",
+        "kind": "guide",
+        "avid": "av1000028",
+        "top": 64,
+        "left": 43,
+        "timeStart": 6,
+        "timeEnd": 10.7,
+        "question": {
+          "title": "三连支持一下",
+          "options": [
+            {
+              "label": "A",
+              "text": "点赞投币收藏",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000029": [
+      {
+        "id": "av1000029-c1",
+        "kind": "guide",
+        "avid": "av1000029",
+        "top": 75,
+        "left": 73,
+        "timeStart": 2.5,
+        "timeEnd": 8.8,
+        "question": {
+          "title": "点赞投币收藏",
+          "options": [
+            {
+              "label": "A",
+              "text": "下次一定",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000030": [
+      {
+        "id": "av1000030-c1",
+        "kind": "link",
+        "avid": "av1000030",
+        "top": 13,
+        "left": 35,
+        "timeStart": 3.5,
+        "timeEnd": 9.8,
+        "question": {
+          "title": "外链：名场面合集",
+          "options": [
+            {
+              "label": "A",
+              "text": "点我跳转",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000030"
+      }
+    ],
+    "av1000031": [],
+    "av1000032": [],
+    "av1000033": [],
+    "av1000034": [],
+    "av1000035": [
+      {
+        "id": "av1000035-c1",
+        "kind": "vote",
+        "avid": "av1000035",
+        "top": 13,
+        "left": 26,
+        "timeStart": 3.3,
+        "timeEnd": 7.3,
+        "question": {
+          "title": "华强该怎么办？",
+          "options": [
+            {
+              "label": "A",
+              "text": "算了",
+              "targetNodeId": "n72",
+              "votes": 947
+            },
+            {
+              "label": "B",
+              "text": "再等等",
+              "targetNodeId": "n11",
+              "votes": 314
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000035-c2",
+        "kind": "score",
+        "avid": "av1000035",
+        "top": 31,
+        "left": 72,
+        "timeStart": 8.3,
+        "timeEnd": 15.7,
+        "question": {
+          "title": "表演打分",
+          "options": [
+            {
+              "label": "A",
+              "text": "很有味道",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 10
+      },
+      {
+        "id": "av1000035-c3",
+        "kind": "score",
+        "avid": "av1000035",
+        "top": 61,
+        "left": 16,
+        "timeStart": 16.8,
+        "timeEnd": 24.2,
+        "question": {
+          "title": "这段剧情几分？",
+          "options": [
+            {
+              "label": "A",
+              "text": "很有味道",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 5
+      }
+    ],
+    "av1000036": [
+      {
+        "id": "av1000036-c1",
+        "kind": "guide",
+        "avid": "av1000036",
+        "top": 72,
+        "left": 71,
+        "timeStart": 3.6,
+        "timeEnd": 6.5,
+        "question": {
+          "title": "三连支持一下",
+          "options": [
+            {
+              "label": "A",
+              "text": "已三连",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000037": [
+      {
+        "id": "av1000037-c1",
+        "kind": "vote",
+        "avid": "av1000037",
+        "top": 40,
+        "left": 36,
+        "timeStart": 0.1,
+        "timeEnd": 2.5,
+        "question": {
+          "title": "你选哪条路？",
+          "options": [
+            {
+              "label": "A",
+              "text": "转身就走",
+              "targetNodeId": "n47",
+              "votes": 184
+            },
+            {
+              "label": "B",
+              "text": "砍他",
+              "targetNodeId": "n21",
+              "votes": 925
+            },
+            {
+              "label": "C",
+              "text": "再等等",
+              "targetNodeId": "n24",
+              "votes": 184
+            },
+            {
+              "label": "D",
+              "text": "先问问",
+              "targetNodeId": "n32",
+              "votes": 891
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000037-c2",
+        "kind": "guide",
+        "avid": "av1000037",
+        "top": 62,
+        "left": 28,
+        "timeStart": 8.3,
+        "timeEnd": 15.5,
+        "question": {
+          "title": "别忘了三连",
+          "options": [
+            {
+              "label": "A",
+              "text": "下次一定",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000037-c3",
+        "kind": "vote",
+        "avid": "av1000037",
+        "top": 75,
+        "left": 27,
+        "timeStart": 16.5,
+        "timeEnd": 23.7,
+        "question": {
+          "title": "你选哪条路？",
+          "options": [
+            {
+              "label": "A",
+              "text": "先问问",
+              "targetNodeId": "n20",
+              "votes": 773
+            },
+            {
+              "label": "B",
+              "text": "自己上",
+              "targetNodeId": "n58",
+              "votes": 771
+            },
+            {
+              "label": "C",
+              "text": "算了",
+              "targetNodeId": "n39",
+              "votes": 210
+            }
+          ]
+        }
+      }
+    ],
+    "av1000038": [],
+    "av1000039": [
+      {
+        "id": "av1000039-c1",
+        "kind": "link",
+        "avid": "av1000039",
+        "top": 55,
+        "left": 32,
+        "timeStart": 2.3,
+        "timeEnd": 4.7,
+        "question": {
+          "title": "点我看原片",
+          "options": [
+            {
+              "label": "A",
+              "text": "去看看",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000039"
+      },
+      {
+        "id": "av1000039-c2",
+        "kind": "vote",
+        "avid": "av1000039",
+        "top": 60,
+        "left": 13,
+        "timeStart": 12.8,
+        "timeEnd": 17.3,
+        "question": {
+          "title": "你选哪条路？",
+          "options": [
+            {
+              "label": "A",
+              "text": "报警",
+              "targetNodeId": "n23",
+              "votes": 797
+            },
+            {
+              "label": "B",
+              "text": "给个面子",
+              "targetNodeId": "n26",
+              "votes": 705
+            }
+          ]
+        }
+      }
+    ],
+    "av1000040": [
+      {
+        "id": "av1000040-c1",
+        "kind": "vote",
+        "avid": "av1000040",
+        "top": 51,
+        "left": 52,
+        "timeStart": 6.5,
+        "timeEnd": 11.1,
+        "question": {
+          "title": "你选哪条路？",
+          "options": [
+            {
+              "label": "A",
+              "text": "给个面子",
+              "targetNodeId": "n08",
+              "votes": 390
+            },
+            {
+              "label": "B",
+              "text": "再等等",
+              "targetNodeId": "n20",
+              "votes": 814
+            }
+          ]
+        }
+      }
+    ],
+    "av1000041": [],
+    "av1000042": [
+      {
+        "id": "av1000042-c1",
+        "kind": "scoreSum",
+        "avid": "av1000042",
+        "top": 25,
+        "left": 75,
+        "timeStart": 12.5,
+        "timeEnd": 15,
+        "question": {
+          "title": "大家怎么看",
+          "options": [
+            {
+              "label": "A",
+              "text": "整体满意",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "average": 8.8,
+        "total": 1
+      },
+      {
+        "id": "av1000042-c2",
+        "kind": "score",
+        "avid": "av1000042",
+        "top": 26,
+        "left": 12,
+        "timeStart": 17.3,
+        "timeEnd": 24.7,
+        "question": {
+          "title": "给这一段打个分",
+          "options": [
+            {
+              "label": "A",
+              "text": "节奏不错",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 10
+      }
+    ],
+    "av1000043": [
+      {
+        "id": "av1000043-c1",
+        "kind": "guide",
+        "avid": "av1000043",
+        "top": 48,
+        "left": 29,
+        "timeStart": 17.1,
+        "timeEnd": 23.5,
+        "question": {
+          "title": "点赞投币收藏",
+          "options": [
+            {
+              "label": "A",
+              "text": "点赞投币收藏",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000044": [
+      {
+        "id": "av1000044-c1",
+        "kind": "link",
+        "avid": "av1000044",
+        "top": 51,
+        "left": 49,
+        "timeStart": 9.3,
+        "timeEnd": 12.5,
+        "question": {
+          "title": "相关推荐",
+          "options": [
+            {
+              "label": "A",
+              "text": "打开链接",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000044"
+      }
+    ],
+    "av1000045": [
+      {
+        "id": "av1000045-c1",
+        "kind": "vote",
+        "avid": "av1000045",
+        "top": 67,
+        "left": 56,
+        "timeStart": 0,
+        "timeEnd": 8.9,
+        "question": {
+          "title": "你选哪条路？",
+          "options": [
+            {
+              "label": "A",
+              "text": "算了",
+              "targetNodeId": "n87",
+              "votes": 728
+            },
+            {
+              "label": "B",
+              "text": "先问问",
+              "targetNodeId": "n81",
+              "votes": 526
+            },
+            {
+              "label": "C",
+              "text": "转身就走",
+              "targetNodeId": "n87",
+              "votes": 594
+            },
+            {
+              "label": "D",
+              "text": "再等等",
+              "targetNodeId": "n63",
+              "votes": 570
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000045-c2",
+        "kind": "link",
+        "avid": "av1000045",
+        "top": 50,
+        "left": 59,
+        "timeStart": 14.2,
+        "timeEnd": 23.3,
+        "question": {
+          "title": "点我看原片",
+          "options": [
+            {
+              "label": "A",
+              "text": "打开链接",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000045"
+      }
+    ],
+    "av1000046": [
+      {
+        "id": "av1000046-c1",
+        "kind": "vote",
+        "avid": "av1000046",
+        "top": 24,
+        "left": 15,
+        "timeStart": 19.6,
+        "timeEnd": 22.4,
+        "question": {
+          "title": "你选哪条路？",
+          "options": [
+            {
+              "label": "A",
+              "text": "自己上",
+              "targetNodeId": "n19",
+              "votes": 139
+            },
+            {
+              "label": "B",
+              "text": "先问问",
+              "targetNodeId": "n85",
+              "votes": 800
+            }
+          ]
+        }
+      }
+    ],
+    "av1000047": [],
+    "av1000048": [
+      {
+        "id": "av1000048-c1",
+        "kind": "vote",
+        "avid": "av1000048",
+        "top": 75,
+        "left": 15,
+        "timeStart": 14.6,
+        "timeEnd": 19.1,
+        "question": {
+          "title": "接下来怎么走？",
+          "options": [
+            {
+              "label": "A",
+              "text": "再等等",
+              "targetNodeId": "n29",
+              "votes": 691
+            },
+            {
+              "label": "B",
+              "text": "自己上",
+              "targetNodeId": "n70",
+              "votes": 293
+            },
+            {
+              "label": "C",
+              "text": "报警",
+              "targetNodeId": "n66",
+              "votes": 238
+            },
+            {
+              "label": "D",
+              "text": "砍他",
+              "targetNodeId": "n44",
+              "votes": 905
+            }
+          ]
+        }
+      }
+    ],
+    "av1000049": [
+      {
+        "id": "av1000049-c1",
+        "kind": "score",
+        "avid": "av1000049",
+        "top": 54,
+        "left": 25,
+        "timeStart": 4.6,
+        "timeEnd": 9.3,
+        "question": {
+          "title": "表演打分",
+          "options": [
+            {
+              "label": "A",
+              "text": "节奏不错",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 5
+      },
+      {
+        "id": "av1000049-c2",
+        "kind": "score",
+        "avid": "av1000049",
+        "top": 46,
+        "left": 12,
+        "timeStart": 13.9,
+        "timeEnd": 16.5,
+        "question": {
+          "title": "本段评分",
+          "options": [
+            {
+              "label": "A",
+              "text": "演技在线",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 10
+      }
+    ],
+    "av1000050": [
+      {
+        "id": "av1000050-c2",
+        "kind": "guide",
+        "avid": "av1000050",
+        "top": 51,
+        "left": 59,
+        "timeStart": 12.7,
+        "timeEnd": 21.7,
+        "question": {
+          "title": "一键三连",
+          "options": [
+            {
+              "label": "A",
+              "text": "点赞投币收藏",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000051": [],
+    "av1000052": [
+      {
+        "id": "av1000052-c1",
+        "kind": "guide",
+        "avid": "av1000052",
+        "top": 75,
+        "left": 64,
+        "timeStart": 17.8,
+        "timeEnd": 20,
+        "question": {
+          "title": "一键三连",
+          "options": [
+            {
+              "label": "A",
+              "text": "下次一定",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000053": [
+      {
+        "id": "av1000053-c1",
+        "kind": "guide",
+        "avid": "av1000053",
+        "top": 71,
+        "left": 70,
+        "timeStart": 9.7,
+        "timeEnd": 17.1,
+        "question": {
+          "title": "点赞投币收藏",
+          "options": [
+            {
+              "label": "A",
+              "text": "下次一定",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000054": [
+      {
+        "id": "av1000054-c1",
+        "kind": "vote",
+        "avid": "av1000054",
+        "top": 73,
+        "left": 19,
+        "timeStart": 0.2,
+        "timeEnd": 8.3,
+        "question": {
+          "title": "华强该怎么办？",
+          "options": [
+            {
+              "label": "A",
+              "text": "再等等",
+              "targetNodeId": "n51",
+              "votes": 41
+            },
+            {
+              "label": "B",
+              "text": "转身就走",
+              "targetNodeId": "n54",
+              "votes": 581
+            }
+          ]
+        }
+      }
+    ],
+    "av1000055": [
+      {
+        "id": "av1000055-c1",
+        "kind": "score",
+        "avid": "av1000055",
+        "top": 12,
+        "left": 44,
+        "timeStart": 21.4,
+        "timeEnd": 23.9,
+        "question": {
+          "title": "表演打分",
+          "options": [
+            {
+              "label": "A",
+              "text": "很有味道",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 10
+      }
+    ],
+    "av1000056": [
+      {
+        "id": "av1000056-c1",
+        "kind": "vote",
+        "avid": "av1000056",
+        "top": 69,
+        "left": 71,
+        "timeStart": 2.4,
+        "timeEnd": 7.3,
+        "question": {
+          "title": "你选哪条路？",
+          "options": [
+            {
+              "label": "A",
+              "text": "再等等",
+              "targetNodeId": "n11",
+              "votes": 697
+            },
+            {
+              "label": "B",
+              "text": "报警",
+              "targetNodeId": "n37",
+              "votes": 138
+            },
+            {
+              "label": "C",
+              "text": "算了",
+              "targetNodeId": "n34",
+              "votes": 463
+            },
+            {
+              "label": "D",
+              "text": "自己上",
+              "targetNodeId": "n67",
+              "votes": 600
+            }
+          ]
+        }
+      }
+    ],
+    "av1000057": [
+      {
+        "id": "av1000057-c1",
+        "kind": "link",
+        "avid": "av1000057",
+        "top": 39,
+        "left": 33,
+        "timeStart": 3.8,
+        "timeEnd": 11.4,
+        "question": {
+          "title": "外链：名场面合集",
+          "options": [
+            {
+              "label": "A",
+              "text": "去看看",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000057"
+      }
+    ],
+    "av1000058": [],
+    "av1000059": [
+      {
+        "id": "av1000059-c1",
+        "kind": "vote",
+        "avid": "av1000059",
+        "top": 33,
+        "left": 41,
+        "timeStart": 11.8,
+        "timeEnd": 14.5,
+        "question": {
+          "title": "这一刀砍不砍？",
+          "options": [
+            {
+              "label": "A",
+              "text": "给个面子",
+              "targetNodeId": "n47",
+              "votes": 743
+            },
+            {
+              "label": "B",
+              "text": "先问问",
+              "targetNodeId": "n88",
+              "votes": 118
+            },
+            {
+              "label": "C",
+              "text": "转身就走",
+              "targetNodeId": "n51",
+              "votes": 891
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000059-c2",
+        "kind": "link",
+        "avid": "av1000059",
+        "top": 76,
+        "left": 18,
+        "timeStart": 21.8,
+        "timeEnd": 24.7,
+        "question": {
+          "title": "跳转番外",
+          "options": [
+            {
+              "label": "A",
+              "text": "点我跳转",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000059"
+      },
+      {
+        "id": "av1000059-c3",
+        "kind": "score",
+        "avid": "av1000059",
+        "top": 61,
+        "left": 57,
+        "timeStart": 28.9,
+        "timeEnd": 34.6,
+        "question": {
+          "title": "给这一段打个分",
+          "options": [
+            {
+              "label": "A",
+              "text": "演技在线",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 10
+      }
+    ],
+    "av1000060": [
+      {
+        "id": "av1000060-c1",
+        "kind": "guide",
+        "avid": "av1000060",
+        "top": 70,
+        "left": 12,
+        "timeStart": 0,
+        "timeEnd": 8.6,
+        "question": {
+          "title": "三连支持一下",
+          "options": [
+            {
+              "label": "A",
+              "text": "点赞投币收藏",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000060-c2",
+        "kind": "vote",
+        "avid": "av1000060",
+        "top": 19,
+        "left": 59,
+        "timeStart": 11.7,
+        "timeEnd": 14.8,
+        "question": {
+          "title": "华强该怎么办？",
+          "options": [
+            {
+              "label": "A",
+              "text": "报警",
+              "targetNodeId": "n04",
+              "votes": 770
+            },
+            {
+              "label": "B",
+              "text": "给个面子",
+              "targetNodeId": "n65",
+              "votes": 550
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000060-c3",
+        "kind": "vote",
+        "avid": "av1000060",
+        "top": 64,
+        "left": 60,
+        "timeStart": 34.4,
+        "timeEnd": 36.7,
+        "question": {
+          "title": "这一刀砍不砍？",
+          "options": [
+            {
+              "label": "A",
+              "text": "转身就走",
+              "targetNodeId": "n15",
+              "votes": 657
+            },
+            {
+              "label": "B",
+              "text": "自己上",
+              "targetNodeId": "n69",
+              "votes": 492
+            }
+          ]
+        }
+      }
+    ],
+    "av1000061": [
+      {
+        "id": "av1000061-c1",
+        "kind": "guide",
+        "avid": "av1000061",
+        "top": 38,
+        "left": 55,
+        "timeStart": 17.3,
+        "timeEnd": 21.4,
+        "question": {
+          "title": "三连支持一下",
+          "options": [
+            {
+              "label": "A",
+              "text": "点赞投币收藏",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000062": [
+      {
+        "id": "av1000062-c1",
+        "kind": "score",
+        "avid": "av1000062",
+        "top": 15,
+        "left": 33,
+        "timeStart": 1.5,
+        "timeEnd": 8.3,
+        "question": {
+          "title": "表演打分",
+          "options": [
+            {
+              "label": "A",
+              "text": "节奏不错",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 100
+      },
+      {
+        "id": "av1000062-c2",
+        "kind": "scoreSum",
+        "avid": "av1000062",
+        "top": 34,
+        "left": 19,
+        "timeStart": 17.2,
+        "timeEnd": 24.7,
+        "question": {
+          "title": "本视频评分总结",
+          "options": [
+            {
+              "label": "A",
+              "text": "中规中矩",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "average": 71,
+        "total": 1
+      }
+    ],
+    "av1000063": [],
+    "av1000064": [
+      {
+        "id": "av1000064-c1",
+        "kind": "guide",
+        "avid": "av1000064",
+        "top": 16,
+        "left": 45,
+        "timeStart": 10.8,
+        "timeEnd": 18.4,
+        "question": {
+          "title": "别忘了三连",
+          "options": [
+            {
+              "label": "A",
+              "text": "已三连",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000065": [
+      {
+        "id": "av1000065-c1",
+        "kind": "guide",
+        "avid": "av1000065",
+        "top": 32,
+        "left": 38,
+        "timeStart": 2.7,
+        "timeEnd": 9.8,
+        "question": {
+          "title": "点赞投币收藏",
+          "options": [
+            {
+              "label": "A",
+              "text": "下次一定",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000066": [],
+    "av1000067": [
+      {
+        "id": "av1000067-c1",
+        "kind": "guide",
+        "avid": "av1000067",
+        "top": 75,
+        "left": 32,
+        "timeStart": 3.7,
+        "timeEnd": 12.1,
+        "question": {
+          "title": "点赞投币收藏",
+          "options": [
+            {
+              "label": "A",
+              "text": "已三连",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000068": [
+      {
+        "id": "av1000068-c1",
+        "kind": "scoreSum",
+        "avid": "av1000068",
+        "top": 27,
+        "left": 32,
+        "timeStart": 0.8,
+        "timeEnd": 9.3,
+        "question": {
+          "title": "本视频评分总结",
+          "options": [
+            {
+              "label": "A",
+              "text": "值得再看",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "average": 95,
+        "total": 1
+      },
+      {
+        "id": "av1000068-c2",
+        "kind": "score",
+        "avid": "av1000068",
+        "top": 60,
+        "left": 52,
+        "timeStart": 25.2,
+        "timeEnd": 27.4,
+        "question": {
+          "title": "表演打分",
+          "options": [
+            {
+              "label": "A",
+              "text": "演技在线",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 100
+      }
+    ],
+    "av1000069": [],
+    "av1000070": [],
+    "av1000071": [
+      {
+        "id": "av1000071-c1",
+        "kind": "link",
+        "avid": "av1000071",
+        "top": 45,
+        "left": 21,
+        "timeStart": 4.5,
+        "timeEnd": 12.2,
+        "question": {
+          "title": "外链：名场面合集",
+          "options": [
+            {
+              "label": "A",
+              "text": "点我跳转",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000071"
+      }
+    ],
+    "av1000072": [
+      {
+        "id": "av1000072-c1",
+        "kind": "vote",
+        "avid": "av1000072",
+        "top": 59,
+        "left": 26,
+        "timeStart": 10.3,
+        "timeEnd": 14.3,
+        "question": {
+          "title": "华强该怎么办？",
+          "options": [
+            {
+              "label": "A",
+              "text": "算了",
+              "targetNodeId": "n46",
+              "votes": 628
+            },
+            {
+              "label": "B",
+              "text": "砍他",
+              "targetNodeId": "n60",
+              "votes": 100
+            },
+            {
+              "label": "C",
+              "text": "给个面子",
+              "targetNodeId": "n57",
+              "votes": 155
+            }
+          ]
+        }
+      }
+    ],
+    "av1000073": [],
+    "av1000074": [],
+    "av1000075": [],
+    "av1000076": [],
+    "av1000077": [],
+    "av1000078": [
+      {
+        "id": "av1000078-c1",
+        "kind": "guide",
+        "avid": "av1000078",
+        "top": 49,
+        "left": 14,
+        "timeStart": 10.1,
+        "timeEnd": 14.9,
+        "question": {
+          "title": "一键三连",
+          "options": [
+            {
+              "label": "A",
+              "text": "已三连",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000079": [],
+    "av1000080": [
+      {
+        "id": "av1000080-c1",
+        "kind": "link",
+        "avid": "av1000080",
+        "top": 77,
+        "left": 65,
+        "timeStart": 5.9,
+        "timeEnd": 9.4,
+        "question": {
+          "title": "跳转番外",
+          "options": [
+            {
+              "label": "A",
+              "text": "点我跳转",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "url": "https://www.bilibili.com/video/av1000080"
+      }
+    ],
+    "av1000081": [
+      {
+        "id": "av1000081-c1",
+        "kind": "score",
+        "avid": "av1000081",
+        "top": 75,
+        "left": 54,
+        "timeStart": 0,
+        "timeEnd": 4.9,
+        "question": {
+          "title": "本段评分",
+          "options": [
+            {
+              "label": "A",
+              "text": "一般般",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 100
+      }
+    ],
+    "av1000082": [],
+    "av1000083": [
+      {
+        "id": "av1000083-c1",
+        "kind": "guide",
+        "avid": "av1000083",
+        "top": 51,
+        "left": 64,
+        "timeStart": 18.8,
+        "timeEnd": 26.8,
+        "question": {
+          "title": "三连支持一下",
+          "options": [
+            {
+              "label": "A",
+              "text": "点赞投币收藏",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000083-c2",
+        "kind": "score",
+        "avid": "av1000083",
+        "top": 17,
+        "left": 22,
+        "timeStart": 27.5,
+        "timeEnd": 34.6,
+        "question": {
+          "title": "这段剧情几分？",
+          "options": [
+            {
+              "label": "A",
+              "text": "节奏不错",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 10
+      },
+      {
+        "id": "av1000083-c3",
+        "kind": "vote",
+        "avid": "av1000083",
+        "top": 19,
+        "left": 52,
+        "timeStart": 41.1,
+        "timeEnd": 44.4,
+        "question": {
+          "title": "接下来怎么走？",
+          "options": [
+            {
+              "label": "A",
+              "text": "砍他",
+              "targetNodeId": "n49",
+              "votes": 488
+            },
+            {
+              "label": "B",
+              "text": "给个面子",
+              "targetNodeId": "n08",
+              "votes": 500
+            }
+          ]
+        }
+      },
+      {
+        "id": "av1000083-c4",
+        "kind": "vote",
+        "avid": "av1000083",
+        "top": 61,
+        "left": 11,
+        "timeStart": 48.2,
+        "timeEnd": 52.4,
+        "question": {
+          "title": "这一刀砍不砍？",
+          "options": [
+            {
+              "label": "A",
+              "text": "先问问",
+              "targetNodeId": "n27",
+              "votes": 461
+            },
+            {
+              "label": "B",
+              "text": "报警",
+              "targetNodeId": "n05",
+              "votes": 846
+            },
+            {
+              "label": "C",
+              "text": "转身就走",
+              "targetNodeId": "n59",
+              "votes": 320
+            },
+            {
+              "label": "D",
+              "text": "给个面子",
+              "targetNodeId": "n78",
+              "votes": 671
+            }
+          ]
+        }
+      }
+    ],
+    "av1000084": [
+      {
+        "id": "av1000084-c1",
+        "kind": "vote",
+        "avid": "av1000084",
+        "top": 26,
+        "left": 73,
+        "timeStart": 0.3,
+        "timeEnd": 8.2,
+        "question": {
+          "title": "华强该怎么办？",
+          "options": [
+            {
+              "label": "A",
+              "text": "转身就走",
+              "targetNodeId": "n81",
+              "votes": 313
+            },
+            {
+              "label": "B",
+              "text": "先问问",
+              "targetNodeId": "n48",
+              "votes": 991
+            }
+          ]
+        }
+      }
+    ],
+    "av1000085": [
+      {
+        "id": "av1000085-c1",
+        "kind": "guide",
+        "avid": "av1000085",
+        "top": 71,
+        "left": 40,
+        "timeStart": 13.1,
+        "timeEnd": 19.9,
+        "question": {
+          "title": "三连支持一下",
+          "options": [
+            {
+              "label": "A",
+              "text": "已三连",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ],
+    "av1000086": [
+      {
+        "id": "av1000086-c1",
+        "kind": "scoreSum",
+        "avid": "av1000086",
+        "top": 40,
+        "left": 51,
+        "timeStart": 0.2,
+        "timeEnd": 6.7,
+        "question": {
+          "title": "大家怎么看",
+          "options": [
+            {
+              "label": "A",
+              "text": "中规中矩",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "average": 90.5,
+        "total": 1
+      },
+      {
+        "id": "av1000086-c2",
+        "kind": "score",
+        "avid": "av1000086",
+        "top": 66,
+        "left": 65,
+        "timeStart": 10.9,
+        "timeEnd": 14.7,
+        "question": {
+          "title": "这段剧情几分？",
+          "options": [
+            {
+              "label": "A",
+              "text": "演技在线",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 100
+      }
+    ],
+    "av1000087": [
+      {
+        "id": "av1000087-c1",
+        "kind": "score",
+        "avid": "av1000087",
+        "top": 48,
+        "left": 20,
+        "timeStart": 5.7,
+        "timeEnd": 11.6,
+        "question": {
+          "title": "这段剧情几分？",
+          "options": [
+            {
+              "label": "A",
+              "text": "演技在线",
+              "targetNodeId": ""
+            }
+          ]
+        },
+        "max": 10
+      }
+    ],
+    "av1000088": [
+      {
+        "id": "av1000088-c1",
+        "kind": "guide",
+        "avid": "av1000088",
+        "top": 42,
+        "left": 73,
+        "timeStart": 11.1,
+        "timeEnd": 19.4,
+        "question": {
+          "title": "三连支持一下",
+          "options": [
+            {
+              "label": "A",
+              "text": "下次一定",
+              "targetNodeId": ""
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

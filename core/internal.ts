@@ -273,6 +273,109 @@ export function _createComp(
 }
 
 /**
+ * 创建组件 VNode（编译期已确认 attrs 不含 ref / __providers 的快速路径）
+ *
+ * 编译期转换：h(MyComp, { prop: val }) → _createCompPure(MyComp, { prop: val })
+ * 仅当编译期能**静态证明** attrs 不可能携带 `ref` / `__providers` 时才选用：
+ * - attrs 省略 / null / undefined 字面量
+ * - attrs 为对象字面量，且不含 SpreadElement / computed key
+ *   （动态 attrs 变量、`{...rest}`、`{ [k]: v }` 一律回退 _createComp）
+ * 详见 vite-plugin-lumina-compile/transform.ts 的 canUseCompPure。
+ *
+ * 与 _createComp 相比跳过（实测约 10%，见 docs/framework-optimization-analysis.md §10）：
+ * - `'ref' in attrs` 判定 + isSignalRef/isRefObject 三形态提取
+ * - `'__providers' in attrs` 判定 + Array.isArray 判定
+ * - 上述两个内部键的 props 过滤（键不存在，无需 continue 分支）
+ *
+ * 仍然完整保留（运行时必需，与 _createComp 逐行等价）：
+ * - children 扁平化 → props.children
+ * - 响应式 props 代理（maybeReactiveProps，控制流组件豁免）
+ * - 函数/类组件渲染 + reportError 上报后 rethrow
+ * - vnode.__parent 设置（useContext 遍历父链）
+ * - 未标记组件类型的 fallback（走通用 h()）
+ *
+ * 注意：本函数**不设置 vnode.__providers**。若调用点实际传入了 __providers，
+ * Context 依赖注入会失效——这正是编译期准入条件必须严格的原因。
+ */
+export function _createCompPure(
+  component: Component<Record<string, unknown>>,
+  attrs?: Record<string, unknown>,
+  ...children: HChild[]
+): VNode {
+  // 扁平化子节点
+  const flatChildren = flattenChildren(children);
+
+  const type = (
+    component as unknown as { __lumina_type?: "fn" | "class" }
+  ).__lumina_type;
+
+  // 构建 props（attrs 已由编译期保证不含 ref / __providers）
+  const rawAttrs = attrs ?? {};
+  const props: Record<string, unknown> = {};
+  for (const key in rawAttrs) {
+    props[key] = rawAttrs[key];
+  }
+  props.children = flatChildren;
+
+  // ★ 响应式 props：检测 Signal / _rp thunk 后包装为惰性代理
+  //（控制流组件豁免，与 _createComp 一致）
+  const compProps = isFlowComponent(component)
+    ? props
+    : maybeReactiveProps(props);
+
+  // 函数组件
+  if (type === "fn") {
+    const fn = component as unknown as (
+      props: Record<string, unknown>,
+    ) => VNode;
+
+    let vnode: VNode;
+    try {
+      vnode = fn(compProps);
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      reportError(
+        ErrorSource.RENDER,
+        `Function component render failed: ${component.name || "Anonymous"}`,
+        error,
+      );
+      throw e;
+    }
+
+    vnode.__parent = getCurrentVNode();
+    return vnode;
+  }
+
+  // 类组件
+  if (type === "class") {
+    const cls = component as unknown as new (
+      props: Record<string, unknown>,
+    ) => { render: () => VNode; _ref?: Ref<unknown> };
+    const instance = new cls(compProps);
+
+    let vnode: VNode;
+    try {
+      vnode = instance.render();
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      reportError(
+        ErrorSource.RENDER,
+        `Class component render failed: ${component.name || "Anonymous"}`,
+        error,
+      );
+      throw e;
+    }
+
+    vnode.lifecycle = instance as unknown as VNode["lifecycle"];
+    vnode.__parent = getCurrentVNode();
+    return vnode;
+  }
+
+  // fallback：未编译的代码走通用 h() 路径
+  return h(component as Component<unknown>, attrs, ...children);
+}
+
+/**
  * 克隆编译期提升的静态 VNode（_hoisted_N）
  *
  * 静态提升把整棵静态子树提升为模块级共享常量，

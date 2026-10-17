@@ -66,6 +66,9 @@ import type {
   StateListener,
   QualityOption,
   UserPreferences,
+  PlayerSettingsFlags,
+  DanmakuPersistedSettings,
+  SubtitleStyleSettings,
 } from './types';
 
 import { PersistentKeyEnum, StateKeyEnum } from './enums';
@@ -362,6 +365,13 @@ export function createPlayerStore(options: StoreOptions = {}): PlayerStore {
 
   let persistentState: PlayerPersistentState;
 
+  /**
+   * localStorage 中是否已存在用户持久化数据（profile 曾被写入过）
+   * 「持久化优先」语义的判定依据：存在 → 持久化值优先于外部传入的
+   * 默认配置；不存在（首次使用）→ 外部传入值兜底 store 默认值
+   */
+  let hasSavedProfile = false;
+
   if (persist) {
     // 先尝试旧格式迁移（只执行一次，迁移后删除旧数据）
     tryMigrateFromLegacy();
@@ -370,13 +380,28 @@ export function createPlayerStore(options: StoreOptions = {}): PlayerStore {
     const saved = safeGetJSON(persistKey, isPlayerPersistentState);
 
     if (saved) {
-      // 有已存储的数据：合并默认值（确保新增字段有默认值）
+      // 标记存在已持久化数据（持久化优先语义的判定依据）
+      hasSavedProfile = true;
+      // 有已存储的数据：合并默认值（确保新增字段有默认值）；
+      // 嵌套对象逐个深合并，避免旧版本 profile 缺新字段时整组覆盖丢失
       persistentState = {
         ...defaultPersistentState,
         ...saved,
         userPreferences: {
           ...defaultPersistentState.userPreferences,
           ...(saved.userPreferences || {}),
+        },
+        settings: {
+          ...defaultPersistentState.settings,
+          ...(saved.settings || {}),
+        },
+        danmakuSettings: {
+          ...defaultPersistentState.danmakuSettings,
+          ...(saved.danmakuSettings || {}),
+        },
+        subtitleStyle: {
+          ...defaultPersistentState.subtitleStyle,
+          ...(saved.subtitleStyle || {}),
         },
       };
 
@@ -499,6 +524,71 @@ export function createPlayerStore(options: StoreOptions = {}): PlayerStore {
       notify(StateKeyEnum.codec_prefer_type, type, oldVal);
       // 双写：profile JSON + 独立 key
       safeSetItem(PersistentKeyEnum.codec_prefer_type, type);
+      saveProfile(persistentState);
+    },
+
+    /**
+     * 设置音量均衡模式（0 关闭 / 1 标准 / 2 高动态）
+     * 写入 profile JSON；播放器刷新/重建后按此值恢复音效链状态
+     */
+    setLoudness(mode: number): void {
+      const oldVal = persistentState.loudness;
+      if (oldVal === mode) return;
+      persistentState = { ...persistentState, loudness: mode };
+      notify(StateKeyEnum.loudness, mode, oldVal);
+      saveProfile(persistentState);
+    },
+
+    /**
+     * 是否存在已持久化的用户数据
+     * 「持久化优先」语义的判定依据（见 hasSavedProfile 注释）
+     */
+    hasPersistedData(): boolean {
+      return hasSavedProfile;
+    },
+
+    /**
+     * 设置面板开关项增量合并持久化
+     * （镜像/循环/自动开播/关灯/播完暂停——用户可打开/关闭的全部项）
+     */
+    updateSettingsFlags(flags: Partial<PlayerSettingsFlags>): void {
+      const oldVal = persistentState.settings;
+      const merged = { ...oldVal, ...flags };
+      persistentState = { ...persistentState, settings: merged };
+      notify(StateKeyEnum.settings_flags, merged, oldVal);
+      saveProfile(persistentState);
+    },
+
+    /** 画面比例持久化（"0:0" 自适应） */
+    setAspect(aspect: string): void {
+      const oldVal = persistentState.aspect;
+      if (oldVal === aspect) return;
+      persistentState = { ...persistentState, aspect };
+      notify(StateKeyEnum.aspect, aspect, oldVal);
+      saveProfile(persistentState);
+    },
+
+    /**
+     * 弹幕设置增量合并持久化（弹幕面板全部可调项：
+     * 开关/不透明度/速度/显示区域/字号/随屏幕缩放）
+     */
+    updateDanmakuSettings(patch: Partial<DanmakuPersistedSettings>): void {
+      const merged = { ...persistentState.danmakuSettings, ...patch };
+      const oldVal = persistentState.danmakuSettings;
+      persistentState = { ...persistentState, danmakuSettings: merged };
+      notify(StateKeyEnum.danmaku_settings, merged, oldVal);
+      saveProfile(persistentState);
+    },
+
+    /**
+     * 字幕样式增量 patch 持久化（只带变化字段，合并到既有样式对象；
+     * 刷新/重建后经构造期合并恢复到字幕菜单初值 + 挂载期应用到字幕插件）
+     */
+    updateSubtitleStyle(patch: Partial<SubtitleStyleSettings>): void {
+      const merged = { ...persistentState.subtitleStyle, ...patch };
+      const oldVal = persistentState.subtitleStyle;
+      persistentState = { ...persistentState, subtitleStyle: merged };
+      notify(StateKeyEnum.subtitle_style, merged, oldVal);
       saveProfile(persistentState);
     },
 

@@ -44,6 +44,10 @@ type BabelPath = {
   isCallExpression(): boolean;
   isImportSpecifier(): boolean;
   isImportDeclaration(): boolean;
+  isFunction(): boolean;
+  isObjectProperty(): boolean;
+  isArrayExpression(): boolean;
+  isSpreadElement(): boolean;
   get(key: string | number): BabelPath | BabelPath[];
   findParent(predicate: (path: BabelPath) => boolean): BabelPath | null;
 };
@@ -118,6 +122,7 @@ export function transformCode(
     compileComponentType: options.compileComponentType,
     compileAttrs: options.compileAttrs,
     hoistedCount: 0,
+    hoistedAttrsCount: 0,
     defaultExportCount: 0,
     filename,
     internalImportSource: options.internalImportSource ?? "@/core/internal",
@@ -133,6 +138,9 @@ export function transformCode(
         exit(path) {
           const node = path.node as t.CallExpression;
           if (!t.isStringLiteral(node.arguments[0])) return;
+          // attrs 区间内的调用一律不提升：祖先的属性重写会覆盖整个 attrs 区间，
+          // 提升声明会被静默丢弃，只留下死代码与多余 import（见 hasAttrsAncestor）
+          if (hasAttrsAncestor(path)) return;
           staticSubtreeMap.set(node, isStaticSubtree(path, staticSubtreeMap));
         },
       },
@@ -149,6 +157,7 @@ export function transformCode(
         exit(path) {
           const node = path.node as t.CallExpression;
           if (staticSubtreeMap.get(node) !== true) return;
+          if (hasAttrsAncestor(path)) return;
           if (hasStaticHAncestor(path, staticSubtreeMap)) return;
           hoistTargets.add(node);
         },
@@ -276,13 +285,102 @@ function isI18nTCall(path: BabelPath, arg: t.Node): boolean {
 }
 
 /**
- * 判断当前 h() 调用是否位于另一个 h() 调用的 attrs 参数内
+ * 判断当前 h() 调用是否位于另一个 h() 调用的 attrs 参数内（直接值位置）
  *
  * attrs 值中的 h() 调用不是子节点（运行时按属性值处理），不应转换：
- * - 语义上 h() 不会把 attrs 里的 VNode 当子节点
- * - 避免与 rewriteAttrs 对 attrs 整段覆盖产生编辑冲突
+ * - 语义上 h() 不会把 attrs 里的 VNode 当子节点，attrs 值只作为属性/组件 props 传递
+ * - 更关键：父级 rewriteAttrs / rewriteCompAttrs 会用
+ *   `s.overwrite(attrsArg.start, attrsArg.end, newStr)` 覆盖**整个 attrs 参数区间**。
+ *   虽然 MagicString 允许「父区间包含子区间」的覆盖，但覆盖会**静默丢弃**子级已写入的编辑：
+ *   子级的 _createEl 转换、静态提升声明与 _cloneHoisted 引用都会从产物中消失，
+ *   只留下永远不被引用的 `const _hoisted_N = ...` 声明与多余的 import（死代码 + 体积膨胀）。
+ *   因此这类位置必须跳过编辑。
+ *
+ * 但「位于 attrs 参数内」不等于「是 attrs 的值」——必须区分两种位置：
+ * - **值位置**（不安全）：`h(C, { icon: h('span') })`、`h(C, { list: [h('i')] })`、
+ *   `h(C, { ...h('div') })`；这些 h() 的求值结果就是属性值本身，必须跳过。
+ * - **函数体内**（安全）：`h(For, { render: (item) => h('div', ...) })`。
+ *   h() 位于**跨越了函数边界**的回调体内，其求值结果注入 DOM 的时机与位置
+ *   由回调调用方决定，与父级 attrs 参数区间无关；这正是 For/Switch/Match/Dynamic
+ *   的 render/key 回调与组件 render prop 的常见写法。
+ *   收紧前这里被一并跳过，导致回调体内的代码**静默失去全部编译期优化**
+ *   （没有 __reactiveAttrs / _reactiveText / 静态提升，信号属性不会自动更新）。
+ *
+ * 判定方式：沿祖先链自底向上，若遭遇「把当前表达式直接当作值的容器」
+ * （ObjectProperty 的 value / ArrayExpression 的元素 / SpreadElement 的 argument）
+ * 则标记为不安全；一旦**跨越函数边界**即清除该标记（函数体内的编辑不会被
+ * 祖先的 attrs 区间覆盖丢弃）。命中「框架 h() 且当前节点是其 arguments[1]」
+ * 时按标记决定是否跳过。
  */
 function isInsideAttrsOfHCall(path: BabelPath): boolean {
+  let child: t.Node = path.node;
+  let parent: BabelPath | null = path.parentPath;
+  // 当前是否处于「非函数的 attrs 值位置」
+  let unsafeValuePosition = false;
+  // 上一次跨越的边是否落进了函数体（函数体内的表达式不再属于外层 attrs 的值位置）
+  let crossedFunction = false;
+
+  while (parent) {
+    // 跨越函数边界 → 该处编辑不会被祖先 attrs 覆盖丢弃，清除非安全标记
+    if (
+      parent.isFunction() ||
+      t.isArrowFunctionExpression(parent.node) ||
+      t.isFunctionExpression(parent.node) ||
+      t.isFunctionDeclaration(parent.node)
+    ) {
+      unsafeValuePosition = false;
+      crossedFunction = true;
+    }
+
+    // 容器判定只在「未落进函数体」时生效：
+    //   h(For, { render: (i) => h('div') })  → 跨越箭头函数后是回调体，安全
+    //   h(C,   { icon:   h('div') })         → 直接落在属性值位置，不安全
+    //   h(C,   { list: [ h('div') ] })       → 落在数组元素位置，不安全
+    // 同时忽略「容器里的值本身就是函数定义」的情形（那条边只是函数定义处，
+    // 函数体内部要么已经单独跨越过函数边界，要么根本不在这里）
+    const childIsFn =
+      t.isArrowFunctionExpression(child) ||
+      t.isFunctionExpression(child) ||
+      t.isFunctionDeclaration(child);
+    if (!crossedFunction && !childIsFn) {
+      if (parent.isObjectProperty()) {
+        if ((parent.node as t.ObjectProperty).value === child) unsafeValuePosition = true;
+      } else if (parent.isArrayExpression()) {
+        if ((parent.node as t.ArrayExpression).elements.indexOf(child as t.Expression) !== -1) {
+          unsafeValuePosition = true;
+        }
+      } else if (parent.isSpreadElement()) {
+        if ((parent.node as t.SpreadElement).argument === child) unsafeValuePosition = true;
+      }
+    }
+
+    if (
+      parent.isCallExpression() &&
+      isFrameworkHCall(parent) &&
+      ((parent.node as t.CallExpression).arguments as t.Node[]).indexOf(child) === 1
+    ) {
+      return unsafeValuePosition;
+    }
+
+    child = parent.node;
+    parent = parent.parentPath;
+  }
+  return false;
+}
+
+/**
+ * 判断调用是否位于任意祖先 h() 调用的 attrs 参数区间内（含函数体内）
+ *
+ * 与 isInsideAttrsOfHCall 的区别：本判定**不区分**值位置与函数体位置，
+ * 只要整段位于某个祖先的 attrs 参数内即为真。
+ *
+ * 用途是静态提升的准入判定：祖先级 rewriteAttrs / rewriteCompAttrs 会
+ * `overwrite(attrsArg.start, attrsArg.end, ...)` 覆盖整个 attrs 区间，
+ * 该区间内**任何**静态提升声明都会被静默丢弃，只留下永不引用的
+ * `const _hoisted_N = ...` 与多余的 import（死代码 + 体积膨胀）。
+ * 因此 attrs 区间内的调用一律不做静态提升，由祖先的属性重写按原样拼接其源码。
+ */
+function hasAttrsAncestor(path: BabelPath): boolean {
   let child: t.Node = path.node;
   let parent: BabelPath | null = path.parentPath;
   while (parent) {
@@ -1207,7 +1305,7 @@ function transformHCall(
 
   // 只有框架的 h() 才转换（binding 校验，避免误伤其他库）
   if (!isFrameworkHCall(path)) return false;
-  // attrs 参数内的 h() 调用不是子节点，跳过
+  // attrs 参数「值位置」内的 h() 调用不是子节点，跳过（函数体内照常转换）
   if (isInsideAttrsOfHCall(path)) return false;
 
   const args = node.arguments;
@@ -1246,8 +1344,11 @@ function transformHCall(
     if (SVG_TAGS.has(tag)) {
       s.overwrite(node.callee.start!, node.callee.end!, "_createSvgEl");
       markUsed(ctx, "_createSvgEl");
-      if (ctx.compileAttrs && args.length >= 2) {
-        rewriteAttrs(node, s);
+      // ★ L12：静态 attrs 单独提升（仅 hoistStatic；失败则回退属性预分类）
+      if (!(ctx.hoistStatic && hoistStaticAttrs(node, s, ctx, hoistTargets, tag))) {
+        if (ctx.compileAttrs && args.length >= 2) {
+          rewriteAttrs(node, s);
+        }
       }
       // ★ 响应式子节点追踪：将动态表达式包装为 _reactiveText
       transformReactiveChildren(node, path, s, ctx, 2);
@@ -1257,8 +1358,11 @@ function transformHCall(
     // 普通元素 → _createEl + 属性预分类
     s.overwrite(node.callee.start!, node.callee.end!, "_createEl");
     markUsed(ctx, "_createEl");
-    if (ctx.compileAttrs && args.length >= 2) {
-      rewriteAttrs(node, s);
+    // ★ L12：静态 attrs 单独提升（仅 hoistStatic；失败则回退属性预分类）
+    if (!(ctx.hoistStatic && hoistStaticAttrs(node, s, ctx, hoistTargets, tag))) {
+      if (ctx.compileAttrs && args.length >= 2) {
+        rewriteAttrs(node, s);
+      }
     }
     // ★ 响应式子节点追踪：将动态表达式包装为 _reactiveText
     transformReactiveChildren(node, path, s, ctx, 2);
@@ -1287,8 +1391,15 @@ function transformHCall(
 
     // 组件调用 → _createComp（组件上的 onMounted/onReady 是生命周期回调，
     // 不是 DOM 事件，因此不做 DOM 式属性预分类）
-    s.overwrite(node.callee.start!, node.callee.end!, "_createComp");
-    markUsed(ctx, "_createComp");
+    // ★ L15：编译期可静态证明 attrs 不含 ref/__providers 时走 _createCompPure
+    //   （跳过运行时的 ref 与 __providers 提取；实测收益见 §10）
+    if (canUseCompPure(args[1])) {
+      s.overwrite(node.callee.start!, node.callee.end!, "_createCompPure");
+      markUsed(ctx, "_createCompPure");
+    } else {
+      s.overwrite(node.callee.start!, node.callee.end!, "_createComp");
+      markUsed(ctx, "_createComp");
+    }
     // ★ 响应式 props：动态 prop 表达式包装为 _rp thunk
     // （运行时 _createComp 检测 _rp 标记后把 props 包装为惰性代理，
     //   组件内部在 effect / 响应式 getter 中读取 props.x 即建立信号依赖）
@@ -1311,14 +1422,169 @@ function transformHCall(
 }
 
 /**
+ * 判断 h() 调用是否含动态子节点（第 2 个及之后的参数中存在非静态字面量）
+ *
+ * 全静态子树会走整棵提升（hoistStaticCall），不会进入单独提升 attrs 的路径；
+ * 只有「attrs 静态 + children 动态」时，attrs 对象才值得单独提升。
+ */
+function hasDynamicChild(node: t.CallExpression): boolean {
+  for (let i = 2; i < node.arguments.length; i++) {
+    if (!isStaticValue(node.arguments[i])) return true;
+  }
+  return false;
+}
+
+/**
+ * 判断静态值节点树内是否出现**任何标识符引用**
+ *
+ * 用途：静态 attrs 会被提升为模块级常量（模块初始化时求值一次）。
+ * 若 attrs 值引用了导入的绑定或模块级变量，而该绑定在模块初始化之后被改写，
+ * 提升就会把值冻结成早期快照，与「每次渲染重新求值」的原语义不一致。
+ * 静态 attrs 本应只含字面量/纯对象/纯数组，出现任何标识符即保守放弃提升。
+ *
+ * 未知节点类型一律视为「可能含标识符」（保守：放弃提升而非误提升）。
+ */
+function containsIdentifier(node: t.Node): boolean {
+  if (t.isIdentifier(node)) return true;
+  if (t.isStringLiteral(node)) return false;
+  if (t.isNumericLiteral(node)) return false;
+  if (t.isBooleanLiteral(node)) return false;
+  if (t.isNullLiteral(node)) return false;
+  if (t.isObjectExpression(node)) {
+    return node.properties.some((p) => containsIdentifier(p as unknown as t.Node));
+  }
+  if (t.isObjectProperty(node)) {
+    return (
+      (node.computed && containsIdentifier(node.key as t.Node)) ||
+      containsIdentifier(node.value)
+    );
+  }
+  if (t.isArrayExpression(node)) {
+    return node.elements.some((el) => el !== null && containsIdentifier(el));
+  }
+  if (t.isUnaryExpression(node)) return containsIdentifier(node.argument);
+  if (t.isTemplateLiteral(node)) {
+    return node.expressions.some((e) => containsIdentifier(e));
+  }
+  // 未知/复合节点 → 保守视为含引用
+  return true;
+}
+
+/**
+ * L12：静态 attrs 单独提升
+ *
+ * 当「attrs 全静态 + children 动态」时，把 attrs 对象提升为模块级常量
+ * `_hoisted_attrs_N`，使用点直接引用该常量，省掉每次渲染重新分配 attrs 对象。
+ *
+ * 准入条件（全部满足才提升）：
+ * - 仅 ctx.hoistStatic（与整棵子树提升同一开关，dev 不提升）
+ * - tag 为字符串字面量、非 fragment（fragment 丢弃 attrs）
+ * - 该调用不是整棵静态提升目标（hoistTargets），否则已内联进 VNode 常量
+ * - 至少有一个动态子节点（全静态时由整棵提升覆盖，单独提升 attrs 无收益）
+ * - attrs 为非空 ObjectExpression，且每个属性都是「非 computed 且值静态」的 ObjectProperty
+ *   （SpreadElement / computed key / 动态值一律不提升）
+ * - 不含 onXxx 事件（必须逐次生成 __events）、不含 __reactiveAttrs / __events /
+ *   __props / 手写内部协议字段 __ref / __providers
+ * - 求值结果不依赖任何模块级可变绑定（containsIdentifier 检查），
+ *   避免把「导入后被改写的绑定」冻结成模块初始化时的快照
+ *
+ * ★ 共享对象安全性（已验证运行时不会 mutate）：
+ * - core/mount.ts applyAttrs / applyReactiveAttrs 只**读取** attrs（for-in + 读值），
+ *   不写入、不删除任何键（已核对 applyAttrs 全部分支）
+ * - core/internal.ts extractProviders 在含 __providers 时返回 `{ ...attrs }` 浅拷贝
+ *   并 `delete rest.__providers`，**不修改入参对象**；不含 __providers 时原样返回
+ * - 显式拒绝含事件 / 动态值 / SpreadElement 的 attrs，因此产物中不存在
+ *   __events / __reactiveAttrs 等需要逐次生成的字段，共享容器恒为只读访问
+ * 故多个使用点共享同一 attrs 常量不会互相污染。
+ *
+ * @returns 是否已提升
+ */
+function hoistStaticAttrs(
+  node: t.CallExpression,
+  s: MagicString,
+  ctx: TransformContext,
+  hoistTargets: ReadonlySet<t.CallExpression>,
+  tag: string,
+): boolean {
+  // fragment 的 attrs 会被 _createFragment 丢弃，提升没有意义
+  if (tag === "fragment") return false;
+  // 整棵子树已提升 → attrs 内联进 VNode 常量，不单独提升（避免重复）
+  if (hoistTargets.has(node)) return false;
+  // 全静态子节点 → 整棵提升覆盖；只有 children 动态时 attrs 才值得单独提升
+  if (!hasDynamicChild(node)) return false;
+
+  const attrsArg = node.arguments[1];
+  if (!t.isObjectExpression(attrsArg)) return false;
+  // 空 attrs 对象不提升（收益微小）
+  if (attrsArg.properties.length === 0) return false;
+
+  const parts: string[] = [];
+  for (const prop of attrsArg.properties) {
+    // SpreadElement / computed key → 不提升
+    if (!t.isObjectProperty(prop) || prop.computed) return false;
+    // 属性值必须静态（字面量 / 纯对象 / 纯数组），且不引用任何标识符
+    if (!isStaticValue(prop.value)) return false;
+    if (containsIdentifier(prop.value)) return false;
+
+    let keyName = "";
+    let keyStr = "";
+    if (t.isIdentifier(prop.key)) {
+      keyName = prop.key.name;
+      keyStr = prop.key.name;
+    } else if (t.isStringLiteral(prop.key)) {
+      keyName = prop.key.value;
+      keyStr = `'${prop.key.value}'`;
+    } else {
+      // 数字键等其它形态 → 保守不提升
+      return false;
+    }
+
+    // 运行时协议内部字段 → 必须逐次生成/处理，不提升
+    if (
+      keyName === "__reactiveAttrs" ||
+      keyName === "__events" ||
+      keyName === "__ref" ||
+      keyName === "__providers"
+    ) {
+      return false;
+    }
+
+    // 事件属性必须每次生成 __events（不能冻结成模块级常量）
+    const isEvent =
+      keyName.startsWith("on") &&
+      keyName.length > 2 &&
+      keyName[2] === keyName[2].toUpperCase();
+    if (isEvent) return false;
+
+    // ref → __ref（与 rewriteAttrs 的预分类命名保持一致）
+    const finalKey = keyName === "ref" ? "__ref" : keyStr;
+    parts.push(`${finalKey}: ${genStaticExpr(prop.value, ctx)}`);
+  }
+
+  const name = `_hoisted_attrs_${++ctx.hoistedAttrsCount}`;
+  ctx.hoistedDecls.push(`const ${name} = { ${parts.join(", ")} };\n`);
+  // 用常量引用替换整个 attrs 对象区间（该区间内已无其它编辑）
+  s.overwrite(attrsArg.start!, attrsArg.end!, name);
+  return true;
+}
+
+/**
  * 属性预分类
  *
  * 将 onXxx 事件属性提取到 __events 对象中，
  * 将 ref 属性重命名为 __ref，
  * 让运行时 applyAttrs 跳过遍历判断。
  *
- * 实现方式：直接替换整个 attrs 对象字符串，避免逐个属性移除的复杂位置计算
- * （attrs 内的 h() 调用已由 isInsideAttrsOfHCall 保证不会被编辑，无冲突）
+ * 实现方式：直接替换整个 attrs 对象字符串，避免逐个属性移除的复杂位置计算。
+ *
+ * ★ 单次编辑安全性（replaceAttrs 与 transformHCall 的调用顺序保证）：
+ * transformHCall 的提前返回分支（attrs 值位置内的 h()、已提升子树内的 h()）
+ * 都不会进入 rewriteAttrs；而 hasAttrsAncestor 已把 attrs 区间内的调用
+ * 全部排除出提升目标，因此本函数覆盖 attrs 整段区间时，
+ * 区间内不存在会被静默丢弃的子级编辑。
+ *
+ * 注意：属性值取自 s.original（源码原文），不做 s.slice 展开 ——
+ * attrs 区间内不允许子级编辑是上述准入条件的一部分。
  */
 function rewriteAttrs(node: t.CallExpression, s: MagicString): void {
   const args = node.arguments;
@@ -1426,6 +1692,46 @@ function isFrameworkFlowImport(path: BabelPath, localName: string): boolean {
     isFrameworkNamedImport(path, localName, "Match") ||
     isFrameworkNamedImport(path, localName, "Dynamic")
   );
+}
+
+/**
+ * L15：判断组件调用能否使用 _createCompPure
+ *
+ * `_createCompPure` 跳过 ref / __providers 提取，因此只有在**静态可证**
+ * attrs 不可能携带这两个内部键时才允许选用：
+ * - attrs 参数省略
+ * - attrs 为 null / undefined 字面量
+ * - attrs 为对象字面量，且每个属性都是「非 computed 的 ObjectProperty」，
+ *   且键名不是 ref / __providers
+ *
+ * 以下情形一律返回 false（回退 _createComp，行为保守正确）：
+ * - SpreadElement：`{ ...extra }` 可能展开出 ref / __providers
+ * - computed key：`{ [k]: v }` 运行时才知道键名
+ * - 动态 attrs 表达式/标识符：无法静态判定
+ * - 键名直接是 ref / __providers
+ *
+ * 说明：`rewriteCompAttrs` 只会把动态值包装为 `_rp(() => ...)`，
+ * 不会增删键名，因此本判定与后续属性重写不冲突。
+ */
+function canUseCompPure(attrsArg: t.Node | undefined): boolean {
+  // 省略第二参数 → attrs 为 undefined，运行时 rawAttrs 为空对象
+  if (attrsArg === undefined) return true;
+  if (t.isNullLiteral(attrsArg)) return true;
+  if (t.isIdentifier(attrsArg) && attrsArg.name === "undefined") return true;
+  if (!t.isObjectExpression(attrsArg)) return false;
+
+  for (const prop of attrsArg.properties) {
+    if (!t.isObjectProperty(prop) || prop.computed) return false;
+    if (t.isIdentifier(prop.key)) {
+      if (prop.key.name === "ref" || prop.key.name === "__providers") return false;
+    } else if (t.isStringLiteral(prop.key)) {
+      if (prop.key.value === "ref" || prop.key.value === "__providers") return false;
+    } else {
+      // 数字键等其它形态：保守不启用
+      return false;
+    }
+  }
+  return true;
 }
 
 /**

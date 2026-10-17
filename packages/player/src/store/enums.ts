@@ -102,6 +102,24 @@ export enum StateKeyEnum {
   // ========== 编解码器 ==========
   codec_prefer_type = 'codec_prefer_type',
 
+  // ========== 音效 ==========
+  /** 音量均衡模式（0 关闭 / 1 标准 / 2 高动态，设置面板驱动） */
+  loudness = 'loudness',
+
+  // ========== 设置面板开关 ==========
+  /** 设置面板开关项（镜像/循环/自动开播/关灯/播完暂停，增量合并） */
+  settings_flags = 'settings_flags',
+  /** 画面比例 */
+  aspect = 'aspect',
+
+  // ========== 弹幕设置 ==========
+  /** 弹幕设置（弹幕面板全部可调项，增量合并） */
+  danmaku_settings = 'danmaku_settings',
+
+  // ========== 字幕样式 ==========
+  /** 字幕样式增量 patch */
+  subtitle_style = 'subtitle_style',
+
   // ========== 系统信息 ==========
   gpu_renderer = 'gpu_renderer',
   max_video_qn = 'max_video_qn',

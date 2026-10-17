@@ -20,10 +20,6 @@
  *   移出平滑缩回，click 触发选择回调；
  * - ResizeObserver 监听容器尺寸变化，重设画布（devicePixelRatio
  *   高清缩放）并重绘
- *
- * 结构：
- * .nova-player-interaction-question（questionState 信号驱动显隐）
- *   └─ canvas（时间窗模式全透明；播完模式绘制最后一帧背景）
  */
 
 import { h, effect } from "@/core";
@@ -329,13 +325,7 @@ function drawQuestion(state: QuestionState | null): void {
       const drawHeight = video.videoHeight * containScale;
       const offsetX = (rect.width - drawWidth) / 2;
       const offsetY = (rect.height - drawHeight) / 2;
-      canvasCtx.drawImage(
-        video,
-        offsetX,
-        offsetY,
-        drawWidth,
-        drawHeight,
-      );
+      canvasCtx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
       // 半透明黑遮罩：压暗定格画面，突出问题按钮（黑边叠遮罩仍是纯黑）
       canvasCtx.fillStyle = "rgba(0, 0, 0, 0.45)";
       canvasCtx.fillRect(0, 0, rect.width, rect.height);
@@ -353,18 +343,13 @@ function drawQuestion(state: QuestionState | null): void {
   if (question.title && groupRect) {
     canvasCtx.fillStyle = "#fff";
     const buttonWidth = computeButtonWidth(rect.width);
-    canvasCtx.font =
-      `600 ${Math.max(14, Math.round(18 * buttonWidth / BUTTON_BASE_WIDTH))}px "PingFang SC", "Microsoft YaHei", sans-serif`;
+    canvasCtx.font = `600 ${Math.max(14, Math.round((18 * buttonWidth) / BUTTON_BASE_WIDTH))}px "PingFang SC", "Microsoft YaHei", sans-serif`;
     canvasCtx.textAlign = "center";
     canvasCtx.textBaseline = "middle";
     // 阴影提升在画面上的可读性
     canvasCtx.shadowColor = "rgba(0, 0, 0, 0.6)";
     canvasCtx.shadowBlur = 4;
-    canvasCtx.fillText(
-      question.title,
-      rect.width / 2,
-      groupRect.startY + 18,
-    );
+    canvasCtx.fillText(question.title, rect.width / 2, groupRect.startY + 18);
     canvasCtx.shadowBlur = 0;
   }
 
@@ -391,12 +376,19 @@ function drawQuestion(state: QuestionState | null): void {
     // 1. 背景图（节点配置优先，回落默认 bg.png；未加载完跳过底图）
     const bgImage = loadBgImage(question.background ?? defaultBgImage);
     if (bgImage) {
-      drawSourceCover(canvasCtx, bgImage, bgImage.width, bgImage.height, {
-        x: baseRect.x,
-        y: baseRect.y,
-        width: baseRect.width,
-        height: baseRect.height,
-      }, true);
+      drawSourceCover(
+        canvasCtx,
+        bgImage,
+        bgImage.width,
+        bgImage.height,
+        {
+          x: baseRect.x,
+          y: baseRect.y,
+          width: baseRect.width,
+          height: baseRect.height,
+        },
+        true,
+      );
     }
 
     // 2. 半透明黑遮罩（保证文字可读；悬停时减淡突出高亮；
@@ -410,8 +402,7 @@ function drawQuestion(state: QuestionState | null): void {
     // 3. 选项文字（前缀 + 文案，居中；恒定白色 —— 悬停不变色，
     //    悬停反馈只保留平滑放大与遮罩减淡）
     canvasCtx.fillStyle = "#fff";
-    canvasCtx.font =
-      `500 ${Math.max(13, Math.round(16 * baseRect.width / BUTTON_BASE_WIDTH))}px "PingFang SC", "Microsoft YaHei", sans-serif`;
+    canvasCtx.font = `500 ${Math.max(13, Math.round((16 * baseRect.width) / BUTTON_BASE_WIDTH))}px "PingFang SC", "Microsoft YaHei", sans-serif`;
     canvasCtx.textAlign = "center";
     canvasCtx.textBaseline = "middle";
     canvasCtx.fillText(
@@ -618,9 +609,7 @@ export function renderQuestion(
     currentQuestionCache = state;
     hoverIndex = -1;
     // 重置缩放状态（新题目从原尺寸开始）
-    hoverScales = state
-      ? state.question.options.map(() => 1)
-      : [];
+    hoverScales = state ? state.question.options.map(() => 1) : [];
     stopScaleAnim();
 
     if (state) {

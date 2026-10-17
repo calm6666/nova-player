@@ -1,0 +1,12 @@
+/**
+ * live-player 样式入口。
+ *
+ * 布局只使用绝对定位与 flexbox，保证老浏览器下的渲染兼容性。
+ */
+
+@use './base.scss';
+@use './control-bar.scss';
+@use './panels.scss';
+@use './dm-setting.scss';
+@use './context-menu.scss';
+@use './icons.scss';

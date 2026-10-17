@@ -128,7 +128,8 @@ export type PlayerEventMap = {
   restoreProgress: { time: number };
 
   // 错误相关事件
-  error: { error: unknown; code?: number; message?: string };
+  /** code：MediaError 数字码（1-4）或语义字符串码（如 'load-timeout'） */
+  error: { error: unknown; code?: number | string; message?: string };
   errorRecovery: undefined;
 
   // 控制栏相关事件

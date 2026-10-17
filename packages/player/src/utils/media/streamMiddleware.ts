@@ -261,6 +261,19 @@ export class StreamMiddleware {
   }
 
   /**
+   * 设置视频编码偏好（转发给生效的流媒体插件）
+   *
+   * 设置面板「编码格式」→ VideoPlayer.setCodecPrefer → 此处转发；
+   * 插件未实现该方法（setCodecPreference 可选）或原生模式下静默忽略
+   * @param type - 编码偏好：0 默认 / 1 HEVC / 2 AVC / 3 AV1
+   */
+  setCodecPreference(type: number): void {
+    if (this.mode === PlayerMode.STREAMING && this.activePlugin) {
+      this.activePlugin.setCodecPreference?.(type);
+    }
+  }
+
+  /**
    * 获取当前生效的档位 id
    * @returns 流媒体模式转发给插件；原生模式返回 ''（原生单文件无档位概念）
    */

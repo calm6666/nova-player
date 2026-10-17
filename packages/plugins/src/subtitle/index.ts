@@ -29,7 +29,16 @@ export { AudioCapture } from './asr/audioCapture';
 export { VadSegmenter } from './asr/vadSegmenter';
 export type { VadCallbacks, VadOptions } from './asr/vadSegmenter';
 export { MockAsrEngine } from './asr/mockAsrEngine';
+// 真实流式识别引擎（sherpa-onnx wasm，流式 zipformer transducer）：
+// 常规接入走 localAi.engineKind='sherpa'（Worker 内按需创建）；
+// 主线程 engines 路径或自定义 Provider 也可直接实例化
+export { SherpaAsrEngine } from './asr/sherpaAsrEngine';
 export { createLocalAiProvider, LOCAL_AI_TRACK_ID } from './asr/localAiProvider';
+// Worker 版 Provider：VAD + 引擎推理在独立 Web Worker（asrWorker.ts），
+// 重计算不占主线程；接口与 createLocalAiProvider 一致，插件无感切换
+export { createLocalAiWorkerProvider } from './asr/asrWorkerProvider';
+export type { LocalAiWorkerProviderOptions } from './asr/asrWorkerProvider';
+export type { AsrWorkerRequest, AsrWorkerResponse } from './asr/asrWorker';
 
 // 字幕双模式公共类型（统一维护于 @/types/subtitle，此处 re-export 便于外部接入）
 export type {

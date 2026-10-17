@@ -46,6 +46,7 @@ import type {
   DanmakuArea,
   DanmakuFilter,
   DanmakuMaskConfig,
+  MaskLoader,
 } from "@/types/danmaku";
 import { DanmakuType, ScreenMode, RenderMode } from "@/types/danmaku";
 import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
@@ -55,6 +56,9 @@ import { PlayerStateKeyEnum } from "../../../player/src/store/runtimeState";
 import { DanmakuManager } from "../utils/danmaku";
 import { DanmakuTip } from "./DanmakuTip";
 import { injectPluginStyle } from "../utils/injectStyle";
+// 防挡分割器仅类型引用（运行时经 applyMaskEnabled 内动态 import 懒加载，
+// 编译期被完全擦除，不产生静态依赖 → 未开启防挡时 chunk 不进主包）
+import type { DanmakuMaskSegmenter } from "../utils/danmakuMask";
 // 弹幕插件样式以字符串形式内联导入（Vite `?inline`），install 时运行时注入
 import danmakuCss from "./danmaku.scss?inline";
 
@@ -233,6 +237,12 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   private renderer: RenderMode;
   private player: VideoPlayer | null = null;
   private video: HTMLVideoElement | null = null;
+  /**
+   * 本地语义分割器（智能防挡运行时，仅类型引用——模块经动态 import
+   * 懒加载，type-only import 会被编译器完全擦除，不产生静态依赖，
+   * 开发者未开启防挡功能时 danmakuMask chunk 不进主包）
+   */
+  private maskSegmenter: DanmakuMaskSegmenter | null = null;
   /** 事件总线订阅的取消函数列表（MOUNTED/SEND/CLEAR） */
   private unsubscribers: Array<() => void> = [];
   /** 状态键订阅的取消函数列表（7 个即时生效的设置键） */
@@ -334,6 +344,10 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     this.stateUnsubscribers.forEach((unsub) => unsub());
     this.stateUnsubscribers = [];
 
+    // 释放本地分割器（终止防挡 Worker，停止模型推理）
+    this.maskSegmenter?.dispose();
+    this.maskSegmenter = null;
+
     // 销毁引擎（内部解除 video 事件 / ResizeObserver / 全屏监听 / Worker）
     if (this.manager) {
       this.manager.destroy();
@@ -380,6 +394,10 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     this.manager.setAutoScale(
       state.get(PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN) ?? true,
     );
+    // 智能防挡：安装时读当前状态（构造期持久化读回值已写入状态键）
+    this.applyMaskEnabled(
+      state.get(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED) ?? false,
+    );
   }
 
   /** 订阅 7 个即时生效的弹幕状态键（COLOR/MODE 在发送时读取，不订阅） */
@@ -409,6 +427,9 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
       state.subscribe(PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN, (auto) => {
         this.manager?.setAutoScale(auto);
       }),
+      state.subscribe(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED, (enabled) => {
+        this.applyMaskEnabled(enabled);
+      }),
     );
   }
 
@@ -420,6 +441,99 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   /** 数值转换：字号档位 0-100 → 缩放系数 0.5-1.5（50 = 基准 1.0） */
   private applyFontSize(fontSize: number): void {
     this.manager?.setFontSizeScale(0.5 + fontSize / 100);
+  }
+
+  // ============================================
+  // 智能防挡接线（外部 provider 优先 / 本地语义分割懒加载）
+  // ============================================
+
+  /**
+   * 应用弹幕智能防挡开关（持久化于 danmakuSettings.maskEnabled）
+   *
+   * 两种模式（优先级从高到低）：
+   * 1. 外部 provider：danmaku.mask.provider 直接作为引擎 maskLoader，
+   *    外部自行按 currentTime 返回遮罩图（与字幕 provider 同一模式）
+   * 2. 本地语义分割：动态 import danmakuMask 模块（Vite 拆独立 chunk：
+   *    开发者未配置不打包进主包；用户未开启不下载不初始化），
+   *    MediaPipe ImageSegmenter 在 Web Worker 内推理（主线程零阻塞，
+   *    视频播放无卡顿）；帧结果带时间戳，stale 帧（seek 后的过期结果）
+   *    丢弃，保证遮罩与视频时钟同步
+   */
+  private async applyMaskEnabled(enabled: boolean): Promise<void> {
+    const manager = this.manager;
+    const video = this.video;
+    if (!manager || !video) return;
+
+    // 关闭：停用引擎遮罩 + 释放本地分割器（终止 Worker，停止模型推理）
+    if (!enabled) {
+      manager.setMaskConfig({ enabled: false });
+      this.maskSegmenter?.dispose();
+      this.maskSegmenter = null;
+      return;
+    }
+
+    // 模式 1：外部 provider（免模型，遮罩由外部获取）
+    const external = this.player?.props.danmaku?.mask?.provider;
+    if (external) {
+      manager.setMaskConfig({ enabled: true, maskLoader: external });
+      return;
+    }
+
+    // 模式 2：本地语义分割（懒加载模块 + Worker 推理 + 时钟同步校验）
+    try {
+      if (!this.maskSegmenter) {
+        // 动态 import：只有用户真正开启防挡才会加载模块与下载模型
+        const { DanmakuMaskSegmenter } = await import("../utils/danmakuMask");
+        const localModel = this.player?.props.danmaku?.mask?.localModel;
+        const segmenter = new DanmakuMaskSegmenter({
+          ...(localModel?.modelUrl !== undefined
+            ? { modelUrl: localModel.modelUrl }
+            : {}),
+          ...(localModel?.threshold !== undefined
+            ? { threshold: localModel.threshold }
+            : {}),
+        });
+        await segmenter.init();
+        // init 期间用户可能已关闭（竞态）：复核当前状态再落位
+        const stillEnabled =
+          this.player?.state.get(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED) ===
+          true;
+        if (!stillEnabled) {
+          segmenter.dispose();
+          return;
+        }
+        this.maskSegmenter = segmenter;
+      }
+      const segmenter = this.maskSegmenter;
+      /**
+       * 预处理流水线：segmenter 内部自驱循环持续分割「当前帧」
+       * （完成一帧立即下一帧，GPU 下 20-30fps），本 loader 仅按
+       * 引擎采样间隔消费最新缓存结果（getLatest 同步返回，
+       * 不触发推理）——遮罩延迟 = 单帧推理耗时，与采样间隔无关
+       */
+      segmenter.startRealtime(video);
+      const loader: MaskLoader = async (currentTime: number) => {
+        const result = segmenter.getLatest(currentTime);
+        if (!result || !result.image) {
+          return { maskImage: "", clearMask: true };
+        }
+        return {
+          maskImage: result.image,
+          originalWidth: result.width,
+          originalHeight: result.height,
+        };
+      };
+      manager.setMaskConfig({
+        enabled: true,
+        maskLoader: loader,
+        // 采样间隔缩短：仅消费缓存结果（无推理开销），可以高频取
+        updateInterval: 300,
+      });
+    } catch {
+      // 模型下载/初始化失败（网络中断/能力不足）：释放并降级为无遮罩
+      this.maskSegmenter?.dispose();
+      this.maskSegmenter = null;
+    }
   }
 
   // ============================================

@@ -27,23 +27,6 @@
  * - 全屏 / 非全屏 / 窗口缩放 / 播放器尺寸不同都经 layerWidth 信号
  *   驱动换行与卡片定位动态重算
  *
- * 结构：
- * .nova-player-interaction-story（默认隐藏，visible 信号驱动显隐）
- *   ├─ .nova-player-interaction-oval-wrap
- *   │   └─ .nova-player-interaction-oval（flex-wrap 换行容器，
- *   │       max-width 由插件按播放器宽度内联）
- *   │       └─ .nova-player-interaction-oval-item(.position | .check [.hover])
- *   │           └─ .nova-player-interaction-oval-round
- *   │               ├─ .small.normal（常态：.icon-position / .icon-check 二选一显示）
- *   │               └─ .small.hover（悬停：.icon-position / .icon-check 二选一显示）
- *   └─ .nova-player-interaction-hover-wrap（零尺寸定位基准，位于胶囊条左上角）
- *       └─ .nova-player-interaction-hover-item × N（hover 信号驱动显隐）
- *           ├─ .nova-player-interaction-background
- *           ├─ .nova-player-interaction-text（节点标题）
- *           ├─ .nova-player-interaction-label（下指小三角，双层描边）
- *           │   ├─ .nova-player-interaction-label-one
- *           │   └─ .nova-player-interaction-label-two
- *           └─ .nova-player-interaction-cover > img（节点封面）
  */
 
 import { h, For } from "@/core";
@@ -104,7 +87,10 @@ const STORY_MAX_RATIO = 0.8;
  * @param count - 路径节点数
  * @returns 换行布局：每行圆点数 / 胶囊条内容宽（最大行宽）
  */
-function computeWrapLayout(layerWidth: number, count: number): {
+function computeWrapLayout(
+  layerWidth: number,
+  count: number,
+): {
   cols: number;
   contentWidth: number;
 } {
@@ -124,8 +110,7 @@ function computeWrapLayout(layerWidth: number, count: number): {
   const usedCols = Math.min(count, cols);
   return {
     cols,
-    contentWidth:
-      usedCols * STORY_DOT_SIZE + (usedCols - 1) * STORY_DOT_GAP,
+    contentWidth: usedCols * STORY_DOT_SIZE + (usedCols - 1) * STORY_DOT_GAP,
   };
 }
 
@@ -259,11 +244,7 @@ function renderOvalItem(
       h(
         "span",
         { class: "small normal" },
-        h(
-          "div",
-          { class: "icon-position" },
-          renderPositionIcon(false),
-        ),
+        h("div", { class: "icon-position" }, renderPositionIcon(false)),
         h("div", { class: "icon-check" }, renderCheckIcon(false)),
       ),
       // 悬停图标层（.small.hover）：位置 / 打勾二选一（CSS 类控显隐）
@@ -317,11 +298,8 @@ function renderHoverItem(
           item.index,
         )}px`,
         top: `${
-          computeDotPosition(
-            layerWidth.value,
-            entries.value.length,
-            item.index,
-          ).dotTopY - 27
+          computeDotPosition(layerWidth.value, entries.value.length, item.index)
+            .dotTopY - 27
         }px`,
         transform: "translateX(-50%)",
       },
@@ -329,11 +307,7 @@ function renderHoverItem(
     // 标题条背景
     h("div", { class: "nova-player-interaction-background" }),
     // 标题文本（单行省略）
-    h(
-      "div",
-      { class: "nova-player-interaction-text" },
-      item.node.title,
-    ),
+    h("div", { class: "nova-player-interaction-text" }, item.node.title),
     // 下指小三角（双层描边；卡片底部中央指向圆点，见 scss label 定位）
     h(
       "div",
@@ -409,8 +383,7 @@ export function renderStoryBar(
         h(For, {
           each: entries,
           key: entryKey,
-          render: (item: unknown): VNode =>
-            renderOvalItem(item, onSeekNode),
+          render: (item: unknown): VNode => renderOvalItem(item, onSeekNode),
         }),
       ),
     ),

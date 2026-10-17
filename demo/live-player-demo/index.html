@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lumina Live Player Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="demo-player" class="demo-player"></div>
+
+    <section class="demo-panel">
+      <div class="demo-panel-header">
+        <h2>播放控制</h2>
+      </div>
+      <div class="demo-form-row">
+        <input id="stream-url" class="demo-input" type="text" />
+        <button id="btn-load" class="demo-button" type="button">加载流</button>
+      </div>
+      <div class="demo-button-row">
+        <button id="btn-play" class="demo-button" type="button">播放</button>
+        <button id="btn-pause" class="demo-button" type="button">暂停</button>
+        <button id="btn-mute" class="demo-button" type="button">静音</button>
+        <button id="btn-volume" class="demo-button" type="button">音量</button>
+        <button id="btn-web-full" class="demo-button" type="button">网页全屏</button>
+        <button id="btn-full" class="demo-button" type="button">全屏</button>
+        <button id="btn-quality" class="demo-button" type="button">切清晰度</button>
+        <button id="btn-menu" class="demo-button" type="button">开右键菜单</button>
+        <button id="btn-info" class="demo-button" type="button">开 info</button>
+        <button id="btn-hotkey" class="demo-button" type="button">开快捷键</button>
+        <button id="btn-dm-setting" class="demo-button" type="button">开弹幕设置</button>
+      </div>
+    </section>
+
+    <section class="demo-panel">
+      <div class="demo-panel-header">
+        <h2>事件日志</h2>
+        <button id="btn-clear-log" class="demo-button" type="button">清空</button>
+      </div>
+      <ul id="log-list" class="demo-log-list"></ul>
+    </section>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

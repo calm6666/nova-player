@@ -6,16 +6,13 @@
  * 与弹幕(RowDm)和互动(InteractionLayer)采用相同的低耦合模式
  * 字幕插件将自身DOM注入到 .nova-player-subtitle-wrap 容器中
  *
- * 声明式响应式版本：字号/文字色/背景色/位置四组样式状态由内部
- * signal 驱动，容器 style 由派生对象经 __reactiveAttrs 增量更新
- * （prev 属性自动清除，等价于原命令式的 top=""/transform="" 清空）。
- *
- * 对外保留 setFontSize/setColor/setBackgroundColor/setPosition
- * 命令式 API 契约不变（PlayerDocker / VideoPlayer 经事件持有引用，
- * 零改动）；API 内部仅写 signal，不再触碰 DOM。
- *
- * 保留命令式的部分：onBeforeDestroy 清空插件注入的子节点
- * （容器子树由插件所有，非本组件渲染数据）。
+ * 职责划分（唯一定位 owner 是 SubtitlePlugin）：
+ * - 本组件：面板容器 + 字号/颜色 signal 样式（经 __reactiveAttrs 增量更新）
+ * - SubtitlePlugin.applyPosition：档位（panel data-position 属性）/
+ *   底部偏移（--subtitle-offset 变量）/ 拖拽（pointer 事件绑字幕文本
+ *   元素，拖动改文本元素 inline 定位）——控制栏抬升与全屏适配由
+ *   subtitlelayer.scss 以 .nova-player-container 属性选择器
+ *   （data-ctrl-hidden / data-screen）纯 CSS 派生，无 JS 参与
  */
 
 import { h, defineComponent, useTemplateRef, signal } from "@/core";
@@ -60,7 +57,7 @@ export const SubtitleLayer = defineComponent<SubtitleLayerProps>(
     );
 
     // ============================================
-    // 响应式状态（渲染层唯一数据源；
+    // 响应式状态（字号/颜色；
     // 初值 null 表示未设置，与原实现初始不写对应内联样式一致）
     // ============================================
 
@@ -72,9 +69,6 @@ export const SubtitleLayer = defineComponent<SubtitleLayerProps>(
 
     /** 字幕背景颜色，null 表示未设置 */
     const backgroundColorSig = signal<string | null>(null);
-
-    /** 字幕显示位置（初值 bottom，与原实现初始 bottom:10% 一致） */
-    const positionSig = signal<SubtitlePosition>("bottom");
 
     // ============================================
     // 样式控制方法（对外 API——内部仅写 signal）
@@ -105,11 +99,13 @@ export const SubtitleLayer = defineComponent<SubtitleLayerProps>(
     };
 
     /**
-     * 设置字幕位置
+     * 设置字幕位置档位：委托插件侧（唯一定位 owner）——
+     * 经事件总线转发到 SubtitlePlugin（其 applyPosition 写
+     * panel data-position 属性），本组件不写定位样式
      * @param position - 字幕位置（top / center / bottom）
      */
     const setPosition = (position: SubtitlePosition): void => {
-      positionSig.value = position;
+      lifecycle.emit?.("subtitlePositionChange", position);
     };
 
     // ============================================
@@ -142,19 +138,11 @@ export const SubtitleLayer = defineComponent<SubtitleLayerProps>(
     // ============================================
 
     /**
-     * 派生容器完整样式（渲染层唯一数据源）
-     * 读取各样式 signal + 定位 signal，由 __reactiveAttrs 的 effect 调用：
-     * 信号变化时增量更新（上次绑定属性集合自动清除，
-     * 等价于原命令式 setPosition 内 top=""/transform="" 的清空语义）
+     * 派生面板样式（仅字号/颜色；定位由插件侧 data-position 属性
+     * + CSS 变量驱动，见 subtitlelayer.scss）
      */
     const buildStyle = (): Record<string, string> => {
       const style: Record<string, string> = {
-        position: "absolute",
-        left: "0",
-        width: "100%",
-        textAlign: "center",
-        pointerEvents: "none",
-        zIndex: "15",
         display: props.visible === false ? "none" : "",
       };
       const fontSize = fontSizeSig.value;
@@ -163,26 +151,20 @@ export const SubtitleLayer = defineComponent<SubtitleLayerProps>(
       if (color !== null) style.color = color;
       const backgroundColor = backgroundColorSig.value;
       if (backgroundColor !== null) style.backgroundColor = backgroundColor;
-      switch (positionSig.value) {
-        case "top":
-          style.top = "10%";
-          break;
-        case "center":
-          style.top = "50%";
-          style.transform = "translateY(-50%)";
-          break;
-        case "bottom":
-          style.bottom = "10%";
-          break;
-      }
       return style;
     };
 
-    return h("div", {
-      class: "nova-player-subtitle-wrap",
-      ref: "subtitleWrapRef",
-      style: buildStyle(),
-    });
+    return h(
+      "div",
+      {
+        class: "nova-player-subtitle-wrap",
+        ref: "subtitleWrapRef",
+      },
+      h("div", {
+        class: "nova-subtitle-x-subtitle-panel",
+        style: buildStyle(),
+      }),
+    );
   },
 );
 

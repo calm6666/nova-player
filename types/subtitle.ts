@@ -173,6 +173,8 @@ export interface AsrEngineInitOptions {
   lang: string;
   /** 模型资源 base 路径（懒加载下载 + 缓存） */
   modelBasePath?: string;
+  /** wasm 运行时 base 路径（sherpa-onnx 等真实引擎的运行时资源目录） */
+  wasmBasePath?: string;
 }
 
 /** 流式识别部分结果（文本仍在变动，渲染层灰显展示） */
@@ -230,6 +232,11 @@ export interface LocalAiSubtitleProvider {
   stop(): void;
   /** cue 推送回调，由插件注入 */
   onCue?: (event: SubtitleCueEvent) => void;
+  /**
+   * 识别链状态回调（可选，由插件注入）：
+   * Worker 引擎异步加载模型，经此上报就绪/失败；主线程引擎无需调用
+   */
+  onStatus?: (phase: 'ready' | 'error', message?: string) => void;
 }
 
 /** 服务端字幕轨道描述（一次列表请求返回，设计文档 5.1） */
@@ -288,12 +295,20 @@ export interface SubtitleTrackInfo {
 export interface LocalAiSubtitleConfig {
   /** 自定义 Provider（可选；缺省时由插件用 engines 组装内部采集管线） */
   provider?: LocalAiSubtitleProvider;
+  /**
+   * Worker 引擎类型（可选；优先级低于 provider、高于 engines）：
+   * 传注册表 key（如 'sherpa' / 'mock'），重计算（VAD + 推理）全部在
+   * ASR 专用 Worker 内运行，主线程零阻塞；引擎在 Worker 内按需创建
+   */
+  engineKind?: string;
   /** 引擎实现（按语言挂引擎；识别语言缺引擎时回落 defaultLang 对应引擎） */
   engines?: Partial<Record<string, AsrEngine>>;
   /** 默认识别语言 */
   defaultLang: string;
   /** 模型资源 base 路径（懒加载下载 + 缓存，真实引擎接入时使用） */
   modelBasePath?: string;
+  /** wasm 运行时 base 路径（sherpa-onnx 等真实引擎的运行时资源目录） */
+  wasmBasePath?: string;
   /** 置信度阈值（低于丢弃，默认 0.35） */
   confidenceThreshold?: number;
   /** 单段最长秒数（默认 15，超限强制切段） */

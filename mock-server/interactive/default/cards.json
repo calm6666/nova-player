@@ -1,0 +1,49 @@
+{
+  "video": "default",
+  "playUrl": "http://127.0.0.1:9000/video/dash2/output-segmentbase.mpd",
+  "seed": 20261016,
+  "generatedBy": "tools/gen-interactive-cards.mjs",
+  "duration": 253.6,
+  "durationSource": "fetch http://127.0.0.1:9000/video/dash2/output-segmentbase.mpd",
+  "cards": [
+    {
+      "id": "default-c2",
+      "kind": "guide",
+      "avid": "default",
+      "top": 55,
+      "left": 73,
+      "timeStart": 76.5,
+      "timeEnd": 81.8,
+      "question": {
+        "title": "三连支持一下",
+        "options": [
+          {
+            "label": "A",
+            "text": "点赞投币收藏",
+            "targetNodeId": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "default-c3",
+      "kind": "link",
+      "avid": "default",
+      "top": 46,
+      "left": 24,
+      "timeStart": 177.1,
+      "timeEnd": 180.7,
+      "question": {
+        "title": "外链：名场面合集",
+        "options": [
+          {
+            "label": "A",
+            "text": "去看看",
+            "targetNodeId": ""
+          }
+        ]
+      },
+      "url": "https://www.bilibili.com/video/default"
+    }
+  ]
+}

@@ -33,6 +33,7 @@ import { useComponentUnmount } from "@/nova/core/componentUnmount";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
 import type { VNode } from "@/types";
+import type { PlayerPluginFlags } from "./PlayerDocker";
 import type { SubtitleTrackInfo } from "@/types/subtitle";
 import { PlayerStateKeyEnum, StateContext } from "@/store/runtimeState";
 
@@ -87,6 +88,14 @@ export interface SubtitleMenuProps {
   };
   /** 是否开启双语 */
   bilingual?: boolean;
+  /**
+   * 插件安装标志读取器（getter 形态，RightControls 透传）：
+   * 未装 subtitle 插件时按钮整体隐藏——根节点 style.display 的
+   * 响应式表达式内调用 getter，编译器包装 __reactiveAttrs 原位
+   * 更新，插件运行中装卸时自动显隐。未传（独立使用
+   * SubtitleMenu 的场景）保持显示
+   */
+  plugins?: () => PlayerPluginFlags;
 }
 
 export interface SubtitleMenuEvents {
@@ -503,12 +512,6 @@ export const SubtitleMenu = defineComponent<
     "subtitleSliderTrackRef",
   );
 
-  /** 滑条圆点（位移由 onEffect 命令式设置） */
-  const sliderThumbRef = useTemplateRef<HTMLDivElement>(
-    lifecycle,
-    "subtitleSliderThumbRef",
-  );
-
   /** 上方双语开关 input（display:none，与下方共用状态） */
   const bilingualAboveInputRef = useTemplateRef<HTMLInputElement>(
     lifecycle,
@@ -884,19 +887,12 @@ export const SubtitleMenu = defineComponent<
 
   /**
    * 刷新「背景不透明度」滑条圆点位置
-   * 圆点位移沿用参考 DOM 的实测公式：translateX(ratio × (轨道宽 - 圆点直径))
-   * （参考 DOM：ratio=0.87、轨道 226px、圆点 12px → 186.18px）
-   * 依赖 getBoundingClientRect 几何测量（声明式 style 无法读取布局尺寸），
-   * 保留命令式 onEffect；触发时机与原实现一致（挂载时 + opacity 变化时）
+   * 【已响应式化】原命令式实现依赖 getBoundingClientRect 测量轨道宽：
+   * 第二页初始隐藏（display:none）→ 挂载时测得宽 0 → 圆点 translateX(0)；
+   * 翻到第二页时 opacity 未变、effect 不重跑，圆点滞留最左侧（初始位置 bug）。
+   * 现改为圆点节点响应式 style 表达式（left: calc(ratio × (100% - 12px))），
+   * 与进度条 scaleX 同模式由编译器 __reactiveAttrs 原位更新，无测量无时序问题
    */
-  onEffect(lifecycle, () => {
-    const ratio = clamp(styleSig.value.opacity, 0, 1);
-    const track = sliderTrackRef.value;
-    const thumb = sliderThumbRef.value;
-    if (!track || !thumb) return;
-    const width = track.getBoundingClientRect().width;
-    thumb.style.transform = `translateX(${ratio * Math.max(width - THUMB_SIZE, 0)}px)`;
-  });
 
   // ============================================
   // 渲染片段
@@ -1259,6 +1255,13 @@ export const SubtitleMenu = defineComponent<
         "nova-player-ctrl-subtitle",
         { "state-show": showSig.value },
       ],
+      // 未装 subtitle 插件时整个按钮（含设置面板）不显示：
+      // style 表达式内调用 plugins getter，读取 signal.value 被
+      // 编译器包装为 __reactiveAttrs 原位更新，插件运行中装卸时
+      // 自动显隐；未传 plugins getter 时保持显示
+      style: {
+        display: (props.plugins?.().subtitle ?? true) ? "" : "none",
+      },
       role: "button",
       "aria-label": t("player.ui.subtitle.label"),
       tabindex: "0",
@@ -1717,8 +1720,18 @@ export const SubtitleMenu = defineComponent<
                               h(
                                 "div",
                                 {
-                                  class: "nova-player-ctrl-subtitle-slider-thumb",
-                                  ref: "subtitleSliderThumbRef",
+                                  class:
+                                    "nova-player-ctrl-subtitle-slider-thumb",
+                                  // 圆点位置：纯响应式 CSS 定位（等价原实测公式
+                                  // translateX(ratio × (轨道宽 - 12px))，
+                                  // left 百分比相对轨道宽、12px 为圆点直径）。
+                                  // style 表达式读 styleSig 依赖 →
+                                  // __reactiveAttrs 原位更新；不依赖几何测量，
+                                  // 第二页初始隐藏时也能按 opacity 正确定位，
+                                  // 翻页后位置始终正确
+                                  style: {
+                                    left: `calc(${clamp(styleSig.value.opacity, 0, 1)} * (100% - ${THUMB_SIZE}px))`,
+                                  },
                                 },
                                 h("div", {
                                   class:

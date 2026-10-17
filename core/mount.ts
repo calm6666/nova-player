@@ -735,12 +735,12 @@ function initFor(vnode: VNode, anchor: FlowAnchor): () => void {
         }
       }
 
-      // 3B.2 移动最小化：双向都有剩余时计算 LIS——
+      //      移动最小化：双向都有剩余时计算 LIS——
       //      处于 LIS 的复用节点保持 DOM 原位，其余复用节点才需要移动
       const stableSet =
         newCount > 0 ? computeLisIndices(oldIndexOfNew) : null;
 
-      // 3B.3 逆序遍历新中间区间：mount 新节点 / 移动非 LIS 的复用节点
+      //      逆序遍历新中间区间：mount 新节点 / 移动非 LIS 的复用节点
       //      逆序的必要性：处理位置 j 时，j+1（新列表下一个位置）必然
       //      已就位——要么是原位保留的尾部同步区，要么是本轮刚
       //      mount / 移动的节点，因此总能拿到有效的 insertBefore 参照；
@@ -761,12 +761,12 @@ function initFor(vnode: VNode, anchor: FlowAnchor): () => void {
           // 新 key：render → materialize → 生命周期 → 插入
           if (renderFn) {
             const item = items[newIndex];
-            // ★ untracked 隔离同上方 3A：renderFn 黑盒回调，掐断体内
+            // untracked 隔离同上方 3A：renderFn 黑盒回调，掐断体内
             // 裸 signal 读取挂成 flow effect 依赖导致整表 diff 重跑
             const childVNode = untracked(() => renderFn(item, newIndex));
             childVNode.__parent = vnode;
             const el = materialize(childVNode);
-            // ★ 就地补发生命周期（同 mountFlowChild：列表项不在静态树 children 递归范围）
+            // 就地补发生命周期（同 mountFlowChild：列表项不在静态树 children 递归范围）
             invokeLifecycle(childVNode, "onBeforeMount");
             parent.insertBefore(el, refEl);
             invokeLifecycle(childVNode, "onMounted");
@@ -824,7 +824,7 @@ function mountFlowChild(
   child.__parent = vnode;
   const el = materialize(child);
   /**
-   * ★ 就地补发生命周期（与 mount() 顺序一致）：
+   * 就地补发生命周期（与 mount() 顺序一致）：
    * 控制流子节点不在静态 VNode 树的 children 里（存于 __flow.children /
    * __flow.fallback），mount/hydrate 顶层的 invokeLifecycle 递归遍历
    * vnode.children 到达不了这里，必须在动态挂载点就地触发，否则：

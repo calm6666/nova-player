@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "rootDir": "../..", "types": ["node"] },
+  "include": [
+    "src/**/*",
+    "../../demo/live-player-demo/**/*",
+    "../../vite-env.d.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

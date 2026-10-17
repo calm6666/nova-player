@@ -42,6 +42,16 @@ const workerScope = self as unknown as WorkerScope;
 
 let segmenter: ImageSegmenter | null = null;
 let config: SegmentationConfig | null = null;
+/**
+ * 传给 MediaPipe 的内部单调时间戳（ms）
+ *
+ * VIDEO 运行模式要求每帧时间戳严格递增：输入的媒体时间（video.currentTime）
+ * 在暂停时重复、seek 时回退，直接传入会触发
+ * 「Packet timestamp mismatch」且计算图进入错误态（后续帧全部失败）。
+ * 故推理统一用内部计数器（尽量贴合媒体毫秒时间，冲突时 +1），
+ * 回传结果仍带原始媒体时间（客户端过期判定用）
+ */
+let lastGraphTs = 0;
 
 function post(message: SegmentationWorkerResponse): void {
   workerScope.postMessage(message);
@@ -316,6 +326,11 @@ async function handleSegment(
 
   const started = performance.now();
   try {
+    // 推理时间戳：严格单调递增（暂停/seek 时媒体时间重复或回退，
+    // 直接传 MediaPipe 会报 timestamp mismatch 并使图进入错误态）
+    let graphTs = Math.round(timestamp * 1000);
+    if (graphTs <= lastGraphTs) graphTs = lastGraphTs + 1;
+    lastGraphTs = graphTs;
     // 先算遮罩目标尺寸（按视频宽高比）
     const aspect = region.w / region.h;
     let outW: number;
@@ -329,7 +344,7 @@ async function handleSegment(
     }
 
     // 分割推理（置信度 mask；二分类 1 个，多分类 6 个，除背景外相加 = 人物）
-    const result = segmenter.segmentForVideo(bitmap, timestamp);
+    const result = segmenter.segmentForVideo(bitmap, graphTs);
     const masks = result.confidenceMasks ?? [];
 
     let image = '';

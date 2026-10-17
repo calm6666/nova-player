@@ -152,6 +152,68 @@ export class HlsPlugin implements StreamPlugin {
   /** 当前流媒体配置 */
   private config: StreamConfig | null = null;
 
+  /**
+   * 视频编码偏好（0 默认 / 1 HEVC / 2 AVC / 3 AV1）
+   * 设置面板「编码格式」→ VideoPlayer.setCodecPrefer → 此处；
+   * 实例未创建时仅暂存，load() 创建实例后统一应用到起播选流
+   */
+  private codecPreferenceType = 0;
+
+  /**
+   * 设置视频编码偏好（StreamPlugin 可选能力的 HLS 实现）
+   *
+   * 真实生效链路：偏好写入 hls.js config.videoPreference.videoCodec，
+   * ABR 起播选流（getStartCodecTier）按 fourCC 匹配优先选择对应
+   * 编码的流；已在播时软重载（回到当前位置继续播放）触发 ABR
+   * 状态重置（MANIFEST_LOADING → codecTiers/firstSelection 清空），
+   * 让新偏好立即生效——不重载则仅对下次清单加载生效（起播
+   * tier 选择已缓存不会重跑）
+   * @param type - 编码偏好：0 默认（清除偏好）/ 1 HEVC / 2 AVC / 3 AV1
+   */
+  setCodecPreference(type: number): void {
+    this.codecPreferenceType = type;
+    this.applyVideoCodecPreference();
+
+    // 已在播的 URL 流：软重载让 ABR 按新偏好重新起播选流
+    if (
+      this.hlsPlayer &&
+      this.config &&
+      typeof this.config.url === 'string' &&
+      this.videoElement &&
+      this.videoElement.currentTime > 0 &&
+      !this.videoElement.ended
+    ) {
+      const resumeTime = this.videoElement.currentTime;
+      const wasPaused = this.videoElement.paused;
+      this.load({ ...this.config, startTime: resumeTime });
+      if (!wasPaused) {
+        void this.play();
+      }
+    }
+  }
+
+  /**
+   * 把编码偏好应用到 hls.js 实例配置（0 = 清除偏好）
+   *
+   * fourCC 约定与 hls.js rendition 匹配规则对齐：
+   * HEVC → 'hvc1'、AVC → 'avc1'、AV1 → 'av01'；
+   * 清单无匹配流时 hls.js 自动回退默认选择（优雅降级）
+   */
+  private applyVideoCodecPreference(): void {
+    if (!this.hlsPlayer) return;
+    const preference = { ...(this.hlsPlayer.config.videoPreference ?? {}) };
+    if (this.codecPreferenceType === 1) {
+      preference.videoCodec = 'hvc1';
+    } else if (this.codecPreferenceType === 2) {
+      preference.videoCodec = 'avc1';
+    } else if (this.codecPreferenceType === 3) {
+      preference.videoCodec = 'av01';
+    } else {
+      delete preference.videoCodec;
+    }
+    this.hlsPlayer.config.videoPreference = preference;
+  }
+
   /** 插件自定义配置 */
   private pluginConfig: HlsPluginConfig;
 
@@ -373,6 +435,9 @@ export class HlsPlugin implements StreamPlugin {
         });
         this.hlsAutoStartLoad = true;
 
+        // 应用编码偏好（实例就绪，在起播选流前写入 videoPreference）
+        this.applyVideoCodecPreference();
+
         // 2. 绑定视频元素
         this.hlsPlayer.attachMedia(this.videoElement);
 
@@ -409,6 +474,9 @@ export class HlsPlugin implements StreamPlugin {
           fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
         });
         this.hlsAutoStartLoad = false;
+
+        // 应用编码偏好（实例就绪，在起播选流前写入 videoPreference）
+        this.applyVideoCodecPreference();
 
         // 2. 绑定视频元素
         this.hlsPlayer.attachMedia(this.videoElement);
@@ -470,6 +538,9 @@ export class HlsPlugin implements StreamPlugin {
           fragLoadingTimeOut: this.pluginConfig.fragLoadingTimeOut,
         });
         this.hlsAutoStartLoad = false;
+
+        // 应用编码偏好（实例就绪，在起播选流前写入 videoPreference）
+        this.applyVideoCodecPreference();
 
         // 2. 绑定视频元素
         this.hlsPlayer.attachMedia(this.videoElement);

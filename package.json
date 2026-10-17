@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "demo:live": "vite --config demo/live-player-demo/vite.config.ts",
     "preview": "vite preview",
-    "build": "cd packages/player && pnpm build && cd ../plugins && pnpm build",
+    "build": "cd packages/player && pnpm build && cd ../plugins && pnpm build && cd ../live-player && pnpm build",
     "build:player": "cd packages/player && pnpm build",
     "build:plugins": "cd packages/plugins && pnpm build",
+    "build:live": "cd packages/live-player && pnpm build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

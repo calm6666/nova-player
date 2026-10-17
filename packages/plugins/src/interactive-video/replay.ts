@@ -8,11 +8,6 @@
  *
  * 响应式写法：visible 信号驱动 display 表达式显隐，
  * 文案经 t() 本地化（主类传入已解析字符串，避免组件内重复调用）。
- *
- * 结构：
- * .nova-player-interaction-replay（visible 信号驱动显隐）
- *   ├─ .nova-player-interaction-replay-icon > svg
- *   └─ span（文案）
  */
 
 import { h } from "@/core";

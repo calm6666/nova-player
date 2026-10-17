@@ -64,6 +64,7 @@ export {
   _createSvgEl,
   _createFragment,
   _createComp,
+  _createCompPure,
   _cloneHoisted,
   _reactiveText,
   _reactiveTemplate,

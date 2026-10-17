@@ -28,6 +28,7 @@ import {
   destroy,
   createTypedStateManager,
   createTypedEventBus,
+  signal,
 } from "@/core";
 import type { TypedStateManager, TypedEventBus } from "@/core";
 import type { Plugin } from "@/nova/core/plugin";
@@ -61,6 +62,7 @@ import type { Signal } from "@/core/signalsCore";
 import { EventEmitter, fullscreen, pip, clamp } from "../utils";
 import type { DanmakuListProvider } from "@/types/danmaku";
 import { PlayerDocker } from "@/nova/components/PlayerDocker";
+import type { PlayerPluginFlags } from "@/nova/components/PlayerDocker";
 import { StreamMiddleware, PlayerMode } from "../utils/media/streamMiddleware";
 import { detectManifestProtocol } from "../utils/media/manifestProtocol";
 import { StreamFormatEnum } from "@/types/streamPlugin";
@@ -116,6 +118,17 @@ function isAutoplayBlocked(error: unknown): boolean {
 }
 
 /**
+ * 判断流媒体插件上报的错误是否为网络类（hls.js fatal data.type 为
+ * 'networkError'，dash/flv 的错误对象带有同类 type 字段）
+ * 网络类错误按 code=2 上报，错误面板据此显示本地网络排查提示
+ */
+function isNetworkStreamError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  if (!("type" in error)) return false;
+  return String(error.type).includes("network");
+}
+
+/**
  * 清晰度能力类型
  * - none：无多档能力（单档 MP4 / FLV）
  * - static：静态多档（MP4 多变体，框架换 src）
@@ -150,8 +163,13 @@ const LOAD_METADATA_TIMEOUT_MS = 10000;
  */
 interface PlayerDockerMountedElements {
   container: HTMLElement;
+  /** 视频区域（比例计算的尺寸基准，B 站式画面比例需要） */
+  videoArea: HTMLElement;
+  /** 视频包裹层（B 站式画面比例的宽度作用目标） */
+  videoWrap: HTMLElement;
   video: HTMLVideoElement;
-  sendingArea: HTMLElement;
+  /** 弹幕发送区（未装 danmaku 插件时不渲染，为 null） */
+  sendingArea: HTMLElement | null;
 }
 
 /**
@@ -232,6 +250,21 @@ export class VideoPlayer
   /** 播放器容器元素 */
   private containerEl: HTMLElement | null = null;
 
+  /** 视频区域（B 站式画面比例的尺寸基准） */
+  private videoAreaEl: HTMLElement | null = null;
+
+  /** 视频包裹层（B 站式画面比例的宽度作用目标） */
+  private videoWrapEl: HTMLElement | null = null;
+
+  /** 当前画面比例（"0:0" 自适应 | "4:3" | "16:9"） */
+  private aspectRatio = "0:0";
+
+  /** 画面比例随容器尺寸重算的观察器（B 站式：wrap 宽度百分比需跟随容器变化） */
+  private aspectResizeObserver: ResizeObserver | null = null;
+
+  /** 语言切换退订函数（data-locale 标识随语言响应式更新） */
+  private localeUnsubscribe: (() => void) | null = null;
+
   /** 事件发射器（内部使用，向后兼容 on/off） */
   private emitter = new EventEmitter<PlayerEvents>();
 
@@ -276,6 +309,24 @@ export class VideoPlayer
   /** 插件管理器 */
   private pluginManager: PluginManager | null = null;
 
+  /**
+   * 插件安装标志信号（UI 按需渲染的响应式数据源）
+   *
+   * use / uninstallPlugin 时同步更新，render() 作为 plugins prop 传给
+   * PlayerDocker：弹幕层 / 字幕层 / 交互层 / 互动视频层 / 弹幕发送栏 /
+   * 控制栏字幕入口经 Show 控制流按标志条件挂载——未装插件的 DOM
+   * 完全不进入文档流。effect 同步刷新保证后装插件时（demo 运行期
+   * player.use 场景）信号更新即完成 DOM 挂载，install 内就地初始化
+   * 能找到容器
+   */
+  private pluginFlags: Signal<PlayerPluginFlags> = signal<PlayerPluginFlags>({
+    danmaku: false,
+    subtitle: false,
+    interaction: false,
+    interactiveVideo: false,
+    audioEffect: false,
+  });
+
   /** 流媒体中间件：统一管理 Native 与 Streaming 两种模式 */
   streamMiddleware: StreamMiddleware | null = null;
 
@@ -287,6 +338,21 @@ export class VideoPlayer
 
   /** 字幕轨道列表变化（SUBTITLE_TRACKS_CHANGE）的订阅取消函数 */
   private unsubscribeSubtitleTracks: (() => void) | null = null;
+
+  /** 流媒体致命错误（STREAM_ERROR）的订阅取消函数 */
+  private unsubscribeStreamError: (() => void) | null = null;
+
+  /** 加载超时守卫定时器（loadstart 后长时间无元数据判定加载失败） */
+  private loadGuardTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** 缓冲超时守卫定时器（waiting 后长时间未恢复判定网络异常） */
+  private bufferGuardTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** 初始加载超时阈值（毫秒）：loadstart 后无 loadedmetadata 判定失败 */
+  private static readonly LOAD_TIMEOUT_MS = 20000;
+
+  /** 缓冲恢复超时阈值（毫秒）：waiting 后未恢复判定网络异常 */
+  private static readonly BUFFER_TIMEOUT_MS = 12000;
 
   /** 事件桥接订阅的取消函数集合（bus → emitter 单向转发，destroy 时统一清理） */
   private bridgeUnsubscribes: Array<() => void> = [];
@@ -397,22 +463,67 @@ export class VideoPlayer
 
     const persistentState = this.store.getPersistentState();
     const playback = this.props.playback ?? {};
-    /** 只在用户未显式指定时用持久化偏好覆盖；构造新对象避免污染共享默认值 */
+    /**
+     * 「持久化优先」合并：localStorage 存在已保存的 profile 时，
+     * 音量 / 静音 / 倍速一律以持久化值为准；外部传入的 playback
+     * 配置仅作为无持久化数据（首次使用）时的默认值兜底。
+     * 构造新对象避免污染共享默认值。
+     * 【修复记录】原实现比较 `playback.volume === defaultConfig.playback?.volume`，
+     * 用户未传时 undefined !== 1 恒不成立 → 持久化值被跳过（音量不持久化的根因）
+     */
+    const persisted = this.store.hasPersistedData();
     this.props.playback = {
       ...playback,
-      volume:
-        playback.volume === defaultConfig.playback?.volume
-          ? persistentState.volume
-          : playback.volume,
-      muted:
-        playback.muted === defaultConfig.playback?.muted
-          ? persistentState.isMuted
-          : playback.muted,
-      playbackRate:
-        playback.playbackRate === defaultConfig.playback?.playbackRate
-          ? persistentState.playbackRate
-          : playback.playbackRate,
+      volume: persisted
+        ? persistentState.volume
+        : (playback.volume ?? persistentState.volume),
+      muted: persisted
+        ? persistentState.isMuted
+        : (playback.muted ?? persistentState.isMuted),
+      playbackRate: persisted
+        ? persistentState.playbackRate
+        : (playback.playbackRate ?? persistentState.playbackRate),
+      // 设置面板开关（镜像/循环/自动开播/播完暂停）——同样持久化优先；
+      // 关灯不持久化（即时氛围功能），画中画是浏览器会话态亦不持久化；
+      // 注意映射：「自动开播」面板项写 playback.autoplay（setAutostart 的落点）
+      mirror: persisted
+        ? persistentState.settings.mirror
+        : (playback.mirror ?? persistentState.settings.mirror),
+      loop: persisted
+        ? persistentState.settings.loop
+        : (playback.loop ?? persistentState.settings.loop),
+      autoplay: persisted
+        ? persistentState.settings.autostart
+        : (playback.autoplay ?? persistentState.settings.autostart),
+      pauseAfterEnd: persisted
+        ? persistentState.settings.pauseAfterEnd
+        : (playback.pauseAfterEnd ?? persistentState.settings.pauseAfterEnd),
     };
+
+    /**
+     * 字幕样式持久化优先合并：恢复的 patch 并入 subtitle 配置的 style
+     * 字段——字幕菜单初值快照（props.style）与字幕插件共享同一来源，
+     * 刷新后菜单直接显示上次设置
+     */
+    if (persisted) {
+      const persistedStyle = persistentState.subtitleStyle;
+      if (Object.keys(persistedStyle).length > 0) {
+        const subtitle = this.props.subtitle ?? {};
+        const mergedStyle = {
+          ...(subtitle.style ?? {}),
+          ...persistedStyle,
+        };
+        // 旧版本 bottomOffset 基准过大（60px，控制栏抬升改由 CSS 负责），
+        // 收敛到 20px 内，避免恢复后字幕明显偏高
+        if (
+          typeof mergedStyle.bottomOffset === "number" &&
+          mergedStyle.bottomOffset > 20
+        ) {
+          mergedStyle.bottomOffset = 12;
+        }
+        this.props.subtitle = { ...subtitle, style: mergedStyle };
+      }
+    }
 
     /**
      * 初始化运行时状态管理器（状态路径与 PlayerStateKeyEnum 一致）
@@ -453,12 +564,93 @@ export class VideoPlayer
         qualitySwitchState: "idle",
         playlistIndex: this.currentIndex,
         playlistLength: this.playlist.length,
+        /** 编码偏好：持久化读回（下次加载即上次设置），面板单选经此状态同步 */
+        codecPreferType: this.store.getPersistentState().codecPreferType,
+        /**
+         * 设置面板开关：持久化值读回（playback 已在上方「持久化优先」
+         * 合并完成），面板 Switch 经运行时状态受控回显；
+         * 关灯不持久化（即时氛围功能），恒为 false（默认开灯）
+         */
+        mirror: playbackInit.mirror ?? false,
+        loop: playbackInit.loop ?? false,
+        autostart: playbackInit.autoplay ?? false,
+        lightoff: false,
+        pauseAfterEnd: playbackInit.pauseAfterEnd ?? false,
       },
       video: {
         width: 0,
         height: 0,
-        aspectRatio: 0,
+        // 画面比例默认自适应（"0:0"），持久化值经 MOUNTED setAspectRatio 恢复
+        aspectRatio: "0:0",
       },
+    });
+
+    /**
+     * 弹幕设置 / 高能进度条「持久化优先」恢复：
+     * 持久化值写回运行时状态键——DanmakuPlugin 安装时先读当前状态再
+     * 订阅（subscribeStateKeys），恢复值随安装直达引擎；DmSetting
+     * 打开时也读当前状态回显，两处 UI 一致
+     */
+    if (persisted) {
+      const danmakuSaved = persistentState.danmakuSettings;
+      this.state.set(PlayerStateKeyEnum.DANMAKU_VISIBLE, danmakuSaved.visible);
+      this.state.set(PlayerStateKeyEnum.DANMAKU_OPACITY, danmakuSaved.opacity);
+      this.state.set(PlayerStateKeyEnum.DANMAKU_SPEED, danmakuSaved.speed);
+      this.state.set(PlayerStateKeyEnum.DANMAKU_AREA, danmakuSaved.area);
+      this.state.set(
+        PlayerStateKeyEnum.DANMAKU_FONT_SIZE,
+        danmakuSaved.fontSize,
+      );
+      this.state.set(
+        PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN,
+        danmakuSaved.scaleWithScreen,
+      );
+      // 智能防挡：持久化读回（插件安装时读当前状态直达引擎）
+      this.state.set(
+        PlayerStateKeyEnum.DANMAKU_MASK_ENABLED,
+        danmakuSaved.maskEnabled,
+      );
+      // 高能进度条：渲染开关（pbpState 0/1）/ 常驻图钉（pbpPin 0/1）
+      this.state.set(
+        PlayerStateKeyEnum.PBP_RENDERED,
+        persistentState.pbpState === 1,
+      );
+      this.state.set(
+        PlayerStateKeyEnum.PBP_PERMANENT,
+        persistentState.pbpPin === 1,
+      );
+    }
+
+    /**
+     * 持久化写回订阅：弹幕面板 / 高能进度条开关由 UI 直写运行时状态键，
+     * 在此统一订阅落库——任何入口（面板 / API / 复位）都覆盖
+     */
+    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_VISIBLE, (value) => {
+      this.store.updateDanmakuSettings({ visible: value });
+    });
+    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_OPACITY, (value) => {
+      this.store.updateDanmakuSettings({ opacity: value });
+    });
+    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_SPEED, (value) => {
+      this.store.updateDanmakuSettings({ speed: value });
+    });
+    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_AREA, (value) => {
+      this.store.updateDanmakuSettings({ area: value });
+    });
+    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_FONT_SIZE, (value) => {
+      this.store.updateDanmakuSettings({ fontSize: value });
+    });
+    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN, (value) => {
+      this.store.updateDanmakuSettings({ scaleWithScreen: value });
+    });
+    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED, (value) => {
+      this.store.updateDanmakuSettings({ maskEnabled: value });
+    });
+    this.state.subscribe(PlayerStateKeyEnum.PBP_RENDERED, (value) => {
+      this.store.setPbpState(value ? 1 : 0);
+    });
+    this.state.subscribe(PlayerStateKeyEnum.PBP_PERMANENT, (value) => {
+      this.store.setPbpPin(value ? 1 : 0);
     });
 
     /**
@@ -482,11 +674,14 @@ export class VideoPlayer
     /** 初始化配置中心（后续 setConfig 会整体替换并通知订阅者） */
     this.configStore = createConfigStore(this.props);
 
-    /** 存储用户回调函数（必须在 restorePersistedPlayback 之前：后者会经 setPlaybackRate 触发 ratechange） */
+    /** 存储用户回调函数 */
     this.callbacks = this.props.callbacks ?? {};
 
-    /** 持久化偏好读回并应用（音量 / 静音 / 倍速，仅用户未显式配置时生效） */
-    this.restorePersistedPlayback();
+    /**
+     * 持久化偏好已在构造期「持久化优先」合并进 props.playback 与运行时状态；
+     * 媒体元素同步移至 MOUNTED 回调（applyPlaybackToMedia，
+     * 此时 videoEl 才存在，见方法注释）
+     */
 
     /** 初始化插件管理器 */
     this.pluginManager = new PluginManager(this);
@@ -507,6 +702,12 @@ export class VideoPlayer
     this.unsubscribeSubtitleTracks = this.events.on(
       PlayerEventEnum.SUBTITLE_TRACKS_CHANGE,
       (payload) => this.handleSubtitleTracksChange(payload),
+    );
+
+    /** 监听流媒体插件上报的致命错误（HLS/FLV/DASH fatal），统一收敛到错误面板 */
+    this.unsubscribeStreamError = this.events.on(
+      PlayerEventEnum.STREAM_ERROR,
+      (payload) => this.handleStreamError(payload),
     );
 
     /** 检测浏览器能力 */
@@ -689,26 +890,31 @@ export class VideoPlayer
   }
 
   /**
-   * 读回并应用持久化的音量 / 静音 / 倍速
+   * 把已合并的播放偏好（音量 / 静音 / 倍速）应用到 video 元素
    *
-   * 应用顺序与既有实现一致：构造期读取 → setVolume / setMuted / setPlaybackRate。
-   * 仅在用户未显式配置对应项时生效（与构造期 store 持久化的语义一致）。
+   * 【修复记录】原 restorePersistedPlayback 从 localStorage 裸 key
+   * （getStorage("volume") 等）读取——那是改名前的旧机制，store 现在
+   * 写入 nova_player_profile JSON，裸 key 永远读不到值（恒 no-op），
+   * 且构造期 setVolume 时 videoEl 尚为 null（只写 state 不写媒体），
+   * 挂载后又无人同步 → 实际音量永远是 video 元素默认值 1。
+   *
+   * 现改为 MOUNTED 回调中调用：构造期「持久化优先」合并已把最终值
+   * 写入运行时状态（state.player.*），挂载后在此统一应用到 media
+   * 元素（媒体元素属性操作属约束允许的命令式场景），冗余事件不再发
    */
-  private restorePersistedPlayback(): void {
-    const playback = this.props.playback ?? {};
-    if (playback.volume === defaultConfig.playback?.volume) {
-      const savedVolume = getStorage<number>("volume", Number.NaN);
-      if (!Number.isNaN(savedVolume)) this.setVolume(savedVolume);
+  private applyPlaybackToMedia(): void {
+    if (!this.videoEl) return;
+    const volume = this.state.get(PlayerStateKeyEnum.VOLUME);
+    if (typeof volume === "number") {
+      this.videoEl.volume = clamp(volume, 0, 1);
     }
-    if (playback.muted === defaultConfig.playback?.muted) {
-      const savedMuted = getStorage<boolean | null>("muted", null);
-      if (savedMuted !== null) this.setMuted(savedMuted);
+    const muted = this.state.get(PlayerStateKeyEnum.MUTED);
+    if (typeof muted === "boolean") {
+      this.videoEl.muted = muted;
     }
-    if (playback.playbackRate === defaultConfig.playback?.playbackRate) {
-      const savedRate = getStorage<number>("playbackRate", Number.NaN);
-      if (!Number.isNaN(savedRate) && savedRate > 0) {
-        this.setPlaybackRate(savedRate);
-      }
+    const rate = this.state.get(PlayerStateKeyEnum.PLAYBACK_RATE);
+    if (typeof rate === "number" && rate > 0) {
+      this.videoEl.playbackRate = rate;
     }
   }
 
@@ -910,6 +1116,13 @@ export class VideoPlayer
         mode: this.getQualityMode(),
       },
       events: this.events,
+      /**
+       * 插件安装标志读取器：UI 按需渲染的数据源（未装插件的图层
+       * 不挂载）。getter 形态传入——普通函数不触发 props 代理的
+       * Signal 解包，透传链全程拿到函数本体，effect 内调用读取
+       * signal.value 自动建立依赖
+       */
+      plugins: (): PlayerPluginFlags => this.pluginFlags.value,
       /** 缓冲速度数据源（字节/秒）：流媒体插件统计优先，原生由 PlayerDocker 回退采样 */
       getStreamDownloadSpeed: () => this.getStreamDownloadSpeed(),
       /**
@@ -967,7 +1180,10 @@ export class VideoPlayer
         scale?: boolean;
         fade?: boolean;
       }) => {
-        // 样式项直接下发给字幕插件（有对应能力才调用，未接入的项忽略）
+        // 样式项全部下发给字幕插件真实生效：
+        // - 字号：面板为比例档位（0.6-1.6），映射为绝对 px（基准 24）
+        // - 位置：position=档位（上/下），offset=-1/0/1 为水平 左/中/右
+        // - opacity=背景不透明度，scale=等比缩放（cqh），fade=淡入淡出
         // getPluginAPI 的泛型受 Plugin 约束，这里取回实例后按所需能力做结构化断言
         const api = this.getPluginAPI("subtitle") as
           | {
@@ -977,17 +1193,26 @@ export class VideoPlayer
                 position?: "top" | "bottom",
                 offset?: number,
               ) => void;
+              setAlign?: (align: number) => void;
               setStroke?: (color?: string, width?: number) => void;
-              setStyle?: (style: Record<string, unknown>) => void;
+              setBackgroundOpacity?: (opacity: number) => void;
+              setScale?: (scale: boolean) => void;
+              setFade?: (fade: boolean) => void;
             }
           | undefined;
         if (!api) return;
-        if (patch.fontSize !== undefined) api.setFontSize?.(patch.fontSize);
+        if (patch.fontSize !== undefined) {
+          api.setFontSize?.(Math.round(24 * patch.fontSize));
+        }
         if (patch.color !== undefined && patch.strokeColor === undefined) {
           api.setColor?.(patch.color);
         }
-        if (patch.position !== undefined || patch.offset !== undefined) {
-          api.setPosition?.(patch.position, patch.offset);
+        // 位置档位（上/下）与水平对齐（左/中/右）分开发
+        if (patch.position !== undefined) {
+          api.setPosition?.(patch.position);
+        }
+        if (patch.offset !== undefined) {
+          api.setAlign?.(patch.offset);
         }
         if (
           patch.strokeColor !== undefined ||
@@ -995,11 +1220,38 @@ export class VideoPlayer
         ) {
           api.setStroke?.(patch.strokeColor, patch.strokeWidth);
         }
-        const rest: Record<string, unknown> = {};
-        if (patch.opacity !== undefined) rest.opacity = patch.opacity;
-        if (patch.scale !== undefined) rest.scale = patch.scale;
-        if (patch.fade !== undefined) rest.fade = patch.fade;
-        if (Object.keys(rest).length > 0) api.setStyle?.(rest);
+        if (patch.opacity !== undefined) {
+          api.setBackgroundOpacity?.(patch.opacity);
+        }
+        if (patch.scale !== undefined) {
+          api.setScale?.(patch.scale);
+        }
+        if (patch.fade !== undefined) {
+          api.setFade?.(patch.fade);
+        }
+        // 持久化（语义化字段）：字号存换算后的 px，颜色/描边存字面量；
+        // 位置/开关类（opacity/scale/fade/align）为即时偏好不落库
+        const persistPatch: {
+          fontSize?: number;
+          primaryColor?: string;
+          outlineColor?: string;
+          outlineWidth?: number;
+        } = {};
+        if (patch.fontSize !== undefined) {
+          persistPatch.fontSize = Math.round(24 * patch.fontSize);
+        }
+        if (patch.color !== undefined) {
+          persistPatch.primaryColor = patch.color;
+        }
+        if (patch.strokeColor !== undefined) {
+          persistPatch.outlineColor = patch.strokeColor;
+        }
+        if (patch.strokeWidth !== undefined) {
+          persistPatch.outlineWidth = patch.strokeWidth;
+        }
+        if (Object.keys(persistPatch).length > 0) {
+          this.store.updateSubtitleStyle(persistPatch);
+        }
       },
       onBilingualChange: (enabled: boolean) => {
         // 双语字幕：转发到事件总线，由字幕插件自行处理（无对应能力时仅广播）
@@ -1053,20 +1305,83 @@ export class VideoPlayer
         // 保存 DOM 引用
         this.videoEl = elements.video;
         this.containerEl = elements.container;
+        this.videoAreaEl = elements.videoArea;
+        this.videoWrapEl = elements.videoWrap;
         this.el = elements.container;
 
         if (this.containerEl) {
           playerInstanceMap.set(this.containerEl, this);
         }
 
+        /**
+         * i18n 标识：nova-player-container 加 data-locale 属性，
+         * 随语言切换响应式更新（初始写一次 + 订阅变更）
+         */
+        const localeTarget = this.videoEl?.closest(".nova-player-container");
+        if (localeTarget instanceof HTMLElement) {
+          localeTarget.dataset.locale = getLocale();
+          this.localeUnsubscribe = subscribeLocale((locale) => {
+            localeTarget.dataset.locale = locale;
+          });
+        }
+
         // 创建流媒体中间件并注册插件
         this.setupStreamMiddleware();
+
+        /**
+         * 起播前应用持久化编码偏好：流媒体插件实例创建/清单加载时
+         * 即按偏好起播选流（HLS videoPreference 起播 tier），
+         * 而非加载完成后回切
+         */
+        this.streamMiddleware?.setCodecPreference(
+          this.store.getPersistentState().codecPreferType,
+        );
 
         // 接通清晰度链路
         this.setupQualityPipeline();
 
         // 绑定视频事件
         this.bindVideoEvents();
+
+        // 应用已合并的播放偏好到媒体元素（音量/静音/倍速，持久化优先合并的最终值）
+        this.applyPlaybackToMedia();
+
+        /**
+         * 恢复画面比例 / 镜像 / 循环（持久化优先）：
+         * 需要挂载后的视频元素才能应用，故在 MOUNTED 回调恢复
+         * （此 props.playback 已在构造期完成持久化优先合并）。
+         * 关灯模式不持久化（即时氛围功能），刷新后默认开灯，不在此恢复
+         */
+        if (this.store.hasPersistedData()) {
+          const saved = this.store.getPersistentState();
+          if (saved.aspect && saved.aspect !== "0:0") {
+            this.setAspectRatio(saved.aspect);
+          }
+        }
+        if (this.videoEl) {
+          this.videoEl.loop = this.props.playback?.loop ?? false;
+          if (this.props.playback?.mirror) {
+            this.videoEl.style.transform = "scaleX(-1)";
+          }
+        }
+
+        /**
+         * B 站式画面比例的动态重算：
+         * 1. ResizeObserver——容器尺寸变化时重算 wrap 宽度百分比
+         * 2. loadedmetadata 一次性——自适应模式需要视频原生宽高比，
+         *    metadata 就绪后才有（在此之前按 contain 兜底不变形）
+         */
+        if (this.videoAreaEl && this.videoEl) {
+          this.aspectResizeObserver = new ResizeObserver(() => {
+            this.applyAspectRatio();
+          });
+          this.aspectResizeObserver.observe(this.videoAreaEl);
+          this.videoEl.addEventListener(
+            "loadedmetadata",
+            () => this.applyAspectRatio(),
+            { once: true },
+          );
+        }
 
         // 触发 ready 事件（经总线桥接转发到 emitter）
         this.events.emit(PlayerEventEnum.READY);
@@ -1076,27 +1391,107 @@ export class VideoPlayer
           this.events.emit(PlayerEventEnum.STATE_CHANGE, currentState);
         }
 
-        // 触发插件挂载事件
+        // 触发插件挂载事件（sendingArea 兼容 undefined 契约：未装弹幕插件时为 null）
         this.events.emit("player:mounted", {
           container: this.containerEl,
           video: this.videoEl,
-          sendingArea: elements.sendingArea,
+          sendingArea: elements.sendingArea ?? undefined,
         });
         this.events.emit(PlayerEventEnum.MOUNTED, {
           container: this.containerEl,
           video: this.videoEl,
-          sendingArea: elements.sendingArea,
+          sendingArea: elements.sendingArea ?? undefined,
         });
 
-        // 恢复音量均衡偏好：配置/持久化里的非零 loudness 在挂载后广播一次，
-        // 音效插件（MOUNTED 回调内已完成音效链构建）据此激活压缩器，
-        // 保证刷新/重建后面板设置与实际音频链路状态一致
-        const initialLoudness = this.props.playback?.loudness ?? 0;
+        /**
+         * 恢复音量均衡偏好（持久化优先）：音效插件（MOUNTED 回调内
+         * 已完成音效链构建）据此激活压缩器，保证刷新/重建后面板
+         * 设置与实际音频链路状态一致
+         */
+        const initialLoudness = this.store.hasPersistedData()
+          ? this.store.getPersistentState().loudness
+          : (this.props.playback?.loudness ?? 0);
         if (initialLoudness !== 0) {
           this.events.emit(PlayerEventEnum.AUDIO_EFFECT_CHANGE, {
             effect: 'loudness',
             mode: initialLoudness,
           });
+        }
+
+        /**
+         * 恢复持久化字幕样式（构造期「持久化优先」合并已把最终值
+         * 写入 props.subtitle.style，此处落到字幕插件 API——语义化字段
+         * 与插件 setStyle/.setPosition 一一对应；插件在字幕层挂载完成
+         * 后统一 applyStyles，此处先写配置即可）
+         */
+        const persistedSubtitleStyle: Record<string, unknown> | undefined =
+          this.props.subtitle?.style;
+        if (
+          persistedSubtitleStyle &&
+          Object.keys(persistedSubtitleStyle).length > 0
+        ) {
+          const api = this.getPluginAPI("subtitle") as
+            | {
+                setStyle?: (style: {
+                  fontName?: string;
+                  fontSize?: number;
+                  primaryColor?: string;
+                  outlineColor?: string;
+                  outlineWidth?: number;
+                  bold?: boolean;
+                }) => void;
+                setPosition?: (
+                  position?: "top" | "bottom",
+                  offset?: number,
+                ) => void;
+              }
+            | undefined;
+          /** 类型守卫读取（style 为 Record<string, unknown>） */
+          const readString = (key: string): string | undefined => {
+            const value = persistedSubtitleStyle[key];
+            return typeof value === "string" ? value : undefined;
+          };
+          const readNumber = (key: string): number | undefined => {
+            const value = persistedSubtitleStyle[key];
+            return typeof value === "number" ? value : undefined;
+          };
+          const readBoolean = (key: string): boolean | undefined => {
+            const value = persistedSubtitleStyle[key];
+            return typeof value === "boolean" ? value : undefined;
+          };
+          const stylePatch: {
+            fontName?: string;
+            fontSize?: number;
+            primaryColor?: string;
+            outlineColor?: string;
+            outlineWidth?: number;
+            bold?: boolean;
+          } = {};
+          const fontName = readString("fontName");
+          if (fontName !== undefined) stylePatch.fontName = fontName;
+          const fontSize = readNumber("fontSize");
+          if (fontSize !== undefined) stylePatch.fontSize = fontSize;
+          const primaryColor = readString("primaryColor");
+          if (primaryColor !== undefined) {
+            stylePatch.primaryColor = primaryColor;
+          }
+          const outlineColor = readString("outlineColor");
+          if (outlineColor !== undefined) {
+            stylePatch.outlineColor = outlineColor;
+          }
+          const outlineWidth = readNumber("outlineWidth");
+          if (outlineWidth !== undefined) {
+            stylePatch.outlineWidth = outlineWidth;
+          }
+          const bold = readBoolean("bold");
+          if (bold !== undefined) stylePatch.bold = bold;
+          if (Object.keys(stylePatch).length > 0) {
+            api?.setStyle?.(stylePatch);
+          }
+          const bottomOffset = readNumber("bottomOffset");
+          if (bottomOffset !== undefined) {
+            api?.setPosition?.(undefined, bottomOffset);
+          }
         }
 
         // 流媒体模式：通过中间件加载源
@@ -1151,6 +1546,7 @@ export class VideoPlayer
       this.store.setLoading(true);
       this.state.set(PlayerStateKeyEnum.IS_LOADING, true);
       this.setState(PlayerState.LOADING);
+      this.armLoadGuard();
       this.events.emit(PlayerEventEnum.LOAD_START);
       this.callbacks.loadstart?.();
     });
@@ -1159,6 +1555,7 @@ export class VideoPlayer
     this.addVideoListener("loadedmetadata", () => {
       const duration = this.videoEl?.duration || 0;
       this.store.setLoading(false);
+      this.clearLoadGuard();
       this.store.setDuration(duration);
       this.state.set(PlayerStateKeyEnum.IS_LOADING, false);
       this.state.set(PlayerStateKeyEnum.DURATION, duration);
@@ -1208,6 +1605,7 @@ export class VideoPlayer
     /** canplay：缓冲足够，可以开始播放 */
     this.addVideoListener("canplay", () => {
       this.store.setWaiting(false);
+      this.clearLoadGuards();
       this.events.emit(PlayerEventEnum.CAN_PLAY);
       this.callbacks.canplay?.();
     });
@@ -1255,6 +1653,7 @@ export class VideoPlayer
     this.addVideoListener("abort", () => {
       this.store.setLoading(false);
       this.state.set(PlayerStateKeyEnum.IS_LOADING, false);
+      this.clearLoadGuards();
       this.events.emit(PlayerEventEnum.ABORT);
       this.callbacks.abort?.();
     });
@@ -1262,6 +1661,7 @@ export class VideoPlayer
     /** emptied：媒体被清空 */
     this.addVideoListener("emptied", () => {
       this.store.setEnded(false);
+      this.clearLoadGuards();
       this.events.emit(PlayerEventEnum.EMPTIED);
       this.callbacks.emptied?.();
     });
@@ -1284,6 +1684,7 @@ export class VideoPlayer
     this.addVideoListener("playing", () => {
       this.store.setWaiting(false);
       this.store.setPlaying(true);
+      this.clearLoadGuards();
       this.setState(PlayerState.PLAYING);
       this.events.emit(PlayerEventEnum.PLAYING);
       this.callbacks.playing?.();
@@ -1291,6 +1692,8 @@ export class VideoPlayer
 
     this.addVideoListener("pause", () => {
       this.store.setPlaying(false);
+      // 主动暂停时画面静止：撤下缓冲超时守卫，避免误报网络错误
+      this.clearBufferGuard();
       this.setState(PlayerState.PAUSED);
       this.events.emit(PlayerEventEnum.PAUSE);
       this.callbacks.pause?.();
@@ -1337,6 +1740,7 @@ export class VideoPlayer
     this.addVideoListener("seeked", () => {
       const currentTime = this.videoEl?.currentTime || 0;
       this.store.setWaiting(false);
+      this.clearBufferGuard();
       this.state.set(PlayerStateKeyEnum.CURRENT_TIME, currentTime);
       this.events.emit(PlayerEventEnum.SEEKED, { currentTime });
       this.callbacks.seeked?.(currentTime);
@@ -1352,9 +1756,11 @@ export class VideoPlayer
       this.state.set(PlayerStateKeyEnum.VOLUME, volume);
       this.state.set(PlayerStateKeyEnum.MUTED, muted);
       // 音量 / 静音持久化：任何来源（滚轮 / 滑杆 / 快捷键 / API）的变化都会
-      // 汇聚到 video 元素的 volumechange 事件，这里统一写入
-      setStorage("volume", volume);
-      setStorage("muted", muted);
+      // 汇聚到 video 元素的 volumechange 事件，这里统一写入 profile JSON
+      // （store.setVolume / setMuted 走 nova_player_profile；
+      // 【修复记录】原 setStorage("volume") 写裸 key 是旧版机制，无人读回）
+      this.store.setVolume(volume);
+      this.store.setMuted(muted);
       this.events.emit(PlayerEventEnum.VOLUME_CHANGE, { volume, muted });
       this.callbacks.volumechange?.(volume, muted);
     });
@@ -1362,8 +1768,8 @@ export class VideoPlayer
     this.addVideoListener("ratechange", () => {
       const rate = this.videoEl?.playbackRate ?? 1;
       this.state.set(PlayerStateKeyEnum.PLAYBACK_RATE, rate);
-      // 倍速持久化（同样以 video 元素的 ratechange 为唯一写入口）
-      setStorage("playbackRate", rate);
+      // 倍速持久化（同样以 video 元素的 ratechange 为唯一写入口，写 profile JSON）
+      this.store.setPlaybackRate(rate);
       this.events.emit(PlayerEventEnum.RATE_CHANGE, rate);
       this.callbacks?.ratechange?.(rate);
     });
@@ -1374,6 +1780,7 @@ export class VideoPlayer
 
     this.addVideoListener("waiting", () => {
       this.store.setWaiting(true);
+      this.armBufferGuard();
       this.events.emit(PlayerEventEnum.WAITING);
       this.callbacks.waiting?.();
     });
@@ -1535,6 +1942,7 @@ export class VideoPlayer
     const error = this.videoEl.error;
     if (!error) return;
 
+    this.clearLoadGuards();
     this.store.setLoading(false);
     this.state.set(PlayerStateKeyEnum.IS_LOADING, false);
 
@@ -1556,6 +1964,100 @@ export class VideoPlayer
         message: error.message || "视频播放错误",
       });
     }
+  }
+
+  /**
+   * 处理流媒体插件上报的致命错误（HLS/FLV/DASH fatal）
+   *
+   * 流媒体模式下媒体元素自身不会触发 error 事件（manifest/分片拉取
+   * 失败发生在插件内部），若不在此收敛，UI 会永远停留在缓冲转圈。
+   * 网络类错误与原生 error 同策略：优先切换备用源，无备用源才弹错误面板
+   */
+  private handleStreamError(payload: {
+    message?: string;
+    error?: unknown;
+  }): void {
+    // 备用源切换期间旧插件的 fatal（销毁竞态）不弹面板
+    if (this.isSwitchingBackup) return;
+
+    this.clearLoadGuards();
+    this.store.setLoading(false);
+    this.store.setWaiting(false);
+    this.state.set(PlayerStateKeyEnum.IS_LOADING, false);
+
+    logger.error(`流媒体错误: ${payload.message ?? "unknown stream error"}`);
+
+    // 网络类致命错误按 code=2 上报（错误面板据此显示本地网络排查提示），
+    // 并与原生网络错误同策略优先切换备用源
+    const isNetwork = isNetworkStreamError(payload.error);
+    if (isNetwork) {
+      const switched = this.switchToNextBackupSource();
+      if (switched) return;
+    }
+
+    this.events.emit(PlayerEventEnum.ERROR, {
+      error: payload.error ?? null,
+      code: isNetwork ? 2 : undefined,
+      message: payload.message || "视频流加载失败",
+    });
+  }
+
+  /**
+   * 启动初始加载超时守卫（loadstart 时调用）
+   * 超时未收到元数据则判定加载失败，弹出错误面板（替代无限转圈）
+   */
+  private armLoadGuard(): void {
+    this.clearLoadGuard();
+    this.loadGuardTimer = setTimeout(() => {
+      this.loadGuardTimer = null;
+      this.handleLoadTimeout("load-timeout");
+    }, VideoPlayer.LOAD_TIMEOUT_MS);
+  }
+
+  /**
+   * 启动缓冲恢复超时守卫（waiting 时调用）
+   * 网络断开/CDN 卡死等场景 video 不再触发任何事件，超时兜底弹出错误面板
+   */
+  private armBufferGuard(): void {
+    this.clearBufferGuard();
+    this.bufferGuardTimer = setTimeout(() => {
+      this.bufferGuardTimer = null;
+      this.handleLoadTimeout("buffer-timeout");
+    }, VideoPlayer.BUFFER_TIMEOUT_MS);
+  }
+
+  /** 清除初始加载超时守卫 */
+  private clearLoadGuard(): void {
+    if (this.loadGuardTimer !== null) {
+      clearTimeout(this.loadGuardTimer);
+      this.loadGuardTimer = null;
+    }
+  }
+
+  /** 清除缓冲恢复超时守卫 */
+  private clearBufferGuard(): void {
+    if (this.bufferGuardTimer !== null) {
+      clearTimeout(this.bufferGuardTimer);
+      this.bufferGuardTimer = null;
+    }
+  }
+
+  /** 清除全部加载/缓冲守卫（恢复播放、错误、销毁时调用） */
+  private clearLoadGuards(): void {
+    this.clearLoadGuard();
+    this.clearBufferGuard();
+  }
+
+  /**
+   * 加载/缓冲超时处理：停用加载态并广播 ERROR
+   * message 缺省时错误面板回落到默认网络异常文案（i18n）
+   */
+  private handleLoadTimeout(code: "load-timeout" | "buffer-timeout"): void {
+    this.store.setLoading(false);
+    this.store.setWaiting(false);
+    this.state.set(PlayerStateKeyEnum.IS_LOADING, false);
+    logger.error(`load guard fired: ${code}`);
+    this.events.emit(PlayerEventEnum.ERROR, { error: null, code });
   }
 
   /**
@@ -1598,6 +2100,14 @@ export class VideoPlayer
       logger.error("插件管理器未初始化");
       return this;
     }
+    /**
+     * 先同步安装标志、再 install：
+     * 后装场景（播放器已挂载后 player.use）插件 install 内会就地
+     * 初始化（如 InteractionPlugin 检测 player.el 后挂载响应式根），
+     * 此时对应图层 DOM 必须已挂载——effect 同步刷新，信号写入后
+     * Show 立即完成 DOM 挂载，install 随后执行即可找到容器
+     */
+    this.syncPluginFlags(plugin.name, true);
     this.pluginManager.install(plugin);
     return this;
   }
@@ -1628,7 +2138,41 @@ export class VideoPlayer
    * @param name - 插件名称
    */
   uninstallPlugin(name: string): void {
+    /**
+     * 先 uninstall、再同步安装标志：
+     * 插件 uninstall 清理（如卸载响应式根 / 解绑容器事件）需要
+     * 对应图层 DOM 仍在场；清理完成后再写信号，Show 摘除 DOM
+     */
     this.pluginManager?.uninstall(name);
+    this.syncPluginFlags(name, false);
+  }
+
+  /**
+   * 同步单个插件的安装标志到 pluginFlags 信号
+   *
+   * 仅处理与 UI 挂载相关的四个插件名（danmaku / subtitle /
+   * interaction / interactiveVideo）；流媒体插件（dash / hls / flv）
+   * 等不关联 UI 图层，静默忽略。信号以整体替换方式写入，
+   * 各读取方（Show 控制流 / 右侧按钮渲染器）自动响应
+   *
+   * @param name - 插件名称
+   * @param installed - 是否已安装
+   */
+  private syncPluginFlags(name: string, installed: boolean): void {
+    /** 仅五个 UI 相关键有效，其它插件名直接忽略 */
+    const isUIPluginKey = (
+      key: string,
+    ): key is keyof PlayerPluginFlags =>
+      key === "danmaku" ||
+      key === "subtitle" ||
+      key === "interaction" ||
+      key === "interactiveVideo" ||
+      key === "audioEffect";
+    if (!isUIPluginKey(name)) return;
+    this.pluginFlags.value = {
+      ...this.pluginFlags.value,
+      [name]: installed,
+    };
   }
 
   // ============================================
@@ -2064,10 +2608,14 @@ export class VideoPlayer
 
   /**
    * 设置是否循环（单曲循环语义）
+   * 三路同步：运行时状态（面板 Switch 受控回显）+ 持久化（localStorage，
+   * 刷新后经 MOUNTED 恢复）+ 视频元素 loop
    * @param loop - 是否循环
    */
   setLoop(loop: boolean): void {
     this.props.playback = { ...(this.props.playback ?? {}), loop };
+    this.state.set(PlayerStateKeyEnum.LOOP, loop);
+    this.store.updateSettingsFlags({ loop });
     if (this.videoEl) this.videoEl.loop = loop;
   }
 
@@ -2263,6 +2811,9 @@ export class VideoPlayer
           pauseAfterEnd: value === 2,
         };
         this.configStore.set(this.props);
+        // 运行时状态（面板单选受控回显）+ 持久化（刷新后经构造期恢复）
+        this.state.set(PlayerStateKeyEnum.PAUSE_AFTER_END, value === 2);
+        this.store.updateSettingsFlags({ pauseAfterEnd: value === 2 });
         break;
       case "aspect":
         this.setAspectRatio(typeof value === "string" ? value : "0:0");
@@ -2280,11 +2831,15 @@ export class VideoPlayer
 
   /**
    * 设置镜像画面（水平翻转）
+   * 三路同步：运行时状态（面板 Switch 受控回显）+ 持久化（localStorage，
+   * 刷新后经构造期「持久化优先」合并恢复）+ 视频元素 transform
    * @param mirror - 是否镜像
    */
   setMirror(mirror: boolean): void {
     this.props.playback = { ...(this.props.playback ?? {}), mirror };
     this.configStore.set(this.props);
+    this.state.set(PlayerStateKeyEnum.MIRROR, mirror);
+    this.store.updateSettingsFlags({ mirror });
     if (this.videoEl) {
       this.videoEl.style.transform = mirror ? "scaleX(-1)" : "";
     }
@@ -2300,43 +2855,111 @@ export class VideoPlayer
       autoplay: autostart,
     };
     this.configStore.set(this.props);
+    this.state.set(PlayerStateKeyEnum.AUTOSTART, autostart);
+    this.store.updateSettingsFlags({ autostart });
   }
 
   /**
-   * 设置关灯模式（容器加 data-lightoff 属性，CSS 据此加暗色蒙层）
+   * 设置关灯模式（不持久化：即时氛围功能，刷新后默认开灯）
+   *
+   * 开启时给播放器根节点（.nova-player-docker.nova-player-docker-major）
+   * 加 nova-state-light-off 类（样式由 player.scss / sendbar.scss 消费），
+   * 同时写运行时状态驱动设置面板 Checkbox 受控回显
    * @param on - 是否关灯
    */
   setLightoff(on: boolean): void {
-    const container = this.getPlayerContainerEl();
-    if (container) {
-      if (on) container.setAttribute("data-lightoff", "on");
-      else container.removeAttribute("data-lightoff");
+    this.state.set(PlayerStateKeyEnum.LIGHTOFF, on);
+    const docker = this.containerEl?.closest(
+      ".nova-player-docker.nova-player-docker-major",
+    );
+    if (docker instanceof HTMLElement) {
+      docker.classList.toggle("nova-state-light-off", on);
     }
   }
 
   /**
-   * 设置视频画面比例
+   * 设置视频画面比例（B 站式实现，参考 .bpx-player-video-wrap）
+   *
+   * B 站写法：`.bpx-player-video-wrap { width: 75.0499%; height: 100%; }`
+   * + `video { object-fit: fill; }`——wrap 宽度被计算为「指定比例在容器内
+   * contain 适配的百分比」，video 恒 fill 铺满 wrap。
+   *
+   * 本实现同款：
+   * - "0:0" 自适应：目标比例 = 视频原生宽高比（metadata 就绪后），
+   *   未就绪时 wrap 100% + contain 兜底不变形
+   * - "4:3" / "16:9"：目标比例 = 指定值（与视频原生比例无关，
+   *   画面会被拉伸到指定比例，与 B 站行为一致）
+   * - 容器 resize（ResizeObserver）与 loadedmetadata 时自动重算
+   *
+   * 三路同步：运行时状态（面板单选受控回显）+ 持久化（localStorage，
+   * 刷新后经 MOUNTED 恢复）+ wrap/video 元素样式
    * @param ratio - "0:0" 自动 | "4:3" | "16:9"
    */
   setAspectRatio(ratio: string): void {
     this.state.set(PlayerStateKeyEnum.ASPECT_RATIO, ratio);
-    if (this.videoEl) {
-      if (ratio === "0:0") {
-        this.videoEl.style.aspectRatio = "";
-        this.videoEl.style.objectFit = "";
-      } else {
-        this.videoEl.style.aspectRatio = ratio.replace(":", "/");
-        this.videoEl.style.objectFit = "contain";
-      }
-    }
+    this.store.setAspect(ratio);
+    this.aspectRatio = ratio;
+    this.applyAspectRatio();
   }
 
   /**
-   * 设置编码偏好（持久化到 store，下次加载按此偏好选流）
+   * 应用画面比例到 DOM（B 站式：wrap 宽度百分比 + video fill）
+   *
+   * 纯样式计算（读取 clientWidth/Height + 写两个 style 属性），
+   * ResizeObserver 回调频率下开销可忽略；不进响应式系统（DOM 度量
+   * 不能被 Signal 依赖追踪）
+   */
+  private applyAspectRatio(): void {
+    const video = this.videoEl;
+    const wrap = this.videoWrapEl;
+    const area = this.videoAreaEl;
+    if (!video || !wrap || !area) return;
+
+    // 目标比例：自适应取视频原生宽高比，指定比例直接解析
+    let target: number | null = null;
+    if (this.aspectRatio === "0:0") {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        target = video.videoWidth / video.videoHeight;
+      }
+    } else {
+      const [w, h] = this.aspectRatio.split(":");
+      const wNum = Number(w);
+      const hNum = Number(h);
+      if (wNum > 0 && hNum > 0) target = wNum / hNum;
+    }
+
+    if (target === null) {
+      // 原生比例未知（metadata 未就绪）：wrap 恢复全尺寸，contain 兜底
+      wrap.style.width = "100%";
+      video.style.objectFit = "contain";
+      return;
+    }
+
+    // contain 适配宽度：高度撑满容器时所需的宽度占容器宽的百分比
+    const areaW = area.clientWidth;
+    const areaH = area.clientHeight;
+    if (areaW <= 0 || areaH <= 0) return;
+    const widthPct = Math.min(100, ((areaH * target) / areaW) * 100);
+    wrap.style.width = `${widthPct.toFixed(4)}%`;
+    video.style.objectFit = "fill";
+  }
+
+  /**
+   * 设置编码偏好
+   *
+   * 三路同步：store 持久化（localStorage，下次加载经构造函数读回）+
+   * 运行时状态（设置面板「编码格式」单选受控信号）+ 流媒体插件
+   * （真实生效：HLS 按偏好起播选流；插件未实现时静默忽略）
    * @param type - 0 默认 / 1 HEVC / 2 AVC / 3 AV1
    */
   setCodecPrefer(type: number): void {
+    if (type < 0 || type > 3) {
+      logger.warn("Invalid codec prefer type", type);
+      return;
+    }
     this.store.setCodecPreferType(type);
+    this.state.set(PlayerStateKeyEnum.CODEC_PREFER_TYPE, type);
+    this.streamMiddleware?.setCodecPreference(type);
   }
 
   /**
@@ -2345,11 +2968,15 @@ export class VideoPlayer
    * 0 = 关闭（移除压缩器），1 = 标准，2 = 高动态
    * 通过事件总线广播，由音效插件 AudioEffectPlugin 订阅并应用对应动态压缩配置。
    * 未注册音效插件时仅存储偏好，不报错。
+   * 同时持久化到 store（nova_player_profile.loudness），刷新/重建后
+   * 由挂载期「持久化优先」恢复逻辑读回生效
    * @param mode - 0 关闭 / 1 标准 / 2 高动态
    */
   setLoudness(mode: number): void {
     this.props.playback = { ...(this.props.playback ?? {}), loudness: mode };
     this.configStore.set(this.props);
+    // 持久化：下次加载即本次设置
+    this.store.setLoudness(mode);
     // 广播音量均衡变化，音效插件据此调整 DynamicsCompressorNode 参数
     this.events.emit(PlayerEventEnum.AUDIO_EFFECT_CHANGE, {
       effect: "loudness",
@@ -3284,6 +3911,12 @@ export class VideoPlayer
     // ── 1. 暂停并取消竞态 ──
     this.pause();
 
+    // ── 释放 B 站式画面比例的动态重算资源 + 语言标识订阅 ──
+    this.aspectResizeObserver?.disconnect();
+    this.aspectResizeObserver = null;
+    this.localeUnsubscribe?.();
+    this.localeUnsubscribe = null;
+
     this.loadToken++;
     this.clearPendingLoad();
     this.pendingSeek = null;
@@ -3319,6 +3952,10 @@ export class VideoPlayer
     this.unsubscribeStreamQuality = null;
     this.unsubscribeSubtitleTracks?.();
     this.unsubscribeSubtitleTracks = null;
+    this.unsubscribeStreamError?.();
+    this.unsubscribeStreamError = null;
+    // 释放加载/缓冲超时守卫定时器
+    this.clearLoadGuards();
 
     // ── 6. 解绑根级监听并安全断开媒体 ──
     this.removeVideoListeners();

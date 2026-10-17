@@ -1,0 +1,248 @@
+/**
+ * 控制层（`<nova-live-player-control-bar>`）样式。
+ *
+ * 图标 hover 有放大再缩小的动效与 tooltip；控制条在无操作后自动隐藏，
+ * 鼠标移动 / 进入时重新显示，与点播播放器一致。
+ */
+
+nova-live-player-control-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  display: block;
+}
+
+.nova-live-player-control {
+  position: relative;
+  height: 44px;
+  background-image: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.72));
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+
+  &[data-visible='false'] {
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+  }
+}
+
+.nova-live-player-control-area {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.nova-live-player-control-left {
+  display: flex;
+  align-items: center;
+}
+
+.nova-live-player-control-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.nova-live-player-control-tip-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.nova-live-player-control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+  }
+
+  &.is-active {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* 禁用态：仅降低透明度，保留 pointer-events 以便显示 tooltip 与点击反馈。 */
+  &.is-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &.is-text {
+    width: auto;
+    min-width: 44px;
+    padding: 0 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+.nova-live-player-control-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.nova-live-player-control-icon .nova-live-player-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.nova-live-player-control-icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.nova-live-player-control-button:hover .nova-live-player-control-icon > span > span {
+  animation: nova-live-player-icon-pop 0.24s ease;
+}
+
+.nova-live-player-control-button:hover .nova-live-player-control-icon > svg {
+  animation: nova-live-player-icon-pop 0.24s ease;
+}
+
+@keyframes nova-live-player-icon-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.22);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.nova-live-player-control-tip {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  z-index: 30;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: rgba(33, 33, 33, 0.96);
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.15s, transform 0.15s;
+  pointer-events: none;
+}
+
+.nova-live-player-control-tip-wrap:hover .nova-live-player-control-tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.nova-live-player-control-volume-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.nova-live-player-volume {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 42px;
+  height: 140px;
+  padding: 8px 0;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background-color: rgba(33, 33, 33, 0.94);
+  transform: translateX(-50%);
+}
+
+.nova-live-player-volume-value {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.nova-live-player-volume-rail {
+  position: relative;
+  flex: 1;
+  width: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.24);
+  cursor: pointer;
+}
+
+.nova-live-player-volume-fill {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 2px;
+  background-color: #ff6699;
+}
+
+.nova-live-player-volume-thumb {
+  position: absolute;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transform: translateY(50%);
+  cursor: pointer;
+}
+
+.nova-live-player-control-time {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.nova-live-player-control-time-label {
+  margin-right: 4px;
+}
+
+.nova-live-player-control-time-value {
+  color: rgba(255, 255, 255, 0.92);
+  font-variant-numeric: tabular-nums;
+}

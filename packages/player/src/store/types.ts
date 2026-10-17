@@ -67,6 +67,48 @@ export interface SubtitlePreferences {
 }
 
 /**
+ * 弹幕设置持久化（弹幕设置面板全部可调项）
+ * 写入点：VideoPlayer 订阅运行时 DANMAKU_* 状态键统一落库；
+ * 恢复点：构造期「持久化优先」写回运行时状态（插件安装时读取）
+ */
+export interface DanmakuPersistedSettings {
+  /** 弹幕开关 */
+  visible: boolean;
+  /** 不透明度 (0-1) */
+  opacity: number;
+  /** 速度倍率 */
+  speed: number;
+  /** 显示区域占比 (0-100) */
+  area: number;
+  /** 字号缩放 (12-100) */
+  fontSize: number;
+  /** 弹幕随屏幕缩放 */
+  scaleWithScreen: boolean;
+  /** 弹幕智能防挡开关（开启后插件懒加载防挡运行时：外部 provider 或本地语义分割） */
+  maskEnabled: boolean;
+}
+
+/**
+ * 设置面板可持久化开关项（用户可打开/关闭且跨会话保持的全部设置）
+ * 对照 store.txt 各散落 key 的归一化整合
+ *
+ * 注意：关灯模式（lightoff）与画中画（pip）不持久化——
+ * 前者是即时氛围功能（刷新后默认开灯，B站同款行为），
+ * 后者是浏览器会话态（刷新后 PiP 窗口必然关闭），
+ * 两者仅走运行时状态（见 PlayerStateKeyEnum.LIGHTOFF / IS_PIP）
+ */
+export interface PlayerSettingsFlags {
+  /** 镜像画面 */
+  mirror: boolean;
+  /** 循环播放 */
+  loop: boolean;
+  /** 自动开播 */
+  autostart: boolean;
+  /** 播完暂停（不自动连播） */
+  pauseAfterEnd: boolean;
+}
+
+/**
  * 播放器持久化状态
  * 对应 localStorage 中的 nova_player_profile JSON 对象
  *
@@ -91,6 +133,25 @@ export interface PlayerPersistentState {
   playbackRate: number;
   /** 编解码器偏好类型：0=自动 1=AV1 2=HEVC 3=AVC */
   codecPreferType: number;
+  /**
+   * 音量均衡模式（0 关闭 / 1 标准 / 2 高动态）
+   * 设置面板「音量均衡」驱动；刷新/重建后按此值恢复音效链状态
+   */
+  loudness: number;
+
+  // ========== 设置面板开关（用户可打开/关闭的全部项） ==========
+  /** 设置面板各开关项（镜像/循环/自动开播/关灯/播完暂停） */
+  settings: PlayerSettingsFlags;
+  /** 画面比例（"0:0" 默认自适应） */
+  aspect: string;
+
+  // ========== 弹幕设置 ==========
+  /** 弹幕设置面板全部可调项 */
+  danmakuSettings: DanmakuPersistedSettings;
+
+  // ========== 字幕样式 ==========
+  /** 字幕样式增量 patch（设置面板「字幕样式」驱动，语义化字段见 SubtitleStyleSettings） */
+  subtitleStyle: SubtitleStyleSettings;
 
   // ========== 画面 ==========
   /** 是否宽屏模式 */
@@ -123,6 +184,31 @@ export interface PlayerPersistentState {
   // ========== 用户偏好设置 ==========
   /** 通用用户偏好（不含弹幕/字幕等插件设置） */
   userPreferences: UserPreferences;
+}
+
+/**
+ * 字幕样式持久化（语义化字段，非 CSS 字符串）
+ *
+ * 与 SubtitlePlugin.applyStyle 消费的 SubtitleStylePatch 字段一一对应：
+ * 持久化存语义值（如 fontSize: 24、primaryColor: "#ffffff"），
+ * 构造期原样合并进 props.subtitle.style 由插件直读——
+ * 存储格式与渲染样式之间不做 CSS 转换，避免双重转换偏差与解析开销
+ */
+export interface SubtitleStyleSettings {
+  /** 字号（px） */
+  fontSize?: number;
+  /** 字幕字体（CSS font-family 字面量，如 "Microsoft YaHei"） */
+  fontName?: string;
+  /** 字幕颜色（hex/rgb 字面量） */
+  primaryColor?: string;
+  /** 描边颜色 */
+  outlineColor?: string;
+  /** 描边宽度（px） */
+  outlineWidth?: number;
+  /** 加粗 */
+  bold?: boolean;
+  /** 距底部偏移（px，向上为正） */
+  bottomOffset?: number;
 }
 
 /**
@@ -210,6 +296,22 @@ export interface PlayerStore {
   setMuted(muted: boolean): void;
   setPlaybackRate(rate: number): void;
   setCodecPreferType(type: number): void;
+  setLoudness(mode: number): void;
+  /**
+   * 是否存在已持久化的用户数据（nova_player_profile 曾被写入过）
+   *
+   * 「持久化优先」语义的判定依据：存在 → 持久化值优先于外部传入的
+   * 默认配置；不存在（首次使用）→ 外部传入值 ?? store 默认值
+   */
+  hasPersistedData(): boolean;
+  /** 设置面板开关项增量合并持久化（镜像/循环/自动开播/关灯/播完暂停） */
+  updateSettingsFlags(flags: Partial<PlayerSettingsFlags>): void;
+  /** 画面比例持久化（"0:0" 自适应） */
+  setAspect(aspect: string): void;
+  /** 弹幕设置增量合并持久化（弹幕面板全部可调项） */
+  updateDanmakuSettings(patch: Partial<DanmakuPersistedSettings>): void;
+  /** 字幕样式增量 patch 持久化（合并到既有样式对象） */
+  updateSubtitleStyle(patch: Record<string, unknown>): void;
   updateUserPreferences(preferences: Partial<UserPreferences>): void;
   // 进度条偏好 (PBP)
   setPbpHeight(height: string): void;

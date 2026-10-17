@@ -28,8 +28,8 @@ import { isBrowser } from '@/utils';
 /** 本地识别轨 id（插件轨道注册表与 SubtitleCueEvent.trackId 共用） */
 export const LOCAL_AI_TRACK_ID = 'local-ai';
 
-/** partial 的展示余量（秒）：partial 覆盖到当前时间之后一小段，避免闪烁 */
-const PARTIAL_TAIL_SECONDS = 2;
+/** partial 的展示余量（秒）：partial 覆盖到当前时间之后一小段，避免闪烁（worker 版 provider 共用） */
+export const PARTIAL_TAIL_SECONDS = 2;
 
 /** Provider 组装参数 */
 export interface LocalAiProviderOptions {

@@ -10,7 +10,6 @@
  *
  * 响应式实现：全部状态收敛到单一 signal 对象，style 直接绑定动态表达式，
  * 编译器自动追踪 → applyStyle 增量写入 CSS 变量；
- * 取代旧 dragEditor 中 innerHTML 懒创建 + querySelector + setProperty 直写的命令式实现
  */
 
 import { h, signal } from "@/core";

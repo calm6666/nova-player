@@ -122,6 +122,41 @@ export enum PlayerStateKeyEnum {
   SUBTITLE_LANG = "player.subtitleLang",
   /** 运行时字幕轨道列表（文件轨/服务端轨/本地识别轨统一注册表，字幕面板数据源） */
   SUBTITLE_TRACKS = "player.subtitleTracks",
+
+  // 编码偏好
+  /**
+   * 视频编码偏好（0 默认 / 1 HEVC / 2 AVC / 3 AV1）
+   * 设置面板「编码格式」单选驱动；持久化于 playerStore（localStorage），
+   * 构造时读回恢复——下次加载即上次设置
+   */
+  CODEC_PREFER_TYPE = "player.codecPreferType",
+
+  // 设置面板开关（受控回显用：面板 Switch 与播放器真实状态双向同步）
+  /** 镜像画面（持久化于 settings.mirror，构造期读回） */
+  MIRROR = "player.mirror",
+  /** 循环播放（持久化于 settings.loop，构造期读回） */
+  LOOP = "player.loop",
+  /** 自动开播（持久化于 settings.autostart，构造期读回） */
+  AUTOSTART = "player.autostart",
+  /**
+   * 弹幕智能防挡开关（持久化于 danmakuSettings.maskEnabled）
+   * 开启后 DanmakuPlugin 懒加载防挡运行时：
+   * 优先外部 provider（danmaku.mask.provider），否则本地 MediaPipe 语义分割
+   * （动态 import 独立 chunk，用户未开启不下载模型、不阻塞主线程）
+   */
+  DANMAKU_MASK_ENABLED = "player.danmakuMaskEnabled",
+
+  /**
+   * 关灯模式（不持久化：即时氛围功能，刷新后默认开灯）
+   * 开启时播放器根节点（.nova-player-docker.nova-player-docker-major）
+   * 加 nova-state-light-off 类
+   */
+  LIGHTOFF = "player.lightoff",
+  /**
+   * 播完暂停（不自动连播，持久化于 settings.pauseAfterEnd）
+   * 设置面板「播放方式」单选（0 自动连播 / 2 播完暂停）受控回显
+   */
+  PAUSE_AFTER_END = "player.pauseAfterEnd",
 }
 
 /**
@@ -213,6 +248,20 @@ export type PlayerStateMap = {
   "player.subtitleLang": string;
   /** 运行时字幕轨道列表（空数组时字幕面板回退到配置语言列表） */
   "player.subtitleTracks": SubtitleTrackInfo[];
+  /** 视频编码偏好（0 默认 / 1 HEVC / 2 AVC / 3 AV1，设置面板单选驱动） */
+  "player.codecPreferType": number;
+  /** 镜像画面（设置面板 Switch 受控回显） */
+  "player.mirror": boolean;
+  /** 循环播放（设置面板 Switch 受控回显） */
+  "player.loop": boolean;
+  /** 自动开播（设置面板 Switch 受控回显） */
+  "player.autostart": boolean;
+  /** 弹幕智能防挡开关（DmSetting 复选框受控回显，持久化） */
+  "player.danmakuMaskEnabled": boolean;
+  /** 关灯模式（不持久化，设置面板 Checkbox 受控回显） */
+  "player.lightoff": boolean;
+  /** 播完暂停（设置面板「播放方式」单选受控回显） */
+  "player.pauseAfterEnd": boolean;
   browser: object;
 } & Record<string, object>;
 
@@ -305,6 +354,10 @@ export interface RuntimeState {
   subtitleLang: string;
   /** 运行时字幕轨道列表 */
   subtitleTracks: SubtitleTrackInfo[];
+
+  // 编码偏好
+  /** 视频编码偏好（0 默认 / 1 HEVC / 2 AVC / 3 AV1） */
+  codecPreferType: number;
 }
 
 /**
@@ -354,6 +407,7 @@ export const defaultRuntimeState: RuntimeState = {
   subtitleVisible: true,
   subtitleLang: "zh-CN",
   subtitleTracks: [],
+  codecPreferType: 0,
 };
 
 /**
@@ -473,6 +527,10 @@ export function createRuntimeStateManager(
       initialState.subtitleLang ?? defaultRuntimeState.subtitleLang,
     [PlayerStateKeyEnum.SUBTITLE_TRACKS]:
       initialState.subtitleTracks ?? defaultRuntimeState.subtitleTracks,
+
+    // 编码偏好
+    [PlayerStateKeyEnum.CODEC_PREFER_TYPE]:
+      initialState.codecPreferType ?? defaultRuntimeState.codecPreferType,
   };
 
   return createTypedStateManager<PlayerStateMap>(state);

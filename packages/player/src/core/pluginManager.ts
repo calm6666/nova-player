@@ -166,6 +166,16 @@ export class PluginManager {
   }
 
   /**
+   * 判断插件是否已安装（UI 按需渲染的依据：
+   * 未装弹幕/字幕/交互插件时不挂载对应图层与控制入口）
+   * @param name - 插件名称
+   * @returns 是否已安装
+   */
+  has(name: string): boolean {
+    return this.plugins.has(name);
+  }
+
+  /**
    * 遍历所有已安装的插件
    * @param callback - 对每个插件执行的回调
    */

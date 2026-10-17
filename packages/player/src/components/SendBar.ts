@@ -12,7 +12,6 @@ import {
   t,
   signal,
   computed,
-  Show,
 } from "@/core";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
@@ -133,9 +132,7 @@ export const SendBar = defineComponent<SendBarProps>(
      * 作为渲染层的唯一数据源，所有依赖此状态的 UI（弹幕类型按钮显隐、
      * 发送按钮 disabled 态、「已关闭弹幕」提示）均由此信号驱动响应式更新
      */
-    const isDanmakuEnabledSignal = signal<boolean>(
-      props.danmakuSwitch ?? true,
-    );
+    const isDanmakuEnabledSignal = signal<boolean>(props.danmakuSwitch ?? true);
 
     /**
      * 是否允许发送弹幕（computed 派生信号）
@@ -410,7 +407,7 @@ export const SendBar = defineComponent<SendBarProps>(
         h(
           "div",
           { class: "nova-player-video-info-online" },
-          h("b", {}, props.onlineCount || "1000+"),
+          h("b", {}, props.onlineCount || "0"),
           t("player.ui.sendbar.watching"),
         ),
         h(
@@ -470,7 +467,11 @@ export const SendBar = defineComponent<SendBarProps>(
         h(
           "div",
           {
-            class: "nova-player-dm-setting",
+            // class: "nova-player-dm-setting",
+            class: [
+              "nova-player-dm-setting",
+              { disabled: !isDanmakuEnabledSignal.value },
+            ],
             ref: "settingIconRef",
           },
           // 弹幕设置图标：既有实现 icons 的 DanmakuSetting SVG
@@ -564,13 +565,14 @@ export const SendBar = defineComponent<SendBarProps>(
             // 使用 Show 控制流实现响应式条件渲染：子节点位置的三元表达式
             // 只在初始渲染时求值一次，无法响应 signal 变化
             h(
-              Show,
-              { when: (): boolean => !isDanmakuEnabledSignal.value },
-              h(
-                "div",
-                { class: "nova-player-dm-wrap" },
-                t("player.ui.sendbar.danmaku_closed"),
-              ),
+              "div",
+              {
+                class: "nova-player-dm-wrap",
+                style: {
+                  display: isDanmakuEnabledSignal.value ? "none" : "block",
+                },
+              },
+              t("player.ui.sendbar.danmaku_closed"),
             ),
             // 输入框
             h("input", {

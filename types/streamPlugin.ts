@@ -311,6 +311,16 @@ export interface StreamPlugin extends Plugin {
   setQuality(quality: string): void;
 
   /**
+   * 设置视频编码偏好（可选能力，插件按需实现）
+   *
+   * 由设置面板「编码格式」驱动；流媒体插件在起播选流时按偏好
+   * 优先选择对应编码的流（如 HLS 经 config.videoPreference 的
+   * 起播 tier 选择）。未实现 / 原生模式静默忽略（通用性兼容）。
+   * @param type - 编码偏好：0 默认（清除偏好）/ 1 HEVC / 2 AVC / 3 AV1
+   */
+  setCodecPreference?(type: number): void;
+
+  /**
    * 获取当前生效的档位 id（'auto' 表示自动档）
    * @returns 档位 id；插件未就绪或不支持时返回 ''
    */

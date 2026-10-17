@@ -1,0 +1,357 @@
+/**
+ * 播放器基础布局：宿主、舞台、视频、弹幕组件、加载态、提示、错误、举报、发送条。
+ */
+
+nova-live-player {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  box-sizing: border-box;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: Arial, 'Microsoft YaHei', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+nova-live-player[data-screen='webscreen'] {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9000;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+nova-live-player[data-screen='fullscreen'] {
+  width: 100%;
+  height: 100%;
+}
+
+.nova-live-player {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  background-color: #000000;
+}
+
+.nova-live-player [hidden] {
+  display: none !important;
+}
+
+.nova-live-player-video {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+  object-fit: contain;
+}
+
+nova-live-player-danmaku {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.nova-live-player-danmaku-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  font-family: var(--nova-live-player-dm-font, inherit);
+  font-weight: var(--nova-live-player-dm-weight, 600);
+  pointer-events: none;
+}
+
+.nova-live-player-danmaku-layer .danmaku-x-dm {
+  font-family: var(--nova-live-player-dm-font, inherit);
+  font-weight: var(--nova-live-player-dm-weight, 600);
+  -webkit-text-stroke: var(--nova-live-player-dm-stroke, 0.8px) #000000;
+  text-shadow: var(--nova-live-player-dm-shadow, none);
+}
+
+.nova-live-player-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.nova-live-player-loading-ring {
+  display: block;
+  width: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  border: 3px solid rgba(255, 255, 255, 0.24);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: nova-live-player-spin 0.9s linear infinite;
+}
+
+@keyframes nova-live-player-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.nova-live-player-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 30;
+  max-width: 70%;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background-color: rgba(33, 33, 33, 0.92);
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.nova-live-player-toast[data-type='success'] {
+  color: #7bd88f;
+}
+
+.nova-live-player-toast[data-type='warning'] {
+  color: #ffd5a2;
+}
+
+.nova-live-player-toast[data-type='error'] {
+  color: #ff6699;
+}
+
+.nova-live-player-error {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 32;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0 24px;
+  background-color: #000000;
+  text-align: center;
+}
+
+.nova-live-player-error-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.nova-live-player-error-message {
+  margin-top: 8px;
+  max-width: 80%;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.nova-live-player-error-retry {
+  margin-top: 16px;
+  min-width: 72px;
+  height: 30px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 15px;
+  background-color: #00aeec;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nova-live-player-send {
+  position: absolute;
+  right: 0;
+  bottom: 56px;
+  left: 0;
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  width: 420px;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 6px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background-color: rgba(24, 25, 28, 0.92);
+}
+
+.nova-live-player-send-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.nova-live-player-send-button {
+  flex: 0 0 auto;
+  min-width: 56px;
+  height: 30px;
+  margin-left: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background-color: #ff6699;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nova-live-player-report {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 34;
+  width: 360px;
+  max-width: calc(100% - 48px);
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #18191c;
+  text-align: left;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
+}
+
+.nova-live-player-report-title {
+  margin-bottom: 10px;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+.nova-live-player-report-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.nova-live-player-report-key {
+  flex: 0 0 60px;
+  color: #9499a0;
+}
+
+.nova-live-player-report-value {
+  flex: 1;
+  min-width: 0;
+  color: #61666d;
+  word-break: break-all;
+}
+
+.nova-live-player-report-placeholder {
+  margin: 8px 0 6px;
+  color: #9499a0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.nova-live-player-report-reasons {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0;
+}
+
+.nova-live-player-report-reason {
+  height: 30px;
+  margin-bottom: 4px;
+  padding: 0 10px;
+  border: 1px solid #e3e5e7;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #61666d;
+  font-size: 12px;
+  line-height: 28px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #ff6699;
+  }
+
+  &.is-selected {
+    border-color: #ff6699;
+    background-color: rgba(255, 102, 153, 0.08);
+    color: #ff6699;
+  }
+}
+
+.nova-live-player-report-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nova-live-player-report-cancel {
+  min-width: 64px;
+  height: 28px;
+  margin-right: 8px;
+  border: 1px solid #e3e5e7;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #61666d;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nova-live-player-report-submit {
+  min-width: 64px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background-color: #ff6699;
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nova-live-player-report-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

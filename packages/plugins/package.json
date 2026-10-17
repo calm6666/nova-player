@@ -61,6 +61,7 @@
     "@lumina/nova": "workspace:*"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.1.1",
     "dashjs": "^5.1.1",
     "flv.js": "^1.6.2"
   },

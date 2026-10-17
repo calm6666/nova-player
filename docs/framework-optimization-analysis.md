@@ -189,3 +189,143 @@ Vue/Solid 的做法是 **dev 和 prod 编译同一份代码**，差异只由 `__
 - `tests/core/internal.test.ts` 新增 `_cloneHoisted` 多次挂载互不污染测试
 
 验证结果：全量 402 条中 401 通过（唯一失败仍为历史遗留的 `VideoPlayer > should merge default config`）；`core/`、`plugins/`、`tests/` 目录 tsc 类型检查零新增错误；`packages/player` 的 `vite build` 生产构建通过（`tsc && vite build` 中的 tsc 步骤因改动前就存在的类型错误失败，经 stash 对照确认与本次修改无关），产物经 sourcemap 确认包含 `_hoisted_N`/`_cloneHoisted`，且 minify 后 dev 警告代码已被 DCE 移除。
+
+---
+
+## 十、编译器优化（本轮：attrs 护栏收紧 / L12 / L15）
+
+> §9.2 末行「attrs 内的 h() 调用被转换/与 rewriteAttrs 冲突 → `isInsideAttrsOfHCall` 跳过」
+> 中的「与 rewriteAttrs 冲突」表述**已过时**，本轮重新表述并收紧，见 10.1。
+
+### 10.1 `isInsideAttrsOfHCall` 收紧：区分「值位置」与「函数体内」
+
+**问题**：原实现只要向上遇到「框架 h() 的第 2 实参」就跳过，导致 `For/Switch/Match/Dynamic`
+的 render/key 回调与组件 render prop 体内的代码**静默失去全部编译期优化**
+（无 `__reactiveAttrs`、无 `_reactiveText`、无静态提升 ⇒ 信号属性不会自动更新）。
+典型受害位置：`packages/*/src/**` 中所有 `render: (item) => h('div', { class: dyn }, ...)`。
+
+**收紧后的精确规则**（沿祖先链自底向上）：
+
+| 位置 | 判定 | 处理 |
+|------|------|------|
+| 直接落在 ObjectProperty 的 value / ArrayExpression 元素 / SpreadElement 参数上 | 值位置 | **跳过**（属性值不是子节点） |
+| 跨越函数边界（箭头/函数表达式/函数声明）后 | 函数体内 | **正常转换** |
+| 容器里的值本身就是函数定义 | 该边只是函数定义处 | 不视为值位置 |
+
+```ts
+// h(C, { icon:  h('span') })                  → 跳过（icon 的值就是该 VNode）
+// h(C, { list: [h('i')] })                    → 跳过
+// h(C, { ...h('div') })                       → 跳过
+// h(For, { render: (i) => h('div', ...) })    → 转换 ✅
+// h(C, { render: (x) => h('b', {}, x) })      → 转换 ✅
+```
+
+**为什么值位置必须跳过（真实机制，已实测）**：父级 `rewriteAttrs` / `rewriteCompAttrs`
+用 `s.overwrite(attrsArg.start, attrsArg.end, newStr)` 覆盖**整个 attrs 区间**，
+且新串由 `s.original.slice(...)` 生成。MagicString 允许「父区间包含子区间」的覆盖，
+但覆盖会**静默丢弃子级已写入的编辑**：子级的 `_createEl` 转换、提升声明与 `_cloneHoisted`
+引用全部消失，只留下永不引用的 `const _hoisted_N = ...` 与多余 import（死代码 + 体积膨胀）。
+（另：真正**部分重叠**的两次编辑会直接抛 `Cannot split a chunk that has already been edited`。）
+
+**连带修复**：新增 `hasAttrsAncestor`（不区分值位置/函数体，只要整段位于某个祖先 h() 的
+attrs 实参内即为真），用于静态提升的两趟预扫描准入 —— 否则 attrs 内的静态子树仍会被
+标记为提升目标，产生上面那种「声明被覆盖丢弃」的死代码。
+
+**实测效果**（对全仓 213 个源文件 × `tmplStatic` 双路径编译）：
+
+| 指标 | 改造前 | 改造后 |
+|------|--------|--------|
+| 残留的框架 `h()` 调用 | 136 | 10（全部位于注释中） |
+| `_createEl` 调用 | 1584 | 1708 |
+| 受影响文件（去重） | — | 59 |
+
+### 10.2 L12：静态 attrs 单独提升（`_hoisted_attrs_N`）
+
+「attrs 全静态 + children 动态」时把 attrs 对象提升为模块级常量，省掉每次渲染的对象分配。
+
+准入条件：`hoistStatic` 开启（与整棵子树提升同一开关，dev 不提升）；tag 为字符串字面量且
+非 fragment；**不是**整棵静态提升目标；至少一个动态子节点；attrs 为非空对象字面量且每个属性
+都是「非 computed + 值静态 + 不含任何标识符引用」；不含 `onXxx` 事件；不含
+`__reactiveAttrs`/`__events`/`__ref`/`__providers`；`ref` 与 `rewriteAttrs` 一致地重命名为 `__ref`。
+
+> `containsIdentifier` 检查的原因：静态 attrs 在模块初始化时求值一次，
+> 若值引用导入绑定而该绑定后续被改写，提升会把值冻结成早期快照，与「每次渲染重新求值」不一致。
+
+**共享对象安全性（已核对运行时，未发现 mutate）**：
+
+- `core/mount.ts` 的 `applyAttrs` / `applyReactiveAttrs` / `bindRef` / `clearRef` 只**读取** `attrs`
+  （`for...in` + 读值 + `hasOwnProperty`），全部分支无写入、无删除。
+- `core/internal.ts` 的 `extractProviders` 在含 `__providers` 时返回 `{ ...attrs }` **浅拷贝**并
+  `delete rest.__providers`，**不修改入参**；不含 `__providers` 时原样返回。
+- 准入条件显式拒绝事件 / 动态值 / SpreadElement，因此产物中不存在需要逐次生成的
+  `__events` / `__reactiveAttrs`，共享容器恒为只读访问。
+- 反过来，编译路径**不使用** `core/h.ts` 中那处 `delete vnode.attrs["__providers"]`
+  （那是未编译 h() 路径），因此共享 attrs 不会被该分支删除。
+
+**实测效果**：产物新增 `_hoisted_attrs_N` 声明 1084 处（双路径合计），涉及 59 个文件。
+
+### 10.3 L15：`_createCompPure`（先实测，后实施）
+
+**微基准（实施前，同形状 A/B，只差 ref/__providers 提取）**：
+
+| 组 | 基准 | Pure | 提升 |
+|----|------|------|------|
+| round0 | 45.69ms | 40.47ms | 11.42% |
+| round1 | 45.91ms | 40.51ms | 11.77% |
+| round2 | 47.98ms | 44.38ms | 7.51% |
+| 3 轮均值 | 46.53ms | 41.79ms | **10.19%** |
+
+独立重复 3 次得 15.79% / 12.33% / 7.51%，**稳定高于 5% 阈值**，故予实施。
+实施后 `tests/plugin/lumina-compile-l15-bench.test.ts` 直接对比生产函数，多次运行落在
+**6.3%～22.8%** 区间（受机器负载影响），并带「Pure 不慢于基准」的护栏断言。
+
+**编译期准入** `canUseCompPure`：attrs 省略 / `null` / `undefined` 字面量 / 对象字面量且
+每个属性为非 computed 的 ObjectProperty 且键名不是 `ref`/`__providers`。
+SpreadElement、computed key、动态 attrs 表达式一律回退 `_createComp`。
+
+**运行时实现**（`core/internal.ts`，`core/index.ts` 导出）跳过：`'ref' in attrs` + 三形态提取、
+`'__providers' in attrs` + `Array.isArray`、以及两个内部键的 props 过滤分支。
+**完整保留**：children 扁平化 → `props.children`、`maybeReactiveProps` 响应式 props
+（控制流组件豁免）、函数/类组件渲染 + `reportError` 上报后 rethrow、`vnode.__parent`、
+未标记组件类型的 `h()` fallback。**不设置** `vnode.__providers` —— 这正是准入条件必须严格的原因。
+
+**实测效果**：`_createCompPure` 调用 276 处，`_createComp` 由 294 降至 20。
+
+### 10.4 L13：评估后**不实施**（产物已按已发布设计验证）
+
+原测试期望静态子树产出裸 VNode 字面量 `{ tag, attrs, children }` 并跳过
+`_createStaticEl/_createSvgEl/_createFragment`。经评估**不采用**：
+
+1. 三个 helper 承担运行时必需语义：`__providers` 提取（§8 Bug 3）、`flattenChildren`、
+   SVG 的 `__ns`（`materialize` 依赖它调用 `createElementNS`）；改字面量等于把这些逻辑
+   在编译期内联复制。
+2. 提升节点**只在模块初始化时创建一次**，改字面量省掉的是一次性构造，收益≈0。
+3. 生产默认 `tmplStatic: true`，真实构建走 HTML 字符串 + `_tmpl`（cloneNode 直达 DOM），
+   VNode 构造路径仅作裸 SVG 子标签等场景兜底。
+
+因此 `tests/plugin/lumina-compile-l12-l13.test.ts` 的 L13 用例改写为验证**已发布设计**
+（`_createStaticEl`/`_createSvgEl`/`_createFragment`/`_tmpl` + `_cloneHoisted`，且不残留 `h()`），
+并在文件内注明上述理由。这是本轮**唯一**的测试语义变更。
+
+### 10.5 本轮验证结果
+
+| 验证项 | 结果 |
+|--------|------|
+| 全仓产物基线 diff（213 文件 × 双路径） | 59 个文件 / 118 个 (文件,模式) 对发生变化，**0 个未归类**，`_failed=0` |
+| 死代码检查 | 未引用的 `_hoisted_*` 声明 **0**；未使用的 internal import **0**（改造前后均为 0） |
+| AST 级语义核对 | 源级 attrs 规范形（还原 `__events`/`__reactiveAttrs`/`__ref`/`_hoisted_*` 后）**遗失 0 处** |
+| 全量 vitest | **330 通过 / 0 失败**（11 个测试文件） |
+| tsc | 根 + `packages/player` + `packages/live-player`：我的改动范围**零错误**；根检查仅剩 2 条既有错误（`packages/plugins/src/utils/danmakuMask/segmentationWorker.ts` 缺 `@mediapipe/tasks-vision` 类型，与本轮无关） |
+| 生产构建 | `packages/player`、`packages/live-player` 均 `✓ built`；`tsconfig` 类型检查 exit 0 |
+| 产物体积（同一机器 A/B 对照，改造前 vs 改造后） | player `index.js` 1,577,103 → 1,593,414（+1.03%）、`lumina.js` 95,565 → 96,925（+1.42%）、live-player `index.js` 229,448 → 231,412（+0.86%）、live-player `lumina.js` 100,720 → 99,779（**−0.93%**）；8 个产物合计 3,429,711 → 3,448,405（**+0.55%**） |
+
+体积增量主要来自 1084 处 `_hoisted_attrs_N` 常量声明与 `_createCompPure` 函数体；
+对应收益是每次渲染不再重新分配 attrs 对象、组件创建少两次内部键判定。
+两次「我的实现」构建产物字节完全一致（可复现）。
+
+> 遗留未处理项（需负责人决策，不在本轮写入范围）：
+> `packages/live-player/src/business/views/GiftPanel.ts` 头部注释仍写着
+> 「`For.render` 内返回的 VNode 不会参与属性响应式提取（编译期跳过 attrs 内的 h()），
+> 因此条目上的 class 依赖的状态统一并入 key」——本轮 10.1 之后该前提已不再成立
+> （`For.render` 回调体现在会正常编译并生成 `__reactiveAttrs`），该注释与随之而来的
+> 「class 并入 key」规避手法可以重新评估。该文件属于 `packages/**`，不在本轮写入范围。

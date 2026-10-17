@@ -467,6 +467,7 @@ import type { MediaManifestSource, QualityLevel } from "@/types/streamPlugin";
 import type {
   DanmakuListProvider,
   DanmakuSendProvider,
+  MaskLoader,
 } from "@/types/danmaku";
 // 阶段 C.1：插槽类型（ControlSlotItem / EndingSlot / SlotContext / ControlSlotPosition）
 import type {
@@ -752,6 +753,42 @@ export interface DanmakuConfigSpace {
   fontSize?: number;
   /** 显示区域占比 (0-1) */
   area?: number;
+  /**
+   * 弹幕智能防挡配置（开发者可选外部遮罩或本地语义分割）
+   *
+   * 开关由用户在弹幕设置面板控制（持久化 danmakuSettings.maskEnabled）；
+   * 开启时优先使用 provider（外部传入遮罩），未配置 provider 则懒加载
+   * 本地 MediaPipe 语义分割（动态 import 独立 chunk + Web Worker 推理，
+   * 用户未开启不下载模型，不阻塞主线程）
+   */
+  mask?: DanmakuMaskOptions;
+}
+
+/**
+ * 弹幕智能防挡选项
+ */
+export interface DanmakuMaskOptions {
+  /**
+   * 外部遮罩提供者（与字幕 provider 同一模式，优先于本地分割）
+   *
+   * 播放器按遮罩更新间隔调用，外部返回当前时间的遮罩图
+   * （SVG/PNG data URL 或图片 URL）或 clearMask 清除
+   */
+  provider?: MaskLoader;
+  /**
+   * 本地语义分割模型配置（未配置 provider 时启用）
+   *
+   * modelUrl 指向 tflite 模型（默认本地
+   * /mediapipe/models/selfie_multiclass_256x256.tflite，
+   * 可替换为 CDN：https://storage.googleapis.com/mediapipe-models/
+   * image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite）
+   */
+  localModel?: {
+    /** 分割模型 tflite 地址 */
+    modelUrl?: string;
+    /** 置信度阈值（默认 0.25） */
+    threshold?: number;
+  };
 }
 
 /**
@@ -762,6 +799,8 @@ export interface SubtitleConfigSpace {
   enabled?: boolean;
   /** 字幕轨道列表（原 subtitles） */
   list?: SubtitleConfig[];
+  /** 字幕样式增量 patch（字幕菜单初值快照，与字幕插件共享同一来源） */
+  style?: Record<string, unknown>;
 }
 
 /**

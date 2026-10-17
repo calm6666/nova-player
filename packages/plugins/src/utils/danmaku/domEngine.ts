@@ -144,9 +144,6 @@ export class DOMEngine {
 
     container.appendChild(this.danmakuLayer);
 
-    // 应用初始显示区域裁剪（构造即生效，避免初始区域非全屏时首帧闪现全屏弹幕）
-    this.applyAreaClip();
-
     // 绑定鼠标事件
     this.bindMouseEvents();
 
@@ -156,23 +153,6 @@ export class DOMEngine {
     }
 
     this.resize();
-  }
-
-  /**
-   * 将显示区域占比写入弹幕层 CSS 变量（底部裁剪百分比）
-   *
-   * .danmaku-layer 消费 --area-clip 做 clip-path 硬裁剪（danmaku.scss），
-   * 保证区域变化时「在飞弹幕」超出区域的部分立即不可见——仅靠
-   * initTracks 重建轨道只约束新弹幕，在飞弹幕仍按原 y 继续飞行，
-   * 用户侧表现为「设置 50% 后弹幕仍然满屏」（本方法即该问题的修复）。
-   * 裁剪为百分比，容器 resize 时无需重写。
-   */
-  private applyAreaClip(): void {
-    const area = Math.min(1, Math.max(0.05, this.config.area));
-    this.danmakuLayer.style.setProperty(
-      "--area-clip",
-      `${((1 - area) * 100).toFixed(2)}%`,
-    );
   }
 
   /**
@@ -1072,13 +1052,20 @@ export class DOMEngine {
 
     Object.assign(this.config, config);
 
-    // 如果区域档位变化：
-    // 1. 更新弹幕层裁剪变量——在飞弹幕超出区域的部分立即被裁剪不可见
-    //    （仅重建轨道时在飞弹幕保持原 y 继续飞行，观感即「区域设置不生效」）
-    // 2. 重新初始化轨道（回填在飞占用，防止新弹幕叠进在飞 y），
+    // 区域档位变化（不使用 CSS clip-path 裁切，直接物理回收超界弹幕）：
+    // 1. 移除在飞弹幕中超出新区域底界的项（removeDanmaku 回收 DOM、
+    //    释放轨道占用），观感即「区域缩小后超界弹幕立即消失」，
+    //    弹幕真实只存在于新区域内，无被裁切的隐藏渲染开销
+    // 2. 重新初始化轨道（回填剩余在飞占用，防止新弹幕叠进在飞 y），
     //    新弹幕只分配到区域内的轨道
     if (config.area !== undefined && config.area !== oldArea) {
-      this.applyAreaClip();
+      const areaValue = Math.min(1, Math.max(0.05, config.area));
+      const areaBottom = this.height * areaValue;
+      for (const item of Array.from(this.renderItems.values())) {
+        if (item.isRendering && item.y + item.height > areaBottom) {
+          this.removeDanmaku(item.renderId);
+        }
+      }
       const inFlight = Array.from(this.renderItems.values()).filter(
         (item) => item.isRendering,
       );

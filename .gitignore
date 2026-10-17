@@ -41,6 +41,11 @@ mock-server/interactive/videos/
 # 早期独立播放器演示页（已废弃，主 demo 在 demo/ 根）
 demo/player-demo/
 
+# 演示用 AI 模型二进制（MediaPipe 分割模型 / sherpa-onnx ASR 模型与
+# wasm 运行时，共 60+MB）：不入库，下载方式见 docs/api.md 6.5.1 / 6.6.2
+demo/public/asr/
+demo/public/mediapipe/
+
 # ============================================
 # 日志
 # ============================================

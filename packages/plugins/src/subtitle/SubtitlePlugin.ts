@@ -32,7 +32,7 @@
  * ]
  */
 
-import type { Plugin, PluginOptions } from '@/types/plugin';
+import type { Plugin, PluginOptions } from "@/types/plugin";
 import type {
   SubtitleItem,
   ParsedSubtitle,
@@ -48,30 +48,37 @@ import type {
   SubtitleEngineContext,
   AsrEngine,
   AiSubtitleEntry,
-} from '@/types/subtitle';
-import { SubtitleFormat } from '@/types/subtitle';
+} from "@/types/subtitle";
+import { SubtitleFormat } from "@/types/subtitle";
 
-export type { SubtitleSource } from '@/types/subtitle';
-import type { VideoPlayer } from '../../../player/src/player/VideoPlayer';
-import type { PlayerEventBus } from '../../../player/src/core/plugin';
-import { PlayerEventEnum } from '@/core/events';
-import { parseSubtitle } from '@/utils/subtitle';
-import { isBrowser, createLogger } from '@/utils';
-import type { AiSubtitleBackendConfig } from './aiSubtitleConfig';
-import { aiSubtitleEntriesToItems } from './aiSubtitleConfig';
-import { AiSubtitleFetcher } from './AiSubtitleFetcher';
-import { AudioCapture } from './asr/audioCapture';
-import { createLocalAiProvider, LOCAL_AI_TRACK_ID } from './asr/localAiProvider';
-import { createLegacyRemoteProvider, LEGACY_REMOTE_TRACK_ID } from './remoteProvider';
+export type { SubtitleSource } from "@/types/subtitle";
+import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
+import type { PlayerEventBus } from "../../../player/src/core/plugin";
+import { PlayerEventEnum } from "@/core/events";
+import { parseSubtitle } from "@/utils/subtitle";
+import { isBrowser, createLogger } from "@/utils";
+import type { AiSubtitleBackendConfig } from "./aiSubtitleConfig";
+import { aiSubtitleEntriesToItems } from "./aiSubtitleConfig";
+import { AiSubtitleFetcher } from "./AiSubtitleFetcher";
+import { AudioCapture } from "./asr/audioCapture";
+import {
+  createLocalAiProvider,
+  LOCAL_AI_TRACK_ID,
+} from './asr/localAiProvider';
+import { createLocalAiWorkerProvider } from './asr/asrWorkerProvider';
+import {
+  createLegacyRemoteProvider,
+  LEGACY_REMOTE_TRACK_ID,
+} from "./remoteProvider";
 
 /** 字幕插件日志（仅 error 级别的加载失败诊断） */
-const logger = createLogger('SubtitlePlugin');
+const logger = createLogger("SubtitlePlugin");
 
 /** 翻译行样式类（双语拼装：原文 + 译文次级样式，设计文档 5.1） */
-export const SUBTITLE_TRANSLATION_CLASS = 'subtitle-translation';
+export const SUBTITLE_TRANSLATION_CLASS = "subtitle-translation";
 
 /** 本地识别 partial 灰显样式类 */
-const SUBTITLE_PARTIAL_CLASS = 'subtitle-partial';
+const SUBTITLE_PARTIAL_CLASS = "subtitle-partial";
 
 /** 增量拉取窗口（秒） */
 const REMOTE_WINDOW_SECONDS = 60;
@@ -97,15 +104,23 @@ export interface SubtitlePluginConfig {
   fontSize?: number;
   /** 字体颜色 */
   color?: string;
-  /** 背景颜色 */
+  /** 背景颜色（显式设置时优先于 backgroundOpacity；默认透明由不透明度计算） */
   backgroundColor?: string;
+  /** 背景不透明度（0-1，默认 0.87；backgroundColor 未显式设置时生效） */
+  backgroundOpacity?: number;
+  /** 等比缩放：字号随播放器高度缩放（默认 true） */
+  scale?: boolean;
+  /** 淡入淡出：字幕切换时渐显（默认 false） */
+  fade?: boolean;
+  /** 水平对齐：-1 左 / 0 中 / 1 右（默认 0） */
+  align?: number;
   /** 描边颜色 */
   strokeColor?: string;
   /** 描边宽度 */
   strokeWidth?: number;
   /** 位置：'bottom' | 'top' | 'middle' */
-  position?: 'bottom' | 'top' | 'middle';
-  /** 底部偏移（px） */
+  position?: "bottom" | "top" | "middle";
+  /** 底部偏移（px，控制栏隐藏时字幕距底部距离） */
   bottomOffset?: number;
   /**
    * AI 字幕后端接口配置（模式 B 旧路径，启用 AI 字幕模式时必填）
@@ -133,9 +148,13 @@ interface SubtitleResolvedConfig {
   fontSize: number;
   color: string;
   backgroundColor: string;
+  backgroundOpacity: number;
+  scale: boolean;
+  fade: boolean;
+  align: number;
   strokeColor: string;
   strokeWidth: number;
-  position: 'bottom' | 'top' | 'middle';
+  position: "bottom" | "top" | "middle";
   bottomOffset: number;
 }
 
@@ -173,10 +192,18 @@ export interface SubtitlePluginAPI extends Plugin {
   setColor(color: string): void;
   /** 设置背景颜色 */
   setBackgroundColor(color: string): void;
+  /** 设置背景不透明度（0-1，面板「背景不透明度」滑杆） */
+  setBackgroundOpacity(opacity: number): void;
+  /** 设置等比缩放（字号随播放器高度缩放） */
+  setScale(scale: boolean): void;
+  /** 设置淡入淡出（字幕切换时渐显） */
+  setFade(fade: boolean): void;
+  /** 设置水平对齐（-1 左 / 0 中 / 1 右） */
+  setAlign(align: number): void;
   /** 设置描边 */
   setStroke(color?: string, width?: number): void;
   /** 设置位置 */
-  setPosition(position?: 'bottom' | 'top' | 'middle', offset?: number): void;
+  setPosition(position?: "bottom" | "top" | "middle", offset?: number): void;
   /** 获取字幕状态 */
   getStatus(): {
     visible: boolean;
@@ -189,7 +216,7 @@ export interface SubtitlePluginAPI extends Plugin {
     itemCount: number;
     timeOffset: number;
     /** 当前字幕来源维度（设计文档 6.4） */
-    source: 'file' | 'remote' | 'local-ai' | null;
+    source: "file" | "remote" | "local-ai" | null;
   };
   // ==================== AI 字幕 API（旧路径） ====================
   /** 启用 AI 字幕模式（启用后自动拉取一次） */
@@ -226,14 +253,18 @@ export interface SubtitlePluginAPI extends Plugin {
 // ============================================
 
 class SubtitlePluginClass implements SubtitlePluginAPI {
-  readonly name = 'subtitle';
-  readonly version = '1.0.0';
-  readonly description = 'Subtitle rendering plugin';
+  readonly name = "subtitle";
+  readonly version = "1.0.0";
+  readonly description = "Subtitle rendering plugin";
   readonly options?: PluginOptions;
 
   private video: HTMLVideoElement | null = null;
   private subtitleWrap: HTMLElement | null = null;
-  private subtitleEl: HTMLElement | null = null;
+  /** 字幕文本元素（拖拽手柄，注入 panel 内） */
+  private subtitleEl: HTMLDivElement | null = null;
+  /** 拖拽位置（panel 左上角 px，null = 未拖拽走档位基础位置） */
+  private dragLeft: number | null = null;
+  private dragTop: number | null = null;
 
   private config: SubtitleResolvedConfig;
   private currentSubtitle: ParsedSubtitle | null = null;
@@ -270,11 +301,12 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   /** 音频采集会话（AudioContext/Source 全实例复用） */
   private capture: AudioCapture | null = null;
   /** 当前识别语言 */
-  private localAiLang = '';
+  private localAiLang = "";
   /** 本地识别是否运行中 */
   private localAiActive = false;
   /** 本地轨状态点（downloading/loading/ready/error，菜单状态点用） */
-  private localAiStatus: SubtitleAiStatusPayload['phase'] | undefined = undefined;
+  private localAiStatus: SubtitleAiStatusPayload["phase"] | undefined =
+    undefined;
   /** 本地轨字幕条目（负数 id 自增；停止后保留，切轨回来继续可用） */
   private localAiItems: SubtitleItem[] = [];
   /** 本地轨 id 序列（--seq 产出 -1, -2, …） */
@@ -314,29 +346,35 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   /** 当前激活的轨道 id（file:<lang> / remote:<trackId> / local-ai） */
   private activeTrackId: string | null = null;
   /** 渲染去重 key（RAF 逐帧调用，key 不变则跳过 DOM 写入） */
-  private lastRenderedKey = '';
+  private lastRenderedKey = "";
 
   constructor(config?: SubtitlePluginConfig) {
     this.config = {
       sources: config?.sources ?? [],
-      defaultLang: config?.defaultLang ?? '',
+      defaultLang: config?.defaultLang ?? "",
       visible: config?.visible ?? true,
       fontSize: config?.fontSize ?? 24,
-      color: config?.color ?? '#ffffff',
-      backgroundColor: config?.backgroundColor ?? 'transparent',
-      strokeColor: config?.strokeColor ?? '#000000',
+      color: config?.color ?? "#ffffff",
+      backgroundColor: config?.backgroundColor ?? "transparent",
+      backgroundOpacity: config?.backgroundOpacity ?? 0.87,
+      scale: config?.scale ?? true,
+      fade: config?.fade ?? false,
+      align: config?.align ?? 0,
+      strokeColor: config?.strokeColor ?? "#000000",
       strokeWidth: config?.strokeWidth ?? 2,
-      position: config?.position ?? 'bottom',
-      bottomOffset: config?.bottomOffset ?? 60,
+      position: config?.position ?? "bottom",
+      // 底部基础偏移：控制栏隐藏时距底部距离（B 站式小间距，
+      // 控制栏出现时由 CSS 抬升量避开，见 subtitlelayer.scss）
+      bottomOffset: config?.bottomOffset ?? 12,
     };
     this.isVisible = this.config.visible;
     this.options = config?.options;
 
     // AI 字幕配置归一
     this.aiBackend = config?.aiBackend ?? null;
-    if (typeof config?.aiVideoId === 'function') {
+    if (typeof config?.aiVideoId === "function") {
       this.aiVideoIdResolver = config.aiVideoId;
-    } else if (typeof config?.aiVideoId === 'string') {
+    } else if (typeof config?.aiVideoId === "string") {
       const staticId = config.aiVideoId;
       this.aiVideoIdResolver = (): string => staticId;
     } else {
@@ -362,26 +400,30 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       }
 
       if (data.container) {
-        // 查找 .nova-player-subtitle-wrap 容器（SubtitleLayer 组件渲染的容器）
-        this.subtitleWrap = data.container.querySelector('.nova-player-subtitle-wrap') ?? null;
+        // 查找 .nova-subtitle-x-subtitle-panel 容器（SubtitleLayer 组件渲染的容器）
+        this.subtitleWrap =
+          data.container.querySelector(".nova-subtitle-x-subtitle-panel") ??
+          null;
 
-        // 在容器内创建字幕 DOM 元素
+        // 在容器内创建字幕 DOM 元素（拖拽手柄：样式由 subtitlelayer.scss
+        // 的 .subtitle-text 规则提供——fit-content 居中 + pointer-events:auto）
         if (this.subtitleWrap) {
-          this.subtitleEl = document.createElement('div');
-          this.subtitleEl.className = 'subtitle-text';
-          this.subtitleEl.style.textAlign = 'center';
-          this.subtitleEl.style.pointerEvents = 'none';
-          this.subtitleEl.style.whiteSpace = 'pre-wrap';
+          this.subtitleEl = document.createElement("div");
+          this.subtitleEl.className = "subtitle-text";
           this.subtitleWrap.appendChild(this.subtitleEl);
           this.applyStyles();
+          // 定位体系初始化：档位属性 + 偏移变量（控制栏抬升由 CSS 派生）
+          this.applyPosition();
+          this.bindDragHandlers();
         }
       }
 
       // 加载默认字幕
       if (this.config.sources.length > 0) {
-        const defaultSource = this.config.sources.find(s => s.default) ??
-                              this.config.sources.find(s => s.lang === this.config.defaultLang) ??
-                              this.config.sources[0];
+        const defaultSource =
+          this.config.sources.find((s) => s.default) ??
+          this.config.sources.find((s) => s.lang === this.config.defaultLang) ??
+          this.config.sources[0];
         if (defaultSource) {
           void this.load(defaultSource);
         }
@@ -406,11 +448,14 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
 
     // 订阅 TIME_UPDATE 事件：字幕更新由 RAF 循环驱动；
     // 此事件用于增量拉取的播放头预取判断（模式 B）
-    const unsubTimeUpdate = events.on(PlayerEventEnum.TIME_UPDATE, (data): void => {
-      if (data && typeof data.time === 'number') {
-        this.maybePrefetchNextRange(data.time);
-      }
-    });
+    const unsubTimeUpdate = events.on(
+      PlayerEventEnum.TIME_UPDATE,
+      (data): void => {
+        if (data && typeof data.time === "number") {
+          this.maybePrefetchNextRange(data.time);
+        }
+      },
+    );
     this.unsubscribers.push(unsubTimeUpdate);
 
     // 订阅 SEEK_END 事件：跳转时更新字幕
@@ -431,17 +476,23 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     // payload 携带目标值（VideoPlayer.setSubtitleVisible 的「设置」语义），
     // 必须按 payload 应用而非翻转——初始化状态同步也会走此事件，
     // 若误用翻转语义会把字幕意外关闭（isVisible 错位）
-    const unsubToggle = events.on(PlayerEventEnum.SUBTITLE_TOGGLE, (data): void => {
-      if (data && typeof data.visible === 'boolean') {
-        this.setVisible(data.visible);
-      }
-    });
+    const unsubToggle = events.on(
+      PlayerEventEnum.SUBTITLE_TOGGLE,
+      (data): void => {
+        if (data && typeof data.visible === "boolean") {
+          this.setVisible(data.visible);
+        }
+      },
+    );
     this.unsubscribers.push(unsubToggle);
 
     // 订阅 SUBTITLE_SWITCH 事件：切换字幕语言（语言代码或轨道 id）
-    const unsubSwitch = events.on(PlayerEventEnum.SUBTITLE_SWITCH, (data): void => {
-      void this.switchLanguage(data.lang);
-    });
+    const unsubSwitch = events.on(
+      PlayerEventEnum.SUBTITLE_SWITCH,
+      (data): void => {
+        void this.switchLanguage(data.lang);
+      },
+    );
     this.unsubscribers.push(unsubSwitch);
   }
 
@@ -450,7 +501,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     this.stopUpdateLoop();
 
     // 取消所有事件订阅
-    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers.forEach((unsub) => unsub());
     this.unsubscribers = [];
 
     // 移除字幕 DOM 元素
@@ -458,6 +509,9 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       this.subtitleWrap.removeChild(this.subtitleEl);
     }
     this.subtitleEl = null;
+
+    this.dragLeft = null;
+    this.dragTop = null;
 
     this.subtitleWrap = null;
     this.video = null;
@@ -482,7 +536,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     this.remoteActiveTrack = null;
     this.translationItems = [];
     this.activeTrackId = null;
-    this.lastRenderedKey = '';
+    this.lastRenderedKey = "";
 
     // 清理 AI 字幕运行态
     this.eventBus = null;
@@ -523,7 +577,10 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
    * @param currentTime - 当前播放时间（秒）
    * @returns 匹配的字幕索引，未找到返回 -1
    */
-  private binarySearchSubtitle(items: SubtitleItem[], currentTime: number): number {
+  private binarySearchSubtitle(
+    items: SubtitleItem[],
+    currentTime: number,
+  ): number {
     if (items.length === 0) return -1;
 
     let low = 0;
@@ -541,7 +598,12 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
 
     // high 是最后一个 startTime <= currentTime 的索引
     // 检查该字幕是否仍在显示时间范围内
-    if (high >= 0 && high < items.length && currentTime >= items[high].startTime && currentTime <= items[high].endTime) {
+    if (
+      high >= 0 &&
+      high < items.length &&
+      currentTime >= items[high].startTime &&
+      currentTime <= items[high].endTime
+    ) {
       return high;
     }
 
@@ -578,9 +640,9 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     if (!this.subtitleEl) return;
 
     if (!this.isVisible || !this.currentSubtitle || !this.video) {
-      if (this.subtitleEl.innerHTML !== '') {
-        this.subtitleEl.innerHTML = '';
-        this.lastRenderedKey = '';
+      if (this.subtitleEl.innerHTML !== "") {
+        this.subtitleEl.innerHTML = "";
+        this.lastRenderedKey = "";
       }
       return;
     }
@@ -604,19 +666,30 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     // 翻译行：主轨条目命中时查译文（同一时间轴二分）
     let translationItem: SubtitleItem | null = null;
     if (activeItem !== null && this.translationItems.length > 0) {
-      const translationIndex = this.binarySearchSubtitle(this.translationItems, currentTime);
-      translationItem = translationIndex >= 0 ? this.translationItems[translationIndex] : null;
+      const translationIndex = this.binarySearchSubtitle(
+        this.translationItems,
+        currentTime,
+      );
+      translationItem =
+        translationIndex >= 0 ? this.translationItems[translationIndex] : null;
     }
 
     // 渲染 key：final/partial/译文组合任一变化才写 DOM（RAF 逐帧调用，避免高频写入）
     const renderKey =
       activeItem !== null
-        ? `f:${activeItem.id}:${translationItem !== null ? `t${translationItem.id}` : ''}`
+        ? `f:${activeItem.id}:${translationItem !== null ? `t${translationItem.id}` : ""}`
         : partialActive && partial !== null
           ? `p:${partial.text}`
-          : '';
+          : "";
     if (renderKey === this.lastRenderedKey) return;
     this.lastRenderedKey = renderKey;
+
+    // 淡入淡出：内容变化时重触发渐显动画（移除→强制重排→回加）
+    if (this.config.fade && renderKey !== "") {
+      this.subtitleEl.classList.remove("subtitle-fade");
+      void this.subtitleEl.offsetWidth;
+      this.subtitleEl.classList.add("subtitle-fade");
+    }
 
     if (activeItem !== null) {
       this.subtitleEl.innerHTML =
@@ -627,7 +700,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       // 临时灰显：文本仍在变动，被后续 finalCues 覆盖
       this.subtitleEl.innerHTML = `<span class="${SUBTITLE_PARTIAL_CLASS}" style="opacity:.55">${partial.text}</span>`;
     } else {
-      this.subtitleEl.innerHTML = '';
+      this.subtitleEl.innerHTML = "";
     }
   }
 
@@ -639,39 +712,163 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   private applyStyles(): void {
     if (!this.subtitleEl) return;
 
-    this.subtitleEl.style.fontSize = `${this.config.fontSize}px`;
+    // 字号：等比缩放开启时用 cqh 单位（容器高度百分比，基准 500px 高，
+    // 播放器尺寸变化字号随之缩放，下限 12px）；关闭时固定 px
+    if (this.config.scale) {
+      this.subtitleEl.style.fontSize = `max(12px, ${(this.config.fontSize / 5).toFixed(2)}cqh)`;
+    } else {
+      this.subtitleEl.style.fontSize = `${this.config.fontSize}px`;
+    }
     this.subtitleEl.style.color = this.config.color;
-    this.subtitleEl.style.backgroundColor = this.config.backgroundColor;
+    // 背景：显式 backgroundColor（非 transparent）优先（兼容旧配置），
+    // 否则黑底 + 不透明度（字幕设置面板「背景不透明度」实时生效）
+    this.subtitleEl.style.backgroundColor =
+      this.config.backgroundColor !== "transparent"
+        ? this.config.backgroundColor
+        : `rgba(0, 0, 0, ${this.config.backgroundOpacity})`;
     this.subtitleEl.style.textShadow = `0 0 ${this.config.strokeWidth}px ${this.config.strokeColor}`;
-    this.subtitleEl.style.opacity = this.isVisible ? '1' : '0';
+    this.subtitleEl.style.opacity = this.isVisible ? "1" : "0";
+    // 淡入淡出：字幕切换时渐显（动画重触发在 updateSubtitle，keyframes 在 scss）
+    if (this.config.fade) {
+      this.subtitleEl.classList.add("subtitle-fade");
+    } else {
+      this.subtitleEl.classList.remove("subtitle-fade");
+    }
 
     this.applyPosition();
   }
 
   /**
    * 应用位置到字幕容器
+   *
+   * 属性/变量驱动（唯一定位 owner，杜绝与组件层 inline 定位冲突）：
+   * - 档位写 panel 的 data-position 属性（subtitlelayer.scss 按属性
+   *   选择器派生 top/middle/bottom 基础定位）
+   * - 底部偏移写 --subtitle-offset 变量（config.bottomOffset）
+   * - 控制栏抬升不在此处理：subtitlelayer.scss 以
+   *   .nova-player-container 属性选择器（data-ctrl-hidden / data-screen）
+   *   纯 CSS 派生，无 JS 参与
+   * - 拖拽位置（dragLeft/dragTop）写 inline left/top 接管档位定位
    */
   private applyPosition(): void {
     if (!this.subtitleWrap) return;
 
-    switch (this.config.position) {
-      case 'top':
-        this.subtitleWrap.style.top = '20px';
-        this.subtitleWrap.style.bottom = 'auto';
-        this.subtitleWrap.style.transform = 'none';
-        break;
-      case 'middle':
-        this.subtitleWrap.style.top = '50%';
-        this.subtitleWrap.style.bottom = 'auto';
-        this.subtitleWrap.style.transform = 'translateY(-50%)';
-        break;
-      case 'bottom':
-      default:
-        this.subtitleWrap.style.top = 'auto';
-        this.subtitleWrap.style.bottom = `${this.config.bottomOffset}px`;
-        this.subtitleWrap.style.transform = 'none';
-        break;
+    // 档位属性（middle 为插件档位名，center 为组件档位名，统一归一）
+    this.subtitleWrap.dataset.position = this.config.position;
+
+    // 水平对齐属性（-1 左 / 0 中 / 1 右，subtitlelayer.scss 按属性派生）
+    this.subtitleWrap.dataset.align = String(this.config.align);
+
+    // 底部偏移变量
+    this.subtitleWrap.style.setProperty(
+      "--subtitle-offset",
+      `${this.config.bottomOffset}px`,
+    );
+
+    // 拖拽接管定位：inline left/top 写在字幕文本小块上
+    // （panel 档位定位由 CSS 保持不动）
+    if (this.subtitleEl) {
+      if (this.dragLeft !== null && this.dragTop !== null) {
+        this.subtitleEl.style.left = `${this.dragLeft}px`;
+        this.subtitleEl.style.top = `${this.dragTop}px`;
+        this.subtitleEl.style.bottom = "auto";
+        this.subtitleEl.style.transform = "none";
+      } else {
+        // 回档位基础位置（清 inline 接管痕迹，恢复 CSS 基础定位）
+        this.subtitleEl.style.left = "";
+        this.subtitleEl.style.top = "";
+        this.subtitleEl.style.bottom = "";
+        this.subtitleEl.style.transform = "";
+      }
     }
+  }
+
+  /**
+   * 绑定字幕拖拽（手柄 = 字幕文本元素，仅文本小块区域可拖不挡视频）
+   *
+   * 拖拽作用于字幕文本小块（subtitleEl）而非 panel：panel 保持
+   * CSS 档位定位（data-position）不动，拖拽位置以 text 相对 panel
+   * 的 inline left/top 接管其基础定位（bottom:0 + 居中）。
+   * 按下移动超阈值进入拖拽；位置 clamp 在 panel 内；
+   * 双击文本重置回档位基础位置。
+   * 事件挂 subtitleEl（随面板销毁自动释放，unbind 不需要）
+   */
+  private bindDragHandlers(): void {
+    const panel = this.subtitleWrap;
+    const handle = this.subtitleEl;
+    if (!panel || !handle) return;
+
+    /** 拖拽起点（客户端坐标） */
+    let startX = 0;
+    let startY = 0;
+    /** 拖拽起点文本块位置（相对 panel，px） */
+    let startLeft = 0;
+    let startTop = 0;
+    /** 是否已越过拖拽阈值 */
+    let moved = false;
+
+    handle.addEventListener("pointerdown", (event: PointerEvent): void => {
+      if (event.button !== 0) return;
+      startX = event.clientX;
+      startY = event.clientY;
+      const panelRect = panel.getBoundingClientRect();
+      const handleRect = handle.getBoundingClientRect();
+      startLeft = handleRect.left - panelRect.left;
+      startTop = handleRect.top - panelRect.top;
+      moved = false;
+      handle.setPointerCapture(event.pointerId);
+    });
+
+    handle.addEventListener("pointermove", (event: PointerEvent): void => {
+      if (!handle.hasPointerCapture(event.pointerId)) return;
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
+      if (!moved) {
+        // 阈值内不动（点击/微抖不算拖拽）
+        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+        moved = true;
+      }
+      // clamp 域为字幕层容器（wrap，覆盖整个视频区域）；
+      // text 的 left/top 相对 panel（高度 0 的基准线），边界需按
+      // panel 原点在 wrap 内的偏移平移：[-off, wrapSize - handleSize - off]
+      const wrap = panel.parentElement;
+      if (!wrap) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const handleRect = handle.getBoundingClientRect();
+      const offLeft = panelRect.left - wrapRect.left;
+      const offTop = panelRect.top - wrapRect.top;
+      const nextLeft = Math.max(
+        -offLeft,
+        Math.min(startLeft + dx, wrapRect.width - handleRect.width - offLeft),
+      );
+      const nextTop = Math.max(
+        -offTop,
+        Math.min(startTop + dy, wrapRect.height - handleRect.height - offTop),
+      );
+      this.dragLeft = nextLeft;
+      this.dragTop = nextTop;
+      // 拖拽中直接写 text inline（不走路由，跟手优先）
+      handle.style.left = `${nextLeft}px`;
+      handle.style.top = `${nextTop}px`;
+      handle.style.bottom = "auto";
+      handle.style.transform = "none";
+    });
+
+    const endDrag = (event: PointerEvent): void => {
+      if (handle.hasPointerCapture(event.pointerId)) {
+        handle.releasePointerCapture(event.pointerId);
+      }
+    };
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+
+    // 双击重置：清拖拽位置，回档位基础位置
+    handle.addEventListener("dblclick", (): void => {
+      this.dragLeft = null;
+      this.dragTop = null;
+      this.applyPosition();
+    });
   }
 
   // ==================== 轨道注册表 ====================
@@ -691,15 +888,18 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       return this.remoteProvider;
     }
     if (this.aiBackend) {
-      this.remoteProvider = createLegacyRemoteProvider(this.aiBackend, (): {
-        videoId?: string;
-        lang?: string;
-        duration?: number;
-      } => ({
-        videoId: this.aiVideoIdResolver?.() ?? undefined,
-        lang: this.config.defaultLang || undefined,
-        duration: this.video?.duration ?? undefined,
-      }));
+      this.remoteProvider = createLegacyRemoteProvider(
+        this.aiBackend,
+        (): {
+          videoId?: string;
+          lang?: string;
+          duration?: number;
+        } => ({
+          videoId: this.aiVideoIdResolver?.() ?? undefined,
+          lang: this.config.defaultLang || undefined,
+          duration: this.video?.duration ?? undefined,
+        }),
+      );
       return this.remoteProvider;
     }
     return null;
@@ -733,7 +933,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
         trackId: `file:${source.lang}`,
         lang: source.lang,
         label: source.label,
-        source: 'file',
+        source: "file",
       });
     }
 
@@ -743,7 +943,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
         trackId: `remote:${track.trackId}`,
         lang: track.lang,
         label: track.label,
-        source: 'remote',
+        source: "remote",
         kind: track.kind,
       });
     }
@@ -753,8 +953,8 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       tracks.push({
         trackId: LOCAL_AI_TRACK_ID,
         lang: this.localAiLang || this.localAiConfig.defaultLang,
-        label: 'AI Live',
-        source: 'local-ai',
+        label: "AI Live",
+        source: "local-ai",
         isLive: true,
         status: this.localAiStatus,
       });
@@ -770,7 +970,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   async activateTrack(trackId: string): Promise<void> {
     if (!isBrowser()) return;
     if (!this.eventBus) {
-      logger.warn('Subtitle plugin is not installed');
+      logger.warn("Subtitle plugin is not installed");
       return;
     }
 
@@ -778,11 +978,11 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       await this.startLocalAi();
       return;
     }
-    if (trackId.startsWith('remote:')) {
-      await this.activateRemoteTrack(trackId.slice('remote:'.length));
+    if (trackId.startsWith("remote:")) {
+      await this.activateRemoteTrack(trackId.slice("remote:".length));
       return;
     }
-    if (trackId.startsWith('file:')) {
+    if (trackId.startsWith("file:")) {
       await this.switchLanguage(trackId);
       return;
     }
@@ -794,18 +994,22 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     const provider = this.getRemoteProvider();
     const bus = this.eventBus;
     if (!provider) {
-      bus?.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, { count: 0, status: 'error' });
+      bus?.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, {
+        count: 0,
+        status: "error",
+      });
       return;
     }
 
     // 轨道信息（listTracks 未返回时合成为单轨）
-    const track: RemoteSubtitleTrack =
-      this.remoteTracks.find(t => t.trackId === remoteId) ?? {
-        trackId: remoteId,
-        lang: this.config.defaultLang || 'ai',
-        label: 'AI Subtitle',
-        kind: 'original',
-      };
+    const track: RemoteSubtitleTrack = this.remoteTracks.find(
+      (t) => t.trackId === remoteId,
+    ) ?? {
+      trackId: remoteId,
+      lang: this.config.defaultLang || "ai",
+      label: "AI Subtitle",
+      kind: "original",
+    };
 
     await provider.activateTrack?.(remoteId);
     this.remoteActiveTrack = track;
@@ -829,7 +1033,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   private maybePrefetchNextRange(time: number): void {
     const provider = this.getRemoteProvider();
     if (!provider?.incremental) return;
-    if (!this.activeTrackId?.startsWith('remote:')) return;
+    if (!this.activeTrackId?.startsWith("remote:")) return;
     const loaded = this.remoteLoadedRange;
     if (!loaded || this.remoteLoading) return;
     if (time <= loaded.to - REMOTE_PREFETCH_AHEAD) return;
@@ -854,7 +1058,10 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     this.remoteLoading = true;
 
     if (isFirstWindow) {
-      bus?.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, { count: 0, status: 'loading' });
+      bus?.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, {
+        count: 0,
+        status: "loading",
+      });
     }
 
     try {
@@ -887,24 +1094,30 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
           items: this.remoteItems,
         };
         this.currentSource = {
-          src: '',
+          src: "",
           lang: this.remoteActiveTrack.lang,
           label: this.remoteActiveTrack.label,
         };
         this.currentIndex = -1;
-        this.lastRenderedKey = '';
+        this.lastRenderedKey = "";
       }
 
       bus?.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, {
         count: this.remoteItems.length,
-        status: 'ready',
+        status: "ready",
       });
-      bus?.emit(PlayerEventEnum.SUBTITLE_LANG_CHANGE, this.remoteActiveTrack.lang);
+      bus?.emit(
+        PlayerEventEnum.SUBTITLE_LANG_CHANGE,
+        this.remoteActiveTrack.lang,
+      );
     } catch (error) {
       if (requestId !== this.remoteRequestId) return;
       const message = error instanceof Error ? error.message : String(error);
       logger.error(`Remote subtitle fetch failed: ${message}`);
-      bus?.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, { count: 0, status: 'error' });
+      bus?.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, {
+        count: 0,
+        status: "error",
+      });
     } finally {
       this.remoteLoading = false;
     }
@@ -919,15 +1132,15 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
 
     if (!trackId) {
       this.translationItems = [];
-      this.lastRenderedKey = '';
+      this.lastRenderedKey = "";
       return;
     }
 
     const provider = this.getRemoteProvider();
     if (!provider) return;
 
-    const remoteId = trackId.startsWith('remote:')
-      ? trackId.slice('remote:'.length)
+    const remoteId = trackId.startsWith("remote:")
+      ? trackId.slice("remote:".length)
       : trackId;
     const requestId = ++this.translationRequestId;
 
@@ -943,7 +1156,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       // 按时间排序保证二分匹配的前提（容忍服务端乱序返回）
       items.sort((a, b): number => a.startTime - b.startTime);
       this.translationItems = items;
-      this.lastRenderedKey = '';
+      this.lastRenderedKey = "";
 
       // 恢复主轨指向（后续增量窗口拉取继续作用于主轨）
       if (this.remoteActiveTrack) {
@@ -969,7 +1182,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       this.eventBus?.emit(PlayerEventEnum.SUBTITLE_CUE, item);
     }
     this.partialCue = event.partialCue ?? null;
-    this.lastRenderedKey = '';
+    this.lastRenderedKey = "";
     this.eventBus?.emit(PlayerEventEnum.SUBTITLE_PARTIAL, this.partialCue);
   }
 
@@ -980,14 +1193,20 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   async startLocalAi(lang?: string): Promise<void> {
     if (!isBrowser()) return;
     if (!this.eventBus) {
-      logger.warn('Subtitle plugin is not installed');
+      logger.warn("Subtitle plugin is not installed");
       return;
     }
 
     const cfg = this.localAiConfig;
-    if (!this.video || !cfg || (!cfg.provider && !cfg.engines)) {
+    if (
+      !this.video ||
+      !cfg ||
+      (!cfg.provider && !cfg.engines && !cfg.engineKind)
+    ) {
       await this.fallbackToRemote(
-        this.video ? 'local AI is not configured' : 'video element is not ready',
+        this.video
+          ? "local AI is not configured"
+          : "video element is not ready",
       );
       return;
     }
@@ -1002,28 +1221,43 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     }
 
     const bus = this.eventBus;
-    this.localAiStatus = 'loading';
-    bus.emit(PlayerEventEnum.SUBTITLE_AI_STATUS, { phase: 'loading' });
+    this.localAiStatus = "loading";
+    bus.emit(PlayerEventEnum.SUBTITLE_AI_STATUS, { phase: "loading" });
     this.broadcastTracksChange();
 
     try {
-      // 组装 Provider：自定义 Provider 优先，缺省用 engines 组装内部采集管线
+      // 组装 Provider：自定义 Provider > Worker 引擎（engineKind）> 主线程 engines
       let provider = cfg.provider ?? null;
+      // Worker 引擎：VAD + 推理全在 ASR 专用 Worker（主线程零阻塞），
+      // 模型异步加载，就绪/失败经 onStatus 回调上报（本方法不阻塞等待）
+      const usesWorkerEngine = !provider && !!cfg.engineKind;
+      if (!provider && cfg.engineKind) {
+        provider = createLocalAiWorkerProvider({
+          engineKind: cfg.engineKind,
+          lang: targetLang,
+          modelBasePath: cfg.modelBasePath,
+          wasmBasePath: cfg.wasmBasePath,
+          confidenceThreshold: cfg.confidenceThreshold,
+        });
+      }
       if (!provider) {
         const engines = cfg.engines;
         const engine: AsrEngine | null =
           engines?.[targetLang] ?? engines?.[cfg.defaultLang] ?? null;
         if (!engine) {
-          throw new Error(`no ASR engine available for language "${targetLang}"`);
+          throw new Error(
+            `no ASR engine available for language "${targetLang}"`,
+          );
         }
         // 引擎初始化（模型懒加载；真实引擎在此阶段广播下载进度）
         await engine.init({
           lang: targetLang,
           modelBasePath: cfg.modelBasePath,
+          wasmBasePath: cfg.wasmBasePath,
         });
         const engineStatus = engine.getStatus();
-        if (engineStatus.state === 'error') {
-          throw new Error(engineStatus.message ?? 'engine init failed');
+        if (engineStatus.state === "error") {
+          throw new Error(engineStatus.message ?? "engine init failed");
         }
         provider = createLocalAiProvider({
           engine,
@@ -1031,6 +1265,25 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
           confidenceThreshold: cfg.confidenceThreshold,
           maxSegmentSeconds: cfg.maxSegmentSeconds,
         });
+      }
+
+      // Worker 引擎的状态联动：就绪 → ready 广播；失败 → 降级模式 B
+      // （主线程引擎同步就绪，无需挂此回调）
+      if (usesWorkerEngine) {
+        const workerProvider = provider;
+        provider.onStatus = (phase, message): void => {
+          if (phase === "ready") {
+            // 就绪前已被停止/切换（快速开关场景）则忽略
+            if (!this.localAiActive || this.localAiProvider !== workerProvider) {
+              return;
+            }
+            this.localAiStatus = "ready";
+            bus.emit(PlayerEventEnum.SUBTITLE_AI_STATUS, { phase: "ready" });
+            this.broadcastTracksChange();
+            return;
+          }
+          void this.fallbackToRemote(message ?? "worker ASR engine failed");
+        };
       }
 
       // 采集链（AudioContext/Source 全实例复用；CORS 静音数据时上报并降级）
@@ -1055,7 +1308,11 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       this.localAiProvider = provider;
       this.localAiLang = targetLang;
       this.localAiActive = true;
-      this.localAiStatus = 'ready';
+      // Worker 引擎保持 loading（模型异步加载，onStatus('ready') 时翻转）；
+      // 主线程引擎同步就绪，立即 ready
+      if (!usesWorkerEngine) {
+        this.localAiStatus = "ready";
+      }
 
       // 激活为当前主字幕轨（复用现有 RAF + 二分查找渲染管线；
       // items 引用保持 localAiItems，增量 append 后 RAF 逐帧可见）
@@ -1065,14 +1322,16 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
         items: this.localAiItems,
       };
       this.currentSource = {
-        src: '',
+        src: "",
         lang: LOCAL_AI_TRACK_ID,
         label: `AI Live (${targetLang})`,
       };
       this.currentIndex = -1;
-      this.lastRenderedKey = '';
+      this.lastRenderedKey = "";
 
-      bus.emit(PlayerEventEnum.SUBTITLE_AI_STATUS, { phase: 'ready' });
+      if (!usesWorkerEngine) {
+        bus.emit(PlayerEventEnum.SUBTITLE_AI_STATUS, { phase: "ready" });
+      }
       bus.emit(PlayerEventEnum.SUBTITLE_LANG_CHANGE, LOCAL_AI_TRACK_ID);
       this.broadcastTracksChange();
     } catch (error) {
@@ -1094,7 +1353,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     this.localAiActive = false;
     this.localAiStatus = undefined;
     this.partialCue = null;
-    this.lastRenderedKey = '';
+    this.lastRenderedKey = "";
     this.eventBus?.emit(PlayerEventEnum.SUBTITLE_PARTIAL, null);
     this.broadcastTracksChange();
   }
@@ -1124,17 +1383,19 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     const bus = this.eventBus;
     // 半启动的本地识别先停（保留已产出条目）
     this.stopLocalAi();
-    this.localAiStatus = 'error';
+    this.localAiStatus = "error";
     // 降级原因经 SUBTITLE_AI_STATUS 广播，避免静默失败
     bus?.emit(PlayerEventEnum.SUBTITLE_AI_STATUS, {
-      phase: 'error',
+      phase: "error",
       message: reason,
     });
     this.broadcastTracksChange();
 
     const provider = this.getRemoteProvider();
     if (provider) {
-      logger.warn(`Local AI subtitle unavailable (${reason}), falling back to remote subtitle`);
+      logger.warn(
+        `Local AI subtitle unavailable (${reason}), falling back to remote subtitle`,
+      );
       try {
         await this.loadRemoteTracks();
         const first = this.remoteTracks[0];
@@ -1147,7 +1408,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
         logger.error(`Remote subtitle fallback failed: ${message}`);
       }
     } else {
-      logger.warn('No AI subtitle source available, keeping current subtitle');
+      logger.warn("No AI subtitle source available, keeping current subtitle");
     }
   }
 
@@ -1183,9 +1444,9 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     this.currentSource = null;
     this.currentIndex = -1;
     this.activeTrackId = null;
-    this.lastRenderedKey = '';
+    this.lastRenderedKey = "";
     if (this.subtitleEl) {
-      this.subtitleEl.innerHTML = '';
+      this.subtitleEl.innerHTML = "";
     }
   }
 
@@ -1195,7 +1456,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   show(): void {
     this.isVisible = true;
     if (this.subtitleEl) {
-      this.subtitleEl.style.opacity = '1';
+      this.subtitleEl.style.opacity = "1";
     }
   }
 
@@ -1205,8 +1466,8 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   hide(): void {
     this.isVisible = false;
     if (this.subtitleEl) {
-      this.subtitleEl.style.opacity = '0';
-      this.subtitleEl.innerHTML = '';
+      this.subtitleEl.style.opacity = "0";
+      this.subtitleEl.innerHTML = "";
     }
   }
 
@@ -1215,7 +1476,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
    */
   setStyle(style: SubtitleStyle): void {
     if (style.fontName) {
-      this.subtitleEl?.style.setProperty('font-family', style.fontName);
+      this.subtitleEl?.style.setProperty("font-family", style.fontName);
     }
     if (style.fontSize !== undefined) {
       this.config.fontSize = Math.max(12, Math.min(72, style.fontSize));
@@ -1230,13 +1491,22 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       this.config.strokeWidth = Math.max(0, Math.min(5, style.outlineWidth));
     }
     if (style.bold !== undefined) {
-      this.subtitleEl?.style.setProperty('font-weight', style.bold ? 'bold' : 'normal');
+      this.subtitleEl?.style.setProperty(
+        "font-weight",
+        style.bold ? "bold" : "normal",
+      );
     }
     if (style.italic !== undefined) {
-      this.subtitleEl?.style.setProperty('font-style', style.italic ? 'italic' : 'normal');
+      this.subtitleEl?.style.setProperty(
+        "font-style",
+        style.italic ? "italic" : "normal",
+      );
     }
     if (style.underline !== undefined) {
-      this.subtitleEl?.style.setProperty('text-decoration', style.underline ? 'underline' : 'none');
+      this.subtitleEl?.style.setProperty(
+        "text-decoration",
+        style.underline ? "underline" : "none",
+      );
     }
     this.applyStyles();
   }
@@ -1247,7 +1517,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   setOffset(offset: number): void {
     this.timeOffset = offset;
     this.currentIndex = -1; // 重置索引，强制刷新
-    this.lastRenderedKey = '';
+    this.lastRenderedKey = "";
   }
 
   /**
@@ -1276,18 +1546,18 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   async switchLanguage(lang: string): Promise<void> {
     if (
       lang === LOCAL_AI_TRACK_ID ||
-      lang.startsWith('remote:') ||
-      lang.startsWith('file:')
+      lang.startsWith("remote:") ||
+      lang.startsWith("file:")
     ) {
       await this.activateTrack(lang);
       return;
     }
-    const source = this.config.sources.find(s => s.lang === lang);
+    const source = this.config.sources.find((s) => s.lang === lang);
     if (source) {
       await this.load(source);
       // 本地识别保持运行（条目继续累积，切回本地轨继续可用）
       this.activeTrackId = `file:${source.lang}`;
-      this.lastRenderedKey = '';
+      this.lastRenderedKey = "";
     }
   }
 
@@ -1306,7 +1576,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   setVisible(visible: boolean): void {
     this.isVisible = visible;
     if (this.subtitleEl) {
-      this.subtitleEl.style.opacity = visible ? '1' : '0';
+      this.subtitleEl.style.opacity = visible ? "1" : "0";
     }
   }
 
@@ -1335,6 +1605,42 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   }
 
   /**
+   * 设置背景不透明度（字幕设置面板「背景不透明度」滑杆，0-1）
+   * 显式 backgroundColor（非 transparent）存在时会被其覆盖
+   */
+  setBackgroundOpacity(opacity: number): void {
+    this.config.backgroundOpacity = Math.max(0, Math.min(1, opacity));
+    this.applyStyles();
+  }
+
+  /**
+   * 设置等比缩放（字幕设置面板「等比缩放」开关）
+   * 开启时字号用 cqh 单位随播放器高度缩放
+   */
+  setScale(scale: boolean): void {
+    this.config.scale = scale;
+    this.applyStyles();
+  }
+
+  /**
+   * 设置淡入淡出（字幕设置面板「淡入淡出」开关）
+   * 开启时字幕内容切换时渐显
+   */
+  setFade(fade: boolean): void {
+    this.config.fade = fade;
+    this.applyStyles();
+  }
+
+  /**
+   * 设置水平对齐（字幕设置面板位置档位的 左/中/右）
+   * @param align - -1 左 / 0 中 / 1 右
+   */
+  setAlign(align: number): void {
+    this.config.align = Math.max(-1, Math.min(1, align));
+    this.applyPosition();
+  }
+
+  /**
    * 设置描边
    */
   setStroke(color?: string, width?: number): void {
@@ -1350,9 +1656,12 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   /**
    * 设置位置
    */
-  setPosition(position?: 'bottom' | 'top' | 'middle', offset?: number): void {
+  setPosition(position?: "bottom" | "top" | "middle", offset?: number): void {
     if (position) {
       this.config.position = position;
+      // 显式换档位 = 放弃拖拽位置（回档位基础位置）
+      this.dragLeft = null;
+      this.dragTop = null;
     }
     if (offset !== undefined) {
       this.config.bottomOffset = Math.max(0, offset);
@@ -1361,11 +1670,11 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   }
 
   /** 当前字幕来源维度（设计文档 6.4） */
-  private resolveActiveSource(): 'file' | 'remote' | 'local-ai' | null {
-    if (this.activeTrackId === LOCAL_AI_TRACK_ID) return 'local-ai';
-    if (this.activeTrackId?.startsWith('remote:')) return 'remote';
-    if (this.activeTrackId?.startsWith('file:')) return 'file';
-    return this.currentSource ? 'file' : null;
+  private resolveActiveSource(): "file" | "remote" | "local-ai" | null {
+    if (this.activeTrackId === LOCAL_AI_TRACK_ID) return "local-ai";
+    if (this.activeTrackId?.startsWith("remote:")) return "remote";
+    if (this.activeTrackId?.startsWith("file:")) return "file";
+    return this.currentSource ? "file" : null;
   }
 
   /**
@@ -1381,13 +1690,16 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     position: string;
     itemCount: number;
     timeOffset: number;
-    source: 'file' | 'remote' | 'local-ai' | null;
+    source: "file" | "remote" | "local-ai" | null;
   } {
     return {
       visible: this.isVisible,
       currentLang: this.currentSource?.lang ?? null,
       currentLabel: this.currentSource?.label ?? null,
-      availableLangs: this.config.sources.map(s => ({ lang: s.lang, label: s.label })),
+      availableLangs: this.config.sources.map((s) => ({
+        lang: s.lang,
+        label: s.label,
+      })),
       fontSize: this.config.fontSize,
       color: this.config.color,
       position: this.config.position,
@@ -1445,7 +1757,10 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     const bus = this.eventBus;
     // bus 可能在 uninstall 后置空；置空时无法广播，但加载逻辑仍可执行
     if (bus) {
-      bus.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, { count: 0, status: 'loading' });
+      bus.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, {
+        count: 0,
+        status: "loading",
+      });
     }
 
     this.aiLoading = true;
@@ -1469,36 +1784,39 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
         items,
       };
       this.currentSource = {
-        src: '',
-        lang: this.config.defaultLang || 'ai',
-        label: 'AI Subtitle',
+        src: "",
+        lang: this.config.defaultLang || "ai",
+        label: "AI Subtitle",
       };
       this.currentIndex = -1;
-      this.lastRenderedKey = '';
+      this.lastRenderedKey = "";
 
       // 旧 aiBackend 路径映射为单轨 remote 轨（与 Provider 化的模式 B 一致）
-      const trackLang = this.config.defaultLang || 'ai';
+      const trackLang = this.config.defaultLang || "ai";
       this.activeTrackId = `remote:${LEGACY_REMOTE_TRACK_ID}`;
       this.remoteActiveTrack = {
         trackId: LEGACY_REMOTE_TRACK_ID,
         lang: trackLang,
-        label: 'AI Subtitle',
-        kind: 'original',
+        label: "AI Subtitle",
+        kind: "original",
       };
       this.remoteItems = items;
 
       if (bus) {
         bus.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, {
           count: items.length,
-          status: 'ready',
+          status: "ready",
         });
-        bus.emit(PlayerEventEnum.SUBTITLE_LANG_CHANGE, 'ai');
+        bus.emit(PlayerEventEnum.SUBTITLE_LANG_CHANGE, "ai");
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error(`AI subtitle load failed: ${message}`);
       if (bus) {
-        bus.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, { count: 0, status: 'error' });
+        bus.emit(PlayerEventEnum.SUBTITLE_LIST_CHANGE, {
+          count: 0,
+          status: "error",
+        });
       }
     } finally {
       this.aiLoading = false;
@@ -1523,7 +1841,9 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
  *   })
  * ]
  */
-export function SubtitlePlugin(config?: SubtitlePluginConfig): SubtitlePluginAPI {
+export function SubtitlePlugin(
+  config?: SubtitlePluginConfig,
+): SubtitlePluginAPI {
   return new SubtitlePluginClass(config);
 }
 

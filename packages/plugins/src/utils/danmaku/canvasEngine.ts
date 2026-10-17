@@ -975,24 +975,14 @@ export class CanvasEngine {
     // 如果没有可见弹幕，直接返回
     if (visibleItems.length === 0) return;
 
-    // 显示区域硬裁剪（与 DOM 引擎的 clip-path 同一语义，B 站同款观感）：
-    // 区域缩小（如 50%）时，在飞弹幕超出区域的部分立即被裁掉——
-    // 仅靠 initTracks 重建轨道只约束新弹幕的轨道分配，在飞弹幕仍按
-    // 原 y 继续绘制，用户侧表现为「区域设置不生效」
-    const area = Math.min(1, Math.max(0.05, this.config.area));
-    const areaHeight = Math.floor(this.height * area);
-
-    this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.rect(0, 0, this.width, areaHeight);
-    this.ctx.clip();
+    // 显示区域控制不做 ctx.clip() 裁切：区域变化时引擎已在 updateConfig
+    // 物理移除超界在飞弹幕并重建区域内轨道，此处无需每帧裁剪，
+    // 弹幕真实只存在于新区域内，无隐藏绘制开销（与 DOM 引擎同一语义）
 
     // 每帧只贴精灵位图（drawImage），不再逐条 fillText，字体已在精灵里栅格化好了
     for (const item of visibleItems) {
       this.drawItem(item);
     }
-
-    this.ctx.restore();
 
     // 应用防挡遮罩
     this.applyMask();
@@ -1104,8 +1094,19 @@ export class CanvasEngine {
     this.textMeasureCache.clear();
     this.textSpriteCache.clear();
 
-    // 如果区域档位变化，重新初始化轨道（回填在飞占用，防止新弹幕叠进在飞 y）
+    // 区域档位变化（不使用 ctx.clip() 裁切，直接物理移除超界弹幕）：
+    // 移除在飞弹幕中超出新区域底界的项（removeDanmaku 回收渲染项、
+    // 释放轨道占用），观感即「区域缩小后超界弹幕立即消失」，
+    // 弹幕真实只存在于新区域内，draw() 无需每帧裁剪；
+    // 再重新初始化轨道（回填剩余在飞占用），新弹幕只分配区域内轨道
     if (config.area !== undefined && config.area !== oldArea) {
+      const areaValue = Math.min(1, Math.max(0.05, config.area));
+      const areaBottom = this.height * areaValue;
+      for (const item of Array.from(this.renderItems.values())) {
+        if (item.isRendering && item.y + item.height > areaBottom) {
+          this.removeDanmaku(item.renderId);
+        }
+      }
       const inFlight = Array.from(this.renderItems.values()).filter(
         (item) => item.isRendering,
       );

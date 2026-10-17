@@ -17,6 +17,7 @@ import {
   destroy,
 } from "@/core";
 import type { VNode } from "@/types";
+import type { PlayerPluginFlags } from "./PlayerDocker";
 import { PlayerStateKeyEnum, ConfigContext } from "@/store/runtimeState";
 import { StateContext } from "@/store/runtimeState";
 import { ConfigStoreContext } from "@/store/configStore";
@@ -65,7 +66,13 @@ export type RightControlsEvents = {
   rightControlsMounted: undefined;
 };
 
-export interface RightControlsProps {}
+export interface RightControlsProps {
+  /**
+   * 插件安装标志读取器（getter 形态，Controls 透传）：
+   * 字幕按钮按 subtitle 标志显隐，未装 subtitle 插件时整体不显示
+   */
+  plugins?: () => PlayerPluginFlags;
+}
 
 /**
  * RightControls 组件 - 使用 defineComponent 创建独立组件
@@ -73,7 +80,7 @@ export interface RightControlsProps {}
 export const RightControls = defineComponent<
   RightControlsProps,
   RightControlsEvents
->((_props, lifecycle) => {
+>((props, lifecycle) => {
   const configCtx = useContext(ConfigContext);
   const config = configCtx;
   const state = useContext(StateContext);
@@ -441,6 +448,8 @@ export const RightControls = defineComponent<
         fade: false,
       };
       return h(SubtitleMenu, {
+        /** 插件安装标志读取器透传：未装 subtitle 插件时按钮整体隐藏 */
+        plugins: props.plugins,
         visible: state?.get(PlayerStateKeyEnum.SUBTITLE_VISIBLE) ?? false,
         lang: state?.get(PlayerStateKeyEnum.SUBTITLE_LANG) ?? "",
         // 语言列表：播放器暂无对应运行时状态键；由使用方通过配置提供，缺省为空数组
@@ -462,6 +471,8 @@ export const RightControls = defineComponent<
       return h(SettingMenu, {
         onSettingChange,
         visible: settingConfigSignal,
+        /** 插件安装标志读取器透传：未装 audioEffect 插件时第二页音频设置区块不渲染 */
+        plugins: props.plugins,
       });
     },
     /** 渲染画中画按钮（state-active 由 isPipSignal 驱动，style.display 由 pipConfigSignal 驱动） */

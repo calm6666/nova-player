@@ -11,9 +11,6 @@
  * 的阶梯感，呈现平滑倒计时；归零自动选择由主类在 TIME_UPDATE
  * 判定（time >= timeEnd → handleSelect 默认项）。
  *
- * 结构：
- * .nova-player-interaction-countdown（visible 信号驱动显隐）
- *   └─ .nova-player-interaction-countdown-bar（width 表达式随 ratio 更新）
  */
 
 import { h } from "@/core";

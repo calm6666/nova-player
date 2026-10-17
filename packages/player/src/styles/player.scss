@@ -1056,6 +1056,26 @@ img {
   height: 100%;
   position: relative;
   width: 100%;
+
+  &.nova-state-light-off {
+    &::before {
+      background-color: #000;
+      bottom: 0;
+      content: "";
+      display: block;
+      left: 0;
+      opacity: 0.9;
+      position: fixed;
+      right: 0;
+      top: 0;
+      z-index: 1002;
+    }
+    .nova-player-container {
+      -webkit-box-shadow: none;
+      box-shadow: none;
+      z-index: 1010;
+    }
+  }
 }
 
 @media screen and (max-width: 749.9px) {

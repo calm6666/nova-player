@@ -12,6 +12,7 @@ import {
   useTemplateRef,
   useContext,
   useState,
+  Show,
 } from "@/core";
 import type { TypedStateManager } from "@/core";
 import type { PlayerEventBus } from "@/core/events";
@@ -191,7 +192,8 @@ export type PlayerDockerEvents = {
     videoArea: HTMLElement;
     videoWrap: HTMLElement;
     video: HTMLVideoElement;
-    sendingArea: HTMLElement;
+    /** 弹幕发送区（未装 danmaku 插件时整个发送区不渲染，为 null） */
+    sendingArea: HTMLElement | null;
   };
   videoCreated: { video: HTMLVideoElement };
   /** 用户选择了新的清晰度档位，值为档位 id（'auto' 表示自动） */
@@ -322,6 +324,28 @@ export type PlayerDockerEvents = {
 // ============================================
 
 /**
+ * 插件安装标志（UI 按需渲染的数据源）
+ *
+ * 由 VideoPlayer 维护的响应式信号承载：install / uninstall 时更新，
+ * PlayerDocker / Controls 通过 Show 控制流读取信号条件渲染对应图层
+ * 与控制入口——未安装插件的 DOM 完全不挂载（而非 CSS 隐藏）。
+ * 插件名约定与各插件类的 readonly name 一致
+ * （danmaku / subtitle / interaction / interactiveVideo）。
+ */
+export interface PlayerPluginFlags {
+  /** 弹幕插件：控制弹幕层 RowDm 与底部弹幕发送栏 SendBar */
+  danmaku: boolean;
+  /** 字幕插件：控制字幕层 SubtitleLayer 与控制栏字幕按钮 / 字幕设置面板 */
+  subtitle: boolean;
+  /** 交互插件：控制交互层 InteractionLayer */
+  interaction: boolean;
+  /** 互动视频插件：控制互动视频层 InteractiveVideoLayer */
+  interactiveVideo: boolean;
+  /** 音效插件：控制设置面板第二页「音量均衡」音频设置区块 */
+  audioEffect: boolean;
+}
+
+/**
  * 清晰度运行时快照
  *
  * 由 `VideoPlayer.render()` 传入的初始值；因框架无虚拟 DOM diff，
@@ -388,6 +412,19 @@ export interface PlayerDockerProps {
    * 未提供数据时该层不渲染（保持不可见）。
    */
   energyProvider?: EnergyProgressProvider;
+
+  /**
+   * 插件安装标志读取器（按需渲染的数据源，getter 形态）
+   *
+   * 由 VideoPlayer 注入：`() => pluginFlags.value`——普通函数不触发
+   * props 代理的 Signal 解包（reactiveProps 仅解包 Signal / _rp thunk），
+   * 全透传链（Controls → RightControls → SubtitleMenu）拿到的都是
+   * 函数本体；effect / 响应式表达式内调用时读取 signal.value 自动
+   * 建立依赖，插件装卸即时联动显隐。未装插件的图层经 Show 控制
+   * 流条件挂载，DOM 完全不进入文档流。
+   * 未传（直接使用 PlayerDocker 的场景）时保持既有行为：全部渲染。
+   */
+  plugins?: () => PlayerPluginFlags;
 }
 
 // ============================================
@@ -701,7 +738,12 @@ export const PlayerDocker = defineComponent<
     cleanupFns.push(
       props.events.on(
         PlayerEventEnum.ERROR,
-        (payload: { error: unknown; code?: number; message?: string }) => {
+        (payload: { error: unknown; code?: number | string; message?: string }) => {
+          /** 撤下缓冲指示（转圈/蒙层/延迟句柄），错误面板与转圈不并存 */
+          cancelBuffIndicator();
+          playerContainerRef.value?.classList.remove("state-buff");
+          stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
+
           /** 从当前视频源 URL 提取出错主机名（解析失败返回 undefined） */
           const host = (() => {
             try {
@@ -717,7 +759,8 @@ export const PlayerDocker = defineComponent<
             message: payload.message,
             code: payload.code,
             host,
-            // 网络错误（MediaError.code === 2）时附带本地网络权限提示
+            // 网络错误（MediaError.code === 2 / 流媒体网络类致命错误）时
+            // 附带本地网络权限提示
             showLocalNetworkTip: payload.code === 2,
           });
         },
@@ -774,6 +817,18 @@ export const PlayerDocker = defineComponent<
     /** 重建进度条分段（progress.segments 变化时调用） */
     rebuildSegments?: (segments?: ProgressSegment[]) => void;
   } = {};
+
+  /**
+   * 插件安装标志读取助手（Show 控制流 when 回调内使用）
+   *
+   * 调用 getter 读取当前标志：when 回调运行在 flow effect 内，
+   * getter 内的 signal.value 读取自动建立依赖，插件装卸即时联动。
+   * 语义：VideoPlayer 总是注入 plugins getter（未装插件 = false =
+   * 不挂载对应图层）；直接使用 PlayerDocker 未传时保持既有行为
+   * （全部渲染），`?? true` 兜底兼容这类调用方
+   */
+  const hasPlugin = (key: keyof PlayerPluginFlags): boolean =>
+    props.plugins?.()[key] ?? true;
 
   /** 弹幕组件 API，由 RowDm 组件挂载后填充 */
   const rowDmApi: {
@@ -2095,19 +2150,22 @@ export const PlayerDocker = defineComponent<
     setupConfigSubscriptions();
 
     // 触发挂载完成回调
+    // 【sendingArea 不再是挂载硬依赖】未装 danmaku 插件时发送区经
+    // Show 控制流不渲染（playerSendingAreaRef 为 null），若仍作为
+    // 必要条件，mounted 永不触发 → VideoPlayer 的流媒体初始化 /
+    // 事件绑定 / 首帧加载链路全部中断，表现为无法播放
     if (
       playerDockerRef.value &&
       playerVideoAreaRef.value &&
       playerVideoWrapRef.value &&
-      videoRef.value &&
-      playerSendingAreaRef.value
+      videoRef.value
     ) {
       lifecycle.emit?.("mounted", {
         container: playerDockerRef.value,
         videoArea: playerVideoAreaRef.value,
         videoWrap: playerVideoWrapRef.value,
         video: videoRef.value,
-        sendingArea: playerSendingAreaRef.value,
+        sendingArea: playerSendingAreaRef.value ?? null,
       });
     }
 
@@ -2258,51 +2316,42 @@ export const PlayerDocker = defineComponent<
             class: "nova-player-video-poster",
             hidden: true,
           }),
-          // 弹幕容器
-          h(RowDm, {
-            isOpen: true,
-            onDanmakuLayerMounted: (data: DanmakuLayerAPI) => {
-              // playPause：根容器 danmaku-x-paused 类（原版暂停机制）；
-              // 弹幕渲染与设置应用由 DanmakuPlugin 接管，此层只保留播放暂停联动
-              rowDmApi.playPause = data.playPause;
-              rowDmApi.showDmTip = data.showDmTip;
-              rowDmApi.hideDmTip = data.hideDmTip;
-              lifecycle.emit?.("danmakuLayerMounted", data);
-              // 弹幕层挂载完成，通知插件系统（不使用 DANMAKU_TOGGLE，那是切换弹幕可见性的事件）
-            },
-            onShowDmTip: (data: {
-              event: MouseEvent;
-              element: HTMLElement;
-            }) => {
-              lifecycle.emit?.("showDmTip", data);
-              // Bridge to Dialog's showDmTip
-              dialogApi.showDmTip?.(
-                {
-                  content: data.element?.textContent ?? "",
-                  timePoint: readCurrentTime(),
-                },
-                data.element,
-              );
-            },
-            onHideDmTip: (data: { element: HTMLElement }) => {
-              lifecycle.emit?.("hideDmTip", data);
-              // Bridge to Dialog's hideDmTip
-              dialogApi.hideDmTip?.(data.element);
-            },
-          }),
-          // 字幕容器
-          h(SubtitleLayer, {
-            visible: true,
-            onSubtitleLayerMounted: (data: SubtitleLayerAPI) => {
-              subtitleApi.subtitleWrap = data.subtitleWrap;
-              subtitleApi.setFontSize = data.setFontSize;
-              subtitleApi.setColor = data.setColor;
-              subtitleApi.setBackgroundColor = data.setBackgroundColor;
-              subtitleApi.setPosition = data.setPosition;
-              lifecycle.emit?.("subtitleLayerMounted", data);
-              // 字幕层挂载完成，通知插件系统（不使用 SUBTITLE_TOGGLE，那是切换字幕可见性的事件）
-            },
-          }),
+          // 弹幕容器（按需渲染：未装 danmaku 插件时不挂载任何弹幕 DOM）
+          h(
+            Show,
+            { when: (): boolean => hasPlugin("danmaku") },
+            h(RowDm, {
+              isOpen: true,
+              onDanmakuLayerMounted: (data: DanmakuLayerAPI) => {
+                // playPause：根容器 danmaku-x-paused 类（原版暂停机制）；
+                // 弹幕渲染与设置应用由 DanmakuPlugin 接管，此层只保留播放暂停联动
+                rowDmApi.playPause = data.playPause;
+                rowDmApi.showDmTip = data.showDmTip;
+                rowDmApi.hideDmTip = data.hideDmTip;
+                lifecycle.emit?.("danmakuLayerMounted", data);
+                // 弹幕层挂载完成，通知插件系统（不使用 DANMAKU_TOGGLE，那是切换弹幕可见性的事件）
+              },
+              onShowDmTip: (data: {
+                event: MouseEvent;
+                element: HTMLElement;
+              }) => {
+                lifecycle.emit?.("showDmTip", data);
+                // Bridge to Dialog's showDmTip
+                dialogApi.showDmTip?.(
+                  {
+                    content: data.element?.textContent ?? "",
+                    timePoint: readCurrentTime(),
+                  },
+                  data.element,
+                );
+              },
+              onHideDmTip: (data: { element: HTMLElement }) => {
+                lifecycle.emit?.("hideDmTip", data);
+                // Bridge to Dialog's hideDmTip
+                dialogApi.hideDmTip?.(data.element);
+              },
+            }),
+          ),
           // 播放状态层（缓冲图标 / 「正在缓冲... <速度>」/ 暂停时的中央播放图标）
           // 由 stateMounted 回传 API，经 state 订阅（player.isLoading / player.state）
           // 命令式更新；缓冲速度为 0（无有效数据）时速度文本自动隐藏
@@ -2317,15 +2366,19 @@ export const PlayerDocker = defineComponent<
               }
             },
           }),
-          // 互动容器
-          h(InteractionLayer, {
-            showLines: false,
-            onInteractionLayerMounted: (data: InteractionLayerAPI) => {
-              interactionApi.container = data.container;
-              lifecycle.emit?.("interactionLayerMounted", data);
-              props.events?.emit("interactionLayerMounted", data);
-            },
-          }),
+          // 互动容器（按需渲染：未装 interaction 插件时不挂载交互层 DOM）
+          h(
+            Show,
+            { when: (): boolean => hasPlugin("interaction") },
+            h(InteractionLayer, {
+              showLines: false,
+              onInteractionLayerMounted: (data: InteractionLayerAPI) => {
+                interactionApi.container = data.container;
+                lifecycle.emit?.("interactionLayerMounted", data);
+                props.events?.emit("interactionLayerMounted", data);
+              },
+            }),
+          ),
           // 顶部栏（标题 / 关注 / 问题反馈，既有实现挂载于视频区域；
           // ui.title 动态更新时由 configStore 订阅驱动 setTitle）
           h(Top, {
@@ -2341,6 +2394,26 @@ export const PlayerDocker = defineComponent<
             onShowTooltip: handleShowTooltip,
             onHideTooltip: handleHideTooltip,
           }),
+          // 字幕容器（按需渲染：未装 subtitle 插件时不挂载字幕层 DOM）
+          // 位于 Top 容器与 Ending 容器之间；定位规则全部由
+          // subtitlelayer.scss 纯 CSS 派生（档位 data-position /
+          // 偏移 --subtitle-offset / 控制栏抬升 .nova-player-container
+          // 属性选择器）
+          h(
+            Show,
+            { when: (): boolean => hasPlugin("subtitle") },
+            h(SubtitleLayer, {
+              visible: true,
+              onSubtitleLayerMounted: (data: SubtitleLayerAPI) => {
+                subtitleApi.subtitleWrap = data.subtitleWrap;
+                subtitleApi.setFontSize = data.setFontSize;
+                subtitleApi.setColor = data.setColor;
+                subtitleApi.setBackgroundColor = data.setBackgroundColor;
+                subtitleApi.setPosition = data.setPosition;
+                lifecycle.emit?.("subtitleLayerMounted", data);
+              },
+            }),
+          ),
           // 对话框容器
           h(Dialog, {
             onDialogMounted: (data: DialogAPI) => {
@@ -2425,19 +2498,26 @@ export const PlayerDocker = defineComponent<
             },
           }),
           // 互动视频层容器（仅一个空的 .nova-player-interaction-wrap，
-          // 剧情进度条 / 分支选择等内容由互动视频插件注入；位于控制栏之前）
-          h(InteractiveVideoLayer, {
-            onInteractiveVideoLayerMounted: (data: InteractiveVideoLayerAPI) => {
-              interactiveVideoApi.wrap = data.wrap;
-              lifecycle.emit?.("interactiveVideoLayerMounted", data);
-              props.events?.emit("interactiveVideoLayerMounted", data);
-            },
-          }),
+          // 剧情进度条 / 分支选择等内容由互动视频插件注入；位于控制栏之前。
+          // 按需渲染：未装 interactiveVideo 插件时不挂载该空容器）
+          h(
+            Show,
+            { when: (): boolean => hasPlugin("interactiveVideo") },
+            h(InteractiveVideoLayer, {
+              onInteractiveVideoLayerMounted: (data: InteractiveVideoLayerAPI) => {
+                interactiveVideoApi.wrap = data.wrap;
+                lifecycle.emit?.("interactiveVideoLayerMounted", data);
+                props.events?.emit("interactiveVideoLayerMounted", data);
+              },
+            }),
+          ),
           // 视频控制栏
           h(Controls, {
             duration: readDuration(),
             volume: readVolume(),
             backrate: readBackrate(),
+            /** 插件安装标志读取器：字幕按钮按 subtitle 标志显隐（getter 本体透传给 SubtitleMenu） */
+            plugins: props.plugins,
             previewProvider: props.previewProvider,
             energyProvider: props.energyProvider,
             // ===== 控件条交互接线（设计文档阶段 J）=====
@@ -2499,21 +2579,9 @@ export const PlayerDocker = defineComponent<
               scale?: boolean;
               fade?: boolean;
             }) => {
-              // 立即反馈到字幕层（无需等待播放器状态回流）
-              if (patch.fontSize !== undefined)
-                subtitleApi.setFontSize?.(patch.fontSize);
-              if (
-                patch.color !== undefined &&
-                patch.strokeColor === undefined
-              ) {
-                subtitleApi.setColor?.(patch.color);
-              }
-              // 注意：字幕层 API 只接受位置一个参数（offset 由插件侧处理）
-              if (patch.position !== undefined) {
-                subtitleApi.setPosition?.(
-                  patch.position === "top" ? "top" : "bottom",
-                );
-              }
+              // 全部向上转发，由 VideoPlayer 落到字幕插件真实 API
+              // （插件对字幕文本元素有唯一 inline 样式所有权，
+              // 层级即时反馈会被插件样式覆盖，不再在此重复应用）
               lifecycle.emit?.("subtitleStyleChange", patch);
             },
             onBilingualChange: (enabled: boolean) => {
@@ -2561,14 +2629,19 @@ export const PlayerDocker = defineComponent<
           }),
         ),
         // 发送区域（弹幕输入栏，既有实现+ sendbar 挂载方式：
-        // .nova-player-sending-area > .nova-player-sending-bar）
+        // .nova-player-sending-area > .nova-player-sending-bar。
+        // 按需渲染：未装 danmaku 插件时整个发送区域不挂载——
+        // 连容器一起省掉，避免空 sending-area 撑高播放器底部布局）
         h(
-          "div",
-          {
-            class: "nova-player-sending-area",
-            ref: "playerSendingAreaRef",
-          },
-          h(SendBar, {
+          Show,
+          { when: (): boolean => hasPlugin("danmaku") },
+          h(
+            "div",
+            {
+              class: "nova-player-sending-area",
+              ref: "playerSendingAreaRef",
+            },
+            h(SendBar, {
             // 弹幕开关初始状态来自运行时状态（与设置面板共享同一状态源）
             danmakuSwitch:
               stateMgr?.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true,
@@ -2605,6 +2678,7 @@ export const PlayerDocker = defineComponent<
               Object.assign(sendBarApi, api);
             },
           }),
+          ),
         ),
       ),
       // 按钮悬停提示工具（既有实现挂载于 .nova-player-container：

@@ -1,0 +1,397 @@
+/**
+ * 弹幕设置面板（根元素内部 DOM）。
+ *
+ * 视觉对齐点播播放器 DmSetting：两页结构、粉色滑块、深色面板，
+ * 只把面板圆角改为 8px；第一页不含「按类型过滤」，改为弹幕密度分段选择。
+ */
+
+.nova-live-player-dm-setting-panel {
+  position: absolute;
+  right: 28px;
+  bottom: 52px;
+  z-index: 20;
+  transition: width 0.2s, height 0.2s;
+}
+
+.nova-live-player-dm-setting-box {
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: hsla(0, 0%, 8%, 0.92);
+}
+
+.nova-live-player-dm-setting-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 12px 20px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(100%);
+  transition:
+    transform 0.25s ease,
+    opacity 0.1s linear;
+
+  &:not(.is-hidden) {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  &.nova-live-player-dm-setting-page-main.is-hidden {
+    transform: translateX(-100%);
+  }
+}
+
+/* ---------------- 通用滑块 ---------------- */
+
+.nova-live-player-slider-row {
+  margin-bottom: 12px;
+}
+
+.nova-live-player-slider-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 16px;
+  margin-bottom: 6px;
+}
+
+.nova-live-player-slider-label {
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.nova-live-player-slider-value {
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.nova-live-player-slider-track {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background-color: hsla(0, 0%, 100%, 0.24);
+  cursor: pointer;
+}
+
+.nova-live-player-slider-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 3px;
+  background-color: #ff6699;
+  pointer-events: none;
+}
+
+.nova-live-player-slider-dot {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.nova-live-player-slider-mark {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin-left: -1.5px;
+  border-radius: 50%;
+  background-color: hsla(0, 0%, 100%, 0.6);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* ---------------- 分段选择 ---------------- */
+
+.nova-live-player-dm-setting-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.nova-live-player-dm-setting-row-label {
+  flex: 0 0 61px;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 24px;
+}
+
+.nova-live-player-dm-setting-row-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.nova-live-player-segmented {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  height: 24px;
+  border-radius: 4px;
+  background-color: hsla(0, 0%, 100%, 0.12);
+}
+
+.nova-live-player-segmented-item {
+  position: relative;
+  flex: 1;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  line-height: 24px;
+  cursor: pointer;
+
+  & + &::before {
+    position: absolute;
+    top: 6px;
+    left: 0;
+    width: 1px;
+    height: 12px;
+    background-color: hsla(0, 0%, 100%, 0.18);
+    content: '';
+  }
+
+  &.is-active {
+    color: #ff6699;
+  }
+}
+
+/* ---------------- 复选 ---------------- */
+
+.nova-live-player-dm-setting-checks {
+  display: flex;
+  align-items: center;
+  margin: 4px 0 14px;
+}
+
+.nova-live-player-checkbox {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 18px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nova-live-player-checkbox-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 2px;
+  color: #ffffff;
+  box-sizing: border-box;
+}
+
+.nova-live-player-checkbox-box.is-checked {
+  border-color: #ff6699;
+  background-color: #ff6699;
+}
+
+.nova-live-player-checkbox-icon {
+  display: none;
+  width: 12px;
+  height: 12px;
+}
+
+.nova-live-player-checkbox-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.nova-live-player-checkbox-box.is-checked .nova-live-player-checkbox-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nova-live-player-checkbox-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* ---------------- 高级设置入口 ---------------- */
+
+.nova-live-player-dm-setting-advanced {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 30px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  line-height: 30px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    color: #ff6699;
+  }
+}
+
+.nova-live-player-dm-setting-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.nova-live-player-dm-setting-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------------- 第二页：更多设置 ---------------- */
+
+.nova-live-player-dm-setting-page-more {
+  padding: 0;
+}
+
+.nova-live-player-dm-setting-back {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 0;
+  background-color: transparent;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 36px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.nova-live-player-dm-setting-back .nova-live-player-dm-setting-arrow {
+  margin-right: 6px;
+}
+
+.nova-live-player-dm-setting-font-row {
+  padding: 4px 20px 0;
+}
+
+.nova-live-player-dm-setting-font-title {
+  height: 16px;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.nova-live-player-dm-setting-font-control {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.nova-live-player-dm-setting-select {
+  width: 150px;
+  height: 26px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 2px;
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nova-live-player-dm-setting-select option {
+  background-color: #1c1c1c;
+  color: #ffffff;
+}
+
+.nova-live-player-dm-setting-font-bold {
+  margin-left: 16px;
+}
+
+.nova-live-player-dm-setting-stroke-block {
+  padding: 0 20px;
+}
+
+.nova-live-player-dm-setting-stroke-list {
+  display: flex;
+  align-items: center;
+}
+
+.nova-live-player-dm-setting-stroke {
+  flex: 1;
+  height: 26px;
+  margin-right: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 26px;
+  text-align: center;
+  cursor: pointer;
+
+  &:last-child {
+    margin-right: 0;
+  }
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.32);
+  }
+
+  &.is-active {
+    background-color: #ff6699;
+  }
+}
+
+.nova-live-player-dm-setting-reset {
+  display: block;
+  width: 116px;
+  height: 26px;
+  margin: 16px 20px 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 3px;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #ff6699;
+    color: #ff6699;
+  }
+}

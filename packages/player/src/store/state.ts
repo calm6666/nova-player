@@ -12,6 +12,8 @@ import type {
   UserPreferences,
   DanmakuPreferences,
   SubtitlePreferences,
+  PlayerSettingsFlags,
+  DanmakuPersistedSettings,
 } from './types';
 
 // ============================================
@@ -33,6 +35,31 @@ export const defaultUserPreferences: UserPreferences = {
   defaultPlaybackRate: 1,
   /** 默认不跳过片头片尾 */
   skipOpEd: false,
+};
+
+/**
+ * 默认设置面板开关项（镜像/循环/自动开播/播完暂停，默认全关）
+ * 关灯模式与画中画不持久化（见 types.ts PlayerSettingsFlags 注释）
+ */
+export const defaultSettingsFlags: PlayerSettingsFlags = {
+  mirror: false,
+  loop: false,
+  autostart: false,
+  pauseAfterEnd: false,
+};
+
+/**
+ * 默认弹幕设置（与弹幕设置面板的复位默认值一致）
+ */
+export const defaultDanmakuSettings: DanmakuPersistedSettings = {
+  visible: true,
+  opacity: 1,
+  speed: 1,
+  area: 75,
+  fontSize: 50,
+  scaleWithScreen: true,
+  // 智能防挡默认关闭：开启才懒加载模型（用户未开启不下载）
+  maskEnabled: false,
 };
 
 /**
@@ -84,6 +111,18 @@ export const defaultPersistentState: PlayerPersistentState = {
   // 播放设置
   playbackRate: 1,
   codecPreferType: 0,
+  loudness: 0,
+
+  // 设置面板开关（用户可打开/关闭的全部项，默认全关）
+  settings: defaultSettingsFlags,
+  // 画面比例（"0:0" 默认自适应）
+  aspect: '0:0',
+
+  // 弹幕设置（与弹幕面板默认值一致）
+  danmakuSettings: defaultDanmakuSettings,
+
+  // 字幕样式（空对象 = 全默认，面板 patch 增量合并）
+  subtitleStyle: {},
 
   // 画面设置
   isWideScreen: false,
@@ -99,7 +138,7 @@ export const defaultPersistentState: PlayerPersistentState = {
   pbpPin: 0,            // 默认不固定
   pbpTheme: 'b',        // 默认主题 b
   pbpVersion: '3.6.2',  // 版本号
-  pbpState: 1,          // 默认开启
+  pbpState: 0,          // 默认不渲染高能进度条（对照当前播放器运行时默认）
   pbpStateClear: 1,     // 默认清晰模式
 
   // 通用用户偏好

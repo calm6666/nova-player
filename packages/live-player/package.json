@@ -1,0 +1,19 @@
+{
+  "name": "@lumina/live-player",
+  "version": "1.0.0",
+  "description": "Live room player UI for Lumina",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./style.css": "./dist/style.css" },
+  "files": ["dist"],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check:selectors": "node scripts/check-duplicate-selectors.mjs",
+    "smoke": "node scripts/cdp-smoke.mjs"
+  },
+  "devDependencies": { "sass": "^1.99.0", "vite": "^5.4.21", "vite-plugin-dts": "^4.5.0" }
+}

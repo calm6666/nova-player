@@ -19,6 +19,7 @@ import {
   signal,
   computed,
   onEffect,
+  Show,
   t,
 } from "@/core";
 import type { Signal, ReadonlySignal } from "@/core";
@@ -33,6 +34,7 @@ import { Checkbox } from "@/nova/components/Checkbox";
 import { ArrowRight } from "./icons";
 import { RadioGroup } from "./RadioGroup";
 import type { RadioGroupOption } from "./RadioGroup";
+import type { PlayerPluginFlags } from "./PlayerDocker";
 import settingHoverAnimationData from "../assets/lottie-icon/settings-animation.json";
 
 export interface SettingMenuProps {
@@ -44,6 +46,12 @@ export interface SettingMenuProps {
    * 缺省可见；display 由本组件根节点响应式 style 单一来源管理
    */
   visible?: boolean | ReadonlySignal<boolean>;
+  /**
+   * 插件安装标志读取器（getter 形态，RightControls 透传）：
+   * 未装 audioEffect 插件时第二页「音量均衡」音频设置区块不渲染，
+   * 面板高度联动收缩；未传（独立使用场景）保持既有行为
+   */
+  plugins?: () => PlayerPluginFlags;
 }
 
 export type SettingMenuEvents = {
@@ -62,6 +70,19 @@ const SETTING_PAGE_MAIN = { width: 132, height: 140 };
  * radio 内容（24+12）+ others（title 20 + checkbox 行 20）= 296px
  */
 const SETTING_PAGE_MORE = { width: 286, height: 296 };
+/**
+ * 「音量均衡」区块高度，px（title 16+4 + 内容 24 + 区块间距 12）
+ * 未装音效插件时区块不渲染，第二页高度相应收缩
+ */
+const LOUDNESS_BLOCK_HEIGHT = 56;
+/**
+ * 第二页（无音频设置）尺寸：隐藏音量均衡区块后的收缩高度
+ * 音效插件未装时使用，面板高度随区块渲染状态动态选择
+ */
+const SETTING_PAGE_MORE_NO_AUDIO = {
+  width: 286,
+  height: SETTING_PAGE_MORE.height - LOUDNESS_BLOCK_HEIGHT,
+};
 
 export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
   (props, lifecycle) => {
@@ -171,47 +192,44 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
     };
 
     /**
-     * 渲染一组单选按钮
+     * renderRadioGroup：单选组渲染助手
      * 响应式迁移后单选组不再需要 DOM 引用（refKey 残留传参会触发未注册告警），已一并移除
+     *
      * @param options - 选项列表
-     * @param key - settingChange 的配置键
-     * @returns 单选组虚拟节点
+     * @param key - 设置项 key（settingChange 事件回传）
+     * @param checkedValue - 可选受控选中值信号（编码格式单选传入：
+     *        与运行时状态 CODEC_PREFER_TYPE 双向同步——onSelect 经
+     *        applySettingChange → setCodecPrefer → state.set 写回，
+     *        外部 API 改值时信号驱动选中态原位更新）
      */
     const renderRadioGroup = (
       options: RadioGroupOption[],
       key: string,
+      checkedValue?: Signal<boolean | string | number | undefined>,
     ): VNode =>
       RadioGroup(options, {
         name: key,
+        ...(checkedValue ? { checkedValue } : {}),
         onSelect: (option) => {
           lifecycle.emit?.("settingChange", { key, value: option.value });
         },
       });
 
-    /** 左侧菜单的三个开关项（对应参考的 bui-switch 组） */
-    const switches: Array<{
-      cls: string;
-      name: string;
-      checked?: boolean;
-      onChange: (checked: boolean) => void;
-    }> = [
-      {
-        cls: "nova-player-ctrl-setting-mirror",
-        name: t("player.ui.settings.mirror"),
-        onChange: handleMirrorChange,
-      },
-      {
-        cls: "nova-player-ctrl-setting-loop",
-        name: t("player.ui.settings.loop"),
-        onChange: handleLoopChange,
-      },
-      {
-        cls: "nova-player-ctrl-setting-autoplay",
-        name: t("player.ui.settings.autostart"),
-        checked: true,
-        onChange: handleAutostartChange,
-      },
-    ];
+    /**
+     * 开关 API 容器：三个 Switch + 关灯 Checkbox 挂载后暴露 setChecked，
+     * 由下方 onEffect 依信号值受控同步（key 对应 switches[].key）
+     */
+    const switchApis: Record<
+      "mirror" | "loop" | "autostart",
+      { setChecked: (value: boolean) => void } | null
+    > = {
+      mirror: null,
+      loop: null,
+      autostart: null,
+    };
+
+    /** 关灯复选框 API（LIGHTOFF 运行时状态受控同步，不持久化） */
+    let lightoffApi: { setChecked: (value: boolean) => void } | null = null;
 
     /** 高能进度条复选框 API（供渲染态双向同步） */
     let highenergyApi: { setChecked: (value: boolean) => void } | null = null;
@@ -231,13 +249,120 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       : signal<boolean | undefined>(undefined);
 
     /**
-     * 响应式同步：渲染态信号变化 → 调用 Checkbox API 同步勾选状态
+     * 响应式信号：编码偏好（0 默认 / 1 HEVC / 2 AVC / 3 AV1）
+     * 与运行时状态 CODEC_PREFER_TYPE 同步（useReactiveState 派生）：
+     * 构造时由持久化值初始化（下次加载即上次设置），面板选择经
+     * setCodecPrefer 写回状态 → 信号驱动选中态原位更新
+     */
+    const codecPreferSignal: Signal<number | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.CODEC_PREFER_TYPE, lifecycle)
+      : signal<number | undefined>(undefined);
+
+    /**
+     * 响应式信号：镜像 / 循环 / 自动开播 / 关灯 / 播完暂停
+     * 全部与运行时状态同步（useReactiveState 派生）：
+     * 构造时由持久化值初始化（关灯不持久化恒 false），面板操作经
+     * settingChange → applySettingChange 写回状态 → 信号驱动
+     * Switch/Checkbox/单选组受控回显，外部 API 改值时同样原位更新
+     */
+    const mirrorSignal: Signal<boolean | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.MIRROR, lifecycle)
+      : signal<boolean | undefined>(undefined);
+    const loopSignal: Signal<boolean | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.LOOP, lifecycle)
+      : signal<boolean | undefined>(undefined);
+    const autostartSignal: Signal<boolean | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.AUTOSTART, lifecycle)
+      : signal<boolean | undefined>(undefined);
+    const lightoffSignal: Signal<boolean | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.LIGHTOFF, lifecycle)
+      : signal<boolean | undefined>(undefined);
+    const pauseAfterEndSignal: Signal<boolean | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.PAUSE_AFTER_END, lifecycle)
+      : signal<boolean | undefined>(undefined);
+
+    /**
+     * 响应式信号：画面比例（"0:0" 自适应 / "4:3" / "16:9"）
+     * 与运行时状态 ASPECT_RATIO 同步：构造期 "0:0"，持久化值经
+     * MOUNTED setAspectRatio 写回 → 信号驱动单选组选中态
+     */
+    const aspectSignal: Signal<string | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.ASPECT_RATIO, lifecycle)
+      : signal<string | undefined>(undefined);
+
+    /**
+     * 派生信号：播放方式单选值（0 自动连播 / 2 播完暂停）
+     * PAUSE_AFTER_END 为 boolean，单选组 value 为 0/2，经下方 onEffect
+     * 单向映射写入（RadioGroup 受控信号需可写，computed 只读不兼容）
+     */
+    const handoffValueSignal = signal<number>(0);
+
+    /**
+     * 左侧菜单的三个开关项（对应参考的 bui-switch 组）
+     * 受控模式：checked 取响应式信号初值（构造时即持久化值），
+     * 后续变化经 switchMounted 暴露的 setChecked API 原位同步
+     * （autostart 不再硬编码 true，跟随持久化真实值回显）
+     */
+    const switches: Array<{
+      cls: string;
+      name: string;
+      key: "mirror" | "loop" | "autostart";
+      checked?: boolean;
+      onChange: (checked: boolean) => void;
+    }> = [
+      {
+        cls: "nova-player-ctrl-setting-mirror",
+        name: t("player.ui.settings.mirror"),
+        key: "mirror",
+        checked: mirrorSignal.value ?? false,
+        onChange: handleMirrorChange,
+      },
+      {
+        cls: "nova-player-ctrl-setting-loop",
+        name: t("player.ui.settings.loop"),
+        key: "loop",
+        checked: loopSignal.value ?? false,
+        onChange: handleLoopChange,
+      },
+      {
+        cls: "nova-player-ctrl-setting-autoplay",
+        name: t("player.ui.settings.autostart"),
+        key: "autostart",
+        checked: autostartSignal.value ?? false,
+        onChange: handleAutostartChange,
+      },
+    ];
+
+    /**
+     * 派生信号：音效插件是否安装（音频设置区块的渲染开关）
+     * 读 plugins getter 建立依赖，插件运行中装卸时区块即时挂/摘，
+     * 第二页面板高度随区块渲染状态联动收缩
+     */
+    const hasAudioEffectSignal = computed(
+      () => props.plugins?.().audioEffect ?? true,
+    );
+
+    /**
+     * 响应式同步：信号变化 → 调用组件 API 同步勾选状态
      * onEffect 内读取 signal.value 自动追踪，信号变化时自动重跑
-     * 保留命令式：highenergyApi.setChecked() 是组件 API 调用（非 DOM 操作）
+     * 保留命令式：setChecked() 是组件 API 调用（非 DOM 操作）
+     * 覆盖：高能进度条 / 镜像 / 循环 / 自动开播 / 关灯 / 播放方式
      */
     onEffect(lifecycle, () => {
       const value = pbpRenderedSignal.value;
       if (value !== undefined) highenergyApi?.setChecked(value);
+      // 三个 Switch 受控（状态源：持久化 flags 或运行时状态）
+      const mirror = mirrorSignal.value;
+      if (mirror !== undefined) switchApis.mirror?.setChecked(mirror);
+      const loop = loopSignal.value;
+      if (loop !== undefined) switchApis.loop?.setChecked(loop);
+      const autostart = autostartSignal.value;
+      if (autostart !== undefined) switchApis.autostart?.setChecked(autostart);
+      // 关灯（不持久化，仅运行时状态）
+      const lightoff = lightoffSignal.value;
+      if (lightoff !== undefined) lightoffApi?.setChecked(lightoff);
+      // 播放方式单选值映射（boolean → 0/2）
+      handoffValueSignal.value = pauseAfterEndSignal.value === true ? 2 : 0;
     });
 
     lifecycle.onBeforeDestroy = (): void => {
@@ -289,11 +414,18 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                 "div",
                 {
                   class: "ui-panel-wrap",
-                  // 外框尺寸跟随当前页（响应式 style 派生，过渡由 CSS transition 承担）
-                  style: {
-                    width: `${(pageIndexSignal.value === 0 ? SETTING_PAGE_MAIN : SETTING_PAGE_MORE).width}px`,
-                    height: `${(pageIndexSignal.value === 0 ? SETTING_PAGE_MAIN : SETTING_PAGE_MORE).height}px`,
-                  },
+                // 外框尺寸跟随当前页（响应式 style 派生，过渡由 CSS transition 承担）
+                // 第二页高度联动音频设置区块：未装音效插件时区块不
+                // 渲染，高度取收缩尺寸（296 - 56 = 240）
+                style: {
+                  width: `${(pageIndexSignal.value === 0 ? SETTING_PAGE_MAIN : SETTING_PAGE_MORE).width}px`,
+                  height: `${(pageIndexSignal.value === 0
+                    ? SETTING_PAGE_MAIN
+                    : hasAudioEffectSignal.value
+                      ? SETTING_PAGE_MORE
+                      : SETTING_PAGE_MORE_NO_AUDIO
+                  ).height}px`,
+                },
                 },
                 h(
                   "div",
@@ -330,6 +462,12 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                           name: item.name,
                           checked: item.checked,
                           onChange: item.onChange,
+                          // 挂载后捕获 API：onEffect 依持久化/运行时状态受控同步勾选态
+                          onSwitchMounted: (api: {
+                            setChecked: (value: boolean) => void;
+                          }) => {
+                            switchApis[item.key] = api;
+                          },
                         }),
                       ),
                     ),
@@ -396,10 +534,12 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                               {
                                 label: t("player.ui.settings.handoff.pause"),
                                 value: 2,
-                                checked: true,
                               },
                             ],
                             "handoff",
+                            // 受控模式：播完暂停持久化值驱动选中态
+                            // （构造时即上次选择，外部 API 改值时原位更新）
+                            handoffValueSignal,
                           ),
                         ),
                       ),
@@ -427,12 +567,14 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                               {
                                 label: t("player.ui.settings.aspect.auto"),
                                 value: "0:0",
-                                checked: true,
                               },
                               { label: "4:3", value: "4:3" },
                               { label: "16:9", value: "16:9" },
                             ],
                             "aspect",
+                            // 受控模式：画面比例持久化值驱动选中态
+                            // （构造期 "0:0"，MOUNTED 恢复持久化值时原位更新）
+                            aspectSignal,
                           ),
                         ),
                       ),
@@ -455,59 +597,71 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                           "div",
                           { class: "ui-area" },
                           renderRadioGroup(
-                            // 响应式迁移后单选组不再需要 DOM 引用，refKey 参数已删除（避免运行时未注册告警）
-                            [
-                              {
-                                label: t("player.ui.settings.codec.default"),
-                                value: 0,
-                                checked: true,
-                              },
-                              { label: "AV1", value: 3 },
-                              { label: "HEVC", value: 1 },
-                              { label: "AVC", value: 2 },
-                            ],
-                            "codec",
-                          ),
+                          // 响应式迁移后单选组不再需要 DOM 引用，refKey 参数已删除（避免运行时未注册告警）
+                          [
+                            {
+                              label: t("player.ui.settings.codec.default"),
+                              value: 0,
+                            },
+                            { label: "AV1", value: 3 },
+                            { label: "HEVC", value: 1 },
+                            { label: "AVC", value: 2 },
+                          ],
+                          "codec",
+                          // 受控模式：选中态与运行时状态/持久化值双向同步
+                          // （构造时即持久化值——下次加载即上次设置），
+                          // 不再用静态 checked 标记
+                          codecPreferSignal,
+                        ),
                         ),
                       ),
                     ),
+                    // 音频设置（音量均衡）区块：按音效插件安装状态
+                    // 条件渲染——未装插件时整个区块不挂载（Show 控制
+                    // 流），面板高度联动收缩（见 ui-panel-wrap 的
+                    // 高度表达式）；装卸即时联动由 hasAudioEffectSignal
+                    // 驱动
                     h(
-                      "div",
-                      { class: "nova-player-ctrl-setting-loudness" },
+                      Show,
+                      { when: (): boolean => hasAudioEffectSignal.value },
                       h(
                         "div",
-                        { class: "nova-player-ctrl-setting-loudness-title" },
-                        t("player.ui.settings.loudness.title"),
-                      ),
-                      h(
-                        "div",
-                        {
-                          class:
-                            "nova-player-ctrl-setting-loudness-content ui ui-radio ui-dark",
-                        },
+                        { class: "nova-player-ctrl-setting-loudness" },
                         h(
                           "div",
-                          { class: "ui-area" },
-                          renderRadioGroup(
-                            // 响应式迁移后单选组不再需要 DOM 引用，refKey 参数已删除（避免运行时未注册告警）
-                            [
-                              {
-                                label: t(
-                                  "player.ui.settings.loudness.standard",
-                                ),
-                                value: 1,
-                              },
-                              {
-                                label: t("player.ui.settings.loudness.dynamic"),
-                                value: 2,
-                              },
-                              {
-                                label: t("player.ui.settings.loudness.off"),
-                                value: 0,
-                                checked: true,
-                              },
-                            ],
-                            "loudness",
+                          { class: "nova-player-ctrl-setting-loudness-title" },
+                          t("player.ui.settings.loudness.title"),
+                        ),
+                        h(
+                          "div",
+                          {
+                            class:
+                              "nova-player-ctrl-setting-loudness-content ui ui-radio ui-dark",
+                          },
+                          h(
+                            "div",
+                            { class: "ui-area" },
+                            renderRadioGroup(
+                              // 响应式迁移后单选组不再需要 DOM 引用，refKey 参数已删除（避免运行时未注册告警）
+                              [
+                                {
+                                  label: t(
+                                    "player.ui.settings.loudness.standard",
+                                  ),
+                                  value: 1,
+                                },
+                                {
+                                  label: t("player.ui.settings.loudness.dynamic"),
+                                  value: 2,
+                                },
+                                {
+                                  label: t("player.ui.settings.loudness.off"),
+                                  value: 0,
+                                  checked: true,
+                                },
+                              ],
+                              "loudness",
+                            ),
                           ),
                         ),
                       ),
@@ -531,7 +685,15 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                           },
                           h(Checkbox, {
                             label: t("player.ui.settings.lightoff"),
+                            // 受控初值（关灯不持久化，恒 false 即默认开灯），
+                            // 后续经 LIGHTOFF 运行时状态 + onCheckboxMounted API 同步
+                            checked: lightoffSignal.value ?? false,
                             onChange: handleLightoffChange,
+                            onCheckboxMounted: (api: {
+                              setChecked: (value: boolean) => void;
+                            }) => {
+                              lightoffApi = api;
+                            },
                           }),
                         ),
                         h("div", {

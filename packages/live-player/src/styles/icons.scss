@@ -1,0 +1,30 @@
+/**
+ * 复选框勾选标记：由样式绘制（真实播放器未提供独立勾选 SVG）。
+ */
+.nova-live-player-tick {
+  position: relative;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 3px;
+    width: 4px;
+    height: 8px;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+}
+
+/**
+ * 返回箭头：在元素中心做水平翻转，避免 SVG 内部坐标偏移。
+ */
+.nova-live-player-quality-back-icon svg,
+.nova-live-player-dm-setting-back .nova-live-player-dm-setting-arrow svg {
+  transform: scaleX(-1);
+  transform-origin: center center;
+}

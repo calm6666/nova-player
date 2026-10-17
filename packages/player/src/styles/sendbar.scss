@@ -94,8 +94,8 @@
     color: var(--nova-player-dmsend-info-font, #505050);
 
     &:not(.disabled):hover {
-      fill: #00a1d6;
-      fill: var(--nova-player-primary-color, #00a1d6);
+      color: #00a1d6;
+      color: var(--nova-player-primary-color, #00a1d6);
     }
   }
 
@@ -191,9 +191,15 @@
     color: #505050;
     color: var(--nova-player-dmsend-info-font, #505050);
 
-    &:hover {
-      fill: #00a1d6;
-      fill: var(--nova-player-primary-color, #00a1d6);
+    &:not(.disabled):hover {
+      color: #00a1d6;
+      color: var(--nova-player-primary-color, #00a1d6);
+    }
+
+    &.disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+      pointer-events: none;
     }
 
     svg {
@@ -231,11 +237,11 @@
     display: block;
   }
 
-  .nova-player-dm-setting.disabled {
-    cursor: not-allowed !important;
-    opacity: 0.4 !important;
-    pointer-events: none;
-  }
+  // .nova-player-dm-setting.disabled {
+  //   cursor: not-allowed !important;
+  //   opacity: 0.4 !important;
+  //   pointer-events: none;
+  // }
 
   .nova-player-video-inputbar {
     border-radius: 8px;
@@ -261,11 +267,11 @@
 
   .nova-player-video-btn-dm {
     -webkit-box-flex: 0;
-    fill: #757575;
-    fill: var(--nova-player-dmsend-switch-icon, #757575);
+    color: #757575;
+    color: var(--nova-player-dmsend-switch-icon, #757575);
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
-    color: hsla(0, 0%, 100%, 0.8);
+    // color: hsla(0, 0%, 100%, 0.8);
     cursor: pointer;
     -ms-flex: none;
     flex: none;
@@ -277,8 +283,8 @@
     width: 30px;
 
     &:hover {
-      fill: #00a1d6;
-      fill: var(--nova-player-primary-color, #00a1d6);
+      color: #00a1d6;
+      color: var(--nova-player-primary-color, #00a1d6);
     }
   }
 
@@ -500,6 +506,30 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+    }
+  }
+}
+
+.nova-player-docker-major.nova-state-light-off {
+  .nova-player-container {
+    .nova-player-sending-bar {
+      background: #212121;
+    }
+
+    .nova-player-sending-bar {
+      .nova-player-video-info {
+        color: silver;
+      }
+      .nova-player-video-inputbar {
+        background: hsla(0, 0%, 100%, 0.2);
+        color: #999;
+      }
+    }
+
+    .nova-player-dm-switch,
+    .nova-player-dm-setting,
+    .nova-player-video-btn-dm {
+      color: hsla(0, 0%, 100%, 0.8) !important;
     }
   }
 }

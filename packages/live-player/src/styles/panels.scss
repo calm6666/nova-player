@@ -1,0 +1,493 @@
+/**
+ * 根元素内部面板样式：清晰度 / 线路（居中两页）、速度、直播信息、快捷键。
+ */
+
+.nova-live-player-panel {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  z-index: 20;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background-color: rgba(20, 20, 20, 0.92);
+  color: #ffffff;
+  transform: translateX(-50%);
+}
+
+/* ---------------- 清晰度 / 线路（两页） ---------------- */
+
+.nova-live-player-quality-panel {
+  width: 220px;
+  padding: 4px 0;
+  left: auto;
+  right: auto;
+  transform: none;
+  transition:
+    width 0.2s ease,
+    height 0.2s ease;
+}
+
+.nova-live-player-quality-page {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(100%);
+  transition:
+    transform 0.25s ease,
+    opacity 0.1s linear;
+
+  &:not(.is-hidden) {
+    position: relative;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  &:first-child.is-hidden {
+    transform: translateX(-100%);
+  }
+}
+
+.nova-live-player-quality-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 0;
+  background-color: transparent;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.nova-live-player-quality-back {
+  justify-content: flex-start;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nova-live-player-quality-back-icon,
+.nova-live-player-quality-arrow-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: #ffffff;
+}
+
+.nova-live-player-quality-back-icon {
+  margin-right: 6px;
+}
+
+.nova-live-player-quality-back-icon svg,
+.nova-live-player-quality-arrow-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.nova-live-player-quality-list,
+.nova-live-player-line-list {
+  display: flex;
+  flex-direction: column;
+  max-height: none;
+  overflow: visible;
+}
+
+.nova-live-player-quality-option,
+.nova-live-player-line-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 0;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  &.is-selected {
+    color: #ff6699;
+  }
+}
+
+.nova-live-player-quality-hint {
+  display: block;
+  margin-top: 2px;
+  color: #9499a0;
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.nova-live-player-quality-enhance {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: transparent;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nova-live-player-quality-enhance-label {
+  flex: 0 0 auto;
+}
+
+.nova-live-player-quality-enhance-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  border: 1px solid #9499a0;
+  border-radius: 50%;
+  color: #9499a0;
+  font-size: 10px;
+  line-height: 12px;
+}
+
+.nova-live-player-quality-switch {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 18px;
+  margin-left: auto;
+  border-radius: 9px;
+  background-color: rgba(255, 255, 255, 0.24);
+  transition: background-color 0.2s;
+}
+
+.nova-live-player-quality-switch-dot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transition: left 0.2s;
+}
+
+.nova-live-player-quality-switch.is-active {
+  background-color: #ff6699;
+}
+
+.nova-live-player-quality-switch.is-active .nova-live-player-quality-switch-dot {
+  left: 18px;
+}
+
+/* ---------------- 视频编码 ---------------- */
+
+.nova-live-player-codec-panel {
+  width: 220px;
+  padding: 4px 0;
+}
+
+.nova-live-player-codec-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nova-live-player-codec-title-text {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.nova-live-player-codec-close {
+  border: 0;
+  background-color: transparent;
+  color: #9499a0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nova-live-player-codec-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.nova-live-player-codec-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 0;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  &.is-selected {
+    color: #ff6699;
+  }
+}
+
+.nova-live-player-codec-hint {
+  display: block;
+  margin-top: 2px;
+  color: #9499a0;
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.nova-live-player-codec-empty {
+  padding: 10px 12px;
+  color: #9499a0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* ---------------- 速度 ---------------- */
+
+.nova-live-player-speed-panel {
+  right: 12px;
+  left: auto;
+  width: 130px;
+  padding: 6px 0;
+  transform: none;
+}
+
+.nova-live-player-speed-title {
+  padding: 2px 12px 6px;
+  color: #9499a0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.nova-live-player-speed-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.nova-live-player-speed-option {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &.is-selected {
+    color: #ff6699;
+  }
+}
+
+/* ---------------- 信息 ---------------- */
+
+.nova-live-player-info {
+  width: 330px;
+  max-height: 480px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+
+.nova-live-player-info-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.nova-live-player-info-title-text {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.nova-live-player-info-close {
+  border: 0;
+  background-color: transparent;
+  color: #9499a0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nova-live-player-info-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.nova-live-player-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nova-live-player-info-key {
+  flex: 0 0 auto;
+  color: #9499a0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.nova-live-player-info-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 1Hz 采样曲线：SVG polyline（无坐标轴刻度，y 轴按最大值归一化）。 */
+
+.nova-live-player-info-chart {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nova-live-player-info-chart-title {
+  color: #9499a0;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.nova-live-player-info-chart-body {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin-top: 4px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.nova-live-player-info-chart-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.nova-live-player-info-chart-line {
+  fill: none;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.nova-live-player-info-chart-line-buffer {
+  stroke: #00aeec;
+}
+
+.nova-live-player-info-chart-line-dropped {
+  stroke: #ff6699;
+}
+
+/* ---------------- 快捷键 ---------------- */
+
+.nova-live-player-hotkey {
+  width: 340px;
+  padding: 14px 16px;
+}
+
+.nova-live-player-hotkey-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.nova-live-player-hotkey-title-text {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.nova-live-player-hotkey-close {
+  border: 0;
+  background-color: transparent;
+  color: #9499a0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nova-live-player-hotkey-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.nova-live-player-hotkey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nova-live-player-hotkey-keys {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.nova-live-player-hotkey-desc {
+  flex: 1;
+  min-width: 0;
+  padding-left: 12px;
+  overflow: hidden;
+  color: #9499a0;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

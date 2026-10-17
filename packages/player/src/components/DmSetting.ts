@@ -225,6 +225,15 @@ export const DmSetting = defineComponent<DmSettingProps, DmSettingEvents>(
     };
 
     /**
+     * 智能防挡开关：写运行时状态键（持久化经 VideoPlayer 订阅落库，
+     * DanmakuPlugin 订阅后懒加载防挡运行时——外部 provider 或本地
+     * MediaPipe 语义分割 Worker，用户未开启不下载模型）
+     */
+    const handleMaskChange = (checked: boolean): void => {
+      stateMgr?.set(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED, checked);
+    };
+
+    /**
      * 响应式信号：按类型过滤的选中类型集合（多选，纯本地视觉状态）
      * 驱动各过滤项的 selected 类（__reactiveAttrs），
      * 替代旧的 handleFilterTypeClick 内 classList.toggle 命令式操作
@@ -569,7 +578,11 @@ export const DmSetting = defineComponent<DmSettingProps, DmSettingEvents>(
                   { class: "nova-player-dm-setting-left-mask" },
                   h(Checkbox, {
                     label: t("player.ui.dmsetting.smart_mask"),
-                    checked: true,
+                    // 受控初值：持久化开关（构造期已读回状态键）
+                    checked:
+                      stateMgr?.get(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED) ??
+                      false,
+                    onChange: handleMaskChange,
                   }),
                 ),
               ),

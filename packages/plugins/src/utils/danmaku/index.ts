@@ -329,7 +329,11 @@ export class DanmakuManager {
     this.domEngine?.resumeAnimations();
     this.canvasEngine?.resumeAnimations();
 
-    this.renderLoop();
+    // 弹幕关闭（visible=false）时不启动渲染循环：调度器不查询不发射，
+    // 引擎已清空无在飞弹幕（关闭即不渲染）；setVisible(true) 时恢复启动
+    if (this.options.visible) {
+      this.renderLoop();
+    }
   }
 
   /** 暂停 */
@@ -397,8 +401,9 @@ export class DanmakuManager {
     this.animationId = requestAnimationFrame(this.renderLoop);
   };
 
-  /** 渲染弹幕 */
+  /** 渲染弹幕（弹幕关闭时拦截：seek 同步路径与调度器异步路径的统一守卫） */
   private renderDanmaku(items: DanmakuItem[]): void {
+    if (!this.options.visible) return;
     const engine = this.getActiveEngine();
     if (!engine) return;
 
@@ -559,6 +564,10 @@ export class DanmakuManager {
     // 调度器会再次发射同一条弹幕 → 屏幕出现两条一模一样的弹幕。
     this.scheduler.markEmitted(danmaku);
 
+    // 弹幕关闭时不立即上屏（该条随 markEmitted 保留在历史，不重复发射，
+    // 与 B 站行为一致：关闭弹幕时发送照样入库但不上屏）
+    if (!this.options.visible) return;
+
     // 立即渲染
     const engine = this.getActiveEngine();
     if (engine instanceof DOMEngine) {
@@ -568,11 +577,28 @@ export class DanmakuManager {
     }
   }
 
-  /** 设置可见性（样式由 danmaku.scss 的 .danmaku-x-hide 提供，不在 TS 内联） */
+  /**
+   * 设置可见性（关闭 = 真正不渲染，非透明度遮蔽）
+   *
+   * 关闭时：清空全部在飞弹幕（引擎回收 DOM/渲染项）+ 重置发射窗口 +
+   * 停止渲染循环（调度器不再查询发射），弹幕系统零渲染开销；
+   * danmaku-x-hide 类仅作容器级视觉兜底。
+   * 重新打开时：视频仍在播放则重启渲染循环，调度器从当前时间窗继续发射
+   */
   setVisible(visible: boolean): void {
+    if (this.options.visible === visible) return; // 幂等：状态未变不重复清理
     this.options.visible = visible;
     this.domEngine?.setVisible(visible);
     this.canvasEngine?.setVisible(visible);
+    if (!visible) {
+      this.clear();
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
+      }
+    } else if (this.isPlaying && this.animationId === null) {
+      this.renderLoop();
+    }
   }
 
   /** 设置透明度 */

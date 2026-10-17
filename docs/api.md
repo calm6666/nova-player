@@ -500,6 +500,47 @@ DanmakuPlugin({
 | `setRenderMode` | `(mode: RenderMode) => void` |
 | `setScreenMode` | `(mode: ScreenMode) => void` |
 
+#### 6.5.1 弹幕智能防挡（`danmaku.mask`）
+
+用户在弹幕设置面板勾选「智能防挡」后生效（开关持久化于 `danmakuSettings.maskEnabled`，默认关闭）。两种模式按优先级自动选择：
+
+```ts
+new VideoPlayer({
+  danmaku: {
+    mask: {
+      // 方式一（优先）：外部遮罩 provider —— 播放器按更新间隔调用，
+      // 返回当前时间的镂空遮罩图（SVG/PNG data URL 或图片 URL）
+      provider: async (currentTime) => {
+        const { maskImage } = await fetch(`/api/mask?t=${currentTime}`).then(r => r.json());
+        return maskImage ? { maskImage } : { maskImage: "", clearMask: true };
+      },
+      // 方式二：本地语义分割（未配置 provider 时启用）
+      localModel: {
+        // MediaPipe ImageSegmenter 模型地址（tflite）
+        modelUrl: '/mediapipe/models/selfie_multiclass_256x256.tflite',
+        threshold: 0.25, // 置信度阈值，默认 0.25
+      },
+    },
+  },
+});
+```
+
+**本地分割模式的行为**：
+
+- **懒加载**：`danmakuMask` 模块经动态 import 拆为独立 chunk——开发者未配置时不会打包进主包；用户未开启时不会下载模型与 wasm
+- **Worker 推理**：MediaPipe ImageSegmenter 在 Web Worker 内运行，自动检测 GPU（WebGL delegate）/ CPU 能力择优，主线程零阻塞、视频播放无卡顿
+- **时钟同步**：分割结果带时间戳，stale 帧（已有更新帧在跑）被丢弃，保证遮罩与视频画面同步
+- **降级**：模型下载/初始化失败（网络中断、能力不足）静默降级为无遮罩弹幕
+
+**推荐模型**（放到 `public/` 下即可）：
+
+| 模型 | 大小 | 说明 |
+| --- | --- | --- |
+| `selfie_multiclass_256x256.tflite` | ~5MB | 多分类（背景/头发/皮肤/衣服），人物轮廓最完整，推荐 |
+| `selfie_segmenter.tflite` | ~250KB | 二分类（人/背景），最小但轮廓略糙 |
+
+下载地址：`https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite`
+
 ### 6.6 SubtitlePlugin
 
 ```ts
@@ -535,6 +576,55 @@ SubtitlePlugin({
 | `switchLanguage` | `(lang: string) => Promise<void>` |
 | `setVisible` | `(visible: boolean) => void` |
 | `setFontSize` / `setColor` / `setBackgroundColor` / `setStroke` | |
+
+#### 6.6.1 字幕样式持久化（语义化存储）
+
+字幕样式经设置面板修改后持久化到 `nova_player_profile.subtitleStyle`，**存储的是语义字段而非 CSS 字符串**（与 `SubtitlePlugin.setStyle` 消费的字段一一对应，避免双重转换偏差）：
+
+```ts
+interface SubtitleStyleSettings {
+  fontSize?: number;      // 字号（px）
+  fontName?: string;      // 字体（CSS font-family 字面量）
+  primaryColor?: string;  // 字幕颜色
+  outlineColor?: string;  // 描边颜色
+  outlineWidth?: number;  // 描边宽度（px）
+  bold?: boolean;         // 加粗
+  bottomOffset?: number;  // 距底部偏移（px）
+}
+```
+
+刷新/重建后经构造期合并恢复到 `props.subtitle.style`，由插件直读应用。
+
+#### 6.6.2 本地 AI 语音识别（sherpa-onnx 真实引擎）
+
+本地 ASR（`asr/` 模块）已接入 **sherpa-onnx wasm 真实流式识别引擎**（`engineKind: 'sherpa'`）：VAD 分段 + 推理全部运行在 ASR 专用 Web Worker 内，主线程零阻塞；wasm 运行时（~15MB）与模型文件在开启识别时按需 fetch，未开启零下载。
+
+```ts
+SubtitlePlugin({
+  sources: [...],
+  localAi: {
+    engineKind: "sherpa",              // Worker 引擎：'sherpa'（真实）| 'mock'（演示）
+    defaultLang: "zh",
+    modelBasePath: "/asr/models/zh-14m", // 模型目录
+    wasmBasePath: "/asr/wasm",           // wasm 运行时目录
+  },
+})
+```
+
+静态资源（随 demo `public/asr/` 提供，业务侧自建服务分发）：
+
+| 资源 | 文件 | 大小 |
+| --- | --- | --- |
+| wasm 运行时（`wasmBasePath`） | `sherpa-onnx-wasm-nodejs.js/.wasm`、`sherpa-onnx-asr.js` | ~15MB |
+| 中文流式模型（`modelBasePath`） | `sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23`（int8）：`encoder-epoch-99-avg-1.int8.onnx`、`decoder-epoch-99-avg-1.onnx`、`joiner-epoch-99-avg-1.int8.onnx`、`tokens.txt` | ~30MB |
+
+模型下载（HuggingFace 或国内镜像 hf-mirror.com）：
+`https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-zh-14M-2023-02-23`
+
+引擎加载为异步（fetch wasm/模型 → MEMFS → 创建识别器），就绪/失败经 `SUBTITLE_AI_STATUS` 事件广播（`loading` → `ready` / `error`，失败自动降级服务端字幕）。备选模型：`sherpa-onnx-streaming-zipformer-small-bilingual-zh-en-2023-02-16`（int8，~40MB，中英混合，需按引擎默认文件名约定放置或扩展 `SherpaAsrEngine`）。
+
+> GPU 说明：sherpa-onnx 的 WebAssembly 运行时为 CPU（wasm SIMD）执行；
+> 语义分割（弹幕防挡）的 MediaPipe 模型已支持 GPU（WebGL delegate）自动启用。
 
 ### 6.7 InteractionPlugin
 

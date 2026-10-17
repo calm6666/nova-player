@@ -20,12 +20,26 @@
  *   GET  /x/player/v2?aid=&cid=     进度条节点 view_points（from/to 单位：秒）
  *   GET  /x/player/pbp?aid=&cid=    高能进度条曲线（0~1 浮点数组）
  *   GET  /x/v1/dm/list.so?oid=      弹幕 XML（B 站 list.so 格式，启动时生成 1000 条随机弹幕）
+ *   GET  /x/v1/dm/list.so?avid=     同上，但按 **avid** 返回该互动视频节点的随机弹幕
+ *                                   （同 avid 同结果；不带 avid 时仍是全局那 1000 条）
  *   GET  /v1/dm/list.so?oid=        上面那条的简写别名（返回完全相同的 XML）
  *   POST /danmaku/send              发一条弹幕 → 入库 + 广播给所有 SSE 和 WebSocket 连接
  *   GET  /danmaku/stream            SSE 实时弹幕流
  *   WS   /danmaku/ws                WebSocket 实时弹幕（手写 RFC6455，收发双向）
  *   GET  /danmaku/since?seq=N       长轮询兜底拉取
  *   GET  /videoshot/preview.bin     进度条预览图（UTF-8 文本，\u001F 分隔的 data URL）
+ *   GET  /videoshot/sprite.jpg      进度条预览雪碧图（tile=NxM，可当普通图片加载）
+ *   GET  /videoshot/index.json      预览元信息（pvdata{img_url,img_x_len,img_y_len,...}）
+ *                                   —— 上面三条**带 ?avid=av1000052（或 ?aid=1000052）**时
+ *                                   按该视频的转码目录取（互动视频每个节点一份）；
+ *                                   不带参数时仍是启动参数 --video 那一个视频（老口径）。
+ *   GET  /api/interactive/story?interactiveId=     剧情树（节点只带 avid 引用）
+ *   GET  /api/interactive/playurl?avid=&protocol=&format=   某个 avid 的播放源
+ *   GET  /api/interactive/cards?avid=              互动卡片（某个 avid 那份；
+ *                                   可加 interactiveId，默认 huaqiang）—— 读
+ *                                   interactive/<id>/cards.json（生成脚本落盘）
+ *   GET  /api/interactive/default-cards            默认视频（首页第一张卡）的卡片
+ *                                   —— 读 interactive/default/cards.json，**另一个接口**
  *
  * 【为什么要手写 WebSocket（不用 npm 的 ws）】
  *   本工程要求零 npm 依赖，而 Node 内置模块里只有 WebSocket **客户端**（且要 Node 22+），
@@ -50,6 +64,22 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFile, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+/*
+ * 互动卡片生成器（tools/gen-interactive-cards.mjs）：
+ *   · ensureCardsFiles()  —— 启动时确保两份 cards.json 存在（缺失则按固定种子生成）；
+ *   · hashSeed/mulberry32 —— 稳定的"同种子同结果"随机数（每个 avid 一个独立种子）；
+ *   · HUAQIANG_OUT/readAvidDuration —— 转码产物目录与"从清单里读时长"的权威实现。
+ * 数据面只有一份实现（脚本落盘 → 接口读盘），这里不重复写生成规则。
+ */
+import {
+  DEFAULT_SEED,
+  HUAQIANG_OUT,
+  ensureCardsFiles,
+  hashSeed,
+  mulberry32,
+  readAvidDuration,
+} from './tools/gen-interactive-cards.mjs';
 
 /* ---------------------------------------------------------------------------
  * 0. 基础路径
@@ -1548,6 +1578,156 @@ async function getSpriteFile() {
 }
 
 /* ---------------------------------------------------------------------------
+ * 12a. 互动卡片数据面 + 按 avid 取视频产物（D/E/F/G 四项的服务端一半）
+ * ------------------------------------------------------------------------- */
+
+// 两份卡片数据（由 tools/gen-interactive-cards.mjs 生成落盘，接口只读）：
+//   interactive/huaqiang/cards.json  —— 互动视频每个 avid 的卡片 + 时长索引
+//   interactive/default/cards.json   —— 默认视频（首页第一张卡）的卡片
+const HUAQIANG_CARDS_FILE = path.join(__dirname, 'interactive', 'huaqiang', 'cards.json');
+const DEFAULT_CARDS_FILE = path.join(__dirname, 'interactive', 'default', 'cards.json');
+
+/*
+ * JSON 文件的小缓存（按 mtime 失效）。
+ * 为什么不像 story.json 那样每次请求都重读：cards.json 有 88 个 avid、上百 KB，
+ * 而弹幕/预览图两条链路每次请求都要查一次时长 —— 每请求重读会把磁盘 IO 变成瓶颈。
+ * 按 mtime 失效意味着**改完文件保存即生效**，改盘后不用重启服务（和 story.json 同口径）。
+ */
+const jsonFileCache = new Map();
+
+async function readJsonFileFresh(file) {
+  const st = statSafe(file);
+  if (!st) return null;
+
+  const hit = jsonFileCache.get(file);
+  if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.data;
+
+  try {
+    const data = JSON.parse(await fsp.readFile(file, 'utf8'));
+    jsonFileCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, data });
+    return data;
+  } catch (err) {
+    warn(`读 JSON 失败：${file} —— ${String(err.message)}`);
+    return null;
+  }
+}
+
+/*
+ * G：按视频定位转码产物目录（每个 avid 一个目录，里面是 index.mpd / index.m3u8 /
+ * preview.bin / sprite.jpg …）。
+ *   avid=av1000052        → 直接用（转码脚本的目录名就是 avid）
+ *   aid=1000052（+cid=…） → 目录名是 av<aid>（cid 只进日志，目录不按它分）
+ * 两个都没给 / 名字不合法 / 目录不存在 → null（调用方走原来的"单视频 --video"那条路）。
+ */
+function resolveVideoDir(url) {
+  let avid = (url.searchParams.get('avid') || '').trim();
+
+  if (!avid) {
+    const aid = (url.searchParams.get('aid') || '').trim();
+    if (/^[0-9]+$/.test(aid)) avid = `av${aid}`;
+  }
+
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(avid)) return null;
+
+  const dir = path.join(HUAQIANG_OUT, avid);
+  const st = statSafe(dir);
+  if (!st || !st.isDirectory()) return null;
+
+  return { avid, dir, cid: (url.searchParams.get('cid') || '').trim() };
+}
+
+/* 某个 avid 的时长（秒）：先查 cards.json 的时长索引，再直接读转码产物里的清单 */
+async function avidDurationSec(avid) {
+  const cards = await readJsonFileFresh(HUAQIANG_CARDS_FILE);
+  const meta = cards && cards.durations ? cards.durations[avid] : null;
+
+  if (meta && Number(meta.seconds) > 0) return Number(meta.seconds);
+
+  const info = await readAvidDuration(path.join(HUAQIANG_OUT, avid));
+  if (info && info.seconds > 0) return info.seconds;
+
+  return 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * 12a-2. 每个 avid 的随机弹幕（F 项）
+ *
+ * 口径与全局那 1000 条完全一致（同一套文案/色板/模式比例/速度档，同一种
+ * "等分槽 + 槽内抖动"的分布），只有两点不同：
+ *   1. 种子 = hash("dm:<avid>") → **同 avid 同结果**，换 avid 换一批；
+ *   2. 条数按该视频时长折算（互动节点是十几秒到一分钟的短片，塞 1000 条会糊成一片）。
+ * 生成结果按 avid 缓存（一次生成几十到几百条，很便宜，但没必要每次请求都算）。
+ * ------------------------------------------------------------------------- */
+
+const AVID_DANMAKU_PER_SEC = 12;    // 每秒约 12 条（和全局 1000 条 / 250 秒 同一个密度量级）
+const AVID_DANMAKU_MIN = 20;
+const AVID_DANMAKU_MAX = 600;
+
+const avidDanmakuCache = new Map();   // avid -> { seconds, items, xml }
+
+/* 与 pickSpeed 同分布，但随机源换成"按 avid 固定种子"的那台发生器 */
+function pickSpeedWith(rng) {
+  let r = Math.floor(rng() * 100);
+  for (let i = 0; i < DM_SPEEDS.length; i += 1) {
+    r -= DM_SPEED_WEIGHTS[i];
+    if (r < 0) return DM_SPEEDS[i];
+  }
+  return 'moderate';
+}
+
+function generateDanmakuForAvid(avid, durationSec) {
+  const rng = mulberry32(hashSeed(`dm:${avid}`));
+  const duration = Number(durationSec) > 0 ? Number(durationSec) : 300;
+  const total = Math.max(AVID_DANMAKU_MIN,
+                         Math.min(AVID_DANMAKU_MAX,
+                                  Math.round(duration * AVID_DANMAKU_PER_SEC)));
+  const slot = duration / total;
+  const items = [];
+
+  for (let i = 0; i < total; i += 1) {
+    const jitter = (rng() - 0.5) * slot * 0.9;
+    const timePoint = Math.min(Math.max(0, i * slot + jitter), Math.max(0, duration - 0.1));
+    const r = rng();
+    const mode = r < 0.88 ? DM_MODE_SCROLL : (r < 0.95 ? DM_MODE_TOP : DM_MODE_BOTTOM);
+    const fontSize = rng() < 0.34 ? DM_FONT_SMALL : DM_FONT_NORMAL;
+
+    items.push(makeDanmaku(
+      timePoint,
+      DM_TEXTS[Math.floor(rng() * DM_TEXTS.length)],
+      mode,
+      fontSize,
+      DM_PALETTE_DEC[Math.floor(rng() * DM_PALETTE_DEC.length)],
+      `uid${Math.floor(rng() * 9999) + 1}`,
+      i + 1,
+      pickSpeedWith(rng),
+    ));
+  }
+
+  items.sort((a, b) => a.timePoint - b.timePoint);
+  return items;
+}
+
+/* 取某个 avid 的弹幕 XML（缓存：同 avid 的第二次请求直接返回同一份文本） */
+async function avidDanmakuXml(avid) {
+  const hit = avidDanmakuCache.get(avid);
+  if (hit) return hit;
+
+  const seconds = await avidDurationSec(avid);
+  const items = generateDanmakuForAvid(avid, seconds);
+  const entry = {
+    avid,
+    seconds,
+    items,
+    xml: renderDanmakuXml(items),
+  };
+
+  avidDanmakuCache.set(avid, entry);
+  log(`avid 弹幕已生成并缓存：${avid} → ${items.length} 条`
+      + `（时长 ${seconds > 0 ? `${seconds.toFixed(1)}s` : '未知，按 300s 兜底'}）`);
+  return entry;
+}
+
+/* ---------------------------------------------------------------------------
  * 12b. 交互卡片（guide/link/vote/score 四类，页面可增删改）
  * ------------------------------------------------------------------------- */
 
@@ -1886,8 +2066,23 @@ async function handleRequest(req, res) {
   // ---- 3. 弹幕列表 XML ----------------------------------------------------
   // 返回启动时生成的那 1000 条随机弹幕（不是每次现算，所以内容在本次运行内稳定）。
   // /v1/dm/list.so 是简写别名：真实 B 站是 /x/v1/dm/list.so，两种写法都有人用，都认。
+  //
+  // 【F 项：带 avid 时按视频返回】
+  //   互动视频的每个节点（avid）有自己的弹幕：种子里带上 avid → 同 avid 同结果、
+  //   不同 avid 不同一批；条数按该视频时长折算（见 generateDanmakuForAvid）。
+  //   **不带 avid 时行为与以前完全一致**（全局那 1000 条），老调用方不受影响。
   if ((pathname === '/x/v1/dm/list.so' || pathname === '/v1/dm/list.so') && isGet) {
     const oid = url.searchParams.get('oid') || '';
+    const avid = (url.searchParams.get('avid') || '').trim();
+
+    if (avid !== '' && /^[A-Za-z0-9_-]{1,64}$/.test(avid)) {
+      const entry = await avidDanmakuXml(avid);
+      log(`GET ${pathname} oid=${oid || '-'} avid=${avid} → ${entry.items.length} 条弹幕`
+          + ` / ${Buffer.byteLength(entry.xml)} 字节 XML`);
+      sendText(res, 200, entry.xml, 'text/xml; charset=utf-8');
+      return;
+    }
+
     const xml = danmakuXml();
     log(`GET ${pathname} oid=${oid || '-'} → ${historyDanmaku.length} 条弹幕 / ${Buffer.byteLength(xml)} 字节 XML`);
     sendText(res, 200, xml, 'text/xml; charset=utf-8');
@@ -2051,6 +2246,26 @@ async function handleRequest(req, res) {
   }
 
   // ---- 7. 预览图 ----------------------------------------------------------
+  // 【G 项：带 avid / aid 时按该视频的转码目录取】
+  //   互动视频每个 avid 的目录里都有转码脚本生成的 preview.bin（+ sprite.jpg），
+  //   这里直接按 avid 提供服务；**没有生成时返回空文件**（前端切出 [''] = 一帧都没有，
+  //   是合法降级，绝不能报 500 把进度条交互打断 —— 老路径也是这个口径）。
+  if (pathname === PREVIEW_PATH && isGet) {
+    const perVideo = resolveVideoDir(url);
+    if (perVideo) {
+      const file = path.join(perVideo.dir, 'preview.bin');
+      const st = statSafe(file);
+      if (st && st.size > 0) {
+        log(`GET ${PREVIEW_PATH} avid=${perVideo.avid} → ${st.size} 字节`);
+        sendText(res, 200, await fsp.readFile(file), 'text/plain; charset=utf-8');
+      } else {
+        warn(`avid=${perVideo.avid} 还没有 preview.bin（转码脚本 --preview-only 可补），返回空文件`);
+        sendText(res, 200, Buffer.alloc(0), 'text/plain; charset=utf-8');
+      }
+      return;
+    }
+  }
+
   if (pathname === PREVIEW_PATH && isGet) {
     try {
       const buf = await getPreviewBuffer();
@@ -2081,6 +2296,27 @@ async function handleRequest(req, res) {
 
   // ---- 7b. 雪碧图（sprite）------------------------------------------------
   // 与 preview.bin（逐帧 data URL 列表）并列的第二种预览数据源：一张真实的图片。
+  // 【G 项】带 avid 时按该视频的转码目录取；目录里没有 sprite.jpg 就 404
+  // （前端按"雪碧图不可用"降级回 preview.bin —— index.json 的 img_url 会指回去）。
+  if (pathname === SPRITE_PATH && isGet) {
+    const perVideo = resolveVideoDir(url);
+    if (perVideo) {
+      const file = path.join(perVideo.dir, 'sprite.jpg');
+      const st = statSafe(file);
+      if (st && st.size > 0) {
+        log(`GET ${SPRITE_PATH} avid=${perVideo.avid} → ${st.size} 字节`);
+        sendBinary(res, 200, await fsp.readFile(file), 'image/jpeg');
+      } else {
+        warn(`avid=${perVideo.avid} 还没有 sprite.jpg（转码脚本 --preview-only 可补）`);
+        sendJson(res, 404, {
+          code: -404,
+          message: `avid=${perVideo.avid} 还没有 sprite.jpg：先跑 transcode_huaqiang.py --preview-only`,
+        });
+      }
+      return;
+    }
+  }
+
   if (pathname === SPRITE_PATH && isGet) {
     const file = await getSpriteFile();
     if (!file) {
@@ -2105,6 +2341,87 @@ async function handleRequest(req, res) {
   // ---- 8. 预览图元信息（B 站 x/player/videoshot 形状，mock 自用）----------
   // 同时报出两种数据源：pvdata/image/index 走雪碧图（B 站形状），
   // frames 走 preview.bin（逐帧 data URL），客户端按能力任选。
+  //
+  // 【G 项：带 avid 时按该视频的转码目录取】
+  //   帧数从该目录的 preview.bin 数出来（\u001F 分隔的元素个数 - 1 = 帧数，arr[0] 是空占位）；
+  //   雪碧图几何照转码脚本的口径：x_len = SPRITE_X_LEN(5)、y_len = ceil(帧数/5)、
+  //   每格 FRAME_WIDTH×FRAME_HEIGHT（脚本就是这么拼的）。
+  //   **img_url**：雪碧图存在 → SPRITE_PATH + "?avid=<avid>"（前端是 `base + img_url`，
+  //   所以参数必须写在 img_url 里）；不存在 → **原样指回 PREVIEW_PATH**，播放器据此降级。
+  if (pathname === '/videoshot/index.json' && isGet) {
+    const perVideo = resolveVideoDir(url);
+    if (perVideo) {
+      const previewFile = path.join(perVideo.dir, 'preview.bin');
+      const spriteFile = path.join(perVideo.dir, 'sprite.jpg');
+      const previewStat = statSafe(previewFile);
+      const spriteStat = statSafe(spriteFile);
+      const spriteReady = !!(spriteStat && spriteStat.size > 0);
+      const videoSeconds = await avidDurationSec(perVideo.avid);
+
+      let frameCount = 0;
+      if (previewStat && previewStat.size > 0) {
+        const text = await fsp.readFile(previewFile, 'utf8');
+        frameCount = Math.max(0, text.split(UNIT_SEP).length - 1);
+      }
+      if (frameCount === 0) {
+        /* preview.bin 还没生成：按该视频时长推一个理论帧数（前端只用它画刻度） */
+        frameCount = Math.max(1, Math.ceil((videoSeconds > 0 ? videoSeconds : 60) / FRAME_INTERVAL_SEC));
+      }
+
+      const xLen = SPRITE_X_LEN;
+      const yLen = Math.max(1, Math.ceil(frameCount / xLen));
+      const imgUrl = spriteReady
+        ? `${SPRITE_PATH}?avid=${encodeURIComponent(perVideo.avid)}`
+        : PREVIEW_PATH;   /* 原样指回 preview.bin → 播放器按"雪碧图没生成"降级 */
+
+      log(`GET /videoshot/index.json avid=${perVideo.avid} → ${frameCount} 帧`
+          + `，雪碧图${spriteReady ? '可用' : '不可用（img_url 指回 preview.bin）'}`);
+
+      sendJson(res, 200, {
+        code: 0,
+        message: '0',
+        data: {
+          pvdata: {
+            duration: Math.round(videoSeconds),
+            img_x_len: xLen,
+            img_y_len: yLen,
+            img_x_size: FRAME_WIDTH,
+            img_y_size: FRAME_HEIGHT,
+            img_url: imgUrl,
+          },
+          image: [imgUrl],
+          index: Array.from({ length: frameCount }, (_, k) => k * FRAME_INTERVAL_SEC),
+          frames: {
+            url: `${PREVIEW_PATH}?avid=${encodeURIComponent(perVideo.avid)}`,
+            stepSec: FRAME_INTERVAL_SEC,
+            count: frameCount,
+          },
+          sprite: {
+            url: `${SPRITE_PATH}?avid=${encodeURIComponent(perVideo.avid)}`,
+            status: spriteReady ? 'ready' : 'unavailable',
+            bytes: spriteReady ? spriteStat.size : 0,
+            xLen,
+            yLen,
+            xSize: FRAME_WIDTH,
+            ySize: FRAME_HEIGHT,
+          },
+          mock: {
+            avid: perVideo.avid,
+            cid: perVideo.cid,
+            stepSec: FRAME_INTERVAL_SEC,
+            frameCount,
+            source: 'transcode_huaqiang.py 产出的 <avid>/preview.bin + sprite.jpg',
+            indexOf: `雪碧图切片下标 = Math.floor(秒 / ${FRAME_INTERVAL_SEC})，`
+              + `列 = 下标 % ${xLen}，行 = Math.floor(下标 / ${xLen})；`
+              + `${PREVIEW_PATH}?avid=${perVideo.avid} 按 \\u001F 切分后取 `
+              + `arr[Math.floor(秒 / ${FRAME_INTERVAL_SEC}) + 1]（arr[0] 是空占位）`,
+          },
+        },
+      });
+      return;
+    }
+  }
+
   if (pathname === '/videoshot/index.json' && isGet) {
     const frameCount = previewState.frameCount || previewFrameCount();
     const geo = spriteGeometry();
@@ -2390,6 +2707,108 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // ---- 8c-2. 互动卡片（D 项：**新增**接口，动的是新文件，不动上面任何路由的语义）----
+  //
+  // GET /api/interactive/cards?avid=<avid>[&interactiveId=<id>]
+  //   → { code:0, data:{ cards:[ … ] } }
+  //   数据来源：interactive/<interactiveId>/cards.json（由 tools/gen-interactive-cards.mjs
+  //   扫描各 avid 的 index.mpd / index.m3u8 得到时长后**随机生成并落盘**；
+  //   同 seed 同结果，可重复运行）。接口只读，不在这里生成。
+  //   卡片字段：id / kind / avid / top / left / timeStart / timeEnd /
+  //             question{ title, options[{label,text,targetNodeId}] }
+  //             （kind 取 guide|link|vote|score|scoreSum；link 带 url、score 带 max、
+  //              vote 的 option 带 votes、scoreSum 带 average/total）
+  //   某个 avid 零张卡也照样返回 code:0 与空数组（"可以零张"是合法结果）。
+  if (pathname === '/api/interactive/cards' && isGet) {
+    const avid = (url.searchParams.get('avid') || '').trim();
+    const interactiveId = (url.searchParams.get('interactiveId') || 'huaqiang').trim();
+
+    if (interactiveId !== 'huaqiang') {
+      // 目前只有华强买瓜这一份 cards.json；别的 interactiveId 明确报"没有"，
+      // 而不是偷偷返回华强那份（那种"看起来有数据其实串了"最难查）。
+      sendJson(res, 404, {
+        code: -404,
+        message: `没有 interactiveId=${interactiveId} 的卡片数据`
+          + `（tools/gen-interactive-cards.mjs 目前只生成 huaqiang / default 两份）`,
+      });
+      return;
+    }
+
+    const cardsFile = HUAQIANG_CARDS_FILE;
+    const data = await readJsonFileFresh(cardsFile);
+    if (data === null) {
+      sendJson(res, 503, {
+        code: -503,
+        message: `卡片数据不存在：${path.relative(__dirname, cardsFile)}`
+          + `（跑一次 node tools/gen-interactive-cards.mjs 生成，服务启动时也会自动补）`,
+      });
+      return;
+    }
+
+    const all = (data && data.cards) ? data.cards : {};
+    const list = (avid !== '' && Array.isArray(all[avid])) ? all[avid] : [];
+    if (avid !== '' && !Array.isArray(all[avid])) {
+      // avid 不在数据里：仍然是合法请求（可能这个视频就是零张卡），但要能分辨
+      warn(`/api/interactive/cards avid=${avid} 不在 cards.json 的 avid 列表里，按零张返回`);
+    }
+
+    const durationMeta = (data.durations && data.durations[avid]) ? data.durations[avid] : null;
+    log(`GET /api/interactive/cards avid=${avid || '-'} → ${list.length} 张卡片`);
+
+    sendJson(res, 200, {
+      code: 0,
+      message: '0',
+      data: {
+        interactiveId: 'huaqiang',
+        avid,
+        seed: data.seed,
+        duration: durationMeta ? durationMeta.seconds : 0,
+        count: list.length,
+        cards: list,
+      },
+    });
+    return;
+  }
+
+  // ---- 8c-3. 默认视频的卡片（E 项：第一张卡走的**另一个**接口）------------
+  // GET /api/interactive/default-cards
+  //   → { code:0, data:{ cards:[ … ] } }（结构与 /api/interactive/cards 完全一致）
+  //   数据来源：interactive/default/cards.json（默认视频 = 首页第一张卡那部片，
+  //   片源是 MinIO 的 dash2/output-segmentbase.mpd；时长优先取
+  //   interactive/default/index.mpd，取不到时用生成脚本里记录的实测值）。
+  //   【为什么单独一个接口、而不是复用 /api/interactive/cards】
+  //   这两个接口服务的是**两种来源不同的视频**（默认单视频 vs 互动视频节点），
+  //   合成一个接口就得靠参数去猜来源；分开之后各自的取数路径一目了然，
+  //   前端也就能"按卡片字段决定调用哪一个"（PlayerWindow.applyVideo）。
+  if (pathname === '/api/interactive/default-cards' && isGet) {
+    const data = await readJsonFileFresh(DEFAULT_CARDS_FILE);
+    if (data === null) {
+      sendJson(res, 503, {
+        code: -503,
+        message: `默认视频卡片数据不存在：${path.relative(__dirname, DEFAULT_CARDS_FILE)}`
+          + `（跑一次 node tools/gen-interactive-cards.mjs 生成，服务启动时也会自动补）`,
+      });
+      return;
+    }
+
+    const list = Array.isArray(data.cards) ? data.cards : [];
+    log(`GET /api/interactive/default-cards → ${list.length} 张卡片`);
+    sendJson(res, 200, {
+      code: 0,
+      message: '0',
+      data: {
+        video: 'default',
+        playUrl: data.playUrl || '',
+        duration: data.duration || 0,
+        durationSource: data.durationSource || '',
+        seed: data.seed,
+        count: list.length,
+        cards: list,
+      },
+    });
+    return;
+  }
+
   // ---- 8b. 交互卡片（播放器拉取 + 页面增删改）------------------------------
   // GET /x/player/interaction：播放器形状（guideList/linkList/voteList/scoreList/scoreSumList）。
   // QtPlayer 的 Main.qml fetchProgressMetaFrom() 和 hili-player demo 都按这个约定拉。
@@ -2518,6 +2937,22 @@ async function handleRequest(req, res) {
  * 14. 启动
  * ------------------------------------------------------------------------- */
 
+/*
+ * 起服务之前先确保两份卡片数据在盘上（D/E 两个接口读的就是它们）。
+ * 只在**文件缺失**时生成（已有文件一律不动 —— 用户可能手工改过，或用了别的种子），
+ * 生成过程只扫本地转码目录 + 兜底时长，不联网，所以不会拖慢启动。
+ * 失败不影响服务起来：接口那时会返回 503 + 一句"跑一次生成脚本"。
+ */
+try {
+  const ensured = await ensureCardsFiles();
+  if (ensured.generated) {
+    console.log(`  卡片：盘上没有，已按种子 ${DEFAULT_SEED} 生成 `
+      + `${ensured.stat.huaqiang.avids} 个 avid / 默认视频 ${ensured.stat.defaultVideo.cards} 张`);
+  }
+} catch (err) {
+  warn(`生成互动卡片数据失败（接口会返回 503，可手工跑 tools/gen-interactive-cards.mjs）：${String(err.message)}`);
+}
+
 const server = http.createServer((req, res) => {
   handleRequest(req, res).catch((err) => {
     console.error('[mock error] 处理请求时异常：', err);
@@ -2568,6 +3003,12 @@ server.listen(opts.port, opts.host, () => {
   console.log('    GET  /danmaku/since?seq=N');
   console.log('    GET  /videoshot/preview.bin');
   console.log('    GET  /videoshot/sprite.jpg    雪碧图（tile=NxM，可当普通图片加载）');
+  console.log('    GET  /videoshot/index.json');
+  console.log('    （以上三条带 ?avid=av1000052 或 ?aid=1000052 → 按该视频的转码目录取）');
+  console.log('    GET  /api/interactive/story?interactiveId=huaqiang');
+  console.log('    GET  /api/interactive/playurl?avid=&protocol=dash&format=json');
+  console.log('    GET  /api/interactive/cards?avid=            互动卡片（某个 avid 那份）');
+  console.log('    GET  /api/interactive/default-cards          默认视频的卡片（另一个接口）');
   console.log('');
 
   // 心跳定时器全局只有这一个：它遍历 wsClients，没人连接时就是空转一圈，代价可以忽略。
