@@ -685,7 +685,15 @@ function initFor(vnode: VNode, anchor: FlowAnchor): () => void {
       for (let j = 0; j < newCount; j++) {
         const newIndex = start + j;
         const item = items[newIndex];
-        const childVNode = renderFn(item, newIndex);
+        // renderFn 是用户黑盒回调，必须 untracked 调用（与
+        // invokeLifecycle 内的钩子隔离同理）：体内未被编译器下沉到
+        // __reactiveAttrs getter 的裸 signal 读取（典型：children 位置的
+        // 结构三元快照）若被收集成 flow effect 依赖，该信号每次变化都会
+        // 触发整个列表 diff 重跑——与「renderFn 按 key 只调用一次、复用
+        // 节点永不重跑」语义相悖，大列表（几百集选集）退化为全量 diff。
+        // 掐断收集不改变快照语义：合法的响应式更新走 getter / onEffect，
+        // effect 建立全新捕获作用域，不受 untracked 影响
+        const childVNode = untracked(() => renderFn(item, newIndex));
         childVNode.__parent = vnode;
         const el = materialize(childVNode);
         // ★ 就地补发生命周期（同 mountFlowChild：列表项不在静态树 children 递归范围）
@@ -695,12 +703,9 @@ function initFor(vnode: VNode, anchor: FlowAnchor): () => void {
         entries.set(newKeys[newIndex], { vnode: childVNode, el });
       }
     } else if (oldCount > 0) {
-      // ============================================
-      // 3B. 中间区间含旧节点（复用 / 删除 / 移动 / 混合新增）
-      // ============================================
       /**
        * 新中间区间的 key → 相对索引映射（复用判定）
-       * 与 Vue 同约定：key 在列表内必须唯一；重复 key 属病态用法，
+       * key 在列表内必须唯一；重复 key 属病态用法，
        * 此处保留首个出现位置，后续重复位置按新 mount 处理（不崩溃）
        */
       const newKeyToIndex = new Map<unknown, number>();
@@ -756,7 +761,9 @@ function initFor(vnode: VNode, anchor: FlowAnchor): () => void {
           // 新 key：render → materialize → 生命周期 → 插入
           if (renderFn) {
             const item = items[newIndex];
-            const childVNode = renderFn(item, newIndex);
+            // ★ untracked 隔离同上方 3A：renderFn 黑盒回调，掐断体内
+            // 裸 signal 读取挂成 flow effect 依赖导致整表 diff 重跑
+            const childVNode = untracked(() => renderFn(item, newIndex));
             childVNode.__parent = vnode;
             const el = materialize(childVNode);
             // ★ 就地补发生命周期（同 mountFlowChild：列表项不在静态树 children 递归范围）
