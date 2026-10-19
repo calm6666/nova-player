@@ -303,9 +303,15 @@ const runMode = async (mode: DemoMode): Promise<void> => {
     return;
   }
   if (mode === "embedded-play") {
-    await waitDuration();
+    const duration = await waitDuration();
+    await player?.seek(Math.min(2, Math.max(0, duration - 1)));
     player?.pause();
     showControls();
+    setTimeout(async () => {
+      await player?.seek(2.5);
+      player?.pause();
+      showControls();
+    }, 800);
     return;
   }
   if (mode === "settings" || mode === "settings-more") {

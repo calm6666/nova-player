@@ -263,9 +263,11 @@
 
     .nova-player-relation-context {
       align-items: center;
+      box-sizing: border-box;
       display: flex;
       justify-content: center;
       margin-top: 16px;
+      padding: 0 20px;
       position: relative;
       width: 100%;
       z-index: 1;
@@ -275,8 +277,9 @@
       cursor: pointer;
       flex: 1 1 0;
       margin-left: 14px;
-      max-width: 200px;
-      min-width: 160px;
+      margin-left: 20px;
+      max-width: none;
+      min-width: 0;
       pointer-events: all;
       user-select: none;
 
