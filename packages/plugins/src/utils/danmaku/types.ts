@@ -79,6 +79,18 @@ export interface DanmakuRenderItem extends DanmakuItem {
   scrollDistance?: number;
   /** 动画结束处理方法 */
   animationEndHandler?: () => void;
+  /**
+   * 动画真实已播放时长读取器（毫秒，可选）
+   *
+   * DOM 引擎由 CSS 动画的 currentTime 提供：暂停 / 被冻结时返回值保持不变。
+   * 轨道占用判定必须以此为准，不能用 `performance.now() - createTime` 的墙钟
+   * 差值——暂停期间动画不动而墙钟继续走，会把暂停时长算成弹幕已前进的距离，
+   * 轨道被提前判空，新弹幕叠进仍停在屏幕上的同一轨道（本地连发即重叠）。
+   *
+   * Canvas 引擎不提供该读取器（其位置本身由 createTime 墙钟驱动），
+   * 轨道管理器会回退到墙钟差值。
+   */
+  getElapsedTime?: () => number;
 }
 
 /** 弹幕轨道（引擎内部轨道占用状态） */

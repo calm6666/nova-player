@@ -299,6 +299,24 @@ export class TrackManager {
   }
 
   /**
+   * 获取在飞弹幕的「真实已播放时长」（毫秒）
+   *
+   * 优先使用渲染项自带的动画进度读取器（DOM 引擎由 CSS 动画 currentTime
+   * 提供，暂停 / 冻结时保持不变）；Canvas 引擎不提供该读取器，回退到
+   * `currentTime - createTime` 的墙钟差值（其位置本身也由该墙钟驱动）。
+   *
+   * 轨道占用判定必须与弹幕真实位置同源：只用墙钟差值时，暂停期间动画
+   * 停住而墙钟继续走，暂停时长会被算成已滚动距离，轨道被提前释放，
+   * 新弹幕叠进仍停在屏幕上的同一轨道（本地连发重叠的根因）。
+   * @param item 在飞弹幕
+   * @param currentTime 当前时间（performance.now()，Canvas 回退用）
+   */
+  private getElapsedTime(item: DanmakuRenderItem, currentTime: number): number {
+    const measured = item.getElapsedTime?.();
+    return measured ?? currentTime - item.createTime;
+  }
+
+  /**
    * 检查轨道是否可用
    * @param track 轨道
    * @param newItem 新弹幕
@@ -327,8 +345,9 @@ export class TrackManager {
         continue;
       }
 
-      const elapsedTime = currentTime - existingItem.createTime;
-      const existingProgress = elapsedTime / existingItem.duration;
+      const elapsedTime = this.getElapsedTime(existingItem, currentTime);
+      const duration = existingItem.duration;
+      const existingProgress = duration > 0 ? elapsedTime / duration : 1;
       const existingX = containerWidth - (containerWidth + existingItem.width) * existingProgress;
 
       if (existingX > containerWidth - newItem.width - safeDistance * 2) {
@@ -366,7 +385,7 @@ export class TrackManager {
   private hasTrackConflict(track: DanmakuTrack, currentTime: number): boolean {
     for (const existingItem of track.items) {
       if (!existingItem.isRendering) continue;
-      const elapsedTime = currentTime - existingItem.createTime;
+      const elapsedTime = this.getElapsedTime(existingItem, currentTime);
       const remainingTime = existingItem.duration - elapsedTime;
       if (remainingTime > 500) {
         return true;
@@ -454,7 +473,7 @@ export class TrackManager {
     this.state.tracks.forEach((track) => {
       for (const item of track.items) {
         if (item.isRendering) {
-          const elapsedTime = currentTime - item.createTime;
+          const elapsedTime = this.getElapsedTime(item, currentTime);
           if (elapsedTime >= item.duration) {
             item.isRendering = false;
             track.items.delete(item);

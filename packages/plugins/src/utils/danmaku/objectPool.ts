@@ -209,10 +209,14 @@ export class DanmakuItemPool {
     // }
 
     // 重置并填充数据
+    // getElapsedTime 显式随 source 赋值：回收项可能残留上一个引擎（DOM）的
+    // 动画进度读取器，被 Canvas 引擎复用时必须清空，否则轨道占用会读到
+    // 已不属于该渲染项的 DOM 动画进度。
     Object.assign(item, source, {
       renderId: this.generateRenderId(),
       isRendering: true,
       createTime: performance.now(),
+      getElapsedTime: source.getElapsedTime,
     });
 
     this.inUse.set(item.renderId, item);
@@ -228,6 +232,8 @@ export class DanmakuItemPool {
       // 重置状态
       item.isRendering = false;
       item.element = undefined;
+      // 动画进度读取器随渲染项生命周期结束：避免闭包继续持有已回收的 DOM 元素
+      item.getElapsedTime = undefined;
 
       if (this.pool.length < this.config.maxCapacity) {
         this.pool.push(item);

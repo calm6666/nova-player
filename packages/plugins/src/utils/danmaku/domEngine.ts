@@ -713,6 +713,44 @@ export class DOMEngine {
   }
 
   /**
+   * 绑定「CSS 动画真实进度」读取器（轨道占用判定的时间源）
+   *
+   * 轨道分配此前用 `performance.now() - createTime` 估算在飞弹幕位置。
+   * 该估算只在动画从创建起持续按 1x 前进时成立；播放器暂停、弹幕层被
+   * 外层类加 `animation-play-state: paused`、标签页被节流时，CSS 动画
+   * 停住而墙钟继续走，墙钟差值会把暂停时长算成「已经滚过去的距离」，
+   * 轨道被提前判定为空 → 新弹幕（尤其本地即时发送）被分回同一轨道，
+   * 且即时上屏的横坐标同为容器右边缘、纵坐标同为该轨道 y → 完全重叠。
+   *
+   * `animation.currentTime` 是动画自己的时间轴：暂停时冻结、恢复后继续，
+   * 也能覆盖外层类 / 浏览器节流导致的冻结，是轨道占用唯一可靠的时间源。
+   * @param item 已应用 CSS 动画的渲染项
+   */
+  private bindAnimatedElapsed(item: DanmakuRenderItem): void {
+    const element = item.element;
+    if (!element) return;
+
+    let animation: Animation | null = null;
+    item.getElapsedTime = (): number => {
+      if (!animation) {
+        animation =
+          typeof element.getAnimations === "function"
+            ? (element.getAnimations()[0] ?? null)
+            : null;
+      }
+      const currentTime = animation?.currentTime;
+      if (typeof currentTime === "number") {
+        return Math.max(0, currentTime);
+      }
+      // 动画已建立但时间轴尚未开始（创建当帧 / 时间轴不可用）：
+      // 按 0 处理，不能用墙钟兜底——暂停期间墙钟会持续放大，正是本次要修的问题
+      if (animation) return 0;
+      // 动画尚未建立（创建当帧内即被查询）：墙钟差值此时约等于 0，仅作兜底
+      return Math.max(0, performance.now() - item.createTime);
+    };
+  }
+
+  /**
    * 应用CSS动画 - B站风格：使用CSS变量控制
    * @param item 弹幕项
    */
@@ -738,6 +776,9 @@ export class DOMEngine {
     };
     item.element.addEventListener("animationend", onAnimationEnd);
     item.animationEndHandler = onAnimationEnd;
+
+    // 轨道占用判定改用动画真实进度（暂停时冻结），而不是墙钟差值
+    this.bindAnimatedElapsed(item);
   }
 
   /**
@@ -780,6 +821,9 @@ export class DOMEngine {
     };
     item.element.addEventListener("animationend", onAnimationEnd);
     item.animationEndHandler = onAnimationEnd;
+
+    // 固定弹幕同样以动画真实进度作为轨道占用时间源（暂停时冻结）
+    this.bindAnimatedElapsed(item);
   }
 
   /**
