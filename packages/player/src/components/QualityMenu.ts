@@ -10,6 +10,7 @@ import {
   useState,
   useReactiveState,
   useContext,
+  t,
   signal,
   computed,
   For,
@@ -667,7 +668,7 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
           { "state-fade-in": !collapsedSignal.value },
         ],
         role: "button",
-        "aria-label": "清晰度",
+        "aria-label": t("player.ui.controls.quality"),
         tabindex: 0,
         // 配置显隐（display 单一来源：父层 ui.controls.quality 经 visible prop 传入）+
         // 档位收起态（visibility/width/marginRight 收 0 不占位；空串经 setProperty 清除内联）

@@ -23,6 +23,7 @@ import {
   Show,
   signal,
   onEffect,
+  t,
 } from "@/core";
 import type { VNode } from "@/types";
 import { PlayerStateKeyEnum, ConfigContext } from "@/store/runtimeState";
@@ -368,7 +369,7 @@ export const LeftControls = defineComponent<
       "div",
       {
         role: "button",
-        "aria-label": "上一个",
+        "aria-label": t("player.ui.controls.prev"),
         class: "nova-player-ctrl-btn nova-player-ctrl-prev",
         onClick: handlePrev,
       },
@@ -392,7 +393,7 @@ export const LeftControls = defineComponent<
       "div",
       {
         role: "button",
-        "aria-label": "下一个",
+        "aria-label": t("player.ui.controls.next"),
         class: "nova-player-ctrl-btn nova-player-ctrl-next",
         onClick: handleNext,
       },
@@ -441,7 +442,7 @@ export const LeftControls = defineComponent<
         "div",
         {
           role: "button",
-          "aria-label": "播放/暂停",
+          "aria-label": t("player.ui.controls.playPause"),
           class: "nova-player-ctrl-btn nova-player-ctrl-play",
           onClick: togglePlayPause,
         },

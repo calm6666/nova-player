@@ -13,6 +13,7 @@ import {
   useState,
   useContext,
   signal,
+  t,
 } from "@/core";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
@@ -418,7 +419,7 @@ export const VolumeSlider = defineComponent<
         },
       ],
       role: "button",
-      "aria-label": "音量",
+      "aria-label": t("player.ui.controls.volume"),
       // 响应式迁移后根节点 class 由 shownSignal 信号驱动，不再需要 volumeRootRef 引用（删除残留 ref 字符串，避免运行时未注册告警）
       onMouseEnter: mouseVolumeEnter,
       onMouseLeave: mouseVolumeLeave,

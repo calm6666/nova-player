@@ -16,7 +16,7 @@
  * 命令式 API 契约不变；API 内部仅写 signal。
  */
 
-import { h, defineComponent, signal } from "@/core";
+import { h, defineComponent, signal, t } from "@/core";
 import type { Signal } from "@/core";
 import type { ComponentLifecycle } from "@/types";
 import type { VNode } from "@/types";
@@ -27,8 +27,14 @@ import type { VNode } from "@/types";
 export interface TooltipItem {
   /** 名称标识，用于匹配和索引提示项 */
   name: string;
-  /** 提示标题，显示在工具提示中的文本 */
-  title: string;
+  /** 提示标题（静态字面量，外部自定义 items 使用；内置项改用 titleKey 走 i18n） */
+  title?: string;
+  /**
+   * 提示标题的 i18n key
+   * 渲染时经 t(titleKey) 求值（在响应式文本 getter 内读取 localeSignal），
+   * 语言切换时自动重新翻译。
+   */
+  titleKey?: string;
 }
 
 /**
@@ -47,22 +53,27 @@ export interface TooltipsProps {
 
 /**
  * 默认提示项列表，包含播放器各按钮的默认提示文本
+ *
+ * 全部使用 i18n key（titleKey），文案见 core/locales/{zh-CN,en-US}.json；
+ * 动态态（宽屏进入/退出、网页全屏、画中画、全屏）由 PlayerDocker 通过
+ * updateTipKey 在状态变化时切换 key。
  */
 const DEFAULT_TOOLTIP_ITEMS: TooltipItem[] = [
-  { name: "ctrl:codec:0", title: "优先使用播放器内置策略播放" },
-  { name: "ctrl:codec:1", title: "优先使用 AV1 编码视频播放" },
-  { name: "ctrl:codec:2", title: "优先使用 HEVC/H.265 编码视频播放" },
-  { name: "ctrl:codec:3", title: "优先使用 AVC/H.264 编码视频播放" },
-  { name: "danmaku_switch", title: "关闭弹幕 (d)" },
-  { name: "preventshade", title: "视频底部 15% 部分为空白保留区" },
-  { name: "special-more", title: "特殊颜色、运动形式的弹幕" },
-  { name: "feedback-btn", title: "反馈" },
-  { name: "ctrl:widescreen", title: "宽屏模式" },
-  { name: "ctrl:webscreen", title: "网页全屏" },
-  { name: "ctrl:pip", title: "开启画中画" },
-  { name: "ctrl:fullscreen", title: "进入全屏 (f)" },
-  { name: "ctrl:prev", title: "上一个 ([)" },
-  { name: "ctrl:next", title: "下一个 (])" },
+  { name: "ctrl:codec:0", titleKey: "player.ui.tooltip.codec.default" },
+  { name: "ctrl:codec:1", titleKey: "player.ui.tooltip.codec.av1" },
+  { name: "ctrl:codec:2", titleKey: "player.ui.tooltip.codec.hevc" },
+  { name: "ctrl:codec:3", titleKey: "player.ui.tooltip.codec.avc" },
+  { name: "danmaku_switch", titleKey: "player.ui.tooltip.danmaku_switch.close" },
+  { name: "preventshade", titleKey: "player.ui.tooltip.preventshade" },
+  { name: "special-more", titleKey: "player.ui.tooltip.special_more" },
+  { name: "feedback-btn", titleKey: "player.ui.tooltip.feedback" },
+  { name: "ctrl:playbackrate", titleKey: "player.ui.controls.playbackRate" },
+  { name: "ctrl:widescreen", titleKey: "player.ui.tooltip.widescreen.enter" },
+  { name: "ctrl:webscreen", titleKey: "player.ui.tooltip.webscreen.enter" },
+  { name: "ctrl:pip", titleKey: "player.ui.tooltip.pip.enter" },
+  { name: "ctrl:fullscreen", titleKey: "player.ui.tooltip.fullscreen.enter" },
+  { name: "ctrl:prev", titleKey: "player.ui.tooltip.prev" },
+  { name: "ctrl:next", titleKey: "player.ui.tooltip.next" },
 ];
 
 /**
@@ -93,9 +104,16 @@ export const Tooltips = defineComponent<TooltipsProps>(
     >({});
 
     /**
-     * 提示项文本覆盖表（updateTip 写入，优先于 item.title）
+     * 提示项文本覆盖表（updateTip 写入，优先于 title/titleKey）
      */
     const titlesSig = signal<Record<string, string>>({});
+
+    /**
+     * 提示项 i18n key 覆盖表（updateTipKey 写入）
+     * 与 titlesSig 分开：key 在渲染 getter 内经 t(key) 求值，
+     * 语言切换时随 localeSignal 自动重新翻译（无需重新 updateTip）。
+     */
+    const titleKeysSig = signal<Record<string, string>>({});
 
     // ============================================
     // DOM 引用（几何测量数据源，保留）
@@ -248,6 +266,18 @@ export const Tooltips = defineComponent<TooltipsProps>(
     };
 
     /**
+     * 以 i18n key 更新提示项文本（状态动态提示用）
+     *
+     * 与 updateTip 的区别：不固化翻译结果，渲染时调用 t(key)，
+     * 语言切换（setLocale）后提示文案自动跟随。
+     * @param name - 提示项名称
+     * @param key - i18n key
+     */
+    const updateTipKey = (name: string, key: string): void => {
+      titleKeysSig.value = { ...titleKeysSig.value, [name]: key };
+    };
+
+    /**
      * 隐藏所有提示项
      */
     const hideAll = (): void => {
@@ -295,7 +325,15 @@ export const Tooltips = defineComponent<TooltipsProps>(
           h(
             "div",
             { class: "nova-player-tooltip-title" },
-            () => titlesSig.value[item.name] ?? item.title,
+            () => {
+              // 优先级：updateTip 字面量 > updateTipKey / item.titleKey（i18n）> item.title
+              const override = titlesSig.value[item.name];
+              if (override !== undefined) return override;
+              const key =
+                titleKeysSig.value[item.name] ?? item.titleKey;
+              if (key !== undefined) return t(key);
+              return item.title ?? item.name;
+            },
           ),
         );
       });
@@ -315,6 +353,7 @@ export const Tooltips = defineComponent<TooltipsProps>(
         openTip,
         closeTip,
         updateTip,
+        updateTipKey,
         setScreen,
         hideAll,
       });

@@ -948,6 +948,8 @@ export const PlayerDocker = defineComponent<
     closeTip?: (name: string) => void;
     /** 更新提示文本 */
     updateTip?: (name: string, text: string) => void;
+    /** 以 i18n key 更新提示文本（语言切换自动跟随，动态状态提示首选） */
+    updateTipKey?: (name: string, key: string) => void;
     /** 同步屏幕模式（normal / full / web，影响提示的上下偏移） */
     setScreen?: (screen: "normal" | "full" | "web") => void;
     /** 隐藏全部提示 */
@@ -1528,7 +1530,10 @@ export const PlayerDocker = defineComponent<
       // 退出网页全屏：按当前是否仍在浏览器全屏来决定是否继续监听整页滚轮
       syncVolumeWheelBinding();
       // 同步提示工具（与既有实现 toggleWebFullscreen:524-525 一致）
-      tooltipsApi.updateTip?.("ctrl:webscreen", "网页全屏");
+      tooltipsApi.updateTipKey?.(
+        "ctrl:webscreen",
+        "player.ui.tooltip.webscreen.enter",
+      );
     } else {
       playerDockerRef.value.classList.add("mode-webscreen");
       document.body.classList.add("webscreen-fix");
@@ -1536,8 +1541,25 @@ export const PlayerDocker = defineComponent<
       // 进入网页全屏：开始监听整页滚轮（既有实现 toggleWebFullscreen:506）
       syncVolumeWheelBinding();
       // 同步提示工具（与既有实现 toggleWebFullscreen:511-512 一致）
-      tooltipsApi.updateTip?.("ctrl:webscreen", "退出网页全屏");
+      tooltipsApi.updateTipKey?.(
+        "ctrl:webscreen",
+        "player.ui.tooltip.webscreen.exit",
+      );
     }
+  };
+
+  /**
+   * 同步宽屏提示文案（进入宽屏 ↔ 退出宽屏）
+   * 控制栏点击与外部 API（player.setWideScreen）共用，保证提示与状态一致
+   * @param isWide - 当前是否宽屏
+   */
+  const syncWideTooltip = (isWide: boolean): void => {
+    tooltipsApi.updateTipKey?.(
+      "ctrl:widescreen",
+      isWide
+        ? "player.ui.tooltip.widescreen.exit"
+        : "player.ui.tooltip.widescreen.enter",
+    );
   };
 
   /**
@@ -1546,12 +1568,13 @@ export const PlayerDocker = defineComponent<
    * 控制栏宽屏按钮点击后：只切换内部宽屏状态并广播 `wideScreenChange`，
    * 回调参数为是否宽屏布尔值；外部程序通过 `player.on("wideScreenChange")`
    * （或 callbacks.wideScreenChange）监听后自行调整外部容器布局。
-   * 播放器内部仅同步宽屏按钮 / 图标的选中态，不修改 `data-screen`、
+   * 播放器内部仅同步宽屏按钮 / 图标选中态与提示文案，不修改 `data-screen`、
    * 不搬移发送栏，避免与外部容器布局互相打架。
    */
   const toggleWide = (): void => {
     const next = !(stateMgr?.get(PlayerStateKeyEnum.IS_WIDE_SCREEN) ?? false);
     stateMgr?.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, next);
+    syncWideTooltip(next);
     props.events?.emit(PlayerEventEnum.WIDE_SCREEN_CHANGE, {
       isWideScreen: next,
     });
@@ -1817,7 +1840,10 @@ export const PlayerDocker = defineComponent<
       // （与既有实现 handleFullscreenChange:474-481 一致）
       moveSendBar("full");
       tooltipsApi.setScreen?.("full");
-      tooltipsApi.updateTip?.("ctrl:fullscreen", "退出全屏 (f)");
+      tooltipsApi.updateTipKey?.(
+        "ctrl:fullscreen",
+        "player.ui.tooltip.fullscreen.exit",
+      );
     } else {
       // 退出浏览器全屏：若仍处于网页全屏，data-screen 必须回到 "web" 而不是 "normal"，
       // 否则网页全屏相关的样式与可见性规则（如「选集」按钮）会失效
@@ -1834,7 +1860,10 @@ export const PlayerDocker = defineComponent<
       // （与既有实现 handleFullscreenChange:483-492 一致）
       moveSendBar("normal");
       tooltipsApi.setScreen?.(stillWebFullscreen ? "web" : "normal");
-      tooltipsApi.updateTip?.("ctrl:fullscreen", "进入全屏 (f)");
+      tooltipsApi.updateTipKey?.(
+        "ctrl:fullscreen",
+        "player.ui.tooltip.fullscreen.enter",
+      );
     }
   };
 
@@ -1848,9 +1877,9 @@ export const PlayerDocker = defineComponent<
     );
     // 同步画中画按钮的提示文本（与既有实现 handlePiPChange:649-656 一致）
     if (document.pictureInPictureElement !== null) {
-      tooltipsApi.updateTip?.("ctrl:pip", "退出画中画");
+      tooltipsApi.updateTipKey?.("ctrl:pip", "player.ui.tooltip.pip.exit");
     } else {
-      tooltipsApi.updateTip?.("ctrl:pip", "开启画中画");
+      tooltipsApi.updateTipKey?.("ctrl:pip", "player.ui.tooltip.pip.enter");
     }
   };
 
@@ -2165,6 +2194,15 @@ export const PlayerDocker = defineComponent<
     setupQualityEvents();
     // 订阅配置中心的动态变化（progress.segments / interaction.keyboard）
     setupConfigSubscriptions();
+
+    // 宽屏提示与状态同步：外部 API（player.setWideScreen / toggleWideScreen）
+    // 或控制栏点击都会更新提示文案（进入宽屏 ↔ 退出宽屏）
+    const offWideTooltip = stateMgr?.subscribe(
+      PlayerStateKeyEnum.IS_WIDE_SCREEN,
+      (isWide) => syncWideTooltip(isWide),
+    );
+    if (offWideTooltip) cleanupFns.push(offWideTooltip);
+    syncWideTooltip(stateMgr?.get(PlayerStateKeyEnum.IS_WIDE_SCREEN) ?? false);
 
     // 触发挂载完成回调
     // 【sendingArea 不再是挂载硬依赖】未装 danmaku 插件时发送区经
@@ -2708,6 +2746,7 @@ export const PlayerDocker = defineComponent<
           openTip: (btnElement: HTMLElement | null, name: string) => void;
           closeTip: (name: string) => void;
           updateTip: (name: string, text: string) => void;
+          updateTipKey: (name: string, key: string) => void;
           setScreen: (screen: "normal" | "full" | "web") => void;
           hideAll: () => void;
         }) => {

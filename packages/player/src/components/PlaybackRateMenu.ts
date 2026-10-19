@@ -222,7 +222,7 @@ export const PlaybackRateMenu = defineComponent<
         { "state-show": shownSignal.value },
       ],
       role: "button",
-      "aria-label": t("player.ui.settings.speed"),
+      "aria-label": t("player.ui.controls.playbackRate"),
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
     },
@@ -232,7 +232,7 @@ export const PlaybackRateMenu = defineComponent<
       "div",
       { class: "nova-player-ctrl-playbackrate-result" },
       currentRateSignal.value === 1
-        ? t("player.ui.settings.speed")
+        ? t("player.ui.controls.playbackRate")
         : formatRateLabel(currentRateSignal.value),
     ),
     // 倍速下拉菜单（For 组件：key-based 精准更新，每个倍速值只渲染一次）

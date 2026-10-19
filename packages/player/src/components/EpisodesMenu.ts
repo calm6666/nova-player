@@ -257,7 +257,7 @@ export const EpisodesMenu = defineComponent<
         { "nova-player-has-playlist": hasPlaylistSignal.value },
       ],
       role: "button",
-      "aria-label": "选集",
+      "aria-label": t("player.ui.controls.episodes"),
       // 配置显隐：display 单一来源（父层 ui.controls.episodes 经 visible prop 传入）
       style: { display: configVisibleSignal.value ? "" : "none" },
       tabindex: "0",

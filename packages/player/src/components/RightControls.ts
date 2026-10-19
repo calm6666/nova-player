@@ -15,6 +15,7 @@ import {
   onEffect,
   mount,
   destroy,
+  t,
 } from "@/core";
 import type { VNode } from "@/types";
 import type { PlayerPluginFlags } from "./PlayerDocker";
@@ -555,7 +556,7 @@ export const RightControls = defineComponent<
           ],
           style: { display: pipConfigSignal.value ? "" : "none" },
           role: "button",
-          "aria-label": "画中画",
+          "aria-label": t("player.ui.controls.pip"),
           // 响应式迁移后显隐/激活态由响应式 class+style 驱动，不再需要按钮根节点引用（删除残留 ref，避免运行时未注册告警）
           onClick: togglePip,
           onMouseEnter: mousePipEnter,
@@ -598,7 +599,7 @@ export const RightControls = defineComponent<
           ],
           style: { display: wideConfigSignal.value ? "" : "none" },
           role: "button",
-          "aria-label": "宽屏",
+          "aria-label": t("player.ui.controls.widescreen"),
           // 响应式迁移后显隐/激活态由响应式 class+style 驱动，不再需要按钮根节点引用（删除残留 ref，避免运行时未注册告警）
           onClick: toggleWide,
           onMouseEnter: mouseWideEnter,
@@ -639,7 +640,7 @@ export const RightControls = defineComponent<
           ],
           style: { display: webConfigSignal.value ? "" : "none" },
           role: "button",
-          "aria-label": "网页全屏",
+          "aria-label": t("player.ui.controls.webFullscreen"),
           // 响应式迁移后显隐/激活态由响应式 class+style 驱动，不再需要按钮根节点引用（删除残留 ref，避免运行时未注册告警）
           onClick: toggleWebFullscreen,
           onMouseEnter: mouseWebEnter,
@@ -680,7 +681,7 @@ export const RightControls = defineComponent<
           ],
           style: { display: fullscreenConfigSignal.value ? "" : "none" },
           role: "button",
-          "aria-label": "全屏",
+          "aria-label": t("player.ui.controls.fullscreen"),
           // 响应式迁移后显隐/激活态由响应式 class+style 驱动，不再需要按钮根节点引用（删除残留 ref，避免运行时未注册告警）
           onMouseEnter: mouseFullscreenEnter,
           onMouseLeave: mouseFullscreenLeave,
