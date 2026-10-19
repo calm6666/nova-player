@@ -162,6 +162,70 @@ describe("Ending embedded 场景", () => {
   });
 });
 
+describe("Ending ogv 场景（电视剧 / 番剧）", () => {
+  const OGV_RELATED = Array.from({ length: 6 }, (_, i) => ({
+    title: `剧集推荐 ${i + 1}`,
+    pic: `https://example.test/ogv-${i + 1}.jpg`,
+    duration: 300 + i,
+    url: `https://example.test/watch/${i + 1}`,
+  }));
+
+  it("渲染封面 / 标题 / 追剧 / 操作按钮 / 推荐卡", () => {
+    const api = mountEnding({
+      variant: "ogv",
+      title: "西游记",
+      cover: "https://example.test/cover.jpg",
+      followed: false,
+      related: OGV_RELATED,
+    });
+    api.showEndWrap();
+
+    expect(container.querySelector(".nova-ogv-ending-wrap")).not.toBeNull();
+    expect(
+      container.querySelector(".nova-ogv-ending-title")?.textContent,
+    ).toBe("西游记");
+    expect(
+      container.querySelector(".nova-ogv-ending-cover img")?.getAttribute("src"),
+    ).toBe("https://example.test/cover.jpg");
+    expect(
+      container.querySelector(".nova-ogv-ending-follow")?.textContent,
+    ).toContain(t("player.ui.ending.watch_series"));
+    expect(
+      container.querySelectorAll(".nova-ogv-ending-btn").length,
+    ).toBe(4);
+    expect(
+      container.querySelectorAll(".nova-ogv-ending-recommend-item").length,
+    ).toBe(6);
+  });
+
+  it("首张推荐卡显示 SVG 倒计时，取消后关闭", () => {
+    const api = mountEnding({
+      variant: "ogv",
+      title: "西游记",
+      related: OGV_RELATED,
+      autoNext: true,
+    });
+    api.showEndWrap();
+
+    const wrap = container.querySelector<HTMLElement>(".nova-ogv-ending-wrap");
+    expect(wrap?.getAttribute("data-countdown")).toBe("true");
+    expect(
+      container.querySelector(
+        ".nova-ogv-ending-recommend-item.state-countdown-host",
+      ),
+    ).not.toBeNull();
+    expect(container.querySelector(".nova-ogv-ending-countdown svg")).not.toBeNull();
+    expect(
+      container.querySelector(".nova-ogv-ending-cancel")?.textContent,
+    ).toBe(t("player.ui.ending.cancel_auto_next"));
+
+    container
+      .querySelector<HTMLElement>(".nova-ogv-ending-cancel")
+      ?.click();
+    expect(wrap?.getAttribute("data-countdown")).toBeNull();
+  });
+});
+
 describe("倒计时 lottie 资源与文案", () => {
   it("倒计时动画为 5 秒、4 层", () => {
     expect(countdownAnimation.op).toBe(301);
@@ -184,6 +248,11 @@ describe("倒计时 lottie 资源与文案", () => {
       "player.ui.ending.download_app",
       "player.ui.ending.enter_site",
       "player.ui.embed.enter_quality",
+      "player.ui.ending.watch_series",
+      "player.ui.ending.watching_series",
+      "player.ui.progress.skip_intro",
+      "player.ui.progress.skip_outro",
+      "player.ui.settings.skip_intro_outro",
     ];
     for (const [locale, messages] of [
       ["zh-CN", zhCN as Record<string, string>],

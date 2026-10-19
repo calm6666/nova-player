@@ -106,6 +106,8 @@ export interface PlayerSettingsFlags {
   autostart: boolean;
   /** 播完暂停（不自动连播） */
   pauseAfterEnd: boolean;
+  /** 跳过头尾（自动跳过片头 / 片尾断点） */
+  skipIntroOutro: boolean;
 }
 
 /**

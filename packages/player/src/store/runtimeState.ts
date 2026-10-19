@@ -163,6 +163,11 @@ export enum PlayerStateKeyEnum {
    * 设置面板「播放方式」单选（0 自动连播 / 2 播完暂停）受控回显
    */
   PAUSE_AFTER_END = "player.pauseAfterEnd",
+  /**
+   * 跳过头尾（自动跳过片头结束 / 片尾开始断点，持久化于 settings.skipIntroOutro）
+   * 设置面板「跳过头尾」开关受控回显
+   */
+  SKIP_INTRO_OUTRO = "player.skipIntroOutro",
 }
 
 /**
@@ -272,6 +277,8 @@ export type PlayerStateMap = {
   "player.lightoff": boolean;
   /** 播完暂停（设置面板「播放方式」单选受控回显） */
   "player.pauseAfterEnd": boolean;
+  /** 跳过头尾（设置面板 Switch 受控回显，持久化） */
+  "player.skipIntroOutro": boolean;
   browser: object;
 } & Record<string, object>;
 

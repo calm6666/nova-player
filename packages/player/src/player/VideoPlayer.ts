@@ -19,6 +19,7 @@ import type {
   PlayerSource,
   DisplayMode,
   SubtitleConfig,
+  ProgressSkipPoints,
 } from "@/types";
 import { PlayerState, PlayMode } from "@/types";
 import "../styles/style.scss";
@@ -259,6 +260,15 @@ export class VideoPlayer
   /** 当前画面比例（"0:0" 自适应 | "4:3" | "16:9"） */
   private aspectRatio = "0:0";
 
+  /** 片头 / 片尾跳过断点（progress.skipPoints，外部数据源提供） */
+  private skipPoints: ProgressSkipPoints | null = null;
+
+  /** 当前视频是否已执行过片头跳过（换源后重置） */
+  private skipIntroDone = false;
+
+  /** 当前视频是否已执行过片尾跳过（换源后重置） */
+  private skipOutroDone = false;
+
   /** 画面比例随容器尺寸重算的观察器（：wrap 宽度百分比需跟随容器变化） */
   private aspectResizeObserver: ResizeObserver | null = null;
 
@@ -421,6 +431,9 @@ export class VideoPlayer
      */
     this.props = mergePlayerConfig(defaultConfig, normalizeConfig(config));
 
+    /** 片头 / 片尾跳过断点（外部数据源提供；无数据时不渲染标记、不自动跳过） */
+    this.skipPoints = this.props.progress?.skipPoints ?? null;
+
     /** 应用持久化配置（storage.enabled 默认 true，setConfig 可即时切换） */
     configureStorage(this.props.storage);
 
@@ -498,6 +511,10 @@ export class VideoPlayer
       pauseAfterEnd: persisted
         ? persistentState.settings.pauseAfterEnd
         : (playback.pauseAfterEnd ?? persistentState.settings.pauseAfterEnd),
+      skipIntroOutro: persisted
+        ? persistentState.settings.skipIntroOutro
+        : (playback.skipIntroOutro ??
+          persistentState.settings.skipIntroOutro),
     };
 
     /**
@@ -576,6 +593,7 @@ export class VideoPlayer
         autostart: playbackInit.autoplay ?? false,
         lightoff: false,
         pauseAfterEnd: playbackInit.pauseAfterEnd ?? false,
+        skipIntroOutro: playbackInit.skipIntroOutro ?? false,
       },
       video: {
         width: 0,
@@ -1751,6 +1769,8 @@ export class VideoPlayer
       const currentTime = this.videoEl?.currentTime || 0;
       const duration = this.videoEl?.duration || 0;
       this.state.set(PlayerStateKeyEnum.CURRENT_TIME, currentTime);
+      // 跳过头尾：到达片头结束 / 片尾开始断点时自动跳转
+      this.maybeSkipIntroOutro(currentTime, duration);
       // 进度记忆：节流写入持久化存储（记忆上次看到）
       this.saveProgressThrottled(currentTime, duration);
       this.events.emit(PlayerEventEnum.TIME_UPDATE, { time: currentTime });
@@ -2886,6 +2906,9 @@ export class VideoPlayer
       case "lightoff":
         this.setLightoff(value === true);
         break;
+      case "skipIntroOutro":
+        this.setSkipIntroOutro(value === true);
+        break;
       case "pip":
         if (value === true) void this.enterPip();
         else void this.exitPip();
@@ -2946,6 +2969,72 @@ export class VideoPlayer
     this.configStore.set(this.props);
     this.state.set(PlayerStateKeyEnum.AUTOSTART, autostart);
     this.store.updateSettingsFlags({ autostart });
+  }
+
+  /**
+   * 设置跳过头尾（自动跳过片头 / 片尾断点）
+   * 三路同步：运行时状态（面板 Switch 受控回显）+ 持久化 + props 配置
+   * @param skip - 是否开启
+   */
+  setSkipIntroOutro(skip: boolean): void {
+    this.props.playback = {
+      ...(this.props.playback ?? {}),
+      skipIntroOutro: skip,
+    };
+    this.configStore.set(this.props);
+    this.state.set(PlayerStateKeyEnum.SKIP_INTRO_OUTRO, skip);
+    this.store.updateSettingsFlags({ skipIntroOutro: skip });
+  }
+
+  /**
+   * 设置片头 / 片尾断点（外部数据源可运行时更新）
+   * @param points - 断点秒数；传 null 清除
+   */
+  setSkipPoints(points?: ProgressSkipPoints | null): void {
+    this.skipPoints = points ?? null;
+    this.skipIntroDone = false;
+    this.skipOutroDone = false;
+  }
+
+  /**
+   * 跳过头尾：到达片头结束断点时跳到片头结束，到达片尾开始断点时切下一集 /
+   * 跳到结尾。只在开关开启且存在对应断点时触发，每个视频只执行一次。
+   * @param currentTime - 当前播放时间（秒）
+   * @param duration - 总时长（秒）
+   */
+  private maybeSkipIntroOutro(currentTime: number, duration: number): void {
+    if (this.state.get(PlayerStateKeyEnum.SKIP_INTRO_OUTRO) !== true) return;
+    const points = this.skipPoints;
+    if (!points) return;
+
+    const introEnd = points.introEnd;
+    if (
+      !this.skipIntroDone &&
+      typeof introEnd === "number" &&
+      introEnd > 0 &&
+      currentTime > 0.2 &&
+      currentTime < introEnd
+    ) {
+      this.skipIntroDone = true;
+      this.seek(introEnd);
+      return;
+    }
+
+    const outroStart = points.outroStart;
+    if (
+      !this.skipOutroDone &&
+      typeof outroStart === "number" &&
+      outroStart > 0 &&
+      duration > 0 &&
+      currentTime >= outroStart
+    ) {
+      this.skipOutroDone = true;
+      if (this.playlist.length > 1) {
+        void this.next();
+      } else {
+        this.seek(Math.max(0, duration - 0.05));
+      }
+    }
   }
 
   /**
@@ -3409,6 +3498,10 @@ export class VideoPlayer
     // 1. 竞态守卫：自增 token，过期回调（loadedmetadata）直接丢弃
     this.loadToken++;
     const token = this.loadToken;
+
+    // 换源后重置片头 / 片尾跳过标记，避免新视频沿用上一个视频的跳过状态
+    this.skipIntroDone = false;
+    this.skipOutroDone = false;
 
     // 2. 暂停、清错误态、进度归零
     this.pause();

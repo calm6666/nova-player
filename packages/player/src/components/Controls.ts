@@ -33,6 +33,7 @@ import type {
   EnergyProgressProvider,
   ProgressPreviewProvider,
   ProgressSegment,
+  ProgressSkipPoints,
 } from "@/types";
 import {
   ConfigContext,
@@ -118,6 +119,8 @@ export interface ControlsProps {
   previewProvider?: ProgressPreviewProvider;
   /** 高能进度条数据提供者（progress.energyProvider 配置注入，异步到达后写入 PbpControls） */
   energyProvider?: EnergyProgressProvider;
+  /** 片头 / 片尾跳过断点（progress.skipPoints 配置注入，透传给顶部进度条） */
+  skipPoints?: ProgressSkipPoints;
   /**
    * 插件安装标志读取器（getter 形态，PlayerDocker 透传）：
    * 响应式表达式 / effect 内调用读取，未装 subtitle 插件时字幕
@@ -635,6 +638,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         h(TopControls, {
           progressSegments: config.progressSegments,
           previewProvider: props.previewProvider,
+          skipPoints: props.skipPoints,
           onSeek: (time) => {
             updateCurrent(time);
             lifecycle.emit?.("seek", time);

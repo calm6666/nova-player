@@ -1,0 +1,361 @@
+/**
+ * ============================================
+ * 电视剧 / 番剧片尾（OGV endpage）
+ * ============================================
+ * 对照 B 站 endpage_* DOM/CSS 复刻：
+ * - 整页暗色背景，内容区 75% × 85%（max 1000×700）
+ * - 头部：68×68 封面 + 标题 + 追剧按钮 + 重播/好评/投币/分享
+ * - 相关推荐：112×148 卡片，首张支持 5s SVG 倒计时 + 取消连播
+ */
+
+.nova-player-container {
+  .nova-player-ending-wrap.nova-ogv-ending-wrap {
+    .nova-player-ogv-ending,
+    .nova-ogv-ending {
+      align-items: center;
+      background-color: hsla(0, 0%, 9%, 0.8);
+      box-sizing: border-box;
+      cursor: pointer;
+      display: flex;
+      height: 100%;
+      justify-content: center;
+      padding: 30px;
+      width: 100%;
+    }
+
+    .nova-ogv-ending-content {
+      display: flex;
+      flex-direction: column;
+      height: 85%;
+      justify-content: center;
+      max-height: 700px;
+      max-width: 1000px;
+      min-height: 300px;
+      min-width: 500px;
+      width: 75%;
+    }
+
+    // ---------- 头部 ----------
+    .nova-ogv-ending-header {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      margin-bottom: 40px;
+    }
+
+    .nova-ogv-ending-ep-info {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+    }
+
+    .nova-ogv-ending-cover {
+      flex-shrink: 0;
+      height: 68px;
+      width: 68px;
+
+      img {
+        border-radius: 2px;
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+      }
+    }
+
+    .nova-ogv-ending-ep-right {
+      align-items: flex-start;
+      display: flex;
+      flex: 1 1;
+      flex-direction: column;
+      margin-left: 20px;
+      overflow: hidden;
+    }
+
+    .nova-ogv-ending-title {
+      color: #fff;
+      font-size: 16px;
+      height: 22px;
+      line-height: 16px;
+      margin-bottom: 4px;
+      overflow: hidden;
+      position: relative;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 100%;
+    }
+
+    .nova-ogv-ending-follow {
+      align-items: center;
+      background: #fb7299;
+      border-radius: 2px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      font-size: 12px;
+      height: 32px;
+      justify-content: flex-start;
+      width: 72px;
+
+      &.state-followed {
+        background: #e7e7e7;
+        color: #999;
+        justify-content: center;
+      }
+    }
+
+    .nova-ogv-ending-follow-icon {
+      display: inline-block;
+      fill: #fff;
+      height: 18px;
+      margin-left: 14px;
+      margin-right: 5px;
+      width: 14px;
+
+      svg {
+        fill: currentColor;
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    .nova-ogv-ending-btn-group {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+
+    .nova-ogv-ending-btn {
+      align-items: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s linear;
+
+      svg path {
+        fill: hsla(0, 0%, 100%, 0.9);
+      }
+
+      &:hover svg path {
+        fill: #fff;
+      }
+
+      &.nova-ogv-ending-restart {
+        border-right: 1px solid hsla(0, 0%, 100%, 0.1);
+        padding-right: 30px;
+      }
+
+      &.nova-ogv-ending-like,
+      &.nova-ogv-ending-coin,
+      &.nova-ogv-ending-share {
+        margin-left: 30px;
+      }
+    }
+
+    .nova-ogv-ending-btn-icon {
+      display: inline-flex;
+      height: 26px;
+      width: 26px;
+    }
+
+    .nova-ogv-ending-btn-text {
+      color: #fff;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    // ---------- 相关推荐 ----------
+    .nova-ogv-ending-recommend {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .nova-ogv-ending-recommend-heading {
+      color: #fff;
+      font-size: 15px;
+      line-height: 16px;
+      margin-bottom: 14px;
+      width: 100%;
+    }
+
+    .nova-ogv-ending-recommend-list {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .nova-ogv-ending-recommend-item {
+      border-radius: 2px;
+      cursor: pointer;
+      display: block;
+      height: 148px;
+      margin-bottom: 30px;
+      position: relative;
+      width: 112px;
+
+      &:hover {
+        .nova-ogv-ending-recommend-title {
+          box-sizing: border-box;
+          height: auto;
+          max-height: 42px;
+          white-space: normal;
+        }
+
+        .nova-ogv-ending-recommend-cover {
+          border: 1px solid #fff;
+          box-shadow: 0 0 10px hsla(0, 0%, 100%, 0.5);
+        }
+      }
+    }
+
+    .nova-ogv-ending-recommend-cover {
+      border-radius: 2px;
+      bottom: 0;
+      height: 148px;
+      left: 0;
+      overflow: hidden;
+      position: absolute;
+      right: 0;
+      top: 0;
+      transition: all 0.3s ease-in-out;
+      width: 112px;
+
+      img {
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+      }
+    }
+
+    .nova-ogv-ending-recommend-mask {
+      background: linear-gradient(
+        transparent,
+        rgba(0, 0, 0, 0.1) 20%,
+        rgba(0, 0, 0, 0.2) 35%,
+        rgba(0, 0, 0, 0.5) 65%,
+        rgba(0, 0, 0, 0.66)
+      );
+      bottom: 0;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 30%;
+    }
+
+    .nova-ogv-ending-recommend-title {
+      bottom: 7px;
+      color: #fff;
+      font-size: 14px;
+      height: 21px;
+      left: 0;
+      line-height: 21px;
+      overflow: hidden;
+      padding: 0 10px;
+      position: absolute;
+      text-overflow: ellipsis;
+      transition:
+        height 0.5s,
+        transform 0.5s;
+      white-space: nowrap;
+      width: 100%;
+      z-index: 10;
+    }
+
+    // ---------- 首张卡倒计时 ----------
+    .nova-ogv-ending-cancel,
+    .nova-ogv-ending-countdown {
+      display: none;
+    }
+
+    &[data-countdown="true"] {
+      .nova-ogv-ending-recommend-item.state-countdown-host {
+        .nova-ogv-ending-cancel,
+        .nova-ogv-ending-countdown {
+          display: block;
+        }
+
+        .nova-ogv-ending-recommend-cover::after {
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 4px;
+          bottom: 0;
+          content: "";
+          left: 0;
+          position: absolute;
+          right: 0;
+          top: 0;
+          z-index: 1;
+        }
+      }
+    }
+
+    .nova-ogv-ending-cancel {
+      background: hsla(0, 0%, 100%, 0.4);
+      border: 0;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font-family: "PingFang SC", sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      height: 22px;
+      left: 8px;
+      line-height: 22px;
+      padding: 0;
+      position: absolute;
+      text-align: center;
+      top: 8px;
+      width: 60px;
+      z-index: 20;
+    }
+
+    .nova-ogv-ending-countdown {
+      height: 51px;
+      left: 50%;
+      pointer-events: none;
+      position: absolute;
+      top: 48.5px;
+      transform: translateX(-50%);
+      width: 51px;
+      z-index: 20;
+
+      svg {
+        display: block;
+        height: 100%;
+        overflow: visible;
+        width: 100%;
+      }
+    }
+
+    .nova-ogv-ending-countdown-bg {
+      fill: hsla(0, 0%, 100%, 0.4);
+    }
+
+    .nova-ogv-ending-countdown-progress {
+      animation: nova-ogv-ending-countdown linear forwards;
+      fill: none;
+      stroke: #fff;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 0;
+      stroke-linecap: round;
+      stroke-width: 3px;
+      transform: rotate(-90deg);
+      transform-origin: center;
+    }
+
+    .nova-ogv-ending-play-icon {
+      fill: #fff;
+    }
+  }
+}
+
+@keyframes nova-ogv-ending-countdown {
+  to {
+    stroke-dashoffset: 1;
+  }
+}

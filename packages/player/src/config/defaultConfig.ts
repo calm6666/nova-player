@@ -47,6 +47,7 @@ const defaultConfig: PlayerConfig = {
     volume: 1,
     playbackRate: 1,
     loop: false,
+    skipIntroOutro: false,
     playMode: PlayMode.ORDER,
     preload: "metadata",
     playsinline: true,
@@ -61,6 +62,7 @@ const defaultConfig: PlayerConfig = {
   ui: {
     title: "Nova Player",
     scene: "station",
+    endingStyle: "standard",
     controls: defaultControlConfig,
   },
 

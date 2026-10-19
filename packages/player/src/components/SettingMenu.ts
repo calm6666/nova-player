@@ -26,6 +26,7 @@ import type { Signal, ReadonlySignal } from "@/core";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
 import { PlayerStateKeyEnum, StateContext } from "@/store/runtimeState";
+import { ConfigStoreContext } from "@/store/configStore";
 import type { PlayerStateMap, TypedStateManager } from "@/store/runtimeState";
 import type { VNode } from "@/types";
 import { LottieIcon, LottieIconApi } from "./LottieIcon";
@@ -177,6 +178,13 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       lifecycle.emit?.("settingChange", { key: "autostart", value: checked });
     };
 
+    const handleSkipIntroOutroChange = (checked: boolean): void => {
+      lifecycle.emit?.("settingChange", {
+        key: "skipIntroOutro",
+        value: checked,
+      });
+    };
+
     const handleLightoffChange = (checked: boolean): void => {
       lifecycle.emit?.("settingChange", { key: "lightoff", value: checked });
     };
@@ -258,6 +266,8 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
     const stateMgr = useContext<TypedStateManager<PlayerStateMap> | null>(
       StateContext,
     );
+    /** 配置中心（读取 progress.skipPoints / ui.endingStyle 决定是否展示跳过头尾） */
+    const configStore = useContext(ConfigStoreContext);
 
     /**
      * 响应式信号：高能进度条渲染态（设置面板复选框 = 是否渲染开关）
@@ -294,6 +304,13 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       : signal<boolean | undefined>(undefined);
     const autostartSignal: Signal<boolean | undefined> = stateMgr
       ? useReactiveState(stateMgr, PlayerStateKeyEnum.AUTOSTART, lifecycle)
+      : signal<boolean | undefined>(undefined);
+    const skipIntroOutroSignal: Signal<boolean | undefined> = stateMgr
+      ? useReactiveState(
+          stateMgr,
+          PlayerStateKeyEnum.SKIP_INTRO_OUTRO,
+          lifecycle,
+        )
       : signal<boolean | undefined>(undefined);
     const lightoffSignal: Signal<boolean | undefined> = stateMgr
       ? useReactiveState(stateMgr, PlayerStateKeyEnum.LIGHTOFF, lifecycle)
@@ -333,6 +350,32 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
      * 后续变化经 switchMounted 暴露的 setChecked API 原位同步
      * （autostart 不再硬编码 true，跟随持久化真实值回显）
      */
+    /**
+     * 是否展示「跳过头尾」开关：电视剧 / 番剧片尾或提供片头片尾断点时展示
+     * （普通视频没有 op/ed 时间轴，不显示该项）
+     */
+    const skipPointsConfig = configStore?.getPath<{
+      introEnd?: number;
+      outroStart?: number;
+    }>("progress.skipPoints");
+    const isOgvEnding =
+      configStore?.getPath<string>("ui.endingStyle") === "ogv";
+    const showSkipIntroOutro =
+      isOgvEnding ||
+      Boolean(
+        skipPointsConfig &&
+          (skipPointsConfig.introEnd !== undefined ||
+            skipPointsConfig.outroStart !== undefined),
+      );
+
+    /** 首页高度：有「跳过头尾」开关时多一行（32px） */
+    const mainPageHeight =
+      SETTING_PAGE_MAIN.height + (showSkipIntroOutro ? 32 : 0);
+
+    /** 「跳过头尾」Switch 受控 API */
+    let skipIntroOutroApi: { setChecked: (value: boolean) => void } | null =
+      null;
+
     const switches: Array<{
       cls: string;
       name: string;
@@ -388,6 +431,9 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       if (loop !== undefined) switchApis.loop?.setChecked(loop);
       const autostart = autostartSignal.value;
       if (autostart !== undefined) switchApis.autostart?.setChecked(autostart);
+      // 跳过头尾（仅 OGV / 有断点时展示）
+      const skip = skipIntroOutroSignal.value;
+      if (skip !== undefined) skipIntroOutroApi?.setChecked(skip);
       // 关灯（不持久化，仅运行时状态）
       const lightoff = lightoffSignal.value;
       if (lightoff !== undefined) lightoffApi?.setChecked(lightoff);
@@ -454,12 +500,14 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                 // 渲染，高度取收缩尺寸（296 - 56 = 240）
                 style: {
                   width: `${(pageIndexSignal.value === 0 ? SETTING_PAGE_MAIN : SETTING_PAGE_MORE).width}px`,
-                  height: `${(pageIndexSignal.value === 0
-                    ? SETTING_PAGE_MAIN
-                    : hasAudioEffectSignal.value
-                      ? SETTING_PAGE_MORE
-                      : SETTING_PAGE_MORE_NO_AUDIO
-                  ).height}px`,
+                  height: `${
+                    pageIndexSignal.value === 0
+                      ? mainPageHeight
+                      : (hasAudioEffectSignal.value
+                          ? SETTING_PAGE_MORE
+                          : SETTING_PAGE_MORE_NO_AUDIO
+                        ).height
+                  }px`,
                 },
                 },
                 h(
@@ -482,7 +530,7 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                       ],
                       style: {
                         width: `${SETTING_PAGE_MAIN.width}px`,
-                        height: `${SETTING_PAGE_MAIN.height}px`,
+                        height: `${mainPageHeight}px`,
                       },
                     },
                   h(
@@ -506,10 +554,30 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                         }),
                       ),
                     ),
-                    h("div", {
-                      class: "nova-player-ctrl-setting-oped",
-                      style: { display: "none" },
-                    }),
+                    h(
+                      "div",
+                      {
+                        class: "nova-player-ctrl-setting-oped",
+                        style: {
+                          display: showSkipIntroOutro ? "" : "none",
+                        },
+                      },
+                      h(
+                        "div",
+                        { class: "ui ui-switch" },
+                        h(Switch, {
+                          size: "small",
+                          name: t("player.ui.settings.skip_intro_outro"),
+                          checked: skipIntroOutroSignal.value ?? false,
+                          onChange: handleSkipIntroOutroChange,
+                          onSwitchMounted: (api: {
+                            setChecked: (value: boolean) => void;
+                          }) => {
+                            skipIntroOutroApi = api;
+                          },
+                        }),
+                      ),
+                    ),
                     h(
                       "div",
                       {

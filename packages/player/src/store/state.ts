@@ -46,6 +46,7 @@ export const defaultSettingsFlags: PlayerSettingsFlags = {
   loop: false,
   autostart: false,
   pauseAfterEnd: false,
+  skipIntroOutro: false,
 };
 
 /**

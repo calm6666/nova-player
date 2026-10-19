@@ -24,8 +24,12 @@ import endingCountdownAnimationData from "../assets/lottie-icon/ending-countdown
  * Ending 组件 Props 接口
  */
 export interface EndingProps {
-  /** 渲染形态（默认 station） */
-  variant?: PlayerScene;
+  /** 渲染形态（默认 station；ogv = 电视剧 / 番剧整页片尾） */
+  variant?: PlayerScene | "ogv";
+  /** 剧集封面（ogv 头部 68×68） */
+  cover?: string;
+  /** 是否已追剧（ogv 追剧按钮状态） */
+  followed?: boolean;
   /** 视频标题（embedded 顶部展示） */
   title?: string;
   /** UP 主信息（无数据时不渲染详情内容） */
@@ -136,6 +140,9 @@ const CLOSE_ICON =
 const DOWNLOAD_ICON = "M12 3v12m0 0 4-4m-4 4-4-4M4 21h16";
 /** 进入箭头（线性） */
 const ENTER_ICON = "m9 6 6 6-6 6";
+/** 追剧爱心（OGV 片尾头部） */
+const HEART_ICON =
+  "M8 14c-.1 0-.25-.05-.35-.1-.45-.35-4.3-3.35-5.1-4.5-.9-1.2-1.05-1.85-1.05-3C1.5 4 3.25 2 5.45 2 6.4 2 7.3 2.35 8 3c.7-.65 1.6-1 2.55-1 2.2 0 3.95 2 3.95 4.4 0 1.1-.15 1.75-1.05 3-.8 1.1-4.7 4.15-5.1 4.5-.1.05-.25.1-.35.1z";
 
 /**
  * 秒数格式化为 mm:ss / hh:mm:ss
@@ -158,8 +165,9 @@ const formatDuration = (value?: number | string): string => {
  * 片尾推荐面板组件
  */
 export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
-  const variant: PlayerScene = props.variant ?? "station";
+  const variant: PlayerScene | "ogv" = props.variant ?? "station";
   const isEmbedded = variant === "embedded";
+  const isOgv = variant === "ogv";
 
   // ============================================
   // DOM 引用
@@ -257,7 +265,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 显示分享面板（data-select="2"，仅 station） */
   const showShareWrap = (): void => {
-    if (isEmbedded) return;
+    if (isEmbedded || isOgv) return;
     stopCountdown();
     endingWrapRef.value?.setAttribute("data-select", "2");
   };
@@ -764,6 +772,233 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     );
 
   // ============================================
+  // 渲染：ogv（电视剧 / 番剧）整页片尾
+  // ============================================
+
+  /** 渲染 OGV 单张推荐卡片（112×148，首张承载倒计时） */
+  const renderOgvCard = (
+    item: EndingRelatedItem,
+    index: number,
+  ): VNode => {
+    const isCountdownHost = index === 0;
+    const children: VNode[] = [
+      h(
+        "div",
+        { class: "nova-ogv-ending-recommend-cover" },
+        item.pic ? h("img", { src: item.pic, alt: item.title }) : null,
+        h("div", { class: "nova-ogv-ending-recommend-mask" }),
+      ),
+      h("div", { class: "nova-ogv-ending-recommend-title" }, item.title),
+    ];
+
+    if (isCountdownHost) {
+      children.push(
+        h(
+          "div",
+          {
+            class: "nova-ogv-ending-cancel",
+            onClick: (event: MouseEvent) => {
+              event.preventDefault();
+              event.stopPropagation();
+              cancelCountdown();
+            },
+          },
+          t("player.ui.ending.cancel_auto_next"),
+        ),
+        h(
+          "div",
+          { class: "nova-ogv-ending-countdown" },
+          h(
+            "svg",
+            { viewBox: "0 0 51 51" },
+            h("circle", {
+              class: "nova-ogv-ending-countdown-bg",
+              cx: 25.5,
+              cy: 25.5,
+              r: 23,
+            }),
+            h("circle", {
+              class: "nova-ogv-ending-countdown-progress",
+              cx: 25.5,
+              cy: 25.5,
+              r: 23,
+              pathLength: 1,
+              style: { animationDuration: `${countdownSeconds}s` },
+            }),
+            h("path", {
+              class: "nova-ogv-ending-play-icon",
+              d: "M21 17.5 34 25.5 21 33.5z",
+            }),
+          ),
+        ),
+      );
+    }
+
+    const cls = isCountdownHost
+      ? "nova-ogv-ending-recommend-item state-countdown-host"
+      : "nova-ogv-ending-recommend-item";
+
+    return item.url
+      ? h(
+          "a",
+          {
+            class: cls,
+            href: item.url,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            onClick: (event: MouseEvent) => {
+              if (props.onRelatedClick) event.preventDefault();
+              props.onRelatedClick?.(item);
+            },
+          },
+          ...children,
+        )
+      : h(
+          "div",
+          {
+            class: cls,
+            role: "button",
+            onClick: () => props.onRelatedClick?.(item),
+          },
+          ...children,
+        );
+  };
+
+  /** 渲染 OGV 整页片尾（对应 B 站 endpage_* 结构） */
+  const renderOgvEnding = (): VNode =>
+    h(
+      "div",
+      { class: "nova-ogv-ending" },
+      h(
+        "div",
+        { class: "nova-ogv-ending-content" },
+        // 头部：封面 / 标题 / 追剧 + 操作按钮
+        h(
+          "div",
+          { class: "nova-ogv-ending-header" },
+          h(
+            "div",
+            { class: "nova-ogv-ending-ep-info" },
+            h(
+              "div",
+              { class: "nova-ogv-ending-cover" },
+              props.cover ? h("img", { src: props.cover, alt: props.title }) : null,
+            ),
+            h(
+              "div",
+              { class: "nova-ogv-ending-ep-right" },
+              h(
+                "div",
+                { class: "nova-ogv-ending-title" },
+                props.title ?? "",
+              ),
+              h(
+                "div",
+                {
+                  class: [
+                    "nova-ogv-ending-follow",
+                    { "state-followed": Boolean(props.followed) },
+                  ],
+                  role: "button",
+                  onClick: props.onFollow,
+                },
+                h(
+                  "span",
+                  { class: "nova-ogv-ending-follow-icon" },
+                  h(
+                    "svg",
+                    { viewBox: "0 -3 16 16" },
+                    h("path", { d: HEART_ICON }),
+                  ),
+                ),
+                t(
+                  props.followed
+                    ? "player.ui.ending.watching_series"
+                    : "player.ui.ending.watch_series",
+                ),
+              ),
+            ),
+          ),
+          h(
+            "div",
+            { class: "nova-ogv-ending-btn-group" },
+            h(
+              "div",
+              {
+                class: "nova-ogv-ending-btn nova-ogv-ending-restart",
+                role: "button",
+                onClick: props.onRestart,
+              },
+              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(RESTART_ICON)),
+              h(
+                "span",
+                { class: "nova-ogv-ending-btn-text" },
+                t("player.ui.ending.replay"),
+              ),
+            ),
+            h(
+              "div",
+              {
+                class: "nova-ogv-ending-btn nova-ogv-ending-like",
+                role: "button",
+                onClick: props.onLike,
+              },
+              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(LIKE_ICON)),
+              h(
+                "span",
+                { class: "nova-ogv-ending-btn-text" },
+                t("player.ui.ending.like"),
+              ),
+            ),
+            h(
+              "div",
+              {
+                class: "nova-ogv-ending-btn nova-ogv-ending-coin",
+                role: "button",
+                onClick: props.onCoin,
+              },
+              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(COIN_ICON)),
+              h(
+                "span",
+                { class: "nova-ogv-ending-btn-text" },
+                t("player.ui.ending.coin"),
+              ),
+            ),
+            h(
+              "div",
+              {
+                class: "nova-ogv-ending-btn nova-ogv-ending-share",
+                role: "button",
+                onClick: props.onShare,
+              },
+              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(SHARE_ICON)),
+              h(
+                "span",
+                { class: "nova-ogv-ending-btn-text" },
+                t("player.ui.ending.share"),
+              ),
+            ),
+          ),
+        ),
+        // 相关推荐
+        h(
+          "div",
+          { class: "nova-ogv-ending-recommend" },
+          h(
+            "div",
+            { class: "nova-ogv-ending-recommend-heading" },
+            t("player.ui.ending.related"),
+          ),
+          h(
+            "div",
+            { class: "nova-ogv-ending-recommend-list" },
+            ...related.slice(0, 10).map(renderOgvCard),
+          ),
+        ),
+      ),
+    );
+
+  // ============================================
   // 渲染：station 分享面板
   // ============================================
 
@@ -927,19 +1162,34 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   const rootClass = isEmbedded
     ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
-    : "nova-player-ending-wrap";
+    : isOgv
+      ? "nova-player-ending-wrap nova-ogv-ending-wrap"
+      : "nova-player-ending-wrap";
 
   return h(
     "div",
     { class: rootClass, ref: "endingWrapRef" },
-    // station 使用模糊封面背景；embedded 使用纯色整页背景
-    isEmbedded ? null : h("div", { class: "nova-player-ending-backdrop" }),
+    // station 使用模糊封面背景；embedded 使用纯色整页背景；
+    // ogv 用剧集封面做背景（无封面时保持纯色）
+    isEmbedded
+      ? null
+      : h("div", {
+          class: "nova-player-ending-backdrop",
+          style:
+            isOgv && props.cover
+              ? { backgroundImage: `url("${props.cover}")` }
+              : undefined,
+        }),
     h(
       "div",
       { class: "nova-player-ending-panel", "data-option": "1" },
-      isEmbedded ? renderEmbeddedEnding() : renderStationEnding(),
+      isEmbedded
+        ? renderEmbeddedEnding()
+        : isOgv
+          ? renderOgvEnding()
+          : renderStationEnding(),
     ),
-    isEmbedded
+    isEmbedded || isOgv
       ? null
       : h(
           "div",

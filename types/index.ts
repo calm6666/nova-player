@@ -583,6 +583,8 @@ export interface PlaybackConfig {
   loudness?: number;
   /** 播完暂停（不自动切集，对应 handoff=2） */
   pauseAfterEnd?: boolean;
+  /** 跳过头尾（自动跳过片头 / 片尾断点） */
+  skipIntroOutro?: boolean;
   /** 预加载策略 */
   preload?: 'none' | 'metadata' | 'auto';
   /** 移动端内联播放 */
@@ -666,8 +668,14 @@ export interface UiConfig {
    * - embedded：外链 / iframe 嵌入播放器，简化控制栏 + 整页式片尾 + 进入站内入口
    */
   scene?: PlayerScene;
+  /** 片尾形态（默认 standard；电视剧 / 番剧使用 ogv） */
+  endingStyle?: PlayerEndingStyle;
   /** 外链 / 嵌入场景数据 */
   embedded?: EmbeddedConfig;
+  /** 电视剧 / 番剧片尾数据（endingStyle=ogv 时生效） */
+  ogv?: OgvEndingConfig;
+  /** 站内标准片尾的相关推荐数据（不传则为空列表） */
+  related?: EndingRelatedItem[];
   /** 控制条开关（单一来源） */
   controls?: ControlsConfig;
   /**
@@ -758,6 +766,38 @@ export type EnergyProgressProvider =
   | (() => Promise<EnergyProgressData | null>);
 
 /**
+ * 进度条跳过片头 / 片尾断点
+ *
+ * 由外部数据源提供（电视剧 / 番剧的 op、ed 时间轴），
+ * 供进度条渲染断点标记与「跳过头尾」自动跳过使用。
+ */
+export interface ProgressSkipPoints {
+  /** 片头结束时间（秒） */
+  introEnd?: number;
+  /** 片尾开始时间（秒） */
+  outroStart?: number;
+}
+
+/**
+ * 片尾形态
+ * - standard：普通视频的浮层片尾
+ * - ogv：电视剧 / 番剧的整页片尾（封面 + 追剧 + 推荐 + 回看）
+ */
+export type PlayerEndingStyle = "standard" | "ogv";
+
+/** 电视剧 / 番剧片尾数据 */
+export interface OgvEndingConfig {
+  /** 剧集标题 */
+  title?: string;
+  /** 剧集封面（68×68 展示） */
+  cover?: string;
+  /** 是否已追剧 */
+  followed?: boolean;
+  /** 相关推荐（112×148 卡片） */
+  related?: EndingRelatedItem[];
+}
+
+/**
  * 进度条配置
  */
 export interface ProgressConfig {
@@ -772,6 +812,8 @@ export interface ProgressConfig {
   previewProvider?: ProgressPreviewProvider;
   /** 高能进度条数据提供者（外部获取，播放器只负责绘制曲线） */
   energyProvider?: EnergyProgressProvider;
+  /** 片头 / 片尾跳过断点（外部提供，用于进度条标记与自动跳过） */
+  skipPoints?: ProgressSkipPoints;
 }
 
 /**

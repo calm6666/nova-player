@@ -775,44 +775,42 @@
  * ============================================ */
 .nova-player-container {
   .nova-player-ending {
-    .common-svg-icon {
-      align-items: center;
-      display: inline-flex;
-      height: 18px;
-      justify-content: center;
-      width: 18px;
-
-      svg {
-        fill: currentColor;
-        height: 100%;
-        width: 100%;
-      }
+    // SVG 尺寸由 .common-svg-icon 容器决定（标准片尾 28px / 关注 16px），
+    // 这里只负责让 svg 铺满容器，避免默认 300×150 撑坏布局
+    .common-svg-icon svg {
+      fill: currentColor;
+      height: 100%;
+      width: 100%;
     }
 
+    // UP 信息底部按钮行：充电 + 关注（标准片尾）
     .nova-player-ending-functions-buttons {
       align-items: center;
+      bottom: 0;
       display: flex;
-      gap: 10px;
-      position: relative;
+      gap: 8px;
+      left: 0;
+      position: absolute;
     }
 
-    .nova-player-ending-functions-electric,
-    .nova-player-ending-functions-follow {
+    .nova-player-ending-functions-buttons .nova-player-ending-functions-electric {
       align-items: center;
       display: flex;
       gap: 2px;
-      position: static;
+      height: 32px;
+      position: static !important;
+    }
+
+    .nova-player-ending-functions-buttons .nova-player-ending-functions-follow {
+      min-width: 68px;
+      padding: 0 !important;
+      width: 130px !important;
     }
 
     .nova-player-ending-functions-electric .common-svg-icon,
     .nova-player-ending-functions-follow .common-svg-icon {
       height: 16px;
       width: 16px;
-    }
-
-    .nova-player-ending-functions-btn .common-svg-icon {
-      height: 20px;
-      width: 20px;
     }
   }
 

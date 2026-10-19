@@ -175,6 +175,29 @@
       position: absolute;
       top: 0;
       width: 100%;
+
+      .nova-player-progress-point {
+        -webkit-transform: translate(-50%, -50%);
+        background: hsla(0, 0%, 100%, 0.8);
+        border-radius: 50%;
+        box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+        cursor: pointer;
+        height: 6px;
+        pointer-events: auto;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        -webkit-transition: transform 0.15s ease-in-out;
+        transition: transform 0.15s ease-in-out;
+        width: 6px;
+        z-index: 3;
+
+        &:hover {
+          -webkit-transform: translate(-50%, -50%) scale(1.5);
+          background: #fff;
+          transform: translate(-50%, -50%) scale(1.5);
+        }
+      }
     }
   }
 

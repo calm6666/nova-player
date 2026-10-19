@@ -4,6 +4,7 @@ import {
   useTemplateRef,
   signal,
   For,
+  t,
 } from "@/core";
 import { useComponentUnmount } from "@/nova/core/componentUnmount";
 import { normalizeSegmentSpan } from "@/nova/utils/media/progressSegment";
@@ -11,6 +12,7 @@ import type {
   ProgressPreviewFrame,
   ProgressPreviewProvider,
   ProgressSegment,
+  ProgressSkipPoints,
   VNode,
 } from "@/types";
 import { isBrowser } from "@/utils";
@@ -80,6 +82,8 @@ export interface ProgressBarProps {
    * 数据获取逻辑（雪碧图裁切 / 逐帧 URL / 服务端接口）完全由外部实现。
    */
   previewProvider?: ProgressPreviewProvider;
+  /** 片头 / 片尾跳过断点（外部数据源提供，渲染进度条圆点） */
+  skipPoints?: ProgressSkipPoints;
 }
 
 /**
@@ -1031,8 +1035,72 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
                   : h("div", {}),
             }),
           ),
-          // 进度点容器
-          h("div", { class: "nova-player-progress-point-wrap" }),
+          // 进度点容器：片头结束 / 片尾开始断点（外部数据源提供）
+          h(
+            "div",
+            { class: "nova-player-progress-point-wrap" },
+            h(For, {
+              each: (): Array<{ key: string; time: number; label: string }> => {
+                const total = durationSignal.value;
+                const points = props.skipPoints;
+                if (!points || total <= 0) return [];
+                const list: Array<{
+                  key: string;
+                  time: number;
+                  label: string;
+                }> = [];
+                if (
+                  typeof points.introEnd === "number" &&
+                  points.introEnd > 0 &&
+                  points.introEnd < total
+                ) {
+                  list.push({
+                    key: "intro",
+                    time: points.introEnd,
+                    label: t("player.ui.progress.skip_intro"),
+                  });
+                }
+                if (
+                  typeof points.outroStart === "number" &&
+                  points.outroStart > 0 &&
+                  points.outroStart < total
+                ) {
+                  list.push({
+                    key: "outro",
+                    time: points.outroStart,
+                    label: t("player.ui.progress.skip_outro"),
+                  });
+                }
+                return list;
+              },
+              key: (item: unknown): string =>
+                typeof item === "object" && item !== null && "key" in item
+                  ? String((item as { key: string }).key)
+                  : "point",
+              render: (item: unknown): VNode => {
+                if (typeof item !== "object" || item === null) {
+                  return h("span", {});
+                }
+                const point = item as {
+                  key: string;
+                  time: number;
+                  label: string;
+                };
+                const total = durationSignal.value;
+                return h("span", {
+                  class:
+                    "nova-player-progress-point nova-player-progress-point-oped",
+                  title: point.label,
+                  "data-point": point.key,
+                  style: { left: `${(point.time / total) * 100}%` },
+                  onClick: (event: MouseEvent) => {
+                    event.stopPropagation();
+                    lifecycle.emit?.("seek", point.time);
+                  },
+                });
+              },
+            }),
+          ),
           // 拖拽滑块
           h(
             "div",

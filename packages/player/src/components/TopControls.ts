@@ -7,7 +7,11 @@
 
 import { h, defineComponent } from "@/core";
 import { ProgressBar, type ProgressBarApi } from "./ProgressBar";
-import type { ProgressPreviewProvider, ProgressSegment } from "@/types";
+import type {
+  ProgressPreviewProvider,
+  ProgressSegment,
+  ProgressSkipPoints,
+} from "@/types";
 
 /**
  * TopControls 组件 Props 接口
@@ -19,6 +23,8 @@ export interface TopControlsProps {
   progressSegments?: ProgressSegment[];
   /** 预览图提供者（progress.previewProvider 配置注入，透传给 ProgressBar） */
   previewProvider?: ProgressPreviewProvider;
+  /** 片头 / 片尾跳过断点（progress.skipPoints 配置注入） */
+  skipPoints?: ProgressSkipPoints;
 }
 
 export type TopControlsEvents = {
@@ -32,7 +38,8 @@ export type TopControlsEvents = {
 
 export const TopControls = defineComponent<TopControlsProps, TopControlsEvents>(
   (props, lifecycle) => {
-    const { duration = 0, progressSegments, previewProvider } = props;
+    const { duration = 0, progressSegments, previewProvider, skipPoints } =
+      props;
     /**
      * 组件挂载后，通知上层组件
      */
@@ -49,6 +56,7 @@ export const TopControls = defineComponent<TopControlsProps, TopControlsEvents>(
         duration,
         progressSegments,
         previewProvider,
+        skipPoints,
         onSeek: (time) => lifecycle.emit?.("seek", time),
         onSeekStart: () => lifecycle.emit?.("seekStart"),
         onSeekEnd: () => lifecycle.emit?.("seekEnd"),

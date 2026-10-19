@@ -450,6 +450,12 @@ export const PlayerDocker = defineComponent<
   /** 外链场景数据（标题 / UP / 推荐 / 跳转地址） */
   const embeddedConfig = props.config?.ui?.embedded;
 
+  /** 片尾形态：standard（普通）/ ogv（电视剧 / 番剧） */
+  const endingStyle = props.config?.ui?.endingStyle ?? "standard";
+
+  /** 电视剧 / 番剧片尾数据 */
+  const ogvConfig = props.config?.ui?.ogv;
+
   /** 打开外链场景的跳转地址（无地址时静默忽略） */
   const openEmbeddedUrl = (url?: string): void => {
     if (!url || !isBrowser()) return;
@@ -2539,13 +2545,28 @@ export const PlayerDocker = defineComponent<
           // 片尾推荐面板（默认隐藏，播放结束时显示、重新播放时隐藏；
           // 推荐列表无真实数据源，仅渲染面板结构）
           h(Ending, {
-            variant: embeddedMode ? "embedded" : "station",
-            title:
-              embeddedConfig?.title ??
-              props.config?.ui?.title ??
-              props.playerName,
+            variant: embeddedMode
+              ? "embedded"
+              : endingStyle === "ogv"
+                ? "ogv"
+                : "station",
+            title: embeddedMode
+              ? (embeddedConfig?.title ??
+                props.config?.ui?.title ??
+                props.playerName)
+              : endingStyle === "ogv"
+                ? (ogvConfig?.title ??
+                  props.config?.ui?.title ??
+                  props.playerName)
+                : (props.config?.ui?.title ?? props.playerName),
+            cover: ogvConfig?.cover,
+            followed: ogvConfig?.followed,
             upInfo: embeddedConfig?.up,
-            related: embeddedConfig?.related,
+            related: embeddedMode
+              ? embeddedConfig?.related
+              : endingStyle === "ogv"
+                ? ogvConfig?.related
+                : props.config?.ui?.related,
             autoNext: embeddedMode
               ? false
               : () =>
@@ -2627,6 +2648,7 @@ export const PlayerDocker = defineComponent<
             plugins: props.plugins,
             previewProvider: props.previewProvider,
             energyProvider: props.energyProvider,
+            skipPoints: props.config?.progress?.skipPoints,
             // ===== 控件条交互接线（设计文档阶段 J）=====
             // 控制栏挂载完成：持有其操作 API（时间/音量/缓冲等显示更新的入口）
             onControlsMounted: (api: ControlsAPI) => {
