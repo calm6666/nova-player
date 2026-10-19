@@ -850,6 +850,16 @@ export class VideoPlayer
         this.emitter.emit("error", payload.error as MediaError);
       }),
     );
+
+    // ── 弹幕发送成功：本地弹幕条数自增 ──
+    // 使用 events.on 直连总线（不走 subscribe），保持 danmakuSent 仍为
+    // 总线直连事件，外部 player.on("danmakuSent") 语义不变。
+    // 服务端实时总数由 setDanmakuCount 绝对值覆盖（见该方法注释）。
+    this.bridgeUnsubscribes.push(
+      this.events.on(PlayerEventEnum.DANMAKU_SENT, () => {
+        this.incrementDanmakuCount();
+      }),
+    );
   }
 
   /**
@@ -2719,38 +2729,70 @@ export class VideoPlayer
 
   /**
    * 切换画中画
+   *
+   * 浏览器可能拒绝请求（无用户手势 / 视频未就绪 / 不支持），
+   * 结束后一律以 document.pictureInPictureElement 的真实状态收敛三路状态，
+   * 不按「请求成功」假设写值，避免面板 / 控制栏 / 播放器状态不一致。
    */
   async togglePip(): Promise<void> {
     if (!this.videoEl) return;
-    const wasPip = pip.isActive();
-    await pip.toggle(this.videoEl);
-    const isNowPip = !wasPip;
-
-    this.store.setPip(isNowPip);
-    this.state.set(PlayerStateKeyEnum.IS_PIP, isNowPip);
-    this.events.emit(PlayerEventEnum.PIP_CHANGE, { isPip: isNowPip });
+    try {
+      if (pip.isActive()) {
+        await pip.exit();
+      } else {
+        await pip.request(this.videoEl);
+      }
+    } catch {
+      // 请求失败不抛出：继续按浏览器真实状态收敛（保持原状态并广播）
+    }
+    this.syncPipStateFromBrowser();
   }
 
   /**
    * 进入画中画
    */
   async enterPip(): Promise<void> {
-    if (!this.videoEl || pip.isActive()) return;
-    await pip.request(this.videoEl);
-    this.store.setPip(true);
-    this.state.set(PlayerStateKeyEnum.IS_PIP, true);
-    this.events.emit(PlayerEventEnum.PIP_CHANGE, { isPip: true });
+    if (!this.videoEl || pip.isActive()) {
+      this.syncPipStateFromBrowser();
+      return;
+    }
+    try {
+      await pip.request(this.videoEl);
+    } catch {
+      // 浏览器拒绝 / 不支持：不抛出，交由下方按真实状态收敛
+    }
+    this.syncPipStateFromBrowser();
   }
 
   /**
    * 退出画中画
    */
   async exitPip(): Promise<void> {
-    if (!pip.isActive()) return;
-    await pip.exit();
-    this.store.setPip(false);
-    this.state.set(PlayerStateKeyEnum.IS_PIP, false);
-    this.events.emit(PlayerEventEnum.PIP_CHANGE, { isPip: false });
+    if (!pip.isActive()) {
+      this.syncPipStateFromBrowser();
+      return;
+    }
+    try {
+      await pip.exit();
+    } catch {
+      // 退出失败：同样以真实状态收敛
+    }
+    this.syncPipStateFromBrowser();
+  }
+
+  /**
+   * 以浏览器真实画中画状态收敛 state / store，并广播 PIP_CHANGE
+   *
+   * 单一状态源：`document.pictureInPictureElement`。设置面板复选框、
+   * 控制栏 state-active、播放器 store 标志都订阅这条链路，不再各自假设。
+   * @returns 收敛后的画中画状态
+   */
+  private syncPipStateFromBrowser(): boolean {
+    const isPip = pip.isActive();
+    this.store.setPip(isPip);
+    this.state.set(PlayerStateKeyEnum.IS_PIP, isPip);
+    this.events.emit(PlayerEventEnum.PIP_CHANGE, { isPip });
+    return isPip;
   }
 
   /**
@@ -3640,6 +3682,61 @@ export class VideoPlayer
    */
   sendDanmaku(text: string, options?: Record<string, unknown>): void {
     this.events.emit(PlayerEventEnum.DANMAKU_SEND, { text, options });
+  }
+
+  // ============================================
+  // 发送栏互动计数（在线观看人数 / 弹幕总条数）
+  // ============================================
+
+  /**
+   * 更新在线观看人数（服务端实时数据入口）
+   *
+   * 写入运行时状态 ONLINE_COUNT，发送栏底部「X 人正在看」经状态信号
+   * 响应式刷新；同时广播 ONLINE_COUNT_CHANGE 供外部订阅。
+   * 负数 / NaN / 小数按「非负整数」归一化。
+   * @param count - 在线观看人数
+   */
+  setOnlineCount(count: number): void {
+    const value = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+    this.state.set(PlayerStateKeyEnum.ONLINE_COUNT, value);
+    this.events.emit(PlayerEventEnum.ONLINE_COUNT_CHANGE, { count: value });
+  }
+
+  /** 读取在线观看人数 */
+  getOnlineCount(): number {
+    return this.state.get(PlayerStateKeyEnum.ONLINE_COUNT) ?? 0;
+  }
+
+  /**
+   * 更新弹幕总条数（服务端实时数据入口，绝对值覆盖本地累计）
+   *
+   * 服务端推送的实时总数应调用本方法（而不是自增），保证与服务器一致；
+   * 本地发送成功后由播放器监听 DANMAKU_SENT 自动 incrementDanmakuCount()，
+   * 下一次服务端数据到达时再被本方法覆盖校准。
+   * @param count - 弹幕总条数
+   */
+  setDanmakuCount(count: number): void {
+    const value = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+    this.state.set(PlayerStateKeyEnum.DANMAKU_COUNT, value);
+    this.events.emit(PlayerEventEnum.DANMAKU_COUNT_CHANGE, { count: value });
+  }
+
+  /** 读取弹幕总条数 */
+  getDanmakuCount(): number {
+    return this.state.get(PlayerStateKeyEnum.DANMAKU_COUNT) ?? 0;
+  }
+
+  /**
+   * 弹幕条数自增（本地发送成功后播放器自动调用）
+   *
+   * 也供外部按增量同步使用；负增量 / 非数字忽略（服务端总数校准请用
+   * setDanmakuCount 绝对值覆盖）。
+   * @param delta - 增量，默认 1
+   */
+  incrementDanmakuCount(delta = 1): void {
+    const step = Number.isFinite(delta) ? Math.floor(delta) : 0;
+    if (step === 0) return;
+    this.setDanmakuCount(this.getDanmakuCount() + step);
   }
 
   /** 取弹幕插件 API（存在则转发） */

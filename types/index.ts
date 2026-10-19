@@ -1256,6 +1256,12 @@ export interface PlayerEvents extends Record<string, (...args: any[]) => void> {
   /** 弹幕清空 */
   danmakuClear: () => void;
 
+  // 发送栏互动计数（总线直连；服务端实时数据 / 本地发送自增驱动）
+  /** 在线观看人数更新 */
+  onlineCountChange: (payload: { count: number }) => void;
+  /** 弹幕总条数更新 */
+  danmakuCountChange: (payload: { count: number }) => void;
+
   // 字幕
   /** 字幕显隐变化 */
   subtitleToggle: (payload: { visible: boolean }) => void;
@@ -1670,6 +1676,18 @@ export interface PlayerMethods {
   clearDanmaku(): void;
   /** 发送弹幕 */
   sendDanmaku(text: string, options?: Record<string, unknown>): void;
+
+  // ===== 发送栏互动计数 =====
+  /** 更新在线观看人数（服务端实时数据；发送栏「人正在看」响应式刷新） */
+  setOnlineCount(count: number): void;
+  /** 读取在线观看人数 */
+  getOnlineCount(): number;
+  /** 更新弹幕总条数（服务端实时数据，绝对值覆盖本地累计） */
+  setDanmakuCount(count: number): void;
+  /** 读取弹幕总条数 */
+  getDanmakuCount(): number;
+  /** 弹幕条数自增（本地发送成功后播放器自动调用；也可由外部按增量同步） */
+  incrementDanmakuCount(delta?: number): void;
 
   // ===== 字幕 =====
   /** 设置字幕可见性 */

@@ -136,6 +136,12 @@ export type PlayerEventMap = {
   seekStart: { time: number; previousTime: number };
   seekEnd: { time: number; previousTime: number };
 
+  // 发送栏互动计数
+  /** 在线观看人数更新，payload: { count } */
+  onlineCountChange: { count: number };
+  /** 弹幕总条数更新，payload: { count }（服务端数据覆盖 / 本地发送自增） */
+  danmakuCountChange: { count: number };
+
   // 生命周期事件
   ready: undefined;
   mounted: { container?: HTMLElement; video?: HTMLVideoElement; sendingArea?: HTMLElement };
@@ -316,6 +322,10 @@ export enum PlayerEventEnum {
   SEEK_START = 'seekStart',
   /** 进度条拖动结束 */
   SEEK_END = 'seekEnd',
+  /** 在线观看人数更新，payload: { count } */
+  ONLINE_COUNT_CHANGE = 'onlineCountChange',
+  /** 弹幕总条数更新，payload: { count } */
+  DANMAKU_COUNT_CHANGE = 'danmakuCountChange',
 
   // 生命周期事件
   /** 播放器初始化完成 */

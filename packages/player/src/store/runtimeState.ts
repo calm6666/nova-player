@@ -92,6 +92,12 @@ export enum PlayerStateKeyEnum {
   CONTROLS_VISIBLE = "player.controlsVisible",
   CONTROLS_HOVER = "player.controlsHover",
 
+  // 发送栏互动计数
+  /** 在线观看人数（发送栏底部展示；服务端实时数据经 setOnlineCount 写入） */
+  ONLINE_COUNT = "player.onlineCount",
+  /** 弹幕总条数（发送栏底部展示；服务端数据 set 覆盖、本地发送成功自增） */
+  DANMAKU_COUNT = "player.danmakuCount",
+
   // 弹幕状态
   DANMAKU_VISIBLE = "player.danmakuVisible",
   DANMAKU_OPACITY = "player.danmakuOpacity",
@@ -226,6 +232,10 @@ export type PlayerStateMap = {
   "player.loadProgress": number;
   "player.controlsVisible": boolean;
   "player.controlsHover": boolean;
+  /** 在线观看人数（发送栏底部，服务端实时数据） */
+  "player.onlineCount": number;
+  /** 弹幕总条数（发送栏底部，服务端数据 + 本地发送自增） */
+  "player.danmakuCount": number;
   "player.danmakuVisible": boolean;
   "player.danmakuOpacity": number;
   "player.danmakuSpeed": number;
@@ -327,6 +337,12 @@ export interface RuntimeState {
   controlsVisible: boolean;
   controlsHover: boolean;
 
+  // 发送栏互动计数
+  /** 在线观看人数（服务端实时数据） */
+  onlineCount: number;
+  /** 弹幕总条数（服务端数据 + 本地发送自增） */
+  danmakuCount: number;
+
   // 弹幕状态
   danmakuVisible: boolean;
   danmakuOpacity: number;
@@ -393,6 +409,8 @@ export const defaultRuntimeState: RuntimeState = {
   loadProgress: 0,
   controlsVisible: true,
   controlsHover: false,
+  onlineCount: 0,
+  danmakuCount: 0,
   danmakuVisible: true,
   danmakuOpacity: 1,
   danmakuSpeed: 1,
@@ -494,6 +512,12 @@ export function createRuntimeStateManager(
       initialState.controlsVisible ?? defaultRuntimeState.controlsVisible,
     [PlayerStateKeyEnum.CONTROLS_HOVER]:
       initialState.controlsHover ?? defaultRuntimeState.controlsHover,
+
+    // 发送栏互动计数
+    [PlayerStateKeyEnum.ONLINE_COUNT]:
+      initialState.onlineCount ?? defaultRuntimeState.onlineCount,
+    [PlayerStateKeyEnum.DANMAKU_COUNT]:
+      initialState.danmakuCount ?? defaultRuntimeState.danmakuCount,
 
     // 弹幕状态
     [PlayerStateKeyEnum.DANMAKU_VISIBLE]:

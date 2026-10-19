@@ -183,6 +183,15 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
 
     const handlePipChange = (checked: boolean): void => {
       lifecycle.emit?.("settingChange", { key: "pip", value: checked });
+      // 请求是异步的且可能被浏览器拒绝（无用户手势 / 视频未就绪 / 不支持）：
+      // 成功时由下方 IS_PIP effect 正常同步；这里延迟一拍按真实状态对账，
+      // 失败时把复选框复位，避免「面板勾着、播放器实际没进 PiP」。
+      cancelRaf(pipSyncTimer!);
+      pipSyncTimer = rafTimeout(() => {
+        pipSyncTimer = null;
+        const actual = pipSignal.value;
+        if (actual !== undefined) pipApi?.setChecked(Boolean(actual));
+      }, 300);
     };
 
     /** 更多设置：翻到第二页（写页码信号驱动翻页三联动） */
@@ -234,6 +243,18 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
     /** 高能进度条复选框 API（供渲染态双向同步） */
     let highenergyApi: { setChecked: (value: boolean) => void } | null = null;
 
+    /**
+     * 画中画复选框 API（IS_PIP 受控同步）
+     *
+     * 画中画状态可能来自三条链路：本面板复选框、控制栏按钮、
+     * 浏览器原生 PiP UI / 关闭 PiP 窗口（PlayerDocker 监听 document 事件）。
+     * 全部收敛到运行时状态 IS_PIP，本面板作为受控复选框跟随该状态。
+     */
+    let pipApi: { setChecked: (value: boolean) => void } | null = null;
+
+    /** 画中画请求对账定时器（浏览器可能拒绝请求，需按真实状态复位勾选） */
+    let pipSyncTimer: AnimationFrameID | null = null;
+
     const stateMgr = useContext<TypedStateManager<PlayerStateMap> | null>(
       StateContext,
     );
@@ -279,6 +300,15 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       : signal<boolean | undefined>(undefined);
     const pauseAfterEndSignal: Signal<boolean | undefined> = stateMgr
       ? useReactiveState(stateMgr, PlayerStateKeyEnum.PAUSE_AFTER_END, lifecycle)
+      : signal<boolean | undefined>(undefined);
+
+    /**
+     * 响应式信号：画中画状态（IS_PIP）
+     * 控制栏按钮 / 浏览器原生 PiP 变化 / 本面板复选框统一写回该状态，
+     * 面板复选框经 setChecked 受控跟随（与镜像/循环等开关同一模式）
+     */
+    const pipSignal: Signal<boolean | undefined> = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.IS_PIP, lifecycle)
       : signal<boolean | undefined>(undefined);
 
     /**
@@ -361,11 +391,16 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       // 关灯（不持久化，仅运行时状态）
       const lightoff = lightoffSignal.value;
       if (lightoff !== undefined) lightoffApi?.setChecked(lightoff);
+      // 画中画（控制栏 / 浏览器原生 PiP 变化同样回显到设置面板）
+      const pip = pipSignal.value;
+      if (pip !== undefined) pipApi?.setChecked(Boolean(pip));
       // 播放方式单选值映射（boolean → 0/2）
       handoffValueSignal.value = pauseAfterEndSignal.value === true ? 2 : 0;
     });
 
     lifecycle.onBeforeDestroy = (): void => {
+      cancelRaf(pipSyncTimer!);
+      pipSyncTimer = null;
       clearTimers();
     };
 
@@ -741,7 +776,14 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                           },
                           h(Checkbox, {
                             label: t("player.ui.settings.pip"),
+                            // 受控回显：状态源 IS_PIP（控制栏 / 浏览器原生 PiP 同步）
+                            checked: pipSignal.value ?? false,
                             onChange: handlePipChange,
+                            onCheckboxMounted: (api: {
+                              setChecked: (value: boolean) => void;
+                            }) => {
+                              pipApi = api;
+                            },
                           }),
                         ),
                       ),

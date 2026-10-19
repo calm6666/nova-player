@@ -9,6 +9,8 @@ import {
   h,
   defineComponent,
   useTemplateRef,
+  useContext,
+  useReactiveState,
   t,
   signal,
   computed,
@@ -16,6 +18,8 @@ import {
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
 import type { ComponentLifecycle } from "@/types";
+import { StateContext, PlayerStateKeyEnum } from "@/store/runtimeState";
+import { formatOnlineCount, formatDanmakuCount } from "@/nova/utils/formatCount";
 import { DmSetting } from "@/nova/components/DmSetting";
 import type { DmSettingApi } from "@/nova/components/DmSetting";
 import { Selection } from "@/nova/components/Selection";
@@ -133,6 +137,42 @@ export const SendBar = defineComponent<SendBarProps>(
      * 发送按钮 disabled 态、「已关闭弹幕」提示）均由此信号驱动响应式更新
      */
     const isDanmakuEnabledSignal = signal<boolean>(props.danmakuSwitch ?? true);
+
+    /**
+     * 在线观看人数 / 弹幕总条数（发送栏底部计数唯一数据源）
+     *
+     * 由 VideoPlayer.setOnlineCount / setDanmakuCount 写入运行时状态；
+     * 服务端实时数据（绝对值覆盖）与本地发送成功（DANMAKU_SENT 自增）
+     * 都经这一通道驱动 `_reactiveText` 刷新。
+     * 无状态管理器时回退 props 静态文本（纯展示场景）。
+     */
+    const state = useContext(StateContext);
+    const onlineCountSignal = state
+      ? useReactiveState(state, PlayerStateKeyEnum.ONLINE_COUNT, lifecycle)
+      : signal<number | undefined>(undefined);
+    const danmakuCountSignal = state
+      ? useReactiveState(state, PlayerStateKeyEnum.DANMAKU_COUNT, lifecycle)
+      : signal<number | undefined>(undefined);
+
+    /**
+     * 在线观看人数展示文本（状态值优先，props 兜底）
+     * 数量级采用 B 站风格「万 / 亿」单位（如 1.2万、10万）
+     */
+    const onlineCountText = (): string => {
+      const raw = onlineCountSignal.value;
+      if (typeof raw === "number") return formatOnlineCount(raw);
+      return props.onlineCount || "0";
+    };
+
+    /**
+     * 弹幕条数展示文本（状态值优先，props 兜底）
+     * 超过 1000 按数量级封顶显示「N+」（1000+ / 1.2万+ / 10万+ / 1亿+）
+     */
+    const danmakuCountText = (): string => {
+      const raw = danmakuCountSignal.value;
+      if (typeof raw === "number") return formatDanmakuCount(raw);
+      return props.danmakuCount || "0";
+    };
 
     /**
      * 是否允许发送弹幕（computed 派生信号）
@@ -407,7 +447,7 @@ export const SendBar = defineComponent<SendBarProps>(
         h(
           "div",
           { class: "nova-player-video-info-online" },
-          h("b", {}, props.onlineCount || "0"),
+          h("b", {}, () => onlineCountText()),
           t("player.ui.sendbar.watching"),
         ),
         h(
@@ -418,9 +458,10 @@ export const SendBar = defineComponent<SendBarProps>(
         h(
           "div",
           { class: "nova-player-video-info-dm" },
-          t("player.ui.sendbar.danmaku_count", {
-            count: props.danmakuCount || "0",
-          }),
+          () =>
+            t("player.ui.sendbar.danmaku_count", {
+              count: danmakuCountText(),
+            }),
         ),
       ),
       // 弹幕根容器
