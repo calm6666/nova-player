@@ -1048,6 +1048,9 @@ export const PlayerDocker = defineComponent<
     keyboard?: VNode;
   } = {};
 
+  /** 音量提示层懒挂载节点（首次滚轮/快捷键调节音量时创建，之后复用） */
+  let volumeHintVNode: VNode | null = null;
+
   /**
    * 按需挂载面板（已挂载则直接复用）
    * @param name - 面板名：color 色彩调整 / info 视频统计信息 / keyboard 快捷键说明
@@ -1710,8 +1713,33 @@ export const PlayerDocker = defineComponent<
     }
   };
 
+  /**
+   * 确保音量提示层已挂载
+   *
+   * 与 ColorPanel / AudioPanel 一致：首次真正需要显示时才创建 DOM，
+   * 已创建则直接复用；未触发过音量提示时播放器里没有该节点。
+   */
+  const ensureVolumeHint = (): void => {
+    if (volumeHintVNode) return;
+    const videoArea = playerVideoAreaRef.value;
+    if (!videoArea) return;
+    volumeHintVNode = h(VolumeHint, {
+      onVolumeHintMounted: (api: {
+        show: (volume: number) => void;
+        hide: () => void;
+        setVolume: (volume: number) => void;
+        setMuted: (muted: boolean) => void;
+      }) => {
+        volumeHintApi.show = api.show;
+        volumeHintApi.hide = api.hide;
+      },
+    });
+    mount(volumeHintVNode, videoArea);
+  };
+
   /** 显示音量提示层（滚轮 / 快捷键调节音量时，与既有实现一致） */
   const showVolumeHint = (volume: number): void => {
+    ensureVolumeHint();
     volumeHintApi.show?.(volume);
   };
 
@@ -2336,8 +2364,15 @@ export const PlayerDocker = defineComponent<
       if (panelVNode) destroy(panelVNode);
     });
     lazyPanelVNodes.color = undefined;
+    lazyPanelVNodes.audio = undefined;
     lazyPanelVNodes.info = undefined;
     lazyPanelVNodes.keyboard = undefined;
+
+    // 销毁懒挂载的音量提示层
+    if (volumeHintVNode) {
+      destroy(volumeHintVNode);
+      volumeHintVNode = null;
+    }
 
     // 清理迷你播放器拖拽期间可能残留在 document 上的监听
     if (miniDragMouseMove) {
@@ -2576,18 +2611,6 @@ export const PlayerDocker = defineComponent<
               loadingApi.show = api.show;
               loadingApi.hide = api.hide;
               loadingApi.setText = api.setText;
-            },
-          }),
-          // 音量提示层（滚轮 / 快捷键调节音量时显示，与既有实现的 volumehint 行为一致）
-          h(VolumeHint, {
-            onVolumeHintMounted: (api: {
-              show: (volume: number) => void;
-              hide: () => void;
-              setVolume: (volume: number) => void;
-              setMuted: (muted: boolean) => void;
-            }) => {
-              volumeHintApi.show = api.show;
-              volumeHintApi.hide = api.hide;
             },
           }),
           // 色彩调整面板 / 视频统计信息面板 / 快捷键说明面板：
