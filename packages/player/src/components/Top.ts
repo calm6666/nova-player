@@ -5,10 +5,29 @@
  */
 
 import { h, defineComponent, useTemplateRef, t } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import type { ComponentLifecycle, VNode } from "@/types";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
 import { Plus, Issue } from "@/nova/components/icons";
+/** 外链顶部操作图标（B 站 external 样式） */
+const TOP_LIKE_PATH =
+  "M20.319 7.75h-4.543c.223-.484.457-1.093.545-1.683.064-.426.07-.948.019-1.445-.05-.485-.163-1.027-.387-1.452-.476-.901-1.13-1.534-1.917-1.688-.837-.163-1.558.263-1.99.916-.36.546-.501 1.001-.63 1.416l-.004.014c-.123.399-.244.791-.556 1.344-.513.909-.932 1.38-1.495 1.873-.29.255-.588.427-.861.538v13.642a108.372 108.372 0 0 0 8.127-.118c1.28-.067 2.504-.713 3.173-1.885.632-1.109 1.44-2.786 1.929-4.792.457-1.88.647-3.407.724-4.445.096-1.278-.943-2.235-2.134-2.235ZM7 21.184V7.75H5.302c-1.543 0-2.914 1.1-3.09 2.698A35.171 35.171 0 0 0 2 14.252c0 1.587.117 3.06.24 4.16.167 1.519 1.42 2.628 2.913 2.698.532.026 1.156.052 1.847.074Z";
+const TOP_SHARE_PATH =
+  "M10.25 3.827c0-1.264 1.467-1.961 2.447-1.163l8.574 6.978c.86.7.86 2.015 0 2.715l-8.574 6.978c-.98.798-2.447.1-2.447-1.163v-3.298c-.83.008-1.763.17-2.71.627-1.213.587-2.503 1.686-3.646 3.69-.29.507-.843.636-1.264.527-.43-.111-.867-.513-.827-1.13.283-4.443 1.685-7.268 3.511-9.025 1.58-1.52 3.412-2.18 4.936-2.447V3.827Z";
+const TOP_COMMENT_PATH =
+  "M12 2C6.477 2 2 6.03 2 11c0 2.55 1.16 4.86 3.03 6.52-.13 1.12-.62 2.55-1.68 3.48-.23.2-.08.58.23.55 2.16-.2 3.77-1.08 4.8-1.83.85.18 1.74.28 2.62.28 5.52 0 10-4.03 10-9S17.52 2 12 2zm-5 7h10v2H7V9zm0 4h7v2H7v-2z";
+const TOP_MORE_PATH =
+  "M12 6.5a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5zm0 7.25a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5zm0 7.25a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5z";
+
+/** 外链顶部图标 */
+const TopIcon = (path: string): VNode =>
+  h(
+    "svg",
+    { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "none" },
+    h("path", { d: path, fill: "currentColor", "fill-rule": "evenodd" }),
+  );
+
+
 
 /**
  * 顶栏提示信息（与既有实现的 Tooltip 结构一致）
@@ -28,6 +47,24 @@ export interface TopTooltip {
 export interface TopProps {
   /** 视频标题 */
   title?: string;
+  /** 外链播放器形态：显示 bilibili logo / 点赞评论分享更多 */
+  embedded?: boolean;
+  /** UP 是否已关注 */
+  followed?: boolean;
+  /** UP 昵称 */
+  upName?: string;
+  /** 外链点赞数 */
+  likeCount?: number;
+  /** 外链评论数 */
+  commentCount?: number;
+  /** 点赞按钮回调 */
+  onLikeClick?: () => void;
+  /** 评论按钮回调 */
+  onCommentClick?: () => void;
+  /** 分享按钮回调 */
+  onShareClick?: () => void;
+  /** 更多按钮回调 */
+  onMoreClick?: () => void;
   /** UP主头像 URL */
   avatar?: string;
   /** 是否显示顶部栏 */
@@ -200,7 +237,16 @@ export const Top = defineComponent<TopProps>(
             style: { fontSize: "20px" },
             ref: "titleRef",
           },
-          props.title ?? "",
+          props.embedded
+            ? h("span", { class: "nova-player-top-left-logo" }, "bilibili")
+            : null,
+          props.embedded
+            ? h(
+                "span",
+                { class: "nova-player-top-left-title-text" },
+                props.title ?? "",
+              )
+            : (props.title ?? ""),
         ),
         h(
           "div",
@@ -215,36 +261,122 @@ export const Top = defineComponent<TopProps>(
                 "https://io.v.hblog.top/hfs/face/706353e46fe1c390d6d2cb72a704818a.jpg@240w_240h_1c_1s_!web-avatar-nav.webp",
               ref: "avatarRef",
             }),
-            h(
-              "span",
-              { class: "nova-player-follow-icon" },
-              // 关注图标：既有实现 icons 的 Plus SVG（禁止用 unicode 字符当图标）
-              h("span", { class: "common-svg-icon" }, Plus()),
-            ),
+            props.upName
+              ? h(
+                  "span",
+                  { class: "nova-player-follow-name" },
+                  props.upName,
+                )
+              : null,
+            !props.followed
+              ? h(
+                  "span",
+                  { class: "nova-player-follow-icon" },
+                  h("span", { class: "common-svg-icon" }, Plus()),
+                )
+              : null,
             h(
               "span",
               { class: "nova-player-follow-text" },
-              t("player.ui.top.follow"),
+              props.followed
+                ? t("player.ui.ending.following")
+                : t("player.ui.top.follow"),
             ),
           ),
         ),
       ),
-      h(
-        "div",
-        { class: "nova-player-top-issue" },
-        h(
-          "span",
-          {
-            class: "nova-player-top-issue-icon",
-            ref: "issueIconRef",
-            onMouseEnter: handleIssueEnter,
-            onMouseLeave: handleIssueLeave,
-            onClick: handleIssueClick,
-          },
-          // 问题反馈图标：既有实现 icons 的 Issue SVG（禁止用 unicode 字符当图标）
-          Issue(),
-        ),
-      ),
+      props.embedded
+        ? h(
+            "div",
+            { class: "nova-player-top-actions" },
+            h(
+              "div",
+              {
+                class: "nova-player-top-action",
+                role: "button",
+                onClick: props.onLikeClick,
+              },
+              h(
+                "span",
+                { class: "nova-player-top-action-icon" },
+                TopIcon(TOP_LIKE_PATH),
+              ),
+              h(
+                "span",
+                { class: "nova-player-top-action-text" },
+                String(props.likeCount ?? 0),
+              ),
+            ),
+            h(
+              "div",
+              {
+                class: "nova-player-top-action",
+                role: "button",
+                onClick: props.onCommentClick,
+              },
+              h(
+                "span",
+                { class: "nova-player-top-action-icon" },
+                TopIcon(TOP_COMMENT_PATH),
+              ),
+              h(
+                "span",
+                { class: "nova-player-top-action-text" },
+                String(props.commentCount ?? 0),
+              ),
+            ),
+            h(
+              "div",
+              {
+                class: "nova-player-top-action",
+                role: "button",
+                onClick: props.onShareClick,
+              },
+              h(
+                "span",
+                { class: "nova-player-top-action-icon" },
+                TopIcon(TOP_SHARE_PATH),
+              ),
+              h(
+                "span",
+                { class: "nova-player-top-action-text" },
+                t("player.ui.ending.share"),
+              ),
+            ),
+            h(
+              "div",
+              {
+                class: "nova-player-top-action",
+                role: "button",
+                onClick: props.onMoreClick,
+              },
+              h(
+                "span",
+                { class: "nova-player-top-action-icon" },
+                TopIcon(TOP_MORE_PATH),
+              ),
+              h(
+                "span",
+                { class: "nova-player-top-action-text" },
+                t("player.ui.embed.more"),
+              ),
+            ),
+          )
+        : h(
+            "div",
+            { class: "nova-player-top-issue" },
+            h(
+              "span",
+              {
+                class: "nova-player-top-issue-icon",
+                ref: "issueIconRef",
+                onMouseEnter: handleIssueEnter,
+                onMouseLeave: handleIssueLeave,
+                onClick: handleIssueClick,
+              },
+              Issue(),
+            ),
+          ),
     );
   },
 );

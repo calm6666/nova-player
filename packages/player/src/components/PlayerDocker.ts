@@ -247,6 +247,12 @@ export type PlayerDockerEvents = {
   settingChange: { key: string; value: boolean | string | number };
   /** 点击「更多设置」 */
   moreSettingClick: undefined;
+  /** 外链顶部评论 */
+  comment: undefined;
+  /** 外链顶部分享 */
+  share: undefined;
+  /** 外链顶部更多 */
+  more: undefined;
   /** 请求显示 tooltip */
   showTooltip: Tooltip;
   /** 请求隐藏 tooltip */
@@ -2469,12 +2475,30 @@ export const PlayerDocker = defineComponent<
           // 顶部栏（标题 / 关注 / 问题反馈，既有实现挂载于视频区域；
           // ui.title 动态更新时由 configStore 订阅驱动 setTitle）
           h(Top, {
-            title: props.config?.ui?.title ?? props.playerName,
-            onTopMounted: (api: TopAPI) => {
-              Object.assign(topApi, api);
-            },
+            title:
+              (embeddedMode
+                ? (embeddedConfig?.title ?? props.config?.ui?.title)
+                : props.config?.ui?.title) ?? props.playerName,
+            avatar: embeddedConfig?.up?.face,
+            upName: embeddedConfig?.up?.name,
+            embedded: embeddedMode,
+            followed: Boolean(embeddedConfig?.up?.followed),
+            likeCount: embeddedConfig?.stats?.like,
+            commentCount: embeddedConfig?.stats?.comment,
             onFollowClick: () => {
               lifecycle.emit?.("follow");
+            },
+            onLikeClick: () => {
+              lifecycle.emit?.("like");
+            },
+            onCommentClick: () => {
+              lifecycle.emit?.("comment");
+            },
+            onShareClick: () => {
+              lifecycle.emit?.("share");
+            },
+            onMoreClick: () => {
+              lifecycle.emit?.("more");
             },
             // 问题反馈图标的悬停提示（既有实现的
             // top.on("show-tooltip"/"hide-tooltip") 接通 Tooltips 组件）
@@ -2770,7 +2794,7 @@ export const PlayerDocker = defineComponent<
         // 连容器一起省掉，避免空 sending-area 撑高播放器底部布局）
         h(
           Show,
-          { when: (): boolean => hasPlugin("danmaku") },
+          { when: (): boolean => hasPlugin("danmaku") || embeddedMode },
           h(
             "div",
             {
@@ -2781,6 +2805,9 @@ export const PlayerDocker = defineComponent<
             // 弹幕开关初始状态来自运行时状态（与设置面板共享同一状态源）
             danmakuSwitch:
               stateMgr?.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true,
+            placeholder: embeddedMode
+              ? t("player.ui.embed.send_placeholder")
+              : undefined,
             // 输入框聚焦 / 失焦：维护 isSendFocus，供 mouseleave 豁免判断
             onInputFocus: () => {
               isSendFocus = true;

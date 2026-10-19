@@ -84,7 +84,7 @@ const renderItem = (
 
 export const RelationStrip = defineComponent<RelationStripProps>(
   (props, _lifecycle) => {
-    const related = (props.related ?? []).slice(0, 6);
+    const related = (props.related ?? []).slice(0, 5);
     if (related.length === 0) {
       return h("div", {
         class: "nova-player-relation-wrap",

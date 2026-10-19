@@ -23,11 +23,15 @@ type DemoMode =
   | "share"
   | "ogv-share"
   | "embedded-play"
+  | "controls"
+  | "wide"
+  | "quality"
+  | "rate"
   | "settings"
+  | "settings-more"
   | "points";
 
-const VIDEO =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+const VIDEO = "sample.mp4";
 
 /** 生成 SVG data URI 图片（封面 / 推荐图） */
 const svgPic = (
@@ -67,12 +71,28 @@ const EMBEDDED_EXTRA_TITLES = [
   "红楼梦",
   "济公",
 ];
+const EMBEDDED_TITLES = [
+  "老伴跑出去打工了，当爹又当妈的日子很难过",
+  "华农兄弟：做个糖醋鱼来吃，味道还可以",
+  "学都学了就发一下吧，朋友们将就看下哈哈",
+  "侯家四妯娌集齐啦～",
+  "弟弟婚礼圆满结束，家人们又要远行，留守家里...",
+];
+const embeddedRelated: EndingRelatedItem[] = EMBEDDED_TITLES.map(
+  (title, i) => ({
+    title,
+    pic: svgPic(i + 5, 448, 252, title.slice(0, 6)),
+    duration: [872, 421, 1500, 16, 255][i] ?? 100,
+    url: "#",
+  }),
+);
 const ogvRelated: EndingRelatedItem[] = [
   ...OGV_TITLES,
   ...EMBEDDED_EXTRA_TITLES,
 ].map((title, i) => ({
   title,
   pic: svgPic(i, 448, 592, title),
+  duration: [872, 421, 1500, 16, 255, 163, 238, 121, 192, 87][i] ?? 100,
   url: "#",
 }));
 
@@ -135,8 +155,10 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
     src: VIDEO,
     i18n: { enabled: true, locale: "zh-CN" },
     playback: {
-      autoplay: true,
+      autoplay: mode !== "embedded-play",
       muted: true,
+      loop: mode === "embedded-play",
+      startTime: 0,
       pauseAfterEnd: mode === "share" || mode === "ogv-share",
       playMode: PlayMode.ORDER,
     },
@@ -197,11 +219,12 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
         embedded: {
           title: "外链播放器演示：B 站风格片尾",
           up: {
-            name: "测试 UP 主",
+            name: "小梅vlog",
             face: svgPic(7, 96, 96),
-            followed: false,
+            followed: true,
           },
-          related: ogvRelated,
+          stats: { like: 3388, comment: 158 },
+          related: embeddedRelated,
           enterUrl: "#enter",
           downloadUrl: "#download",
         },
@@ -214,6 +237,12 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
 
 /** 销毁旧实例并重建 */
 const createPlayer = (mode: DemoMode): void => {
+  // 切换场景时清掉上次播放进度，避免新实例恢复到结尾直接进片尾
+  try {
+    localStorage.clear();
+  } catch {
+    // ignore
+  }
   if (player) {
     player.destroy();
     player = null;
@@ -246,21 +275,53 @@ const runMode = async (mode: DemoMode): Promise<void> => {
     }, 900);
     return;
   }
-  if (mode === "embedded-play") {
-    await waitDuration();
-    await player?.seek(1);
-    await player?.play();
-    setTimeout(() => {
-      player?.pause();
-      showControls();
-    }, 900);
-    return;
-  }
-  if (mode === "settings") {
+  if (
+    mode === "controls" ||
+    mode === "wide" ||
+    mode === "quality" ||
+    mode === "rate"
+  ) {
     await waitDuration();
     await player?.seek(1);
     player?.pause();
-    setTimeout(openSettings, 900);
+    setTimeout(() => {
+      showControls();
+      if (mode === "wide") {
+        container.querySelector<HTMLElement>(".nova-player-ctrl-wide")?.click();
+      }
+      if (mode === "quality") {
+        container
+          .querySelector<HTMLElement>(".nova-player-ctrl-quality")
+          ?.dispatchEvent(new MouseEvent("mouseenter", { bubbles: false }));
+      }
+      if (mode === "rate") {
+        container
+          .querySelector<HTMLElement>(".nova-player-ctrl-playbackrate")
+          ?.dispatchEvent(new MouseEvent("mouseenter", { bubbles: false }));
+      }
+    }, 700);
+    return;
+  }
+  if (mode === "embedded-play") {
+    await waitDuration();
+    player?.pause();
+    showControls();
+    return;
+  }
+  if (mode === "settings" || mode === "settings-more") {
+    await waitDuration();
+    await player?.seek(1);
+    player?.pause();
+    setTimeout(() => {
+      openSettings();
+      if (mode === "settings-more") {
+        setTimeout(() => {
+          container
+            .querySelector<HTMLElement>(".nova-player-ctrl-setting-more")
+            ?.click();
+        }, 500);
+      }
+    }, 900);
     return;
   }
   if (mode === "points") {
@@ -306,7 +367,12 @@ document.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => 
     "share",
     "ogv-share",
     "embedded-play",
+    "controls",
+    "wide",
+    "quality",
+    "rate",
     "settings",
+    "settings-more",
     "points",
   ],
   screenshotMode: (on: boolean) => {

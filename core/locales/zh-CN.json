@@ -87,6 +87,8 @@
   "player.ui.ending.logo": "bilibili",
   "player.ui.ending.download_app": "下载哔哩哔哩客户端",
   "player.ui.ending.enter_site": "进入哔哩哔哩观看",
+  "player.ui.embed.more": "更多",
+  "player.ui.embed.send_placeholder": "一起去哔哩哔哩发送弹幕吧!",
   "player.ui.embed.enter_quality": "进入哔哩哔哩，观看更高清",
   "player.ui.embed.send_danmaku": "一起去哔哩哔哩发送弹幕吧！",
   "player.ui.ending.next": "下一集",

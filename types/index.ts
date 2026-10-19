@@ -658,6 +658,11 @@ export interface ShareInfo {
 export interface EmbeddedConfig {
   /** 视频标题（片尾页顶部展示） */
   title?: string;
+  /** 顶部点赞 / 评论统计数（外链暂停页展示） */
+  stats?: {
+    like?: number;
+    comment?: number;
+  };
   /** UP 主信息 */
   up?: EndingUpInfo;
   /** 片尾相关推荐（最多渲染 10 张卡片） */

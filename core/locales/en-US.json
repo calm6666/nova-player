@@ -87,6 +87,8 @@
   "player.ui.ending.logo": "bilibili",
   "player.ui.ending.download_app": "Download Bilibili App",
   "player.ui.ending.enter_site": "Watch on Bilibili",
+  "player.ui.embed.more": "More",
+  "player.ui.embed.send_placeholder": "Send a danmaku on Bilibili!",
   "player.ui.embed.enter_quality": "Watch in higher quality on Bilibili",
   "player.ui.embed.send_danmaku": "Join Bilibili to send danmaku!",
   "player.ui.ending.next": "Next Episode",
