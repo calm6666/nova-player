@@ -44,7 +44,6 @@
 
   .nova-audio-panel-page {
     box-sizing: border-box;
-    min-height: 340px;
     padding: 16px 18px 20px;
     position: relative;
   }
@@ -188,7 +187,7 @@
 
   // ---------- 均衡器页 ----------
   .nova-audio-panel-eq-page {
-    min-height: 359px;
+    min-height: 0;
   }
 
   .nova-audio-panel-eq-header {
@@ -229,6 +228,11 @@
     margin-left: 8px;
     min-width: 92px;
     padding: 0 8px;
+
+    option {
+      background: #fff;
+      color: #1a1a1a;
+    }
   }
 
   .nova-audio-panel-eq-scale {

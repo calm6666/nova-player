@@ -8,7 +8,7 @@
  * - 均衡器：预设 / 段数选择 + 5/10 段竖向 EQ + 重置
  */
 
-import { h, defineComponent, signal, t } from "@/core";
+import { h, defineComponent, signal, t, useTemplateRef } from "@/core";
 import type { ComponentLifecycle } from "@/types";
 
 /** 音效插件面板使用的最小 API 契约 */
@@ -84,6 +84,7 @@ const CLOSE_PATH =
 
 export const AudioPanel = defineComponent<AudioPanelProps>(
   (props, lifecycle: ComponentLifecycle) => {
+    const panelRef = useTemplateRef<HTMLDivElement>(lifecycle, "panelRef");
     const activeSignal = signal(false);
     const pageSignal = signal<"preset" | "eq">("preset");
     const gainSignal = signal(0);
@@ -104,6 +105,21 @@ export const AudioPanel = defineComponent<AudioPanelProps>(
       lifecycle.emit?.("audioPanelMounted", { open, close } as AudioPanelHandle);
     };
 
+    /** 把信号状态同步回原生 range（重置 / 切段数后受控回显） */
+    const syncInputs = (): void => {
+      const root = panelRef.value;
+      if (!root) return;
+      const gain = root.querySelector<HTMLInputElement>(
+        ".nova-audio-panel-range",
+      );
+      if (gain) gain.value = String(gainSignal.value);
+      root
+        .querySelectorAll<HTMLInputElement>(".nova-audio-panel-eq-range")
+        .forEach((input, index) => {
+          input.value = String(gainsSignal.value[index] ?? 0);
+        });
+    };
+
     /** 应用组合预设 */
     const choosePreset = (value: string): void => {
       props.api?.selectCombination?.(value);
@@ -119,6 +135,7 @@ export const AudioPanel = defineComponent<AudioPanelProps>(
     const reset = (): void => {
       choosePreset("default");
       changeGain(0);
+      syncInputs();
     };
 
     /** 切换 EQ 段数 */
@@ -129,6 +146,7 @@ export const AudioPanel = defineComponent<AudioPanelProps>(
         () => 0,
       );
       props.api?.setEQPreset?.(eqPresetSignal.value, count);
+      requestAnimationFrame(syncInputs);
     };
 
     /** EQ 预设变化 */
@@ -153,12 +171,20 @@ export const AudioPanel = defineComponent<AudioPanelProps>(
         () => 0,
       );
       props.api?.setEQGains?.(gainsSignal.value);
+      requestAnimationFrame(syncInputs);
     };
 
     const closeButton = (): ReturnType<typeof h> =>
       h(
         "div",
-        { class: "nova-audio-panel-close", onClick: close },
+        {
+          class: "nova-audio-panel-close",
+          role: "button",
+          onClick: (event: MouseEvent) => {
+            event.stopPropagation();
+            close();
+          },
+        },
         h(
           "svg",
           { viewBox: "0 0 16 16" },
@@ -368,10 +394,12 @@ export const AudioPanel = defineComponent<AudioPanelProps>(
     return h(
       "div",
       {
+        ref: "panelRef",
         class: [
           "nova-player-audio-panel",
           { "nova-player-panel-active": activeSignal.value },
         ],
+        style: { display: activeSignal.value ? "flex" : "none" },
       },
       h(
         "div",
