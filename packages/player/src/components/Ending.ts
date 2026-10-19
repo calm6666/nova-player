@@ -10,11 +10,12 @@
  * 未提供数据时只渲染容器结构，列表为空。
  */
 
-import { h, defineComponent, useTemplateRef, t } from "@/core";
+import { h, defineComponent, useTemplateRef, signal, t } from "@/core";
 import type { VNode } from "@/types";
 import type {
   EndingRelatedItem,
   EndingUpInfo,
+  InteractiveBacktrackItem,
   PlayerScene,
 } from "@/types";
 import { LottieIcon, type LottieIconApi } from "./LottieIcon";
@@ -25,12 +26,20 @@ import endingElectricIcon from "../assets/images/ending-electric.png";
  * Ending 组件 Props 接口
  */
 export interface EndingProps {
-  /** 渲染形态（默认 station；ogv = 电视剧 / 番剧整页片尾） */
-  variant?: PlayerScene | "ogv";
+  /** 渲染形态（默认 station；ogv = 电视剧整页；interactive = 互动视频） */
+  variant?: PlayerScene | "ogv" | "interactive";
   /** 剧集封面（ogv 头部 68×68） */
   cover?: string;
   /** 是否已追剧（ogv 追剧按钮状态） */
   followed?: boolean;
+  /** 互动视频：关注人数文案 */
+  followers?: string;
+  /** 互动视频：进度回溯节点 */
+  backtrack?: InteractiveBacktrackItem[];
+  /** 互动视频：当前高亮回溯节点 */
+  activeBacktrackIndex?: number;
+  /** 互动视频：打分提示 */
+  ratingPrompt?: string;
   /** 视频标题（embedded 顶部展示） */
   title?: string;
   /** UP 主信息（无数据时不渲染详情内容） */
@@ -192,6 +201,11 @@ const CLOSE_ICON =
 const DOWNLOAD_ICON = "M12 3v12m0 0 4-4m-4 4-4-4M4 21h16";
 /** 进入箭头（线性） */
 const ENTER_ICON = "m9 6 6 6-6 6";
+/** 互动视频星级 */
+const INTERACTIVE_STAR_PATH =
+  "M19.423 9.56c-1.37-.213-2.602-1.159-3.106-2.38l-1.82-3.832c-.205-.472-.836-.472-1.079.016l-1.743 3.83c-.623 1.258-1.769 2.16-3.098 2.366l-4.113.637c-.44.056-.633.64-.27 1.005l3.054 3.158c.93.937 1.348 2.283 1.142 3.633l-.71 4.448c-.087.5.433.86.89.614L12 21.17a4.017 4.017 0 0 1 4.053-.014l3.447 1.896a.604.604 0 0 0 .899-.608l-.79-4.456c-.206-1.342.212-2.689 1.134-3.618l3.072-3.176c.354-.357.16-.94-.307-1l-4.085-.633Z";
+/** 互动视频关注加号 */
+const INTERACTIVE_PLUS = "M7.25 7.25v-4.5a.75.75 0 0 1 1.5 0v4.5h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5z";
 /** 追剧爱心（OGV 片尾头部） */
 const HEART_ICON =
   "M8 14c-.1 0-.25-.05-.35-.1-.45-.35-4.3-3.35-5.1-4.5-.9-1.2-1.05-1.85-1.05-3C1.5 4 3.25 2 5.45 2 6.4 2 7.3 2.35 8 3c.7-.65 1.6-1 2.55-1 2.2 0 3.95 2 3.95 4.4 0 1.1-.15 1.75-1.05 3-.8 1.1-4.7 4.15-5.1 4.5-.1.05-.25.1-.35.1z";
@@ -217,9 +231,11 @@ const formatDuration = (value?: number | string): string => {
  * 片尾推荐面板组件
  */
 export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
-  const variant: PlayerScene | "ogv" = props.variant ?? "station";
+  const variant: PlayerScene | "ogv" | "interactive" =
+    props.variant ?? "station";
   const isEmbedded = variant === "embedded";
   const isOgv = variant === "ogv";
+  const isInteractive = variant === "interactive";
 
   // ============================================
   // DOM 引用
@@ -245,6 +261,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 倒计时秒数 */
   const countdownSeconds = Math.max(1, props.countdownSeconds ?? 5);
+  /** 互动视频评分（0 未评分） */
+  const interactiveRating = signal(0);
+  /** 互动视频进度回溯横向偏移 */
+  const backtrackOffset = signal(0);
 
   /** 解析自动连播开关（支持 getter，展示时求值） */
   const resolveAutoNext = (): boolean =>
@@ -282,7 +302,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
    *   保证电视剧片尾始终有倒计时反馈；无下一集时不触发切集
    */
   const startCountdown = (): void => {
-    if (isEmbedded) return;
+    if (isEmbedded || isInteractive) return;
     const autoNextEnabled = resolveAutoNext();
     // OGV 片尾不展示取消连播 / 圆环，只保留静默自动连播
     if (isOgv) {
@@ -835,6 +855,279 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     );
 
   // ============================================
+  // 渲染：互动视频片尾
+  // ============================================
+
+  /** 渲染互动视频评分星星 */
+  const renderInteractiveStar = (index: number): VNode =>
+    h(
+      "span",
+      {
+        class: "nova-interactive-star",
+        role: "button",
+        onClick: () => {
+          interactiveRating.value = index + 1;
+        },
+      },
+      h(
+        "svg",
+        { viewBox: "0 0 28 28" },
+        h("path", {
+          d: INTERACTIVE_STAR_PATH,
+          fill:
+            interactiveRating.value > index ? "#ffb800" : "none",
+          stroke:
+            interactiveRating.value > index ? "#ffb800" : "#6D757A",
+          "stroke-width": 2,
+          "fill-rule": "evenodd",
+        }),
+      ),
+    );
+
+  /** 渲染互动视频片尾 */
+  const renderInteractiveEnding = (): VNode => {
+    const backtrack = props.backtrack ?? [];
+    const activeIndex = props.activeBacktrackIndex ?? 0;
+    const related = props.related ?? [];
+
+    return h(
+      "div",
+      { class: "nova-interactive-ending" },
+      // 顶部：UP / 关注 + 重播 / 评分
+      h(
+        "div",
+        { class: "nova-interactive-header" },
+        h(
+          "div",
+          { class: "nova-interactive-up" },
+          h(
+            "div",
+            { class: "nova-interactive-avatar" },
+            props.upInfo?.face
+              ? h("img", {
+                  src: props.upInfo.face,
+                  alt: props.upInfo.name ?? "",
+                })
+              : null,
+          ),
+          h(
+            "div",
+            { class: "nova-interactive-upinfo" },
+            h(
+              "div",
+              { class: "nova-interactive-name" },
+              props.upInfo?.name ?? "",
+            ),
+            h(
+              "div",
+              {
+                class: "nova-interactive-follow",
+                role: "button",
+                onClick: props.onFollow,
+              },
+              h(
+                "span",
+                { class: "nova-interactive-follow-icon" },
+                h(
+                  "svg",
+                  { viewBox: "0 0 16 16" },
+                  h("path", { d: INTERACTIVE_PLUS, fill: "currentColor" }),
+                ),
+              ),
+              h(
+                "span",
+                { class: "nova-interactive-follow-text" },
+                props.followed
+                  ? t("player.ui.ending.following")
+                  : t("player.ui.ending.follow"),
+              ),
+              props.followers
+                ? h(
+                    "span",
+                    { class: "nova-interactive-follow-fans" },
+                    props.followers,
+                  )
+                : null,
+            ),
+          ),
+        ),
+        h(
+          "div",
+          { class: "nova-interactive-common" },
+          h(
+            "div",
+            {
+              class: "nova-interactive-replay",
+              role: "button",
+              onClick: props.onRestart,
+            },
+            h("span", { class: "nova-interactive-replay-icon" }, RestartIcon()),
+            h(
+              "span",
+              { class: "nova-interactive-replay-text" },
+              t("player.ui.ending.replay"),
+            ),
+          ),
+          h(
+            "div",
+            { class: "nova-interactive-mark" },
+            h(
+              "div",
+              { class: "nova-interactive-stars" },
+              ...[0, 1, 2, 3, 4].map(renderInteractiveStar),
+            ),
+            h(
+              "div",
+              { class: "nova-interactive-tip" },
+              interactiveRating.value > 0
+                ? t("player.ui.ending.rated", {
+                    rating: String(interactiveRating.value),
+                  })
+                : (props.ratingPrompt ??
+                  t("player.ui.ending.rating_prompt")),
+            ),
+          ),
+        ),
+      ),
+      // 进度回溯
+      h(
+        "div",
+        { class: "nova-interactive-section" },
+        h(
+          "div",
+          { class: "nova-interactive-section-title" },
+          t("player.ui.ending.backtrack"),
+        ),
+        h(
+          "div",
+          { class: "nova-interactive-swiper" },
+          h(
+            "div",
+            {
+              class: "nova-interactive-swiper-arrow pre",
+              role: "button",
+              onClick: () => {
+                backtrackOffset.value = Math.max(
+                  0,
+                  backtrackOffset.value - 2,
+                );
+              },
+            },
+            h(
+              "svg",
+              { viewBox: "0 0 16 16" },
+              h("path", {
+                d: "m9.188 7.999-3.359 3.359a.75.75 0 1 0 1.061 1.061l3.889-3.889a.75.75 0 0 0 0-1.061L6.89 3.58a.75.75 0 1 0-1.061 1.061l3.359 3.358z",
+              }),
+            ),
+          ),
+          h(
+            "div",
+            { class: "nova-interactive-swiper-viewport" },
+            h(
+              "div",
+              {
+                class: "nova-interactive-swiper-list",
+                style: {
+                  transform: `translateX(-${backtrackOffset.value * 142}px)`,
+                },
+              },
+              ...backtrack.map((item, index) =>
+                h(
+                  "div",
+                  {
+                    class: [
+                      "nova-interactive-backtrack-item",
+                      { "state-active": index === activeIndex },
+                    ],
+                    onClick: () => {
+                      props.onRelatedClick?.({
+                        title: item.title,
+                        pic: item.pic,
+                        url: item.url,
+                      });
+                    },
+                  },
+                  h(
+                    "div",
+                    { class: "nova-interactive-backtrack-img" },
+                    item.pic ? h("img", { src: item.pic, alt: item.title }) : null,
+                  ),
+                  h(
+                    "div",
+                    { class: "nova-interactive-backtrack-text" },
+                    item.title,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          h(
+            "div",
+            {
+              class: "nova-interactive-swiper-arrow next",
+              role: "button",
+              onClick: () => {
+                backtrackOffset.value = Math.min(
+                  Math.max(0, backtrack.length - 6),
+                  backtrackOffset.value + 2,
+                );
+              },
+            },
+            h(
+              "svg",
+              { viewBox: "0 0 16 16" },
+              h("path", {
+                d: "m9.188 7.999-3.359 3.359a.75.75 0 1 0 1.061 1.061l3.889-3.889a.75.75 0 0 0 0-1.061L6.89 3.58a.75.75 0 1 0-1.061 1.061l3.359 3.358z",
+              }),
+            ),
+          ),
+        ),
+      ),
+      // 相关推荐
+      h(
+        "div",
+        { class: "nova-interactive-section nova-interactive-related" },
+        h(
+          "div",
+          { class: "nova-interactive-section-title" },
+          t("player.ui.ending.related"),
+        ),
+        h(
+          "div",
+          { class: "nova-interactive-related-list" },
+          ...related.slice(0, 4).map((item) =>
+            h(
+              "a",
+              {
+                class: "nova-interactive-related-item",
+                href: item.url || undefined,
+                target: item.url ? "_blank" : undefined,
+                rel: "noopener noreferrer",
+                onClick: (event: MouseEvent) => {
+                  if (props.onRelatedClick) event.preventDefault();
+                  props.onRelatedClick?.(item);
+                },
+              },
+              h("div", {
+                class: "nova-interactive-related-cover",
+                style: item.pic
+                  ? { backgroundImage: `url("${item.pic}")` }
+                  : undefined,
+              }),
+              h(
+                "div",
+                { class: "nova-interactive-related-title" },
+                item.title,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
+  // ============================================
   // 渲染：ogv（电视剧 / 番剧）整页片尾
   // ============================================
 
@@ -1193,7 +1486,9 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
     : isOgv
       ? "nova-player-ending-wrap nova-ogv-ending-wrap"
-      : "nova-player-ending-wrap";
+      : isInteractive
+        ? "nova-player-ending-wrap nova-interactive-ending-wrap"
+        : "nova-player-ending-wrap";
 
   return h(
     "div",
@@ -1210,7 +1505,9 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         ? renderEmbeddedEnding()
         : isOgv
           ? renderOgvEnding()
-          : renderStationEnding(),
+          : isInteractive
+            ? renderInteractiveEnding()
+            : renderStationEnding(),
     ),
     h(
       "div",

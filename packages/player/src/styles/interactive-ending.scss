@@ -1,0 +1,384 @@
+/**
+ * ============================================
+ * 互动视频片尾（EndPanel interactive）
+ * ============================================
+ * 对照 B 站 bpx-player-ending-interaction-* / bui-swiper：
+ * - 顶部 UP + 关注（粉丝数）、重播、五星打分
+ * - 进度回溯横向卡片（117×89，高亮蓝色）
+ * - 相关推荐 4 列大卡（336×190 比例）
+ */
+
+.nova-player-container {
+  .nova-player-ending-wrap.nova-interactive-ending-wrap {
+    .nova-player-ending-panel {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+    }
+
+    .nova-interactive-ending {
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      left: 50%;
+      max-width: 1080px;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+    }
+
+    // ---------- 顶部 ----------
+    .nova-interactive-header {
+      align-items: flex-start;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .nova-interactive-up {
+      align-items: center;
+      display: flex;
+      min-width: 0;
+    }
+
+    .nova-interactive-avatar {
+      border-radius: 50%;
+      flex: 0 0 56px;
+      height: 56px;
+      overflow: hidden;
+      width: 56px;
+
+      img {
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+      }
+    }
+
+    .nova-interactive-upinfo {
+      align-items: flex-start;
+      display: flex;
+      flex-direction: column;
+      margin-left: 20px;
+      min-width: 0;
+    }
+
+    .nova-interactive-name {
+      color: #fff;
+      font-size: 18px;
+      line-height: 24px;
+      margin-bottom: 6px;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nova-interactive-follow {
+      align-items: center;
+      background: #00a1d6;
+      border-radius: 2px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      font-size: 14px;
+      height: 32px;
+      justify-content: center;
+      width: 130px;
+
+      &:hover {
+        background: #00b5e5;
+      }
+    }
+
+    .nova-interactive-follow-icon {
+      display: inline-flex;
+      height: 16px;
+      margin-right: 5px;
+      width: 16px;
+
+      svg {
+        fill: currentColor;
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    .nova-interactive-follow-fans {
+      margin-left: 5px;
+    }
+
+    .nova-interactive-common {
+      align-items: flex-start;
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    .nova-interactive-replay {
+      align-items: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      width: 46px;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+
+    .nova-interactive-replay-icon {
+      display: inline-flex;
+      height: 28px;
+      width: 28px;
+
+      svg {
+        fill: currentColor;
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    .nova-interactive-replay-text {
+      color: #fff;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .nova-interactive-mark {
+      align-items: flex-start;
+      display: flex;
+      flex-direction: column;
+      margin-left: 38px;
+    }
+
+    .nova-interactive-stars {
+      display: flex;
+    }
+
+    .nova-interactive-star {
+      cursor: pointer;
+      display: inline-flex;
+      height: 22px;
+      margin-left: 8px;
+      width: 21px;
+
+      &:first-child {
+        margin-left: 0;
+      }
+
+      svg {
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    .nova-interactive-tip {
+      color: #fff;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    // ---------- 进度回溯 ----------
+    .nova-interactive-section {
+      margin-top: 30px;
+      pointer-events: auto;
+      width: 100%;
+    }
+
+    .nova-interactive-section-title {
+      font-size: 16px;
+      line-height: 20px;
+      margin-bottom: 12px;
+    }
+
+    .nova-interactive-swiper {
+      padding: 0 14px;
+      position: relative;
+    }
+
+    .nova-interactive-swiper-viewport {
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .nova-interactive-swiper-list {
+      display: flex;
+      transition: transform 0.6s ease-in-out;
+    }
+
+    .nova-interactive-backtrack-item {
+      cursor: pointer;
+      flex: 0 0 117px;
+      height: 89px;
+      margin-left: 25px;
+      position: relative;
+
+      &:first-child {
+        margin-left: 0;
+      }
+    }
+
+    .nova-interactive-backtrack-img {
+      background: #000;
+      border: 1px solid hsla(0, 0%, 100%, 0.8);
+      bottom: 16px;
+      box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+
+      img {
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    .nova-interactive-backtrack-text {
+      background: #fff;
+      bottom: 4px;
+      box-sizing: border-box;
+      color: #343434;
+      font-size: 14px;
+      height: 20px;
+      left: -4px;
+      line-height: 20px;
+      overflow: hidden;
+      padding-left: 4px;
+      position: absolute;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 100%;
+    }
+
+    .nova-interactive-backtrack-item.state-active {
+      .nova-interactive-backtrack-img {
+        border-color: #00a1d6;
+      }
+
+      .nova-interactive-backtrack-text {
+        background: #00a1d6;
+        color: #fff;
+        padding-left: 22px;
+
+        &::before {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='4' fill='%23fff'/%3E%3C/svg%3E");
+          background-size: 16px 16px;
+          content: "";
+          height: 16px;
+          left: 3px;
+          position: absolute;
+          top: 2px;
+          width: 16px;
+        }
+      }
+    }
+
+    .nova-interactive-swiper-arrow {
+      align-items: center;
+      background: #fff;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      height: 28px;
+      justify-content: center;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      z-index: 3;
+
+      svg {
+        fill: #00a1d6;
+        height: 16px;
+        width: 16px;
+      }
+
+      &.pre {
+        left: 0;
+        transform: translateY(-50%) rotate(180deg);
+      }
+
+      &.next {
+        right: 0;
+      }
+
+      &:hover {
+        background: #00a1d6;
+
+        svg {
+          fill: #fff;
+        }
+      }
+    }
+
+    // ---------- 相关推荐 ----------
+    .nova-interactive-related-list {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      width: 100%;
+    }
+
+    .nova-interactive-related-item {
+      aspect-ratio: 336 / 190;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      width: 100%;
+
+      &::before {
+        background: linear-gradient(
+          transparent,
+          rgba(0, 0, 0, 0.1) 20%,
+          rgba(0, 0, 0, 0.2) 35%,
+          rgba(0, 0, 0, 0.5) 65%,
+          rgba(0, 0, 0, 0.66)
+        );
+        border-radius: 4px;
+        bottom: 0;
+        content: "";
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 30%;
+        z-index: 1;
+      }
+
+      &:hover {
+        border-color: #fff;
+        box-shadow: 0 0 6px hsla(0, 0%, 100%, 0.5);
+      }
+    }
+
+    .nova-interactive-related-cover {
+      background-color: #000;
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: auto 100%;
+      border-radius: 4px;
+      inset: 0;
+      position: absolute;
+    }
+
+    .nova-interactive-related-title {
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      bottom: 0;
+      box-sizing: border-box;
+      color: #fff;
+      display: -webkit-box;
+      font-size: 13px;
+      left: 0;
+      line-height: 18px;
+      overflow: hidden;
+      padding: 0 10px 8px;
+      position: absolute;
+      width: 100%;
+      z-index: 2;
+    }
+  }
+}

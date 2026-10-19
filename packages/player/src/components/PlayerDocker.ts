@@ -2573,7 +2573,9 @@ export const PlayerDocker = defineComponent<
               ? "embedded"
               : endingStyle === "ogv"
                 ? "ogv"
-                : "station",
+                : endingStyle === "interactive"
+                  ? "interactive"
+                  : "station",
             title: embeddedMode
               ? (embeddedConfig?.title ??
                 props.config?.ui?.title ??
@@ -2585,6 +2587,11 @@ export const PlayerDocker = defineComponent<
                 : (props.config?.ui?.title ?? props.playerName),
             cover: ogvConfig?.cover,
             followed: ogvConfig?.followed,
+            followers: props.config?.ui?.interactive?.followers,
+            backtrack: props.config?.ui?.interactive?.backtrack,
+            activeBacktrackIndex:
+              props.config?.ui?.interactive?.activeBacktrackIndex,
+            ratingPrompt: props.config?.ui?.interactive?.ratingPrompt,
             upInfo: embeddedMode
               ? embeddedConfig?.up
               : props.config?.ui?.up,
@@ -2595,7 +2602,10 @@ export const PlayerDocker = defineComponent<
               ? embeddedConfig?.related
               : endingStyle === "ogv"
                 ? ogvConfig?.related
-                : props.config?.ui?.related,
+                : endingStyle === "interactive"
+                  ? (props.config?.ui?.interactive?.related ??
+                    props.config?.ui?.related)
+                  : props.config?.ui?.related,
             autoNext: embeddedMode
               ? false
               : () =>

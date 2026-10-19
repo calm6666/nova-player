@@ -112,9 +112,10 @@ pnpm vite --config demo/vite.config.ts
 | `playlistIndex` | `number` | `0` | 是（`switchTo`） | 起始下标 |
 | `ui.title` | `string` | `'嗨哩播放器'` | 是（`setConfig`） | 播放器名称 |
 | `ui.scene` | `'station' \| 'embedded'` | `'station'` | 否（挂载期读取） | 播放场景：站内完整 / 外链嵌入（见 §7.5） |
-| `ui.endingStyle` | `'standard' \| 'ogv'` | `'standard'` | 否（挂载期读取） | 片尾形态：普通浮层 / 电视剧整页（见 §7.5） |
+| `ui.endingStyle` | `'standard' \| 'ogv' \| 'interactive'` | `'standard'` | 否（挂载期读取） | 片尾形态：普通浮层 / 电视剧整页 / 互动视频（见 §7.5） |
 | `ui.embedded` | `EmbeddedConfig` | `undefined` | 否（挂载期读取） | 外链场景的标题 / UP / 推荐 / 跳转地址（见 §7.5） |
 | `ui.ogv` | `OgvEndingConfig` | `undefined` | 否（挂载期读取） | 电视剧 / 番剧片尾：标题 / 封面 / 追剧状态 / 推荐 |
+| `ui.interactive` | `InteractiveEndingConfig` | `undefined` | 否（挂载期读取） | 互动视频片尾：关注人数 / 进度回溯 / 评分提示 / 推荐 |
 | `ui.related` | `EndingRelatedItem[]` | `undefined` | 否（挂载期读取） | 站内标准片尾的相关推荐 |
 | `ui.up` | `EndingUpInfo` | `undefined` | 否（挂载期读取） | 站内标准片尾的 UP 头像 / 昵称 / 关注态 |
 | `ui.share` | `ShareInfo` | `undefined` | 否（挂载期读取） | 片尾分享面板：视频地址 / 嵌入代码 / 二维码图片 |

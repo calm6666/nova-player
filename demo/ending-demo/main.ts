@@ -19,6 +19,7 @@ import type { EndingRelatedItem, PlayerConfig } from "@/types";
 type DemoMode =
   | "standard"
   | "ogv"
+  | "interactive"
   | "embedded"
   | "share"
   | "ogv-share"
@@ -193,6 +194,64 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
     },
   };
 
+  if (mode === "interactive") {
+    const INTERACTIVE_TITLES = [
+      "选择角色",
+      "选择华强",
+      "华强问价",
+      "挑一个",
+      "保熟吗",
+      "十一 拿起刀",
+      "劈老板",
+    ];
+    return {
+      ...base,
+      playback: { ...base.playback, pauseAfterEnd: true },
+      ui: {
+        ...base.ui,
+        title: "互动视频演示：卖瓜合集2.0",
+        endingStyle: "interactive",
+        up: {
+          name: "Captive柠檬",
+          face: svgPic(1, 112, 112, "柠檬"),
+          followed: false,
+        },
+        interactive: {
+          followers: "6.3万",
+          ratingPrompt: "请为这个互动视频打分",
+          activeBacktrackIndex: INTERACTIVE_TITLES.length - 1,
+          backtrack: INTERACTIVE_TITLES.map((title, i) => ({
+            title,
+            pic: svgPic(i, 234, 178, title.slice(0, 4)),
+            url: "#",
+          })),
+          related: [
+            {
+              title: "【互动视频】卖瓜合集2.0，选择你的角色（包含小强）点进即可游玩",
+              pic: svgPic(1, 672, 380, "卖瓜合集"),
+              url: "#",
+            },
+            {
+              title: "选择角色，结局由你来定！",
+              pic: svgPic(2, 672, 380, "选择角色"),
+              url: "#",
+            },
+            {
+              title: "本视频考验观众听声辨位功夫",
+              pic: svgPic(3, 672, 380, "听声辨位"),
+              url: "#",
+            },
+            {
+              title: "【互动游戏】选择角色，结局你来定，给你机会你不中啊",
+              pic: svgPic(4, 672, 380, "互动游戏"),
+              url: "#",
+            },
+          ],
+        },
+      },
+    };
+  }
+
   if (mode === "ogv" || mode === "ogv-share" || mode === "settings") {
     return {
       ...base,
@@ -260,7 +319,12 @@ const createPlayer = (mode: DemoMode): void => {
 
 /** 执行模式对应的交互 */
 const runMode = async (mode: DemoMode): Promise<void> => {
-  if (mode === "standard" || mode === "ogv" || mode === "embedded") {
+  if (
+    mode === "standard" ||
+    mode === "ogv" ||
+    mode === "interactive" ||
+    mode === "embedded"
+  ) {
     await seekToEnd();
     return;
   }
@@ -369,6 +433,7 @@ document.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => 
   modes: [
     "standard",
     "ogv",
+    "interactive",
     "embedded",
     "share",
     "ogv-share",

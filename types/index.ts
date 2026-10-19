@@ -689,6 +689,8 @@ export interface UiConfig {
   embedded?: EmbeddedConfig;
   /** 电视剧 / 番剧片尾数据（endingStyle=ogv 时生效） */
   ogv?: OgvEndingConfig;
+  /** 互动视频片尾数据（endingStyle=interactive 时生效） */
+  interactive?: InteractiveEndingConfig;
   /** 站内标准片尾的相关推荐数据（不传则为空列表） */
   related?: EndingRelatedItem[];
   /** 站内标准片尾的 UP 主信息（头像 / 昵称 / 关注态） */
@@ -802,7 +804,31 @@ export interface ProgressSkipPoints {
  * - standard：普通视频的浮层片尾
  * - ogv：电视剧 / 番剧的整页片尾（封面 + 追剧 + 推荐 + 回看）
  */
-export type PlayerEndingStyle = "standard" | "ogv";
+export type PlayerEndingStyle = "standard" | "ogv" | "interactive";
+
+/** 互动视频进度回溯节点 */
+export interface InteractiveBacktrackItem {
+  /** 节点标题 */
+  title: string;
+  /** 节点截图 */
+  pic?: string;
+  /** 点击跳转 / 回溯回调数据 */
+  url?: string;
+}
+
+/** 互动视频片尾数据 */
+export interface InteractiveEndingConfig {
+  /** 关注人数（如 "6.3万"） */
+  followers?: string;
+  /** 打分提示文案 */
+  ratingPrompt?: string;
+  /** 进度回溯节点（按时间顺序） */
+  backtrack?: InteractiveBacktrackItem[];
+  /** 当前高亮节点下标 */
+  activeBacktrackIndex?: number;
+  /** 相关推荐（4 列展示） */
+  related?: EndingRelatedItem[];
+}
 
 /** 电视剧 / 番剧片尾数据 */
 export interface OgvEndingConfig {
