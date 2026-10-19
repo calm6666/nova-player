@@ -1619,9 +1619,25 @@ export interface PlayerMethods {
   toggleWebFullscreen(): void;
   /** 是否网页全屏 */
   isWebFullscreen(): boolean;
-  /** 切换宽屏 */
+  /**
+   * 切换宽屏
+   *
+   * 宽屏布局由播放器外部容器决定：播放器只切换内部宽屏状态并广播
+   * `wideScreenChange`（回调参数为是否宽屏布尔值），外部监听后自行
+   * 调整容器布局；播放器内部仅同步宽屏按钮 / 图标状态。
+   */
   toggleWideScreen(): void;
-  /** 设置显示模式 */
+  /**
+   * 设置宽屏状态（外部容器驱动的布局开关）
+   * @param isWide - 是否进入宽屏
+   */
+  setWideScreen(isWide: boolean): void;
+  /** 是否处于宽屏状态 */
+  isWideScreen(): boolean;
+  /**
+   * 设置显示模式（normal / web / mini 会改播放器内部布局；
+   * `wide` 只更新宽屏状态并广播 `wideScreenChange`，布局交给外部容器）
+   */
   setDisplayMode(mode: DisplayMode): void;
   /** 重新计算尺寸 */
   resize(): void;

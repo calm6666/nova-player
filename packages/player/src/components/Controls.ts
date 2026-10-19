@@ -70,9 +70,14 @@ export type ControlsEvents = {
   volumeChange: number;
   muteToggle: undefined;
   backrateChange: number;
+  /** 全屏切换 */
   fullscreenToggle: undefined;
+  /** 网页全屏切换 */
   webFullscreenToggle: undefined;
+  /** 画中画切换 */
   pipToggle: undefined;
+  /** 宽屏切换（播放器只更新状态与回调，布局由外部容器决定） */
+  wideToggle: undefined;
   prev: undefined;
   next: undefined;
   qualityChange: string;
@@ -657,7 +662,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             onFullscreen: () => lifecycle.emit?.("fullscreenToggle"),
             onWebFullscreen: () => lifecycle.emit?.("webFullscreenToggle"),
             onPip: () => lifecycle.emit?.("pipToggle"),
-            onWide: () => {},
+            onWide: () => lifecycle.emit?.("wideToggle"),
             onMute: () => lifecycle.emit?.("muteToggle"),
             onBackrateChange: handleRightBackrateChange,
             onVolumeChange: (vol) => {

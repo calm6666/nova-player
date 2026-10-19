@@ -289,8 +289,12 @@ await player.enterFullscreen();
 await player.exitFullscreen();
 await player.togglePip();          player.enterPip();   player.exitPip();
 player.toggleWebFullscreen();      player.isWebFullscreen();
-player.toggleWideScreen();
-player.setDisplayMode('wide');     // 'normal' | 'web' | 'wide' | 'mini'
+// 宽屏：布局由外部容器决定，播放器只更新状态 + 广播 wideScreenChange
+player.on('wideScreenChange', ({ isWideScreen }) => {
+  appContainer.classList.toggle('is-wide', isWideScreen);
+});
+player.toggleWideScreen();         player.setWideScreen(true);   player.isWideScreen();
+player.setDisplayMode('normal');   // 'normal' | 'web' | 'mini'；'wide' 只广播事件，布局交给外部
 player.resize();
 
 // 画质

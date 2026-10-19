@@ -2721,10 +2721,34 @@ export class VideoPlayer
 
   /**
    * 切换宽屏
+   *
+   * 宽屏布局完全由播放器外部容器决定：播放器只切换内部宽屏状态并广播
+   * `wideScreenChange`（payload 为是否宽屏），由外部监听后自行调整容器尺寸；
+   * 播放器内部不修改 `data-screen`、不搬移发送栏，避免与控制权冲突。
    */
   toggleWideScreen(): void {
-    const isWide = this.state.get(PlayerStateKeyEnum.IS_WIDE_SCREEN) ?? false;
-    this.setDisplayMode(isWide ? "normal" : "wide");
+    this.setWideScreen(!this.isWideScreen());
+  }
+
+  /**
+   * 设置宽屏状态（外部容器驱动的布局开关）
+   *
+   * 只做两件事：写运行时状态 `IS_WIDE_SCREEN`（控制栏宽屏按钮高亮 /
+   * Lottie 图标随之响应式更新）+ 广播 `wideScreenChange`，回调参数为
+   * 是否宽屏布尔值。外部程序通过 `player.on("wideScreenChange", ...)`
+   * 或 `callbacks.wideScreenChange` 监听后自行控制外部容器布局。
+   * @param isWide - 是否进入宽屏
+   */
+  setWideScreen(isWide: boolean): void {
+    this.state.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, isWide);
+    this.events.emit(PlayerEventEnum.WIDE_SCREEN_CHANGE, {
+      isWideScreen: isWide,
+    });
+  }
+
+  /** 是否处于宽屏状态 */
+  isWideScreen(): boolean {
+    return this.state.get(PlayerStateKeyEnum.IS_WIDE_SCREEN) ?? false;
   }
 
   /**
@@ -2797,13 +2821,26 @@ export class VideoPlayer
 
   /**
    * 设置画面显示模式
+   *
+   * 宽屏（wide）是例外：布局由播放器外部容器决定，播放器只更新宽屏状态
+   * 并广播 `wideScreenChange`，不写 `data-screen`、不改变播放器 DOM 布局，
+   * 因此 `mode === 'wide'` 直接走 setWideScreen(true) 后返回。
+   * 从宽屏切换到其它模式时先广播退出宽屏（外部容器据此还原）。
    * @param mode - normal | web | wide | mini
    */
   setDisplayMode(mode: DisplayMode): void {
+    if (mode === "wide") {
+      this.setWideScreen(true);
+      return;
+    }
+    // 退出宽屏：先对外广播，外部容器负责还原布局
+    if (this.isWideScreen()) {
+      this.setWideScreen(false);
+    }
+
     this.state.set(PlayerStateKeyEnum.DISPLAY_MODE, mode);
     this.state.set(PlayerStateKeyEnum.IS_MIN_PLAYER, mode === "mini");
     this.state.set(PlayerStateKeyEnum.IS_WEB_FULLSCREEN, mode === "web");
-    this.state.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, mode === "wide");
 
     const container = this.getPlayerContainerEl();
     if (container) {
@@ -2812,9 +2849,6 @@ export class VideoPlayer
 
     this.events.emit(PlayerEventEnum.WEB_FULLSCREEN_CHANGE, {
       isWebFullscreen: mode === "web",
-    });
-    this.events.emit(PlayerEventEnum.WIDE_SCREEN_CHANGE, {
-      isWideScreen: mode === "wide",
     });
   }
 

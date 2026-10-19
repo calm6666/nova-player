@@ -206,8 +206,10 @@ pnpm vite --config demo/vite.config.ts
 
 | 方法 | 签名 | 说明 |
 | --- | --- | --- |
-| `setDisplayMode` | `(mode: DisplayMode) => void` | `'normal' \| 'web' \| 'wide' \| 'mini'`，触发 `displayModeChange` / `wideScreenChange` / `webFullscreenChange` |
-| `toggleWideScreen` | `() => void` | 切换宽屏 |
+| `setDisplayMode` | `(mode: DisplayMode) => void` | `'normal' \| 'web' \| 'mini'` 由播放器内部处理；`'wide'` 只更新宽屏状态并广播 `wideScreenChange`，布局由外部容器决定 |
+| `toggleWideScreen` | `() => void` | 切换宽屏：只更新状态 + 广播 `wideScreenChange`，不修改 `data-screen` / 布局 |
+| `setWideScreen` | `(isWide: boolean) => void` | 设置宽屏状态（外部容器驱动的布局开关） |
+| `isWideScreen` | `() => boolean` | 是否处于宽屏状态 |
 | `toggleWebFullscreen` | `() => void` | 切换 web 全屏 |
 | `isWebFullscreen` | `() => boolean` | |
 | `toggleFullscreen` | `() => Promise<void>` | 切换浏览器全屏 |
@@ -218,6 +220,25 @@ pnpm vite --config demo/vite.config.ts
 | `enterPip` | `() => Promise<void>` | |
 | `exitPip` | `() => Promise<void>` | |
 | `resize` | `() => void` | 触发 `resize` 事件 |
+
+#### 宽屏（外部容器驱动）
+
+宽屏布局完全由播放器**外部容器**决定。控制栏宽屏按钮点击 / `toggleWideScreen()` 只做两件事：
+
+1. 更新内部宽屏状态（宽屏按钮高亮、图标随状态切换）；
+2. 广播 `wideScreenChange`，回调参数为是否宽屏的布尔值。
+
+播放器内部不修改 `data-screen`、不搬移发送栏，外部程序监听后自行调整容器布局：
+
+```ts
+player.on("wideScreenChange", ({ isWideScreen }) => {
+  appContainer.classList.toggle("is-wide", isWideScreen);
+});
+
+// 也可以主动同步：
+player.setWideScreen(true); // 只更新状态 + 广播 wideScreenChange
+player.isWideScreen();
+```
 
 ### 4.5 清晰度
 
@@ -338,8 +359,8 @@ pnpm vite --config demo/vite.config.ts
 
 | 事件 | payload | 触发时机 |
 | --- | --- | --- |
-| `displayModeChange` | `{ mode: DisplayMode }` | normal/web/wide/mini 切换 |
-| `wideScreenChange` | `{ isWideScreen: boolean }` | 宽屏切换 |
+| `displayModeChange` | `{ mode: DisplayMode }` | normal/web/mini 切换（宽屏不再走内部显示模式） |
+| `wideScreenChange` | `{ isWideScreen: boolean }` | 宽屏切换（布局由外部容器决定，监听后自行调整） |
 | `webFullscreenChange` | `{ isWebFullscreen: boolean }` | web 全屏切换 |
 | `fullscreenchange` | `isFullscreen: boolean` | 浏览器全屏 |
 | `pipchange` | `isPip: boolean` | 画中画 |

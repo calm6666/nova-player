@@ -68,6 +68,27 @@ const off = player.on("play", () => {}); off(); // 取消
 
 全事件表（payload + 触发时机）见 [`docs/api.md` §5](../../docs/api.md#5-全事件表)。
 
+## 宽屏（外部容器驱动）
+
+宽屏布局完全由播放器**外部容器**决定。控制栏宽屏按钮点击 / `toggleWideScreen()` 只做两件事：
+
+1. 更新内部宽屏状态（宽屏按钮高亮、图标随状态切换）；
+2. 广播 `wideScreenChange`，回调参数为是否宽屏的布尔值。
+
+播放器不修改 `data-screen`、不搬移发送栏，由外部监听后自行调整容器布局：
+
+```ts
+player.on("wideScreenChange", ({ isWideScreen }) => {
+  appContainer.classList.toggle("is-wide", isWideScreen);
+});
+
+// 也可以主动同步外部容器状态：
+player.setWideScreen(true);   // 只更新状态 + 广播事件
+player.isWideScreen();        // 读取当前宽屏状态
+```
+
+> `setDisplayMode("wide")` 等价于 `setWideScreen(true)`；`setDisplayMode("normal" | "web" | "mini")` 仍由播放器内部处理，并在退出宽屏时先广播 `wideScreenChange(false)`。
+
 ## API 速查表
 
 | 方法 | 签名 | 说明 |
@@ -83,7 +104,8 @@ const off = player.on("play", () => {}); off(); // 取消
 | `setQualityMode` / `getQualityMode` | | auto / manual |
 | `toggleFullscreen` / `enterFullscreen` / `exitFullscreen` / `isFullscreen` | | 全屏 |
 | `toggleWebFullscreen` / `isWebFullscreen` | | web 全屏 |
-| `toggleWideScreen` / `setDisplayMode` | | 宽屏 / 显示模式 |
+| `toggleWideScreen` / `setWideScreen` / `isWideScreen` | | 宽屏（状态 + 回调，布局由外部容器决定） |
+| `setDisplayMode` | | 显示模式（`wide` 仅广播事件，布局由外部容器决定） |
 | `setDanmakuVisible` / `getDanmakuVisible` / `toggleDanmaku` | | 弹幕显隐 |
 | `setDanmakuOpacity` / `setDanmakuSpeed` / `setDanmakuSource` / `clearDanmaku` / `sendDanmaku` | | 弹幕 API |
 | `setSubtitleVisible` / `getSubtitleVisible` / `toggleSubtitle` / `setSubtitleLang` / `setSubtitleList` | | 字幕 API |

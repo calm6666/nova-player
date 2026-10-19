@@ -527,8 +527,10 @@ export const PlayerDocker = defineComponent<
   /**
    * 应用画面显示模式：写状态 + 同步容器 `data-screen` + 向上广播 `displayModeChange`。
    *
-   * 说明：全屏（full）不属于 `DisplayMode`（无 'full'），由 `player.isFullscreen` 承载，
-   * 故此处只处理 normal / web / wide / mini 四种。
+   * 说明：全屏（full）不属于 `DisplayMode`（无 'full'），由 `player.isFullscreen` 承载；
+   * 宽屏（wide）布局完全由播放器外部容器决定，不在此处处理——宽屏只更新
+   * `IS_WIDE_SCREEN` 并广播 `wideScreenChange`（见 toggleWide），播放器不写
+   * `data-screen`、不改内部布局。故此处只处理 normal / web / mini 三种。
    *
    * @param mode - 目标显示模式
    */
@@ -536,7 +538,6 @@ export const PlayerDocker = defineComponent<
     stateMgr?.set(PlayerStateKeyEnum.DISPLAY_MODE, mode);
     stateMgr?.set(PlayerStateKeyEnum.IS_MIN_PLAYER, mode === "mini");
     stateMgr?.set(PlayerStateKeyEnum.IS_WEB_FULLSCREEN, mode === "web");
-    stateMgr?.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, mode === "wide");
     playerContainerRef.value?.setAttribute("data-screen", mode);
     moveSendBar(mode);
     // 同步提示工具的屏幕模式（既有实现的 tooltips.screen 赋值；
@@ -1539,9 +1540,25 @@ export const PlayerDocker = defineComponent<
     }
   };
 
+  /**
+   * 切换宽屏（宽屏布局完全由播放器外部容器决定）
+   *
+   * 控制栏宽屏按钮点击后：只切换内部宽屏状态并广播 `wideScreenChange`，
+   * 回调参数为是否宽屏布尔值；外部程序通过 `player.on("wideScreenChange")`
+   * （或 callbacks.wideScreenChange）监听后自行调整外部容器布局。
+   * 播放器内部仅同步宽屏按钮 / 图标的选中态，不修改 `data-screen`、
+   * 不搬移发送栏，避免与外部容器布局互相打架。
+   */
+  const toggleWide = (): void => {
+    const next = !(stateMgr?.get(PlayerStateKeyEnum.IS_WIDE_SCREEN) ?? false);
+    stateMgr?.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, next);
+    props.events?.emit(PlayerEventEnum.WIDE_SCREEN_CHANGE, {
+      isWideScreen: next,
+    });
+  };
+
   /** 切换静音状态 */
-  const toggleMute = (): void => {
-    const next = !readMuted();
+  const toggleMute = (): void => {    const next = !readMuted();
     if (videoRef.value) {
       videoRef.value.muted = next;
     }
@@ -2550,6 +2567,8 @@ export const PlayerDocker = defineComponent<
             onPipToggle: togglePip,
             // 网页全屏按钮
             onWebFullscreenToggle: toggleWebFullscreen,
+            // 宽屏按钮：只更新状态 + 广播 wideScreenChange，布局交给外部容器
+            onWideToggle: toggleWide,
             // 分 P 切换：向上交给 VideoPlayer 的 prev() / next() / switchTo()
             onPrev: () => {
               lifecycle.emit?.("prev");
