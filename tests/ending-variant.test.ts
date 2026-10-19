@@ -225,7 +225,7 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     ).toBe(4);
     expect(
       container.querySelectorAll(".nova-ogv-ending-recommend-item").length,
-    ).toBe(6);
+    ).toBe(5);
   });
 
   it("首张推荐卡显示 SVG 倒计时，取消后关闭", () => {

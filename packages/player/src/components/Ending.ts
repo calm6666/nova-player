@@ -1041,7 +1041,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           h(
             "div",
             { class: "nova-ogv-ending-recommend-list" },
-            ...related.slice(0, 10).map(renderOgvCard),
+            ...related.slice(0, 5).map(renderOgvCard),
           ),
         ),
       ),
@@ -1234,15 +1234,9 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     { class: rootClass, ref: "endingWrapRef" },
     // station 使用模糊封面背景；embedded 使用纯色整页背景；
     // ogv 用剧集封面做背景（无封面时保持纯色）
-    isEmbedded
+    isEmbedded || isOgv
       ? null
-      : h("div", {
-          class: "nova-player-ending-backdrop",
-          style:
-            isOgv && props.cover
-              ? { backgroundImage: `url("${props.cover}")` }
-              : undefined,
-        }),
+      : h("div", { class: "nova-player-ending-backdrop" }),
     h(
       "div",
       { class: "nova-player-ending-panel", "data-option": "1" },

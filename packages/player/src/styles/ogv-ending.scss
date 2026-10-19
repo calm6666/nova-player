@@ -2,18 +2,18 @@
  * ============================================
  * 电视剧 / 番剧片尾（OGV endpage）
  * ============================================
- * 对照 B 站 endpage_* DOM/CSS 复刻：
- * - 整页暗色背景，内容区 75% × 85%（max 1000×700）
- * - 头部：68×68 封面 + 标题 + 追剧按钮 + 重播/好评/投币/分享
- * - 相关推荐：112×148 卡片，首张支持 5s SVG 倒计时 + 取消连播
+ * 对照用户提供的 B 站截图与 endpage DOM/CSS：
+ * - 暗色整页背景，内容区居中
+ * - 头部：方形封面 + 标题 + 粉色追剧 + 重播/好评/投币/分享
+ * - 相关推荐：5 列竖版海报卡，标题压在封面底部
+ * - 首张卡支持 5s SVG 倒计时 + 取消连播
  */
 
 .nova-player-container {
   .nova-player-ending-wrap.nova-ogv-ending-wrap {
-    .nova-player-ogv-ending,
     .nova-ogv-ending {
       align-items: center;
-      background-color: hsla(0, 0%, 9%, 0.8);
+      background: rgba(0, 0, 0, 0.9);
       box-sizing: border-box;
       cursor: pointer;
       display: flex;
@@ -32,7 +32,7 @@
       max-width: 1000px;
       min-height: 300px;
       min-width: 500px;
-      width: 75%;
+      width: 84%;
     }
 
     // ---------- 头部 ----------
@@ -42,22 +42,25 @@
       flex-direction: row;
       justify-content: space-between;
       margin-bottom: 40px;
+      width: 100%;
     }
 
     .nova-ogv-ending-ep-info {
       align-items: center;
       display: flex;
       flex-direction: row;
+      min-width: 0;
       overflow: hidden;
     }
 
     .nova-ogv-ending-cover {
-      flex-shrink: 0;
-      height: 68px;
-      width: 68px;
+      border-radius: 2px;
+      flex: 0 0 86px;
+      height: 86px;
+      overflow: hidden;
+      width: 86px;
 
       img {
-        border-radius: 2px;
         height: 100%;
         object-fit: cover;
         width: 100%;
@@ -69,18 +72,19 @@
       display: flex;
       flex: 1 1;
       flex-direction: column;
-      margin-left: 20px;
+      margin-left: 22px;
+      min-width: 0;
       overflow: hidden;
     }
 
     .nova-ogv-ending-title {
       color: #fff;
-      font-size: 16px;
-      height: 22px;
-      line-height: 16px;
-      margin-bottom: 4px;
+      font-size: 18px;
+      font-weight: 500;
+      height: 24px;
+      line-height: 24px;
+      margin-bottom: 10px;
       overflow: hidden;
-      position: relative;
       text-overflow: ellipsis;
       white-space: nowrap;
       width: 100%;
@@ -93,25 +97,23 @@
       color: #fff;
       cursor: pointer;
       display: flex;
-      font-size: 12px;
-      height: 32px;
-      justify-content: flex-start;
-      width: 72px;
+      font-size: 14px;
+      height: 33px;
+      justify-content: center;
+      width: 84px;
 
       &.state-followed {
         background: #e7e7e7;
         color: #999;
-        justify-content: center;
       }
     }
 
     .nova-ogv-ending-follow-icon {
-      display: inline-block;
+      display: inline-flex;
       fill: #fff;
-      height: 18px;
-      margin-left: 14px;
+      height: 16px;
       margin-right: 5px;
-      width: 14px;
+      width: 16px;
 
       svg {
         fill: currentColor;
@@ -124,7 +126,6 @@
       align-items: center;
       display: flex;
       flex-direction: row;
-      justify-content: space-between;
     }
 
     .nova-ogv-ending-btn {
@@ -132,7 +133,6 @@
       cursor: pointer;
       display: flex;
       flex-direction: column;
-      transition: all 0.3s linear;
 
       svg path {
         fill: hsla(0, 0%, 100%, 0.9);
@@ -156,13 +156,13 @@
 
     .nova-ogv-ending-btn-icon {
       display: inline-flex;
-      height: 26px;
-      width: 26px;
+      height: 28px;
+      width: 28px;
     }
 
     .nova-ogv-ending-btn-text {
       color: #fff;
-      font-size: 12px;
+      font-size: 13px;
       margin-top: 8px;
     }
 
@@ -175,33 +175,30 @@
 
     .nova-ogv-ending-recommend-heading {
       color: #fff;
-      font-size: 15px;
-      line-height: 16px;
-      margin-bottom: 14px;
+      font-size: 16px;
+      line-height: 20px;
+      margin-bottom: 16px;
       width: 100%;
     }
 
     .nova-ogv-ending-recommend-list {
-      align-items: center;
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: space-between;
+      display: grid;
+      gap: 30px 32px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       width: 100%;
     }
 
     .nova-ogv-ending-recommend-item {
+      aspect-ratio: 112 / 148;
       border-radius: 2px;
       cursor: pointer;
       display: block;
-      height: 148px;
-      margin-bottom: 30px;
+      overflow: hidden;
       position: relative;
-      width: 112px;
+      width: 100%;
 
       &:hover {
         .nova-ogv-ending-recommend-title {
-          box-sizing: border-box;
           height: auto;
           max-height: 42px;
           white-space: normal;
@@ -216,15 +213,10 @@
 
     .nova-ogv-ending-recommend-cover {
       border-radius: 2px;
-      bottom: 0;
-      height: 148px;
-      left: 0;
+      inset: 0;
       overflow: hidden;
       position: absolute;
-      right: 0;
-      top: 0;
       transition: all 0.3s ease-in-out;
-      width: 112px;
 
       img {
         height: 100%;
@@ -249,10 +241,10 @@
     }
 
     .nova-ogv-ending-recommend-title {
-      bottom: 7px;
+      bottom: 8px;
+      box-sizing: border-box;
       color: #fff;
       font-size: 14px;
-      height: 21px;
       left: 0;
       line-height: 21px;
       overflow: hidden;
@@ -282,7 +274,7 @@
 
         .nova-ogv-ending-recommend-cover::after {
           background: rgba(0, 0, 0, 0.3);
-          border-radius: 4px;
+          border-radius: 2px;
           bottom: 0;
           content: "";
           left: 0;
@@ -300,9 +292,7 @@
       border-radius: 4px;
       color: #fff;
       cursor: pointer;
-      font-family: "PingFang SC", sans-serif;
       font-size: 12px;
-      font-weight: 400;
       height: 22px;
       left: 8px;
       line-height: 22px;

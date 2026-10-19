@@ -867,3 +867,27 @@
     text-align: center;
   }
 }
+
+/* 分享面板：整体收窄，二维码向内容区靠拢（避免偏右） */
+.nova-player-container {
+  .nova-player-video-share-content {
+    width: 520px !important;
+  }
+
+  .nova-player-video-share-left {
+    width: 310px !important;
+  }
+
+  .nova-player-video-share-link-content {
+    width: 304px !important;
+  }
+
+  .nova-player-video-share-link-input {
+    margin-right: 12px;
+    width: 200px !important;
+  }
+
+  .nova-player-video-share-link-copy {
+    width: 64px !important;
+  }
+}

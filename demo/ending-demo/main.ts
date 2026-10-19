@@ -30,10 +30,15 @@ const VIDEO =
   "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
 /** 生成 SVG data URI 图片（封面 / 推荐图） */
-const svgPic = (index: number, width = 400, height = 225): string =>
+const svgPic = (
+  index: number,
+  width = 400,
+  height = 225,
+  label?: string,
+): string =>
   "data:image/svg+xml;charset=utf-8," +
   encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="hsl(${(index * 40) % 360},55%,38%)"/><text x="16" y="${height / 2}" fill="#fff" font-size="${Math.round(width / 14)}">推荐 ${index + 1}</text></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" fill="hsl(${(index * 40) % 360},55%,38%)"/><text x="16" y="${height / 2}" fill="#fff" font-size="${Math.round(width / 14)}">${label ?? `推荐 ${index + 1}`}</text></svg>`,
   );
 
 /** 标准片尾推荐数据 */
@@ -48,9 +53,16 @@ const standardRelated: EndingRelatedItem[] = Array.from(
 );
 
 /** OGV / 外链推荐数据 */
-const ogvRelated: EndingRelatedItem[] = Array.from({ length: 10 }, (_, i) => ({
-  title: `西游记相关推荐 ${i + 1}：一段剧集标题`,
-  pic: svgPic(i, 448, 592),
+const OGV_TITLES = [
+  "西游记续集",
+  "民工",
+  "吴承恩与西游记",
+  "魔幻手机",
+  "朱元璋惩贪",
+];
+const ogvRelated: EndingRelatedItem[] = OGV_TITLES.map((title, i) => ({
+  title,
+  pic: svgPic(i, 448, 592, title),
   url: "#",
 }));
 
@@ -158,7 +170,7 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
         endingStyle: "ogv",
         ogv: {
           title: "西游记",
-          cover: svgPic(3, 136, 136),
+          cover: svgPic(3, 136, 136, "西游记"),
           followed: false,
           related: ogvRelated,
         },
