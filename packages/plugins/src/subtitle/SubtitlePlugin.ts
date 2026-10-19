@@ -8,13 +8,13 @@
  * 使用二分查找进行字幕时间定位
  * 集成 @/utils/subtitle 解析器
  *
- * 双模式架构（docs/subtitle-dual-mode-design.md）：
+ * 双模式架构：
  * - 模式 A（localAi）：本地 AI 实时识别——采集链 → VAD → AsrEngine →
  *   onCue 推送 → 增量有序 append（负数 id）→ 现有 RAF 渲染管线
  * - 模式 B（remoteProvider / 旧 aiBackend）：服务端返回——拉取型 Provider，
  *   支持多轨与增量窗口；旧 aiBackend 自动映射为单轨 Provider
  * - 两种模式统一归一到 SubtitleItem[]，渲染层（RAF + 二分查找）零改动
- * - 降级链：模式 A 失败自动降级模式 B（文档 6.5），
+ * - 降级链：模式 A 失败自动降级模式 B，
  *   降级原因经 SUBTITLE_AI_STATUS 广播
  *
  * 使用方式：
@@ -70,6 +70,9 @@ import {
   createLegacyRemoteProvider,
   LEGACY_REMOTE_TRACK_ID,
 } from "./remoteProvider";
+import { injectPluginStyle } from "../utils/injectStyle";
+// 字幕插件样式以字符串形式内联导入（Vite `?inline`），install 时运行时注入
+import subtitleCss from "./subtitle.scss?inline";
 
 /** 字幕插件日志（仅 error 级别的加载失败诊断） */
 const logger = createLogger("SubtitlePlugin");
@@ -249,6 +252,58 @@ export interface SubtitlePluginAPI extends Plugin {
 }
 
 // ============================================
+// AI 标识图标（DOM 结构参考 B 站 bili-subtitle-x 同名实现）
+// ============================================
+
+/**
+ * 创建 AI 字幕标识图标（8×8 "AI" 字样 SVG）
+ * 结构：div.nova-subtitle-x-subtitle-panel-icon >
+ *       span.nova-subtitle-x-common-svg-icon > svg
+ * 纯 createElementNS 构建（不用 innerHTML），定位样式见 subtitlelayer.scss
+ */
+function createSubtitleAiIcon(): HTMLDivElement {
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  const icon = document.createElement("div");
+  icon.className = "nova-subtitle-x-subtitle-panel-icon";
+
+  const iconSpan = document.createElement("span");
+  iconSpan.className = "nova-subtitle-x-common-svg-icon";
+
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("xmlns", SVG_NS);
+  svg.setAttribute("width", "8");
+  svg.setAttribute("height", "8");
+  svg.setAttribute("fill", "none");
+
+  const group = document.createElementNS(SVG_NS, "g");
+  group.setAttribute("fill", "#fff");
+  group.setAttribute("opacity", ".3");
+
+  // "A" 字形路径
+  const pathA = document.createElementNS(SVG_NS, "path");
+  pathA.setAttribute(
+    "d",
+    "m3.564 1.838 1.759 4.397a.22.22 0 0 1-.205.302h-.474a.22.22 0 0 1-.204-.138l-.472-1.181H2.169l-.472 1.18a.22.22 0 0 1-.204.139H1.02a.22.22 0 0 1-.204-.302l1.759-4.397a.22.22 0 0 1 .204-.138h.581a.22.22 0 0 1 .204.138m-.495 1.13-.548 1.37h1.095l-.547-1.37",
+  );
+
+  // "I" 字形竖条
+  const rectI = document.createElementNS(SVG_NS, "rect");
+  rectI.setAttribute("width", ".923");
+  rectI.setAttribute("height", "4.749");
+  rectI.setAttribute("x", "6.077");
+  rectI.setAttribute("y", "1.7");
+  rectI.setAttribute("rx", ".273");
+
+  group.appendChild(pathA);
+  group.appendChild(rectI);
+  svg.appendChild(group);
+  iconSpan.appendChild(svg);
+  icon.appendChild(iconSpan);
+  return icon;
+}
+
+// ============================================
 // 字幕插件类
 // ============================================
 
@@ -262,6 +317,8 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   private subtitleWrap: HTMLElement | null = null;
   /** 字幕文本元素（拖拽手柄，注入 panel 内） */
   private subtitleEl: HTMLDivElement | null = null;
+  /** AI 标识图标元素（AI 生成字幕时挂载到字幕框右上角，长期复用） */
+  private aiIconEl: HTMLDivElement | null = null;
   /** 拖拽位置（panel 左上角 px，null = 未拖拽走档位基础位置） */
   private dragLeft: number | null = null;
   private dragTop: number | null = null;
@@ -389,7 +446,9 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
 
   install(player: VideoPlayer): void {
     if (!isBrowser()) return;
-
+    // 运行时注入字幕插件样式：样式随插件分发，与播放器样式包彻底解耦
+    // injectPluginStyle 内部自带 SSR 守卫（无 document 时跳过）与幂等保护
+    injectPluginStyle("subtitle", subtitleCss);
     const events: PlayerEventBus = player.events;
     // 持有总线引用，供 AI 字幕加载流程向上广播 loading/ready/error
     this.eventBus = events;
@@ -404,18 +463,6 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
         this.subtitleWrap =
           data.container.querySelector(".nova-subtitle-x-subtitle-panel") ??
           null;
-
-        // 在容器内创建字幕 DOM 元素（拖拽手柄：样式由 subtitlelayer.scss
-        // 的 .subtitle-text 规则提供——fit-content 居中 + pointer-events:auto）
-        if (this.subtitleWrap) {
-          this.subtitleEl = document.createElement("div");
-          this.subtitleEl.className = "subtitle-text";
-          this.subtitleWrap.appendChild(this.subtitleEl);
-          this.applyStyles();
-          // 定位体系初始化：档位属性 + 偏移变量（控制栏抬升由 CSS 派生）
-          this.applyPosition();
-          this.bindDragHandlers();
-        }
       }
 
       // 加载默认字幕
@@ -509,6 +556,8 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
       this.subtitleWrap.removeChild(this.subtitleEl);
     }
     this.subtitleEl = null;
+    // AI 图标随字幕元素销毁，清引用防悬挂
+    this.aiIconEl = null;
 
     this.dragLeft = null;
     this.dragTop = null;
@@ -631,19 +680,161 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
 
   // ==================== 字幕更新 ====================
 
+  /** 当前是否有渲染内容（final/partial 命中），与开关合成最终可见性 */
+  private hasRenderedContent = false;
+
+  /**
+   * 统一可见性同步（唯一的 opacity / pointer-events 写入点）
+   *
+   * 显示条件 = 字幕开关开启 && 当前有渲染内容
+   * - 用 opacity 驱动而非 display:none：subtitle-fade 渐显动画基于
+   *   opacity keyframes，display:none 会瞬间移出渲染流打断过渡，
+   *   且与字幕设置体系（字号/背景/淡入淡出）相互干扰，禁止散落写入
+   * - opacity:0 时空框（背景+padding）整体完全透明，不形成黑点；
+   *   pointer-events:none 确保透明时不拦截鼠标（拖拽手柄随隐藏失效）
+   */
+  private syncVisibility(): void {
+    if (!this.subtitleEl) return;
+    const show = this.isVisible && this.hasRenderedContent;
+    this.subtitleEl.style.opacity = show ? "1" : "0";
+    this.subtitleEl.style.pointerEvents = show ? "" : "none";
+  }
+
+  /**
+   * 清空已渲染内容并同步为无内容隐藏态
+   * （关闭字幕 / 无字幕源 / 当前时间无命中共用）
+   */
+  private clearRenderedContent(): void {
+    this.hasRenderedContent = false;
+    // 重置渲染 key：开关重新打开后同一时间点的条目需要重新渲染
+    // （内容已清空，若 key 不重置会 early return 导致内容丢失）
+    this.lastRenderedKey = "";
+    if (this.subtitleEl) {
+      this.clearSubtitleChildren();
+      this.syncVisibility();
+    }
+  }
+
+  /**
+   * 清空字幕元素全部子节点（纯 DOM 移除，不用 innerHTML——
+   * 避免字符串解析的内存抖动与意外 HTML 注入）
+   */
+  private clearSubtitleChildren(): void {
+    const el = this.subtitleEl;
+    if (!el) return;
+    while (el.firstChild) {
+      el.removeChild(el.firstChild);
+    }
+  }
+
+  /**
+   * 追加带换行标记的文本：把 text 按 <br> 标记拆段，
+   * 段间插入真实 <br> 元素（数据层约定 <br> 字面量表示换行，
+   * 渲染层转 DOM，禁止 innerHTML）
+   */
+  private appendMultilineText(parent: HTMLElement, text: string): void {
+    const lines = text.split("<br>");
+    lines.forEach((line, index): void => {
+      if (index > 0) {
+        parent.appendChild(document.createElement("br"));
+      }
+      if (line !== "") {
+        parent.appendChild(document.createTextNode(line));
+      }
+    });
+  }
+
+  /**
+   * 渲染字幕内容（纯 DOM API：textContent 写文本、createElement 建结构，
+   * 视觉样式全部由 subtitlelayer.scss 按类名提供，不写内联样式）
+   * - 主行：文本节点（text 内 <br> 标记转真实换行）
+   * - 翻译行：<br> + 译文 span（.subtitle-translation 次级样式）
+   * - partial：灰显 span（.subtitle-partial，本地识别中间结果）
+   * @param main - 主行文本
+   * @param opts.translation - 译文行文本（双语拼装，可空）
+   * @param opts.partial - 是否灰显 partial 中间结果
+   */
+  private renderSubtitleContent(
+    main: string,
+    opts: { translation?: string | null; partial?: boolean } = {},
+  ): void {
+    const el = this.subtitleEl;
+    if (!el) return;
+    this.clearSubtitleChildren();
+
+    if (opts.partial) {
+      const span = document.createElement("span");
+      span.className = SUBTITLE_PARTIAL_CLASS;
+      this.appendMultilineText(span, main);
+      el.appendChild(span);
+      return;
+    }
+
+    this.appendMultilineText(el, main);
+    if (opts.translation) {
+      el.appendChild(document.createElement("br"));
+      const span = document.createElement("span");
+      span.className = SUBTITLE_TRANSLATION_CLASS;
+      this.appendMultilineText(span, opts.translation);
+      el.appendChild(span);
+    }
+  }
+
+  /**
+   * 当前激活轨道是否为 AI 生成字幕
+   * - local-ai：本地实时识别轨（partial 亦来自该链路）
+   * - 旧 aiBackend 单轨（LEGACY_REMOTE_TRACK_ID）：服务端 AI 字幕
+   * - 文件源 / 普通服务端轨：非 AI
+   */
+  private isAiSubtitleActive(): boolean {
+    if (this.activeTrackId === LOCAL_AI_TRACK_ID) return true;
+    return this.activeTrackId === `remote:${LEGACY_REMOTE_TRACK_ID}`;
+  }
+
+  /**
+   * 同步 AI 标识图标：AI 字幕挂载到字幕框右上角，非 AI 轨道移除
+   * （图标元素创建一次长期复用，仅做挂载/卸载切换，随内容渲染调用）
+   */
+  private syncAiIcon(): void {
+    const el = this.subtitleEl;
+    if (!el || !this.aiIconEl) return;
+    // partial 灰显只来自本地 AI 识别链路，同样视为 AI 字幕
+    const wantIcon = this.isAiSubtitleActive() || this.partialCue !== null;
+    const mounted = this.aiIconEl.parentElement === el;
+    if (wantIcon && !mounted) {
+      el.appendChild(this.aiIconEl);
+    } else if (!wantIcon && mounted) {
+      el.removeChild(this.aiIconEl);
+    }
+  }
+
+  /**
+   * 懒创建字幕文本元素：首次真正有字幕内容显示时才创建 DOM
+   * - 未开启字幕 → 从不创建（屏幕上不存在 subtitle-text 元素）
+   * - 开启且有内容 → 创建 + 应用样式/定位/拖拽手柄
+   * - 关闭 → 透明隐藏（保留 DOM 与全部用户设置）；再次开启有内容 → 恢复
+   */
+  private ensureSubtitleEl(): void {
+    if (this.subtitleEl || !this.subtitleWrap) return;
+    this.subtitleEl = document.createElement("div");
+    this.subtitleEl.className = "subtitle-text";
+    this.subtitleWrap.appendChild(this.subtitleEl);
+    // AI 标识图标随之创建（是否挂载由 syncAiIcon 按轨道决定）
+    this.aiIconEl = createSubtitleAiIcon();
+    this.applyStyles();
+    this.applyPosition();
+    this.bindDragHandlers();
+  }
+
   /**
    * 更新字幕显示（由 RAF 驱动）
    * 渲染优先级：final 条目 > partial 灰显（被 final 覆盖）> 清空；
    * 翻译轨启用时在 final 条目下方叠加译文行（双语拼装）
    */
   private updateSubtitle(): void {
-    if (!this.subtitleEl) return;
-
+    // 关闭 / 无字幕源 / 无视频：无内容态（元素未创建时无需处理）
     if (!this.isVisible || !this.currentSubtitle || !this.video) {
-      if (this.subtitleEl.innerHTML !== "") {
-        this.subtitleEl.innerHTML = "";
-        this.lastRenderedKey = "";
-      }
+      this.clearRenderedContent();
       return;
     }
 
@@ -684,24 +875,35 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     if (renderKey === this.lastRenderedKey) return;
     this.lastRenderedKey = renderKey;
 
+    // 无命中内容：清空并隐藏（空框透明化，杜绝黑点）
+    if (renderKey === "") {
+      this.clearRenderedContent();
+      return;
+    }
+
+    // 有内容：懒创建（首次）+ 同步可见性（显示）
+    this.hasRenderedContent = true;
+    this.ensureSubtitleEl();
+    if (!this.subtitleEl) return;
+    this.syncVisibility();
+
     // 淡入淡出：内容变化时重触发渐显动画（移除→强制重排→回加）
-    if (this.config.fade && renderKey !== "") {
+    if (this.config.fade) {
       this.subtitleEl.classList.remove("subtitle-fade");
       void this.subtitleEl.offsetWidth;
       this.subtitleEl.classList.add("subtitle-fade");
     }
 
     if (activeItem !== null) {
-      this.subtitleEl.innerHTML =
-        translationItem !== null
-          ? `${activeItem.text}<br><span class="${SUBTITLE_TRANSLATION_CLASS}" style="opacity:.8;font-size:.85em">${translationItem.text}</span>`
-          : activeItem.text;
+      this.renderSubtitleContent(activeItem.text, {
+        translation: translationItem?.text ?? null,
+      });
     } else if (partialActive && partial !== null) {
       // 临时灰显：文本仍在变动，被后续 finalCues 覆盖
-      this.subtitleEl.innerHTML = `<span class="${SUBTITLE_PARTIAL_CLASS}" style="opacity:.55">${partial.text}</span>`;
-    } else {
-      this.subtitleEl.innerHTML = "";
+      this.renderSubtitleContent(partial.text, { partial: true });
     }
+    // AI 标识图标按轨道来源挂载/移除（字幕框右上角）
+    this.syncAiIcon();
   }
 
   // ==================== 样式管理 ====================
@@ -727,7 +929,9 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
         ? this.config.backgroundColor
         : `rgba(0, 0, 0, ${this.config.backgroundOpacity})`;
     this.subtitleEl.style.textShadow = `0 0 ${this.config.strokeWidth}px ${this.config.strokeColor}`;
-    this.subtitleEl.style.opacity = this.isVisible ? "1" : "0";
+    // 可见性统一走 syncVisibility（样式设置变更不改变可见性，
+    // 但需覆盖懒创建初始时机——元素刚创建时同步一次透明/显示态）
+    this.syncVisibility();
     // 淡入淡出：字幕切换时渐显（动画重触发在 updateSubtitle，keyframes 在 scss）
     if (this.config.fade) {
       this.subtitleEl.classList.add("subtitle-fade");
@@ -1188,7 +1392,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
 
   /**
    * 启动本地实时识别（幂等；模型懒加载，进度经 SUBTITLE_AI_STATUS 广播）
-   * 失败（无引擎/环境不支持/采集异常）自动降级模式 B（设计文档 6.5）
+   * 失败（无引擎/环境不支持/采集异常）自动降级模式 B
    */
   async startLocalAi(lang?: string): Promise<void> {
     if (!isBrowser()) return;
@@ -1375,8 +1579,7 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   }
 
   /**
-   * 降级链（设计文档 6.5）：
-   * 模式 A 不可用/失败 → 广播 error → 尝试模式 B（remoteProvider/aiBackend）
+   * 降级链：模式 A 不可用/失败 → 广播 error → 尝试模式 B（remoteProvider/aiBackend）
    * → 模式 B 也未配置 → 维持文件源/无字幕 + warning
    */
   private async fallbackToRemote(reason: string): Promise<void> {
@@ -1445,30 +1648,21 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
     this.currentIndex = -1;
     this.activeTrackId = null;
     this.lastRenderedKey = "";
-    if (this.subtitleEl) {
-      this.subtitleEl.innerHTML = "";
-    }
+    this.clearSubtitleChildren();
   }
 
   /**
-   * 显示字幕
+   * 显示字幕（内容有无仍由 RAF 循环决定，无内容时保持透明）
    */
   show(): void {
-    this.isVisible = true;
-    if (this.subtitleEl) {
-      this.subtitleEl.style.opacity = "1";
-    }
+    this.setVisible(true);
   }
 
   /**
-   * 隐藏字幕
+   * 隐藏字幕（透明化并清空内容，DOM 与用户设置保留）
    */
   hide(): void {
-    this.isVisible = false;
-    if (this.subtitleEl) {
-      this.subtitleEl.style.opacity = "0";
-      this.subtitleEl.innerHTML = "";
-    }
+    this.setVisible(false);
   }
 
   /**
@@ -1575,8 +1769,12 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
    */
   setVisible(visible: boolean): void {
     this.isVisible = visible;
-    if (this.subtitleEl) {
-      this.subtitleEl.style.opacity = visible ? "1" : "0";
+    if (!visible) {
+      // 关闭：清空已渲染内容（下次开启按当前时间重新渲染）
+      this.clearRenderedContent();
+    } else {
+      // 开启：显示与否由 RAF 循环按「有内容」决定，此处仅同步一次
+      this.syncVisibility();
     }
   }
 

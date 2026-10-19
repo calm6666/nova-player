@@ -1,0 +1,129 @@
+// ── 控制栏抬升（纯 CSS 派生，仅底部档）──
+// 控制栏可见时：字幕上抬避开控制栏
+// 非全屏控制栏（nova-player-control-bottom）高度 45px，抬升 50px
+.nova-player-container[data-ctrl-hidden="false"] {
+  .nova-player-subtitle-wrap .nova-subtitle-x-subtitle-panel[data-position="bottom"] {
+    bottom: calc(var(--subtitle-offset, 12px) + 50px);
+  }
+}
+
+// 全屏 / 网页全屏：控制栏更高（bottom 45px + margin 20px + 上方进度条等
+// ≈ 140px 栈高），抬升量随之加大
+.nova-player-container[data-screen="full"][data-ctrl-hidden="false"],
+.nova-player-container[data-screen="web"][data-ctrl-hidden="false"] {
+  .nova-player-subtitle-wrap .nova-subtitle-x-subtitle-panel[data-position="bottom"] {
+    bottom: calc(var(--subtitle-offset, 12px) + 140px);
+  }
+}
+
+// 字幕文本元素（插件注入，类名 .subtitle-text）：内容自适应宽度，
+// 贴 panel 基准线定位；pointer-events:auto 作为拖拽手柄
+// （仅字幕文本小块区域可拖，不挡视频点击）
+// 十字（移动）光标 = 可拖动提示，B 站同款交互
+.nova-subtitle-x-subtitle-panel {
+  .subtitle-text {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 90%;
+    pointer-events: auto;
+    cursor: move;
+    text-align: center;
+    user-select: none;
+    white-space: pre-wrap;
+    // 背景内衬：半透明黑底（不透明度由插件按面板设置写入）配圆角
+    // 内边距用 em 单位随字号等比缩放（24px 字号 ≈ 上下 7px / 左右 20px），
+    // 文字与框边缘保留呼吸空间，避免文字紧贴边框
+    padding: 0.3em 0.6em;
+    border-radius: 4px;
+    // 描边阴影保证在浅色画面上可读（描边宽度由插件写入）
+    text-shadow: 0 0 2px #000000;
+
+    // AI 字幕标识图标（字幕框右上角，8×8 "AI" 字样 SVG，B 站同款交互）
+    // 由 SubtitlePlugin 在 AI 生成字幕（本地实时识别 / 服务端 AI 轨）时挂载
+    .nova-subtitle-x-subtitle-panel-icon {
+      position: absolute;
+      top: 0;
+      right: 0;
+      // 挂角：向右上偏移一半，紧贴框右上角（B 站同款视觉）
+      transform: translate(40%, -40%);
+      line-height: 0;
+      pointer-events: none;
+    }
+
+    // 翻译行（双语拼装：原文 + 译文次级样式）
+    .subtitle-translation {
+      opacity: 0.8;
+      font-size: 0.85em;
+    }
+
+    // 本地识别 partial 灰显（中间结果，会被 final 覆盖）
+    .subtitle-partial {
+      opacity: 0.55;
+    }
+  }
+
+  // 淡入淡出：字幕内容切换时渐显（插件在内容变化时重触发）
+  .subtitle-fade {
+    animation: nova-subtitle-fade-in 0.3s ease;
+  }
+}
+
+// 水平对齐（panel data-align 派生；拖拽 inline 定位优先级更高）
+.nova-subtitle-x-subtitle-panel[data-align="-1"] {
+  .subtitle-text {
+    left: 4%;
+    transform: none;
+  }
+}
+
+.nova-subtitle-x-subtitle-panel[data-align="1"] {
+  .subtitle-text {
+    left: auto;
+    right: 4%;
+    transform: none;
+  }
+}
+
+// 顶部档：文本贴线下方（文字顶边距容器顶 20px）
+.nova-subtitle-x-subtitle-panel[data-position="top"] {
+  .subtitle-text {
+    top: 0;
+    bottom: auto;
+  }
+}
+
+// 居中档：文本垂直居中穿线
+.nova-subtitle-x-subtitle-panel[data-position="middle"] {
+  .subtitle-text {
+    top: 0;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+}
+
+// 居中档 × 左右对齐组合（覆盖穿线的水平位移）
+.nova-subtitle-x-subtitle-panel[data-position="middle"][data-align="-1"] {
+  .subtitle-text {
+    transform: translateY(-50%);
+  }
+}
+
+.nova-subtitle-x-subtitle-panel[data-position="middle"][data-align="1"] {
+  .subtitle-text {
+    transform: translateY(-50%);
+  }
+}
+
+
+@keyframes nova-subtitle-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

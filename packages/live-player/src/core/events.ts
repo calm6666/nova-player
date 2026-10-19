@@ -13,6 +13,7 @@ export const LIVE_PLAYER_EVENTS = {
   linecandidates: 'nova-live-player:linecandidates',
   codecchange: 'nova-live-player:codecchange',
   screenchange: 'nova-live-player:screenchange',
+  minichange: 'nova-live-player:minichange',
   danmakuvisible: 'nova-live-player:danmakuvisible',
   danmakusetting: 'nova-live-player:danmakusetting',
   danmakusent: 'nova-live-player:danmakusent',
@@ -40,6 +41,7 @@ export interface LivePlayerEventDetailMap {
   linecandidates: { candidates: ReadonlyArray<{ line: string; label: string }>; current: string };
   codecchange: { codec: string; label: string };
   screenchange: { mode: 'normal' | 'webscreen' | 'fullscreen' };
+  minichange: { mini: boolean };
   danmakuvisible: { visible: boolean };
   danmakusetting: { setting: Record<string, unknown> };
   danmakusent: { text: string };

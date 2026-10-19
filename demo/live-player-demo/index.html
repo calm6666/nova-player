@@ -23,6 +23,7 @@
         <button id="btn-mute" class="demo-button" type="button">静音</button>
         <button id="btn-volume" class="demo-button" type="button">音量</button>
         <button id="btn-web-full" class="demo-button" type="button">网页全屏</button>
+        <button id="btn-mini" class="demo-button" type="button">小窗</button>
         <button id="btn-full" class="demo-button" type="button">全屏</button>
         <button id="btn-quality" class="demo-button" type="button">切清晰度</button>
         <button id="btn-menu" class="demo-button" type="button">开右键菜单</button>
@@ -38,6 +39,11 @@
         <button id="btn-clear-log" class="demo-button" type="button">清空</button>
       </div>
       <ul id="log-list" class="demo-log-list"></ul>
+    </section>
+
+    <!-- 占位高度：把播放器滚出视口即可验证小窗自动弹出 / 滚回自动退出。 -->
+    <section class="demo-spacer">
+      <p class="demo-spacer-tip">向下滚动到底部：播放器完全离开视口时会自动收进右下角小窗，滚回顶部自动还原。</p>
     </section>
 
     <script type="module" src="./main.ts"></script>

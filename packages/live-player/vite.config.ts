@@ -1,4 +1,4 @@
-﻿import { defineConfig } from 'vite';
+import { defineConfig } from 'vite';
 import path from 'node:path';
 import dts from 'vite-plugin-dts';
 import { luminaCompile } from '../../plugins/vite-plugin-lumina-compile';
@@ -17,6 +17,9 @@ export default defineConfig({
       outDir: 'dist',
       insertTypesEntry: true,
       rollupTypes: false,
+      // 声明文件生成只做 emit：类型检查由 `tsc --noEmit -p tsconfig.json` 负责。
+      // 不跳过诊断时，插件宿主引入的点播播放器类型图谱会撑爆 dts worker 的堆。
+      skipDiagnostics: true,
       logLevel: 'silent',
     }),
   ],

@@ -310,6 +310,32 @@
   line-height: 16px;
 }
 
+.nova-live-player-dm-setting-color-block {
+  padding: 4px 20px 0;
+
+  .nova-live-player-dm-setting-color-list {
+    display: flex;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .nova-live-player-dm-setting-color-item {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    cursor: pointer;
+    outline: none;
+
+    &.is-selected {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+    }
+  }
+}
+
 .nova-live-player-dm-setting-font-control {
   display: flex;
   align-items: center;

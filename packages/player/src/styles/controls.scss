@@ -453,17 +453,28 @@
     .nova-player-ctrl-time {
       .nova-player-ctrl-time-seek {
         background: hsla(0, 0%, 100%, 0.2);
-        border: 1px solid transparent;
+        border: 1px solid hsla(0, 0%, 100%, 0.25);
+        border-radius: 4px;
+        box-sizing: border-box;
         color: inherit;
         font-size: 12px;
-        height: 20px;
+        // 适当放大输入框：加宽加高 + 左右留出呼吸空间，避免文字紧贴边框
+        height: 24px;
         left: 6px;
-        line-height: 20px;
-        padding: 0 5px;
+        line-height: 22px;
+        padding: 0 10px;
         position: absolute;
         text-align: center;
-        top: 0;
-        width: 60px;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: border-color 0.2s, background-color 0.2s;
+        width: 88px;
+
+        &:focus {
+          background: hsla(0, 0%, 100%, 0.3);
+          border-color: hsla(0, 0%, 100%, 0.6);
+          outline: none;
+        }
       }
       .nova-player-ctrl-time-label {
         cursor: pointer;

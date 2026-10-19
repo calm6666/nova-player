@@ -138,7 +138,7 @@ export const defaultPersistentState: PlayerPersistentState = {
   pbpPin: 0,            // 默认不固定
   pbpTheme: 'b',        // 默认主题 b
   pbpVersion: '3.6.2',  // 版本号
-  pbpState: 0,          // 默认不渲染高能进度条（对照当前播放器运行时默认）
+  pbpState: 1,          // 默认渲染高能进度条（与运行时默认一致；取消勾选落库 0）
   pbpStateClear: 1,     // 默认清晰模式
 
   // 通用用户偏好

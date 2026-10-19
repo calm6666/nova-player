@@ -166,14 +166,13 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     /** 底部影子进度条 API（由 ShadowProgressArea 挂载后填充） */
     let shadowApi: ShadowProgressAreaApi | null = null;
 
-    /** 高能进度条常驻态：存在多个分段即常驻，之后由 `.nova-player-pbp-pin` 图钉切换 */
-    let permanent = (config.progressSegments?.length ?? 0) > 1;
-
-    // 常驻态是全局状态，写入运行时状态（PbpControls / 影子进度条 / 设置面板订阅同一份）
-    stateMgr?.set(PlayerStateKeyEnum.PBP_PERMANENT, permanent);
-
-    // 渲染态初始化：默认渲染（设置面板复选框取消勾选后写 false）
-    stateMgr?.set(PlayerStateKeyEnum.PBP_RENDERED, true);
+    /** 高能进度条常驻态初值：读运行时状态（由 VideoPlayer 构造期写入——
+     *  持久化恢复或「多分段即常驻」规则兜底），此处禁止再无条件 set：
+     *  setup 无条件覆盖会把构造期恢复的持久化值抹掉，并经落库订阅
+     *  把覆盖值写回 store，导致用户设置每次刷新被重置 */
+    let permanent = Boolean(
+      stateMgr?.get(PlayerStateKeyEnum.PBP_PERMANENT),
+    );
 
     /**
      * 响应式信号：高能进度条渲染态

@@ -48,7 +48,7 @@ import { createDashPlugin } from "@/lumina/plugins/dash";
 import { DanmakuPlugin } from "@/lumina/plugins/danmaku";
 import type { DanmakuPluginAPI } from "@/lumina/plugins/danmaku";
 import { InteractionPlugin } from "@/lumina/plugins/interaction";
-import { SubtitlePlugin, MockAsrEngine } from "@/lumina/plugins/subtitle";
+import { SubtitlePlugin } from "@/lumina/plugins/subtitle";
 import type { SubtitlePluginAPI } from "@/lumina/plugins/subtitle";
 import { AudioEffectPlugin } from "@/lumina/plugins/audioeffect";
 import type {
@@ -499,9 +499,9 @@ function refreshSegPositionOptions(): void {
 
 /**
  * ============================================
- * 字幕双模式（设计文档 docs/subtitle-dual-mode-design.md）
+ * 字幕双模式
  * ============================================
- * 模式 A：本地 AI 实时识别（MockAsrEngine 跑通「采集→VAD→ASR→字幕」全链路）
+ * 模式 A：本地 AI 实时识别（sherpa-onnx 真实流式引擎，Worker 内加载模型）
  * 模式 B：服务端字幕轨（mock-server 多轨 + 增量拉取）
  */
 
@@ -1472,13 +1472,15 @@ function collectPlugins(source?: PlayerSource): Plugin[] {
         },
       },
     }),
-    // 字幕插件：双模式演示（设计文档 docs/subtitle-dual-mode-design.md 第八节）
-    // - 模式 A（localAi）：MockAsrEngine 跑通「采集→VAD→ASR→字幕」全链路，
-    //   播放中实时产出灰显 partial 与 final 字幕，菜单出现「实时识别」轨
+    // 字幕插件：双模式演示
+    // - 模式 A（localAi）：sherpa-onnx 真实流式引擎跑通「采集→VAD→ASR→字幕」
+    //   全链路（重计算全在 ASR 专用 Worker，模型加载零主线程阻塞），
+    //   播放中实时产出灰显 partial 与 final 字幕，菜单出现「实时识别」轨；
+    //   资源位于 demo/public/asr（缺省 /asr/wasm、/asr/models/zh-14m）
     // - 模式 B（remoteProvider）：mock-server 提供多轨（原文 + 翻译）与增量拉取
     SubtitlePlugin({
       localAi: {
-        engines: { zh: new MockAsrEngine(), en: new MockAsrEngine() },
+        engineKind: "sherpa",
         defaultLang: "zh",
       },
       remoteProvider: {
@@ -2334,7 +2336,7 @@ wireDemoButton("btn-sub-ai", () => {
   );
 });
 
-// 启动本地实时识别（MockAsrEngine 全链路：采集→VAD→ASR→字幕）
+// 启动本地实时识别（sherpa-onnx 真实引擎全链路：采集→VAD→ASR→字幕）
 wireDemoButton("btn-sub-localai-start", () => {
   const api = getSubtitleApi();
   if (!api) return;

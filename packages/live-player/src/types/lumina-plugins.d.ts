@@ -37,6 +37,18 @@ interface LivePlayerStreamStats {
 
 /** 流媒体插件最小接口（HLS / FLV 共用）。 */
 interface LivePlayerStreamPlugin {
+  /** 插件名称（与点播播放器 Plugin 接口对齐）。 */
+  readonly name: string;
+  /** 插件版本号。 */
+  readonly version?: string;
+  /** 插件描述。 */
+  readonly description?: string;
+  /** 安装插件（真实实现接收点播播放器实例，此处只要求可安装）。 */
+  install(player: unknown): void;
+  /** 卸载插件。 */
+  uninstall?(player: unknown): void;
+  /** 插件类型（hls / flv / dash）。 */
+  readonly type: string;
   /** 视频元素。 */
   videoElement: HTMLVideoElement | null;
   /** 是否支持当前浏览器。 */
@@ -59,62 +71,10 @@ interface LivePlayerStreamPlugin {
   getStreamEventBus(): { on(type: string, cb: (payload: unknown) => void): () => void };
 }
 
-/** 插件返回的弹幕渲染项（继承 DanmakuItem 字段）。 */
-interface LivePlayerDanmakuRenderItem {
-  /** 渲染 id。 */
-  renderId: string;
-  /** 弹幕文本。 */
-  text: string;
-  /** 发送者 uid。 */
-  uid?: string | number;
-  /** 发送者名称。 */
-  userName?: string;
-  /** 颜色。 */
-  color?: string;
-  /** 所在 DOM 元素。 */
-  element?: HTMLElement;
-}
-
 declare module '@/lumina/plugins/hls' {
   export function createHlsPlugin(config?: Record<string, unknown>): LivePlayerStreamPlugin;
 }
 
 declare module '@/lumina/plugins/flv' {
   export function createFlvPlugin(config?: Record<string, unknown>): LivePlayerStreamPlugin;
-}
-
-declare module '@/lumina/plugins/utils/injectStyle' {
-  export function injectPluginStyle(id: string, css: string): void;
-}
-
-declare module '@/lumina/plugins/utils/danmaku' {
-  export enum RenderMode {
-    DOM = 'dom',
-    CANVAS = 'canvas',
-    AUTO = 'auto',
-  }
-
-  export class DanmakuManager {
-    constructor(options: Record<string, unknown>, events?: Record<string, unknown>);
-    setOnDanmakuHover(
-      callback: (
-        danmaku: LivePlayerDanmakuRenderItem | null,
-        position: { x: number; y: number } | null,
-      ) => void,
-    ): void;
-    play(): void;
-    pause(): void;
-    clear(): void;
-    destroy(): void;
-    loadDanmaku(list: unknown[]): void;
-    sendDanmaku(text: string, options?: Record<string, unknown>): void;
-    setVisible(visible: boolean): void;
-    setOpacity(opacity: number): void;
-    setAreaRatio(ratio: number): void;
-    setFontSizeScale(scale: number): void;
-    setSpeedMultiplier(multiplier: number): void;
-    setDensity(density: number): void;
-    setAutoScale(autoScale: boolean): void;
-    setFilter(filter: Record<string, boolean | undefined>): void;
-  }
 }

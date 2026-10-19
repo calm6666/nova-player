@@ -619,6 +619,15 @@ export class VideoPlayer
         PlayerStateKeyEnum.PBP_PERMANENT,
         persistentState.pbpPin === 1,
       );
+    } else {
+      // 无持久化数据：业务规则兜底初始化——渲染态默认开，
+      // 常驻态按「存在多个分段即常驻」（与 Controls 旧初始化语义一致；
+      // 写入早于落库订阅注册，兜底值不会被误落库）
+      this.state.set(PlayerStateKeyEnum.PBP_RENDERED, true);
+      this.state.set(
+        PlayerStateKeyEnum.PBP_PERMANENT,
+        (this.props.progress?.segments?.length ?? 0) > 1,
+      );
     }
 
     /**
@@ -2198,8 +2207,6 @@ export class VideoPlayer
 
   /**
    * 深合并并立即应用配置差异（不重建播放器、不重建 DOM）
-   *
-   * 应用矩阵见 docs/nova-player-api-design.md §3.2。
    *
    * @param partial - 局部配置
    */

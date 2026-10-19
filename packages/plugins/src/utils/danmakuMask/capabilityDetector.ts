@@ -97,7 +97,10 @@ export class CapabilityDetector {
     else if (wasmSimd) backend = 'wasm';
 
     const estimatedFps = BACKEND_FPS_ESTIMATE[backend];
-    const supported = backend !== 'none' && estimatedFps >= minFps;
+    // GPU-only：CPU（wasm/XNNPACK）推理每帧数百毫秒，即使放在 Worker 也会
+    // 拖垮整页（GPU 进程与解码线程被抢占），无 GPU 时直接判不支持（走 mock）
+    const supported =
+      (backend === 'webgpu' || backend === 'webgl') && estimatedFps >= minFps;
 
     return { webgl2, webgpu, wasmSimd, offscreenCanvas, backend, estimatedFps, supported };
   }

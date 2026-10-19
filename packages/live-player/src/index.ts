@@ -22,8 +22,15 @@ export {
 export { LIVE_PLAYER_EVENTS, dispatchPlayerEvent, onPlayerEvent } from './core/events';
 export type { LivePlayerEventDetailMap, LivePlayerEventName } from './core/events';
 
-export { clearSettings as clearPersistedSettings, loadSettings } from './core/persistence';
-export type { PersistedSettings } from './core/persistence';
+export {
+  MINI_POSITION_KEY,
+  clearMiniPosition,
+  clearSettings as clearPersistedSettings,
+  loadMiniPosition,
+  loadSettings,
+  saveMiniPosition,
+} from './core/persistence';
+export type { PersistedMiniPosition, PersistedSettings } from './core/persistence';
 
 export { LIVE_PLAYER_MESSAGES, getLivePlayerMessages, mergeLivePlayerMessages } from './i18n/locales';
 export { NOVA_LIVE_HOTKEYS } from './core/hotkeys';
@@ -31,6 +38,7 @@ export { detectStreamKind } from './core/stream';
 export type { StreamKind } from './core/stream';
 
 export type {
+  NovaCodecCandidate,
   NovaContextMenuAction,
   NovaContextMenuTarget,
   NovaControlAction,
@@ -39,7 +47,12 @@ export type {
   NovaDanmakuSetting,
   NovaDanmakuStroke,
   NovaErrorContent,
+  NovaLiveDanmakuPlugin,
   NovaLivePlayerOptions,
+  NovaLivePlugin,
+  NovaLivePluginInput,
+  NovaLiveStreamPlugin,
+  NovaLiveStreamQuality,
   NovaLineCandidate,
   NovaPanelName,
   NovaQualityCandidate,

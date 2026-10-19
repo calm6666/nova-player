@@ -38,6 +38,8 @@ export interface PersistedSettings {
   danmakuSpeedSync?: boolean;
   /** 弹幕字体。 */
   danmakuFontFamily?: string;
+  /** 弹幕字色（#RRGGBB）。 */
+  danmakuColor?: string;
   /** 弹幕加粗。 */
   danmakuBold?: boolean;
   /** 弹幕描边类型。 */
@@ -106,6 +108,9 @@ const sanitize = (raw: Partial<PersistedSettings>): PersistedSettings => {
   if (typeof raw.danmakuFontFamily === 'string' && raw.danmakuFontFamily) {
     result.danmakuFontFamily = raw.danmakuFontFamily;
   }
+  if (typeof raw.danmakuColor === 'string' && /^#[0-9a-f]{6}$/i.test(raw.danmakuColor)) {
+    result.danmakuColor = raw.danmakuColor.toUpperCase();
+  }
   if (raw.danmakuBold !== undefined) result.danmakuBold = Boolean(raw.danmakuBold);
   if (
     raw.danmakuFontBorder === 'heavy' ||
@@ -148,11 +153,72 @@ export function saveSettings(patch: PersistedSettings, enabled = true): void {
   }
 }
 
-/** 清空全部已持久化设置。 */
+/** 清空全部已持久化设置（含小窗位置）。 */
 export function clearSettings(): void {
   if (!hasStorage()) return;
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(MINI_POSITION_KEY);
+  } catch {
+    // 忽略存储不可用。
+  }
+}
+
+// ============================================================
+// 小窗位置持久化
+// ============================================================
+
+/**
+ * 小窗位置存储键。
+ *
+ * 与播放设置分开存：小窗位置属于「布局」而不是「观感设置」，
+ * 单独一个键可以避免拖动小窗时反复重写整份设置。
+ */
+export const MINI_POSITION_KEY = 'lumina.live-player.mini-position.v1';
+
+/** 小窗位置（视口坐标，单位 px）。 */
+export interface PersistedMiniPosition {
+  /** 小窗左边缘距视口左边的距离。 */
+  left: number;
+  /** 小窗上边缘距视口顶部的距离。 */
+  top: number;
+}
+
+/** 读取已持久化的小窗位置；不可用或数据非法时返回 null。 */
+export function loadMiniPosition(): PersistedMiniPosition | null {
+  if (!hasStorage()) return null;
+  try {
+    const text = window.localStorage.getItem(MINI_POSITION_KEY);
+    if (!text) return null;
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const left = Number((parsed as Partial<PersistedMiniPosition>).left);
+    const top = Number((parsed as Partial<PersistedMiniPosition>).top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+    return { left: Math.round(left), top: Math.round(top) };
+  } catch {
+    return null;
+  }
+}
+
+/** 写入小窗位置（非法数值直接忽略）。 */
+export function saveMiniPosition(position: PersistedMiniPosition, enabled = true): void {
+  if (!enabled || !hasStorage()) return;
+  const left = Math.round(Number(position.left));
+  const top = Math.round(Number(position.top));
+  if (!Number.isFinite(left) || !Number.isFinite(top)) return;
+  try {
+    window.localStorage.setItem(MINI_POSITION_KEY, JSON.stringify({ left, top }));
+  } catch {
+    // 隐私模式下写入会抛错，这里按「不持久化」处理。
+  }
+}
+
+/** 清空小窗位置。 */
+export function clearMiniPosition(): void {
+  if (!hasStorage()) return;
+  try {
+    window.localStorage.removeItem(MINI_POSITION_KEY);
   } catch {
     // 忽略存储不可用。
   }

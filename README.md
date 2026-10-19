@@ -86,7 +86,7 @@ nova-player/
 │           └── stream/         #   流媒体插件共享类型与枚举
 ├── plugins/vite-plugin-lumina-compile/   # 编译期 h() 改写插件
 ├── demo/  demo-prod/           # SSR + Hydration 演示（含 Express 服务端）
-└── docs/                       # 设计与分析文档
+└── docs/                       # API 参考文档（api.md 播放器 / framework-api.md 框架）
 ```
 
 ### 代码规模
@@ -98,7 +98,7 @@ nova-player/
 | `packages/plugins/src` | 54 | 17,467 |
 | `plugins/vite-plugin-lumina-compile` | 4 | 939 |
 | `types` / `utils` / `error` / `events` / `directives` | 21 | 5,342 |
-| `packages/player/media`（参考媒体工具库） | 6 | 2,102 |
+| `packages/player/media`（参考媒体工具库） | 5 | 2,102 |
 | `packages/player/src/styles`（SCSS） | 25 | 9,113 |
 
 ---

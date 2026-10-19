@@ -1,5 +1,5 @@
 /**
- * 播放器基础布局：宿主、舞台、视频、弹幕组件、加载态、提示、错误、举报、发送条。
+ * 播放器基础布局：宿主、舞台、视频、弹幕组件、加载态、提示、错误、发送条。
  */
 
 nova-live-player {
@@ -85,11 +85,32 @@ nova-live-player-danmaku {
   pointer-events: none;
 }
 
+/**
+ * plugins 弹幕插件容器契约类：插件在挂载时按该类名查找渲染容器。
+ * 只负责铺满弹幕层，具体尺寸 / 裁剪由插件样式接管。
+ */
+.nova-live-player-danmaku-stage {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/**
+ * 弹幕文字外观。
+ *
+ * 不使用 `-webkit-text-stroke`：描边会把文字实际宽度压窄（同一字号下
+ * 弹幕视觉变瘦）。描边统一由多层 `text-shadow` 承担，具体层数由
+ * DanmakuElement 按弹幕设置的描边类型写入 `--nova-live-player-dm-shadow`。
+ * 这里用 !important 覆盖插件条目上按弹幕数据写入的逐条变量，保证直播
+ * 设置面板（字体 / 粗细 / 描边）始终是唯一外观来源。
+ */
 .nova-live-player-danmaku-layer .danmaku-x-dm {
-  font-family: var(--nova-live-player-dm-font, inherit);
-  font-weight: var(--nova-live-player-dm-weight, 600);
-  -webkit-text-stroke: var(--nova-live-player-dm-stroke, 0.8px) #000000;
-  text-shadow: var(--nova-live-player-dm-shadow, none);
+  font-family: var(--nova-live-player-dm-font, inherit) !important;
+  font-weight: var(--nova-live-player-dm-weight, 600) !important;
+  text-shadow: var(--nova-live-player-dm-shadow, none) !important;
 }
 
 .nova-live-player-loading {
@@ -240,118 +261,4 @@ nova-live-player-danmaku {
   color: #ffffff;
   font-size: 13px;
   cursor: pointer;
-}
-
-.nova-live-player-report {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 34;
-  width: 360px;
-  max-width: calc(100% - 48px);
-  padding: 16px 20px 20px;
-  box-sizing: border-box;
-  border-radius: 8px;
-  background-color: #ffffff;
-  color: #18191c;
-  text-align: left;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
-}
-
-.nova-live-player-report-title {
-  margin-bottom: 10px;
-  font-size: 15px;
-  line-height: 22px;
-  font-weight: 600;
-}
-
-.nova-live-player-report-row {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 6px;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.nova-live-player-report-key {
-  flex: 0 0 60px;
-  color: #9499a0;
-}
-
-.nova-live-player-report-value {
-  flex: 1;
-  min-width: 0;
-  color: #61666d;
-  word-break: break-all;
-}
-
-.nova-live-player-report-placeholder {
-  margin: 8px 0 6px;
-  color: #9499a0;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.nova-live-player-report-reasons {
-  display: flex;
-  flex-direction: column;
-  margin: 12px 0;
-}
-
-.nova-live-player-report-reason {
-  height: 30px;
-  margin-bottom: 4px;
-  padding: 0 10px;
-  border: 1px solid #e3e5e7;
-  border-radius: 6px;
-  background-color: #ffffff;
-  color: #61666d;
-  font-size: 12px;
-  line-height: 28px;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #ff6699;
-  }
-
-  &.is-selected {
-    border-color: #ff6699;
-    background-color: rgba(255, 102, 153, 0.08);
-    color: #ff6699;
-  }
-}
-
-.nova-live-player-report-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.nova-live-player-report-cancel {
-  min-width: 64px;
-  height: 28px;
-  margin-right: 8px;
-  border: 1px solid #e3e5e7;
-  border-radius: 6px;
-  background-color: #ffffff;
-  color: #61666d;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.nova-live-player-report-submit {
-  min-width: 64px;
-  height: 28px;
-  border: 0;
-  border-radius: 6px;
-  background-color: #ff6699;
-  color: #ffffff;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.nova-live-player-report-submit:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }

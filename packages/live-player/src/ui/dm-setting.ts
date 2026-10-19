@@ -29,6 +29,18 @@ const FONT_FAMILIES: ReadonlyArray<{ labelKey: string; value: string }> = [
 ];
 
 /** 面板注入参数。*/
+/** 字色候选（与直播发送弹幕常用色一致）。 */
+const COLOR_PRESETS: readonly string[] = [
+  '#FFFFFF',
+  '#FF6699',
+  '#FFD5A2',
+  '#FFE066',
+  '#7ED321',
+  '#00AEEC',
+  '#B57CFF',
+  '#FF5C5C',
+];
+
 export interface DmSettingPanelProps {
   /** 当前设置。*/
   setting: Signal<NovaDanmakuSetting>;
@@ -180,8 +192,7 @@ export function DmSettingPanel(props: DmSettingPanelProps): VNode {
         type: 'button',
         'data-stroke': value,
         onClick: (): void => {
-          props.onPin();
-          props.onChange({ fontBorder: value });
+                    props.onChange({ fontBorder: value });
         },
         ...reactive({
           class: (): string =>
@@ -225,10 +236,36 @@ export function DmSettingPanel(props: DmSettingPanelProps): VNode {
           label: t('livePlayer.dmSetting.bold'),
           checked: computed((): boolean => props.setting.value.bold),
           onChange: (checked): void => {
-            props.onPin();
             props.onChange({ bold: checked });
           },
         })),
+      ),
+    ),
+    h(
+      'div',
+      { class: 'nova-live-player-dm-setting-color-block' },
+      h('div', { class: 'nova-live-player-dm-setting-font-title' }, t('livePlayer.dmSetting.color')),
+      h(
+        'div',
+        { class: 'nova-live-player-dm-setting-color-list' },
+        ...COLOR_PRESETS.map((value) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              'data-color': value,
+              class: [
+                'nova-live-player-dm-setting-color-item',
+                { 'is-selected': props.setting.value.color === value },
+              ],
+              style: { backgroundColor: value },
+              onClick: (): void => {
+                props.onChange({ color: value });
+              },
+            },
+            '',
+          ),
+        ),
       ),
     ),
     h(
@@ -249,8 +286,7 @@ export function DmSettingPanel(props: DmSettingPanelProps): VNode {
         type: 'button',
         class: 'nova-live-player-dm-setting-reset',
         onClick: (): void => {
-          props.onPin();
-          props.onReset();
+                    props.onReset();
         },
       },
       t('livePlayer.common.reset'),
@@ -274,7 +310,7 @@ export function DmSettingPanel(props: DmSettingPanelProps): VNode {
           style: (): Record<string, string> =>
             props.page.value === 0
               ? { width: '320px', height: '300px' }
-              : { width: '300px', height: '232px' },
+              : { width: '300px', height: '286px' },
         }),
       },
       page1,

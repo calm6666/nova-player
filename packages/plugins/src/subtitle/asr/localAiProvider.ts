@@ -5,12 +5,12 @@
  * 由插件在 startLocalAi 时组装：订阅采集流 → VAD 分段 → 引擎识别 →
  * onCue 推送（partial 灰显 / final 落定），实现 LocalAiSubtitleProvider 接口。
  *
- * 职责边界（docs/subtitle-dual-mode-design.md 3.2/4.3/4.7）：
+ * 职责边界：
  * - 引擎 init 由插件在 start 前完成（模型下载/加载状态由插件广播）
  * - Provider 只负责「音频 → 文本」的实时管线与播放器事件联动：
  *   rateChange → VAD 阈值联动；seekEnd → 丢弃在途段与 pending 音频
- * - 低置信 final 直接丢弃（文档 4.3 的「丢弃」选项）；
- *   「历史命中避免重复识别」（4.6）属 P2 优化，暂不实现
+ * - 低置信 final 直接丢弃；
+ *   「历史命中避免重复识别」属 P2 优化，暂不实现
  * - cue 的 id 由插件统一重排（本地轨负数自增），此处填占位 0
  *
  * @module packages/plugins/src/subtitle/asr/localAiProvider

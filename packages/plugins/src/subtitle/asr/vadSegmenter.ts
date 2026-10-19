@@ -3,7 +3,7 @@
  * VAD 语音活动分段器（VadSegmenter）
  * ============================================
  * 轻量无模型 VAD：能量（RMS）判定语音帧，静音 ≥ 400ms 视为段尾，
- * 单段超上限（默认 15s）强制切段（docs/subtitle-dual-mode-design.md 4.3）
+ * 单段超上限（默认 15s）强制切段
  *
  * 状态机：
  *   PCM 块 → 按 10ms 帧计算 RMS → 语音帧/静音帧
@@ -12,7 +12,7 @@
  *     段内静音累计 ≥ silenceMs → 断段（回调 onSegmentEnd）
  *     段长 ≥ maxSegmentSeconds → 强制断段并立即续开新段（长句不断句尾延迟）
  *
- * 倍速联动（4.2 要点 4）：playbackRate > 1.5 时能量阈值加倍，
+ * 倍速联动：playbackRate > 1.5 时能量阈值加倍，
  * 缓解变速变调带来的噪声放大（已知精度折衷，不做音高校正）
  *
  * @module packages/plugins/src/subtitle/asr/vadSegmenter

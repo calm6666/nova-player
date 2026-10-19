@@ -282,23 +282,30 @@ async function handleInit(cfg: SegmentationConfig, cap: CapabilityInfo): Promise
     wasmBinaryPath: wasmBinaryUrl,
   };
 
-  // WebGL2/WebGPU 可用时走 GPU 委托（WebGL），否则回退 CPU（XNNPACK）。
-  // 之前误写死 CPU 导致控制台出现「XNNPACK delegate for CPU」。
-  const delegate: 'CPU' | 'GPU' = cap.backend === 'wasm' ? 'CPU' : 'GPU';
+  // 恒定 GPU 委托（WebGL）：CPU（XNNPACK）推理每帧数百毫秒会把
+  // Worker 拖死并连带页面卡顿，CPU 模式已在能力检测层禁用。
+  const delegate: 'CPU' | 'GPU' = 'GPU';
 
   segmenter = await ImageSegmenter.createFromOptions(fileset, {
     baseOptions: { modelAssetPath: cfg.modelUrl, delegate },
     runningMode: 'VIDEO',
-    outputCategoryMask: false,
-    outputConfidenceMasks: true,
+    // categoryMask（Uint8 单 mask，1 次 GPU→CPU readback）替代
+    // confidenceMasks（selfie_multiclass 6 类 = 6 次 readback，
+    // 每次都是管线同步 stall，是逐帧卡顿的主因）。
+    // 人物 = 类别 ≥ 1（hair/body-skin/face-skin/clothes/others），0 = 背景
+    outputCategoryMask: true,
+    outputConfidenceMasks: false,
   });
 
   // 预热：先跑一次空帧，把 WebGL 上下文创建 + 首次推理的耗时提前到初始化阶段，
   // 避免首次播放时第一次真实分割卡一下。
+  // 尺寸必须与真实推理一致（256×256 模型输入尺寸）：若先用 64×64 预热，
+  // MediaPipe 的 reusable_pool 会为 64×64 分配一整套缓冲、真实帧到来时
+  // 又整套重分配 256×256 —— 池子反复触顶（reusable_pool.h:147 警告刷屏）。
   try {
-    const warm = new OffscreenCanvas(64, 64);
+    const warm = new OffscreenCanvas(256, 256);
     const wctx = warm.getContext('2d');
-    wctx?.fillRect(0, 0, 64, 64);
+    wctx?.fillRect(0, 0, 256, 256);
     const warmBitmap = warm.transferToImageBitmap();
     const warmResult = segmenter.segmentForVideo(warmBitmap, 0);
     warmResult.confidenceMasks?.forEach(m => m.close());
@@ -343,27 +350,25 @@ async function handleSegment(
       outW = Math.max(1, Math.round(config.maskWidth * aspect));
     }
 
-    // 分割推理（置信度 mask；二分类 1 个，多分类 6 个，除背景外相加 = 人物）
+    // 分割推理（categoryMask：Uint8 单 mask 单次 readback）
     const result = segmenter.segmentForVideo(bitmap, graphTs);
-    const masks = result.confidenceMasks ?? [];
+    const catMask = result.categoryMask;
 
     let image = '';
     let noPerson = false;
     let downscaled: Float32Array | null = null;
 
-    if (masks.length > 0) {
-      const srcW = masks[0].width;
-      const srcH = masks[0].height;
+    if (catMask) {
+      const srcW = catMask.width;
+      const srcH = catMask.height;
+      const categories = catMask.getAsUint8Array();
+      // 类别 → 人物置信度图（0=背景 → 0；≥1 人物类 → 1），
+      // 下游 threshold / 双线性采样 / 连通域等浮点后处理逻辑保持不变
       const person = new Float32Array(srcW * srcH);
-
-      if (masks.length === 1) {
-        person.set(masks[0].getAsFloat32Array());
-      } else {
-        for (let c = 1; c < masks.length; c++) {
-          const d = masks[c].getAsFloat32Array();
-          for (let i = 0; i < d.length; i++) person[i] += d[i];
-        }
+      for (let i = 0; i < categories.length; i++) {
+        if (categories[i] >= 1) person[i] = 1;
       }
+      catMask.close();
 
       let seg = sampleMaskRegion(person, srcW, srcH, region, outW, outH);
       seg = keepLargestComponent(seg, outW, outH, config.threshold);
@@ -395,7 +400,6 @@ async function handleSegment(
       }
     }
 
-    for (const m of masks) m.close();
     post({
       type: 'result',
       id,

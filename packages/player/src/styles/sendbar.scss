@@ -163,11 +163,11 @@
     }
   }
 
-  .danmaku-switch-input:checked + .danmaku-switch-label .danmaku-switch-on {
+  .danmaku-switch-input:checked+.danmaku-switch-label .danmaku-switch-on {
     display: block;
   }
 
-  .danmaku-switch-input:checked + .danmaku-switch-label .danmaku-switch-off {
+  .danmaku-switch-input:checked+.danmaku-switch-label .danmaku-switch-off {
     display: none;
   }
 
@@ -302,6 +302,7 @@
       display: block;
       height: 24px;
       width: 36px;
+
       svg {
         fill: inherit;
       }
@@ -375,18 +376,23 @@
     &::-webkit-input-placeholder {
       color: var(--nova-player-dmsend-input-font, #212121);
     }
+
     &::-moz-placeholder {
       color: var(--nova-player-dmsend-input-font, #212121);
     }
+
     &:-ms-input-placeholder {
       color: var(--nova-player-dmsend-input-font, #212121);
     }
+
     &::-ms-input-placeholder {
       color: var(--nova-player-dmsend-input-font, #212121);
     }
+
     &::placeholder {
       color: var(--nova-player-dmsend-input-font, #212121);
     }
+
     &::placeholder {
       color: var(--nova-player-dmsend-input-font, #212121);
     }
@@ -520,9 +526,38 @@
       .nova-player-video-info {
         color: silver;
       }
+
       .nova-player-video-inputbar {
         background: hsla(0, 0%, 100%, 0.2);
         color: #999;
+      }
+
+      .nova-player-dm-input {
+        color: hsla(0, 0%, 100%, 0.8);
+
+        &::-webkit-input-placeholder {
+          color: hsla(0, 0%, 100%, 0.8);
+        }
+
+        &::-moz-placeholder {
+          color: hsla(0, 0%, 100%, 0.8);
+        }
+
+        &:-ms-input-placeholder {
+          color: hsla(0, 0%, 100%, 0.8);
+        }
+
+        &::-ms-input-placeholder {
+          color: hsla(0, 0%, 100%, 0.8);
+        }
+
+        &::placeholder {
+          color: hsla(0, 0%, 100%, 0.8);
+        }
+
+        &::placeholder {
+          color: hsla(0, 0%, 100%, 0.8);
+        }
       }
     }
 

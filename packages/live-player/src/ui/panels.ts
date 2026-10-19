@@ -1,5 +1,5 @@
 /**
- * 根元素内部面板（清晰度 / 线路、速度、信息、快捷键、右键菜单、举报、
+ * 根元素内部面板（清晰度 / 线路、速度、信息、快捷键、视频编码、右键菜单、
  * 发送条、Toast、错误、加载）的声明式 VNode 渲染。
  *
  * 这些面板不是自定义元素，全部挂在根元素内部。
@@ -243,8 +243,6 @@ export interface InfoPanelProps extends PanelHoverProps {
   rows: ReadonlyArray<{ key: keyof NovaVideoInfo; labelKey: string }>;
   /** 曲线图采样数据（1Hz 采样、环形窗口）。*/
   series: Signal<InfoChartSeries>;
-  /** 曲线图 x 轴固定容量（与采样窗口长度一致）。*/
-  chartCapacity: number;
   onClose: () => void;
 }
 
@@ -252,7 +250,10 @@ export interface InfoPanelProps extends PanelHoverProps {
 const CHART_VIEW_WIDTH = 300;
 
 /** 曲线图 viewBox 高度。*/
-const CHART_VIEW_HEIGHT = 56;
+const CHART_VIEW_HEIGHT = 48;
+
+/** 曲线图上下留白（保证 0 值线与最大值线不被容器边缘裁切）。*/
+const CHART_VIEW_PADDING = 2;
 
 /** 保留一位小数，缩短 points 字符串。*/
 const roundCoord = (value: number): number => Math.round(value * 10) / 10;
@@ -260,18 +261,19 @@ const roundCoord = (value: number): number => Math.round(value * 10) / 10;
 /**
  * 计算折线 `points` 坐标。
  *
- * x 轴按固定容量均分（不显示刻度），y 轴按当前序列最大值归一化；
+ * x 轴按当前采样点数量均分（不显示刻度），y 轴按当前序列最大值归一化；
  * 空数据返回空串，`<polyline>` 因此不绘制任何线段。
  */
-const chartPoints = (values: readonly number[], capacity: number): string => {
+const chartPoints = (values: readonly number[]): string => {
   if (values.length === 0) return '';
   const max = Math.max(...values, 0);
   const scale = max > 0 ? max : 1;
-  const span = Math.max(1, capacity - 1);
+  const span = Math.max(1, values.length - 1);
+  const drawable = CHART_VIEW_HEIGHT - CHART_VIEW_PADDING * 2;
   return values
     .map((value, index): string => {
       const x = (index / span) * CHART_VIEW_WIDTH;
-      const y = CHART_VIEW_HEIGHT - (Math.max(0, value) / scale) * CHART_VIEW_HEIGHT;
+      const y = CHART_VIEW_PADDING + drawable - (Math.max(0, value) / scale) * drawable;
       return `${roundCoord(x)},${roundCoord(y)}`;
     })
     .join(' ');
@@ -282,7 +284,6 @@ const InfoChart = (props: {
   titleKey: string;
   lineClass: string;
   values: () => readonly number[];
-  capacity: number;
 }): VNode =>
   h(
     'div',
@@ -301,7 +302,7 @@ const InfoChart = (props: {
         },
         h('polyline', {
           class: `nova-live-player-info-chart-line ${props.lineClass}`,
-          ...reactive({ points: (): string => chartPoints(props.values(), props.capacity) }),
+          ...reactive({ points: (): string => chartPoints(props.values()) }),
         }),
       ),
     ),
@@ -357,13 +358,11 @@ export function InfoPanel(props: InfoPanelProps): VNode {
         titleKey: 'livePlayer.info.chartBuffer',
         lineClass: 'nova-live-player-info-chart-line-buffer',
         values: (): readonly number[] => props.series.value.buffer,
-        capacity: props.chartCapacity,
       }),
       InfoChart({
         titleKey: 'livePlayer.info.chartDropped',
         lineClass: 'nova-live-player-info-chart-line-dropped',
         values: (): readonly number[] => props.series.value.dropped,
-        capacity: props.chartCapacity,
       }),
     ),
   );

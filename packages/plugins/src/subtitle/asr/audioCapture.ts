@@ -7,7 +7,7 @@
  *   → 主线程按「上下文时钟 ↔ 媒体时间」锚点换算块起始媒体时间
  *   → 经 SubtitleAudioStream 分发给消费者（VAD/引擎）
  *
- * 设计要点（docs/subtitle-dual-mode-design.md 4.2）：
+ * 设计要点：
  * 1. createMediaElementSource 会把音频输出切到 Web Audio 图，
  *    因此采集 Worklet 的输出直通连接 destination，保证回放不中断
  * 2. 跨域视频源未设置 CORS 时 Worklet 收到全零数据；采集层检测到

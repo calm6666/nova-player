@@ -282,7 +282,7 @@ export function _createComp(
  *   （动态 attrs 变量、`{...rest}`、`{ [k]: v }` 一律回退 _createComp）
  * 详见 vite-plugin-lumina-compile/transform.ts 的 canUseCompPure。
  *
- * 与 _createComp 相比跳过（实测约 10%，见 docs/framework-optimization-analysis.md §10）：
+ * 与 _createComp 相比跳过（实测约 10%）：
  * - `'ref' in attrs` 判定 + isSignalRef/isRefObject 三形态提取
  * - `'__providers' in attrs` 判定 + Array.isArray 判定
  * - 上述两个内部键的 props 过滤（键不存在，无需 continue 分支）

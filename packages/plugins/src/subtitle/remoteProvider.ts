@@ -3,9 +3,8 @@
  * 模式 B：服务端字幕 Provider
  * ============================================
  * 旧配置 aiBackend（AiSubtitleBackendConfig）升级映射为单轨
- * RemoteSubtitleProvider（设计文档 5.2：旧配置继续可用，映射为单轨 original）。
- * 多轨/增量协议由使用方按 RemoteSubtitleProvider 接口自行注入
- * （demo 示例见 docs/subtitle-dual-mode-design.md 第八节）。
+ * RemoteSubtitleProvider（旧配置继续可用，映射为单轨 original）。
+ * 多轨/增量协议由使用方按 RemoteSubtitleProvider 接口自行注入。
  *
  * @module packages/plugins/src/subtitle/remoteProvider
  */

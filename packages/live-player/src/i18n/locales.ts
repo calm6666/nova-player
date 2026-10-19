@@ -28,6 +28,12 @@ const ZH_CN: Record<string, string> = {
   'livePlayer.control.exitWebscreen': '退出网页全屏',
   'livePlayer.control.fullscreen': '全屏',
   'livePlayer.control.exitFullscreen': '退出全屏',
+  'livePlayer.control.mini': '小窗模式',
+  'livePlayer.control.exitMini': '退出小窗模式',
+
+  // 小窗
+  'livePlayer.mini.label': '小窗播放器',
+  'livePlayer.mini.close': '关闭悬浮播放器',
 
   // 通用
   'livePlayer.common.close': '关闭',
@@ -75,6 +81,7 @@ const ZH_CN: Record<string, string> = {
   'livePlayer.dmSetting.speedSync': '速度同步',
   'livePlayer.dmSetting.font': '弹幕字体',
   'livePlayer.dmSetting.bold': '加粗',
+  'livePlayer.dmSetting.color': '弹幕颜色',
   'livePlayer.dmSetting.stroke': '描边类型',
   'livePlayer.dmSetting.strokeHeavy': '重量',
   'livePlayer.dmSetting.strokeOutline': '描边',
@@ -172,6 +179,8 @@ const ZH_CN: Record<string, string> = {
   'livePlayer.toast.danmakuOn': '已开启弹幕',
   'livePlayer.toast.danmakuOff': '已关闭弹幕',
   'livePlayer.toast.danmakuSettingBlocked': '弹幕已关闭，无法打开弹幕设置',
+  'livePlayer.toast.danmakuPluginMissing': '未提供弹幕插件',
+  'livePlayer.toast.streamPluginMissing': '未提供对应流插件',
   'livePlayer.toast.codecSwitched': '视频编码已切换至 {label}',
   'livePlayer.toast.pipUnsupported': '当前浏览器不支持画中画',
   'livePlayer.toast.fullscreenUnsupported': '当前浏览器不支持全屏',
@@ -204,6 +213,11 @@ const EN_US: Record<string, string> = {
   'livePlayer.control.exitWebscreen': 'Exit web fullscreen',
   'livePlayer.control.fullscreen': 'Fullscreen',
   'livePlayer.control.exitFullscreen': 'Exit fullscreen',
+  'livePlayer.control.mini': 'Mini player',
+  'livePlayer.control.exitMini': 'Exit mini player',
+
+  'livePlayer.mini.label': 'Mini player',
+  'livePlayer.mini.close': 'Close floating player',
 
   'livePlayer.common.close': 'Close',
   'livePlayer.common.cancel': 'Cancel',
@@ -248,6 +262,7 @@ const EN_US: Record<string, string> = {
   'livePlayer.dmSetting.speedSync': 'Speed sync',
   'livePlayer.dmSetting.font': 'Font',
   'livePlayer.dmSetting.bold': 'Bold',
+  'livePlayer.dmSetting.color': 'Color',
   'livePlayer.dmSetting.stroke': 'Stroke type',
   'livePlayer.dmSetting.strokeHeavy': 'Heavy',
   'livePlayer.dmSetting.strokeOutline': 'Outline',
@@ -335,6 +350,8 @@ const EN_US: Record<string, string> = {
   'livePlayer.toast.danmakuOn': 'Danmaku on',
   'livePlayer.toast.danmakuOff': 'Danmaku off',
   'livePlayer.toast.danmakuSettingBlocked': 'Danmaku is off, cannot open danmaku settings',
+  'livePlayer.toast.danmakuPluginMissing': 'No danmaku plugin provided',
+  'livePlayer.toast.streamPluginMissing': 'No matching stream plugin provided',
   'livePlayer.toast.codecSwitched': 'Video codec switched to {label}',
   'livePlayer.toast.pipUnsupported': 'Picture in picture is not supported',
   'livePlayer.toast.fullscreenUnsupported': 'Fullscreen is not supported',

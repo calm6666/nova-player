@@ -11,7 +11,7 @@
  *   2. 纯函数，不修改入参；
  *   3. 开发环境下对每个被映射的旧键**只打印一次**迁移警告，避免刷屏。
  *
- * 映射表见 docs/player-api-design.md §九。
+ * 映射规则以内联方式维护（MAJOR_VERSION_COMPAT_KEYS 等常量表）。
  */
 
 import type {
