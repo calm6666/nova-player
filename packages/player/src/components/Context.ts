@@ -12,7 +12,7 @@
  * API 内部仅写 signal；document click 关闭监听保留命令式（时序行为）。
  */
 
-import { h, defineComponent, signal } from "@/core";
+import { h, defineComponent, signal, t } from "@/core";
 import { isBrowser } from "@/utils";
 import type { VNode, ComponentLifecycle } from "@/types";
 
@@ -48,8 +48,10 @@ export interface ContextProps {
   onMenuClick?: (action: string) => void;
   /** 关闭菜单回调 */
   onClose?: () => void;
-  /** 打开面板回调（色彩调整、快捷键说明、视频统计信息） */
-  onOpenPanel?: (panel: "color" | "keyboard" | "info") => void;
+  /** 是否加载了音效插件（决定是否显示「音效调节」菜单项） */
+  audioEnabled?: boolean;
+  /** 打开面板回调（色彩调整、音效调节、快捷键说明、视频统计信息） */
+  onOpenPanel?: (panel: "color" | "audio" | "keyboard" | "info") => void;
 }
 
 /**
@@ -72,8 +74,14 @@ export const Context = defineComponent<ContextProps>(
     // 状态数据
     // ============================================
 
-    /** 实际使用的菜单项列表，未传入时使用默认菜单项 */
-    const menuItems = props.menuItems || DEFAULT_MENU_ITEMS;
+    /** 实际使用的菜单项列表，未传入时使用默认菜单项；音效项按插件状态插入 */
+    const menuItems = props.menuItems || [
+      ...DEFAULT_MENU_ITEMS.slice(0, 2),
+      ...(props.audioEnabled
+        ? [{ dataAction: "audio", text: t("player.ui.audio.title") }]
+        : []),
+      ...DEFAULT_MENU_ITEMS.slice(2),
+    ];
     /** 播放器版本号，未传入时默认为 1.0.0 */
     const version = props.version || "1.0.0";
 
@@ -130,6 +138,10 @@ export const Context = defineComponent<ContextProps>(
         case "color":
           props.onOpenPanel?.("color");
           lifecycle.emit?.("openPanel", "color");
+          break;
+        case "audio":
+          props.onOpenPanel?.("audio");
+          lifecycle.emit?.("openPanel", "audio");
           break;
         case "keyboard":
           props.onOpenPanel?.("keyboard");

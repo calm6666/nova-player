@@ -1163,6 +1163,11 @@ export class VideoPlayer
        * signal.value 自动建立依赖
        */
       plugins: (): PlayerPluginFlags => this.pluginFlags.value,
+      /** 音效插件 API：右键音效调节面板使用（未装插件返回 null） */
+      getAudioEffect: () =>
+        (this.getPluginAPI("audioEffect") as unknown as
+          | import("@/nova/components/AudioPanel").AudioPanelApi
+          | undefined) ?? null,
       /** 缓冲速度数据源（字节/秒）：流媒体插件统计优先，原生由 PlayerDocker 回退采样 */
       getStreamDownloadSpeed: () => this.getStreamDownloadSpeed(),
       /**

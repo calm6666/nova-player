@@ -7,7 +7,7 @@
  * 对外 show/hide/open/close API 契约不变，内部仅写信号。
  */
 
-import { h, defineComponent, signal } from "@/core";
+import { h, defineComponent, signal, t } from "@/core";
 import type { ComponentLifecycle } from "@/types";
 import { HOTKEYS } from "@/nova/core/hotkeys";
 
@@ -18,8 +18,12 @@ import { HOTKEYS } from "@/nova/core/hotkeys";
 export interface HotkeyItem {
   /** 快捷键按键名称 */
   name: string;
+  /** 名称 i18n key（可选） */
+  nameKey?: string;
   /** 快捷键功能描述 */
   desc: string;
+  /** 描述 i18n key（可选） */
+  descKey?: string;
 }
 
 /**
@@ -99,12 +103,12 @@ export const HotkeyPanel = defineComponent<HotkeyPanelProps>(
           h(
             "span",
             { class: "nova-player-hotkey-panel-content-name" },
-            item.name,
+            item.nameKey ? t(item.nameKey) : item.name,
           ),
           h(
             "span",
             { class: "nova-player-hotkey-panel-content-desc" },
-            item.desc,
+            item.descKey ? t(item.descKey) : item.desc,
           ),
         ),
       );

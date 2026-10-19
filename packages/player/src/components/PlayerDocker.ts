@@ -67,6 +67,11 @@ import type { BufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
 import { SendBar } from "@/nova/components/SendBar";
 import { Top } from "@/nova/components/Top";
 import { ColorPanel, type ColorPanelApi } from "@/nova/components/ColorPanel";
+import {
+  AudioPanel,
+  type AudioPanelApi,
+  type AudioPanelHandle,
+} from "@/nova/components/AudioPanel";
 import { VideoInfo, type VideoInfoApi } from "@/nova/components/VideoInfo";
 import { Ending, type EndingApi } from "@/nova/components/Ending";
 import { RelationStrip } from "@/nova/components/RelationStrip";
@@ -433,6 +438,9 @@ export interface PlayerDockerProps {
    * 未传（直接使用 PlayerDocker 的场景）时保持既有行为：全部渲染。
    */
   plugins?: () => PlayerPluginFlags;
+
+  /** 音效插件 API 读取器（右键「音效调节」面板使用，未装插件返回 null） */
+  getAudioEffect?: () => AudioPanelApi | null;
 }
 
 // ============================================
@@ -1009,6 +1017,9 @@ export const PlayerDocker = defineComponent<
   /** 色彩调整面板 API，由 ColorPanel 组件挂载后填充（对应既有实现的 colorpanel） */
   const colorPanelApi: Partial<ColorPanelApi> = {};
 
+  /** 音效调节面板 API，由 AudioPanel 组件挂载后填充 */
+  const audioPanelApi: Partial<AudioPanelHandle> = {};
+
   /** 视频统计信息面板 API，由 VideoInfo 组件挂载后填充（对应既有实现的 info） */
   const videoInfoApi: Partial<VideoInfoApi> = {};
 
@@ -1032,6 +1043,7 @@ export const PlayerDocker = defineComponent<
   /** 懒挂载面板的 VNode 缓存（首次使用创建，之后复用；销毁时统一 destroy） */
   const lazyPanelVNodes: {
     color?: VNode;
+    audio?: VNode;
     info?: VNode;
     keyboard?: VNode;
   } = {};
@@ -1040,7 +1052,9 @@ export const PlayerDocker = defineComponent<
    * 按需挂载面板（已挂载则直接复用）
    * @param name - 面板名：color 色彩调整 / info 视频统计信息 / keyboard 快捷键说明
    */
-  const ensurePanel = (name: "color" | "info" | "keyboard"): void => {
+  const ensurePanel = (
+    name: "color" | "audio" | "info" | "keyboard",
+  ): void => {
     const videoArea = playerVideoAreaRef.value;
     if (!videoArea) return;
 
@@ -1072,6 +1086,19 @@ export const PlayerDocker = defineComponent<
         },
       });
       mount(lazyPanelVNodes.color, videoArea);
+    }
+
+    if (name === "audio" && !lazyPanelVNodes.audio) {
+      lazyPanelVNodes.audio = h(AudioPanel, {
+        api: props.getAudioEffect?.() ?? null,
+        onClose: () => {
+          audioPanelApi.close?.();
+        },
+        onAudioPanelMounted: (handle: AudioPanelHandle) => {
+          Object.assign(audioPanelApi, handle);
+        },
+      });
+      mount(lazyPanelVNodes.audio, videoArea);
     }
 
     if (name === "info" && !lazyPanelVNodes.info) {
@@ -2904,6 +2931,7 @@ export const PlayerDocker = defineComponent<
       }),
       // 右键菜单（默认隐藏，右键视频区域时在鼠标位置显示）
       h(ContextMenu, {
+        audioEnabled: hasPlugin("audioEffect"),
         onContextMounted: (api: {
           showMenu: (x: number, y: number) => void;
           hideMenu: () => void;
@@ -2911,12 +2939,16 @@ export const PlayerDocker = defineComponent<
           contextApi.showMenu = api.showMenu;
           contextApi.hideMenu = api.hideMenu;
         },
-        onOpenPanel: (panel: "color" | "keyboard" | "info") => {
+        onOpenPanel: (panel: "color" | "audio" | "keyboard" | "info") => {
           // 面板按需懒挂载：首次打开才创建（既有实现的懒创建模式），之后复用
           ensurePanel(panel);
           // 「视频色彩调整」菜单项 → 打开色彩调整面板
           if (panel === "color") {
             colorPanelApi.open?.();
+          }
+          // 「音效调节」菜单项 → 打开音效面板
+          if (panel === "audio") {
+            audioPanelApi.open?.();
           }
           // 「快捷键说明」菜单项 → 打开快捷键面板
           if (panel === "keyboard") {

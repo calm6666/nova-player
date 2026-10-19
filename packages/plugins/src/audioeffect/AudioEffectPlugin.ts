@@ -57,6 +57,8 @@ export interface AudioEffectPluginAPI extends Plugin {
   setEQPreset(preset: EQPresetName, bandCount?: EQBandCount): void;
   /** 设置 Reverb 预设 */
   setReverbPreset(preset: ReverbPresetName): void;
+  /** 直接设置 EQ 各段增益（自定义 EQ） */
+  setEQGains(gains: readonly number[]): void;
   /** 设置音量（dB） */
   setVolume(db: number): void;
   /** 设置音量均衡模式（0 关闭 / 1 标准 / 2 高动态，设置面板「音量均衡」接线） */
@@ -229,6 +231,11 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
   /** 设置 EQ 预设 */
   setEQPreset(preset: EQPresetName, bandCount?: EQBandCount): void {
     this.effectChain?.setEQPreset(preset, bandCount);
+  }
+
+  /** 直接设置 EQ 各段增益（自定义 EQ） */
+  setEQGains(gains: readonly number[]): void {
+    this.effectChain?.setEQGains(gains);
   }
 
   /** 设置 Reverb 预设 */

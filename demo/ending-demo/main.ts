@@ -13,6 +13,7 @@
  */
 
 import { VideoPlayer } from "@/nova/player";
+import { AudioEffectPlugin } from "@/lumina/plugins/audioeffect";
 import { PlayMode } from "@/types";
 import type { EndingRelatedItem, PlayerConfig } from "@/types";
 
@@ -163,6 +164,7 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
       pauseAfterEnd: mode === "share" || mode === "ogv-share",
       playMode: PlayMode.ORDER,
     },
+    plugins: { list: [AudioEffectPlugin()] },
     playlist: [
       { src: VIDEO, title: "第一集" },
       { src: VIDEO, title: "第二集" },

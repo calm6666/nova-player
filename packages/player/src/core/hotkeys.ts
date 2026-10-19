@@ -107,11 +107,15 @@ export interface HotkeyConfig {
    * 用于快捷键面板展示，如 "Space"、"→"、"媒体键 play/pause" 等
    */
   name: string;
+  /** 名称 i18n key（可选；面板渲染时优先取翻译） */
+  nameKey?: string;
   /**
    * 快捷键功能描述
    * 详细说明该快捷键的作用和行为，与快捷键面板文案完全一致
    */
   desc: string;
+  /** 描述 i18n key（可选；面板渲染时优先取翻译） */
+  descKey?: string;
   /**
    * 按键匹配函数
    * 接收 KeyboardEvent，返回是否匹配该快捷键。
@@ -173,6 +177,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "E",
     desc: "Favorite",
+    descKey: "player.ui.hotkey.favorite",
     keyMatcher: (e: KeyboardEvent) => e.key === "e" || e.key === "E",
     action: (ctx: HotkeyContext): void => {
       ctx.favorite();
@@ -186,6 +191,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "Space",
     desc: "Play/Pause",
+    descKey: "player.ui.hotkey.play_pause",
     keyMatcher: (e: KeyboardEvent) => e.key === " ",
     preventDefault: true,
     action: (ctx: HotkeyContext): void => {
@@ -195,6 +201,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "→",
     desc: "Seek forward 5s, long-press for fast playback",
+    descKey: "player.ui.hotkey.seek_forward",
     keyMatcher: (e: KeyboardEvent) => e.key === "ArrowRight",
     preventDefault: true,
     action: (ctx: HotkeyContext): void => {
@@ -204,6 +211,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "←",
     desc: "Seek backward 5s",
+    descKey: "player.ui.hotkey.seek_backward",
     keyMatcher: (e: KeyboardEvent) => e.key === "ArrowLeft",
     preventDefault: true,
     action: (ctx: HotkeyContext): void => {
@@ -218,6 +226,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "↑",
     desc: "Volume up 10%",
+    descKey: "player.ui.hotkey.volume_up",
     keyMatcher: (e: KeyboardEvent) => e.key === "ArrowUp",
     preventDefault: true,
     action: (ctx: HotkeyContext): void => {
@@ -227,6 +236,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "↓",
     desc: "Volume down 10%",
+    descKey: "player.ui.hotkey.volume_down",
     keyMatcher: (e: KeyboardEvent) => e.key === "ArrowDown",
     preventDefault: true,
     action: (ctx: HotkeyContext): void => {
@@ -241,6 +251,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "Esc",
     desc: "Exit fullscreen",
+    descKey: "player.ui.hotkey.exit_fullscreen",
     keyMatcher: (e: KeyboardEvent) => e.key === "Escape",
     action: (ctx: HotkeyContext): void => {
       ctx.exitFullscreen();
@@ -248,7 +259,9 @@ export const HOTKEYS: HotkeyConfig[] = [
   },
   {
     name: "Media key play/pause",
+    nameKey: "player.ui.hotkey.media_key",
     desc: "Play/Pause",
+    descKey: "player.ui.hotkey.play_pause",
     keyMatcher: (e: KeyboardEvent) =>
       e.key === "MediaPlayPause" || e.key === "MediaPlay" || e.key === "MediaPause",
     action: (ctx: HotkeyContext): void => {
@@ -258,6 +271,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "F",
     desc: "Fullscreen/Exit fullscreen",
+    descKey: "player.ui.hotkey.fullscreen",
     keyMatcher: (e: KeyboardEvent) => e.key === "f" || e.key === "F",
     action: (ctx: HotkeyContext): void => {
       ctx.toggleFullscreen();
@@ -271,6 +285,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "[",
     desc: "Previous episode",
+    descKey: "player.ui.hotkey.prev_episode",
     keyMatcher: (e: KeyboardEvent) => e.key === "[",
     action: (ctx: HotkeyContext): void => {
       ctx.prevEpisode();
@@ -279,6 +294,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "]",
     desc: "Next episode",
+    descKey: "player.ui.hotkey.next_episode",
     keyMatcher: (e: KeyboardEvent) => e.key === "]",
     action: (ctx: HotkeyContext): void => {
       ctx.nextEpisode();
@@ -292,6 +308,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "Enter",
     desc: "Send danmaku",
+    descKey: "player.ui.hotkey.send_danmaku",
     keyMatcher: (e: KeyboardEvent) => e.key === "Enter",
     action: (ctx: HotkeyContext): void => {
       ctx.sendDanmaku();
@@ -300,6 +317,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "D",
     desc: "Toggle danmaku",
+    descKey: "player.ui.hotkey.toggle_danmaku",
     keyMatcher: (e: KeyboardEvent) => e.key === "d" || e.key === "D",
     action: (ctx: HotkeyContext): void => {
       ctx.toggleDanmaku();
@@ -313,6 +331,7 @@ export const HOTKEYS: HotkeyConfig[] = [
   {
     name: "M",
     desc: "Toggle mute",
+    descKey: "player.ui.hotkey.toggle_mute",
     keyMatcher: (e: KeyboardEvent) => e.key === "m" || e.key === "M",
     action: (ctx: HotkeyContext): void => {
       ctx.toggleMute();

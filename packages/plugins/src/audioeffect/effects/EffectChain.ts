@@ -225,6 +225,18 @@ export class EffectChain {
   }
 
   /**
+   * 直接设置 EQ 各段增益（音效调节面板自定义页）
+   * 自动激活 EQ 效果，保证滑块调整立即生效。
+   * @param gains - 各段增益（dB）
+   */
+  setEQGains(gains: readonly number[]): void {
+    const eq = this.effectsObj.eq.node;
+    if (!(eq instanceof EQEffect)) return;
+    this.setEffectActive('eq', true);
+    eq.setData(gains);
+  }
+
+  /**
    * 设置 Reverb 预设
    * 用 instanceof 守卫收窄类型
    * @param preset - 预设名
