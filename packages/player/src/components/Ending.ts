@@ -284,14 +284,24 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const startCountdown = (): void => {
     if (isEmbedded) return;
     const autoNextEnabled = resolveAutoNext();
-    if (!autoNextEnabled && !isOgv) return;
+    // OGV 片尾不展示取消连播 / 圆环，只保留静默自动连播
+    if (isOgv) {
+      clearCountdownTimer();
+      if (!autoNextEnabled) return;
+      countdownTimer = setTimeout(() => {
+        countdownTimer = null;
+        stopCountdown();
+        props.onAutoNext?.();
+      }, countdownSeconds * 1000);
+      return;
+    }
+    if (!autoNextEnabled) return;
     countdownActive = true;
     if (related.length > 0) {
       endingWrapRef.value?.setAttribute("data-countdown", "true");
     }
     countdownRef.value?.play();
     clearCountdownTimer();
-    if (!autoNextEnabled) return;
     countdownTimer = setTimeout(() => {
       countdownTimer = null;
       stopCountdown();
@@ -829,11 +839,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   // ============================================
 
   /** 渲染 OGV 单张推荐卡片（112×148，首张承载倒计时） */
-  const renderOgvCard = (
-    item: EndingRelatedItem,
-    index: number,
-  ): VNode => {
-    const isCountdownHost = index === 0;
+  const renderOgvCard = (item: EndingRelatedItem): VNode => {
     const children: VNode[] = [
       h(
         "div",
@@ -844,58 +850,11 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       h("div", { class: "nova-ogv-ending-recommend-title" }, item.title),
     ];
 
-    if (isCountdownHost) {
-      children.push(
-        h(
-          "div",
-          {
-            class: "nova-ogv-ending-cancel",
-            onClick: (event: MouseEvent) => {
-              event.preventDefault();
-              event.stopPropagation();
-              cancelCountdown();
-            },
-          },
-          t("player.ui.ending.cancel_auto_next"),
-        ),
-        h(
-          "div",
-          { class: "nova-ogv-ending-countdown" },
-          h(
-            "svg",
-            { viewBox: "0 0 51 51" },
-            h("circle", {
-              class: "nova-ogv-ending-countdown-bg",
-              cx: 25.5,
-              cy: 25.5,
-              r: 23,
-            }),
-            h("circle", {
-              class: "nova-ogv-ending-countdown-progress",
-              cx: 25.5,
-              cy: 25.5,
-              r: 23,
-              pathLength: 1,
-              style: { animationDuration: `${countdownSeconds}s` },
-            }),
-            h("path", {
-              class: "nova-ogv-ending-play-icon",
-              d: "M21 17.5 34 25.5 21 33.5z",
-            }),
-          ),
-        ),
-      );
-    }
-
-    const cls = isCountdownHost
-      ? "nova-ogv-ending-recommend-item state-countdown-host"
-      : "nova-ogv-ending-recommend-item";
-
     return item.url
       ? h(
           "a",
           {
-            class: cls,
+            class: "nova-ogv-ending-recommend-item",
             href: item.url,
             target: "_blank",
             rel: "noopener noreferrer",
@@ -909,7 +868,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       : h(
           "div",
           {
-            class: cls,
+            class: "nova-ogv-ending-recommend-item",
             role: "button",
             onClick: () => props.onRelatedClick?.(item),
           },

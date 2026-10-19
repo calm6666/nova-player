@@ -228,22 +228,7 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     ).toBe(5);
   });
 
-  it("没有下一集时仍展示取消连播与圆环", () => {
-    const api = mountEnding({
-      variant: "ogv",
-      title: "西游记",
-      related: OGV_RELATED,
-      autoNext: false,
-    });
-    api.showEndWrap();
-
-    const wrap = container.querySelector<HTMLElement>(".nova-ogv-ending-wrap");
-    expect(wrap?.getAttribute("data-countdown")).toBe("true");
-    expect(container.querySelector(".nova-ogv-ending-cancel")).not.toBeNull();
-    expect(container.querySelector(".nova-ogv-ending-countdown svg")).not.toBeNull();
-  });
-
-  it("首张推荐卡显示 SVG 倒计时，取消后关闭", () => {
+  it("OGV 片尾不展示取消连播与圆环", () => {
     const api = mountEnding({
       variant: "ogv",
       title: "西游记",
@@ -253,21 +238,12 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     api.showEndWrap();
 
     const wrap = container.querySelector<HTMLElement>(".nova-ogv-ending-wrap");
-    expect(wrap?.getAttribute("data-countdown")).toBe("true");
-    expect(
-      container.querySelector(
-        ".nova-ogv-ending-recommend-item.state-countdown-host",
-      ),
-    ).not.toBeNull();
-    expect(container.querySelector(".nova-ogv-ending-countdown svg")).not.toBeNull();
-    expect(
-      container.querySelector(".nova-ogv-ending-cancel")?.textContent,
-    ).toBe(t("player.ui.ending.cancel_auto_next"));
-
-    container
-      .querySelector<HTMLElement>(".nova-ogv-ending-cancel")
-      ?.click();
     expect(wrap?.getAttribute("data-countdown")).toBeNull();
+    expect(container.querySelector(".nova-ogv-ending-cancel")).toBeNull();
+    expect(container.querySelector(".nova-ogv-ending-countdown")).toBeNull();
+    expect(
+      container.querySelector(".state-countdown-host"),
+    ).toBeNull();
   });
 });
 
