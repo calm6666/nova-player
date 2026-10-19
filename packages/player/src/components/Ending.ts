@@ -275,16 +275,23 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     endingWrapRef.value?.removeAttribute("data-countdown");
   };
 
-  /** 启动自动连播倒计时（仅 station 且存在推荐数据时） */
+  /**
+   * 启动自动连播倒计时
+   * - station：仅 autoNext 开启时展示
+   * - OGV：即使没有下一集（autoNext=false）也展示取消连播与圆环，
+   *   保证电视剧片尾始终有倒计时反馈；无下一集时不触发切集
+   */
   const startCountdown = (): void => {
-    if (isEmbedded || !resolveAutoNext()) return;
+    if (isEmbedded) return;
+    const autoNextEnabled = resolveAutoNext();
+    if (!autoNextEnabled && !isOgv) return;
     countdownActive = true;
-    // 有推荐卡时在第一张卡上展示倒计时；没有数据时仍保留 5s 自动连播兜底
     if (related.length > 0) {
       endingWrapRef.value?.setAttribute("data-countdown", "true");
     }
     countdownRef.value?.play();
     clearCountdownTimer();
+    if (!autoNextEnabled) return;
     countdownTimer = setTimeout(() => {
       countdownTimer = null;
       stopCountdown();

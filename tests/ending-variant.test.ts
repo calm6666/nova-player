@@ -228,6 +228,21 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     ).toBe(5);
   });
 
+  it("没有下一集时仍展示取消连播与圆环", () => {
+    const api = mountEnding({
+      variant: "ogv",
+      title: "西游记",
+      related: OGV_RELATED,
+      autoNext: false,
+    });
+    api.showEndWrap();
+
+    const wrap = container.querySelector<HTMLElement>(".nova-ogv-ending-wrap");
+    expect(wrap?.getAttribute("data-countdown")).toBe("true");
+    expect(container.querySelector(".nova-ogv-ending-cancel")).not.toBeNull();
+    expect(container.querySelector(".nova-ogv-ending-countdown svg")).not.toBeNull();
+  });
+
   it("首张推荐卡显示 SVG 倒计时，取消后关闭", () => {
     const api = mountEnding({
       variant: "ogv",
