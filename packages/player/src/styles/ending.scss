@@ -891,3 +891,10 @@
     width: 64px !important;
   }
 }
+
+/* 片尾期间隐藏中央暂停/播放覆盖层（外链整页片尾不能出现播放三角） */
+.nova-player-container.state-ended {
+  .nova-player-state-wrap {
+    display: none;
+  }
+}

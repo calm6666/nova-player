@@ -60,7 +60,17 @@ const OGV_TITLES = [
   "魔幻手机",
   "朱元璋惩贪",
 ];
-const ogvRelated: EndingRelatedItem[] = OGV_TITLES.map((title, i) => ({
+const EMBEDDED_EXTRA_TITLES = [
+  "西游记",
+  "三国演义",
+  "水浒传",
+  "红楼梦",
+  "济公",
+];
+const ogvRelated: EndingRelatedItem[] = [
+  ...OGV_TITLES,
+  ...EMBEDDED_EXTRA_TITLES,
+].map((title, i) => ({
   title,
   pic: svgPic(i, 448, 592, title),
   url: "#",
