@@ -2561,7 +2561,12 @@ export const PlayerDocker = defineComponent<
                 : (props.config?.ui?.title ?? props.playerName),
             cover: ogvConfig?.cover,
             followed: ogvConfig?.followed,
-            upInfo: embeddedConfig?.up,
+            upInfo: embeddedMode
+              ? embeddedConfig?.up
+              : props.config?.ui?.up,
+            shareUrl: props.config?.ui?.share?.url,
+            embedCode: props.config?.ui?.share?.embedCode,
+            qrCodeUrl: props.config?.ui?.share?.qrCodeUrl,
             related: embeddedMode
               ? embeddedConfig?.related
               : endingStyle === "ogv"

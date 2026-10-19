@@ -89,7 +89,7 @@ describe("Ending station 场景", () => {
       container
         .querySelector(".nova-player-ending-functions-electric-icon")
         ?.getAttribute("src"),
-    ).toContain("hdslb.com");
+    ).toMatch(/\.png$/);
   });
 
   it("自动连播开启时显示倒计时，取消后关闭", () => {

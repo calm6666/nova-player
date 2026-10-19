@@ -94,6 +94,7 @@
   "player.ui.ending.copy": "Copy",
   "player.ui.ending.embed_code": "Embed Code",
   "player.ui.ending.share_wechat": "Share to WeChat",
+  "player.ui.ending.qr_placeholder": "QR code (provide qrCodeUrl)",
   "player.ui.sendbar.placeholder": "Send danmaku...",
   "player.ui.sendbar.send": "Send",
   "player.ui.sendbar.settings": "Danmaku Settings",

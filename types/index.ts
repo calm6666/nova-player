@@ -644,6 +644,16 @@ export interface EndingUpInfo {
   followed?: boolean;
 }
 
+/** 片尾分享面板数据 */
+export interface ShareInfo {
+  /** 视频地址（分享链接） */
+  url?: string;
+  /** 嵌入代码（iframe） */
+  embedCode?: string;
+  /** 二维码图片地址（未提供时展示占位提示，不绘制假二维码） */
+  qrCodeUrl?: string;
+}
+
 /** 外链 / 嵌入场景配置（scene=embedded 时生效） */
 export interface EmbeddedConfig {
   /** 视频标题（片尾页顶部展示） */
@@ -676,6 +686,10 @@ export interface UiConfig {
   ogv?: OgvEndingConfig;
   /** 站内标准片尾的相关推荐数据（不传则为空列表） */
   related?: EndingRelatedItem[];
+  /** 站内标准片尾的 UP 主信息（头像 / 昵称 / 关注态） */
+  up?: EndingUpInfo;
+  /** 片尾分享面板数据（视频地址 / 嵌入代码 / 二维码图片） */
+  share?: ShareInfo;
   /** 控制条开关（单一来源） */
   controls?: ControlsConfig;
   /**

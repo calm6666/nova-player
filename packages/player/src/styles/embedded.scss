@@ -139,8 +139,8 @@
         z-index: 54;
       }
 
-      .nova-player-state-play {
-        background: url(@/assets/images/play.svg) 50% no-repeat;
+      .nova-player-state-wrap .nova-player-state-play {
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath d='M18 10v30l24-15z' fill='%23fff'/%3E%3C/svg%3E") center/70% no-repeat;
         background-size: 100% 100%;
         display: block;
         filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));

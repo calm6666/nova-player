@@ -19,6 +19,7 @@ import type {
 } from "@/types";
 import { LottieIcon, type LottieIconApi } from "./LottieIcon";
 import endingCountdownAnimationData from "../assets/lottie-icon/ending-countdown-animation.json";
+import endingElectricIcon from "../assets/images/ending-electric.png";
 
 /**
  * Ending 组件 Props 接口
@@ -34,6 +35,12 @@ export interface EndingProps {
   title?: string;
   /** UP 主信息（无数据时不渲染详情内容） */
   upInfo?: EndingUpInfo;
+  /** 分享面板：视频地址 */
+  shareUrl?: string;
+  /** 分享面板：嵌入代码 */
+  embedCode?: string;
+  /** 分享面板：二维码图片（未提供时展示占位提示） */
+  qrCodeUrl?: string;
   /** 相关推荐列表 */
   related?: EndingRelatedItem[];
   /**
@@ -177,8 +184,6 @@ const OgvCoinIcon = (): VNode =>
 const OgvShareIcon = (): VNode =>
   BiliIcon("0 0 24 24", OGV_SHARE_PATH, "currentColor");
 /** 充电图标（B 站标准片尾使用 PNG 素材） */
-const BILI_ELECTRIC_ICON =
-  "https://i0.hdslb.com/bfs/garb/item/33e2e72d9a0c855f036b4cb55448f44af67a0635.png";
 
 /** 关闭图标 */
 const CLOSE_ICON =
@@ -544,7 +549,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 },
                 h("img", {
                   class: "nova-player-ending-functions-electric-icon",
-                  src: BILI_ELECTRIC_ICON,
+                  src: endingElectricIcon,
                   alt: "",
                 }),
                 t("player.ui.ending.electric"),
@@ -1076,12 +1081,12 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             h(
               "div",
               { class: "nova-player-video-share-btn weibo" },
-              h("span", { class: "common-svg-icon" }),
+              h("span", { class: "nova-player-video-share-btn-text" }, "微博"),
             ),
             h(
               "div",
               { class: "nova-player-video-share-btn qq" },
-              h("span", { class: "common-svg-icon" }),
+              h("span", { class: "nova-player-video-share-btn-text" }, "QQ"),
             ),
           ),
           h(
@@ -1098,6 +1103,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               h("input", {
                 class: "nova-player-video-share-link-input html",
                 readOnly: true,
+                value: props.shareUrl ?? "",
               }),
               h(
                 "div",
@@ -1106,10 +1112,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                     "nova-player-video-share-link-copy html ui ui-button",
                   onClick: (event: MouseEvent) => {
                     if (event.currentTarget instanceof HTMLElement) {
-                      const value =
-                        event.currentTarget.getAttribute("value") ?? "";
                       if (navigator.clipboard) {
-                        void navigator.clipboard.writeText(value);
+                        void navigator.clipboard.writeText(
+                          props.shareUrl ?? "",
+                        );
                       }
                     }
                   },
@@ -1136,6 +1142,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               h("input", {
                 class: "nova-player-video-share-link-input iframe",
                 readOnly: true,
+                value: props.embedCode ?? "",
               }),
               h(
                 "div",
@@ -1144,10 +1151,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                     "nova-player-video-share-link-copy iframe ui ui-button",
                   onClick: (event: MouseEvent) => {
                     if (event.currentTarget instanceof HTMLElement) {
-                      const value =
-                        event.currentTarget.getAttribute("value") ?? "";
                       if (navigator.clipboard) {
-                        void navigator.clipboard.writeText(value);
+                        void navigator.clipboard.writeText(
+                          props.embedCode ?? "",
+                        );
                       }
                     }
                   },
@@ -1168,11 +1175,23 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             "div",
             { class: "nova-player-video-share-qrcode" },
             h("span", {}, t("player.ui.ending.share_wechat")),
-            h(
-              "span",
-              { class: "nova-player-video-share-qrcode-img" },
-              h("canvas", { width: 150, height: 150 }),
-            ),
+            props.qrCodeUrl
+              ? h(
+                  "span",
+                  { class: "nova-player-video-share-qrcode-img" },
+                  h("img", {
+                    src: props.qrCodeUrl,
+                    alt: t("player.ui.ending.share_wechat"),
+                  }),
+                )
+              : h(
+                  "span",
+                  {
+                    class:
+                      "nova-player-video-share-qrcode-img nova-player-video-share-qrcode-placeholder",
+                  },
+                  t("player.ui.ending.qr_placeholder"),
+                ),
           ),
         ),
       ),

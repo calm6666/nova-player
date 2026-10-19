@@ -116,6 +116,8 @@ pnpm vite --config demo/vite.config.ts
 | `ui.embedded` | `EmbeddedConfig` | `undefined` | 否（挂载期读取） | 外链场景的标题 / UP / 推荐 / 跳转地址（见 §7.5） |
 | `ui.ogv` | `OgvEndingConfig` | `undefined` | 否（挂载期读取） | 电视剧 / 番剧片尾：标题 / 封面 / 追剧状态 / 推荐 |
 | `ui.related` | `EndingRelatedItem[]` | `undefined` | 否（挂载期读取） | 站内标准片尾的相关推荐 |
+| `ui.up` | `EndingUpInfo` | `undefined` | 否（挂载期读取） | 站内标准片尾的 UP 头像 / 昵称 / 关注态 |
+| `ui.share` | `ShareInfo` | `undefined` | 否（挂载期读取） | 片尾分享面板：视频地址 / 嵌入代码 / 二维码图片 |
 | `ui.controls` | `ControlsConfig` | `defaultControlConfig` | 否 | 控件开关（见下） |
 | `ui.slots` | `ControlSlotItem[]` | `undefined` | 否 | 控制栏插槽（见 §7） |
 | `interaction.keyboard` | `boolean \| KeyboardStepConfig` | `true` | 否 | 快捷键开关或步长配置 |
@@ -811,6 +813,10 @@ new VideoPlayer({
 **电视剧 / 番剧（OGV）片尾**：`ui.endingStyle: "ogv"` + `ui.ogv` 数据，渲染整页片尾（68×68 封面 / 标题 / 追剧 / 重播 / 好评 / 投币 / 分享 / 112×148 推荐卡），推荐卡首张同样支持 5s 倒计时与取消连播。
 
 **跳过头尾**：`progress.skipPoints: { introEnd, outroStart }` 会在进度条渲染两个断点圆点；电视剧 / 番剧场景下设置面板显示「跳过头尾」开关，开启后到达断点自动跳过（片头跳至 `introEnd`，片尾切换下一集 / 跳到结尾）。断点可由外部数据源通过 `player.setSkipPoints()` 运行时更新。
+
+**分享面板**：`ui.share: { url, embedCode, qrCodeUrl }`，分享面板会填充视频地址 / 嵌入代码；`qrCodeUrl` 不传时展示占位提示，不绘制假二维码。
+
+**在线演示**：`/demo/ending-demo/index.html` 提供「标准片尾 / 电视剧 OGV / 外链片尾 / 分享面板 / 外链播放中 / 设置-跳过头尾 / 进度条断点」一键切换。
 
 ---
 

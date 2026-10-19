@@ -94,6 +94,7 @@
   "player.ui.ending.copy": "复制",
   "player.ui.ending.embed_code": "嵌入代码",
   "player.ui.ending.share_wechat": "分享到微信",
+  "player.ui.ending.qr_placeholder": "二维码（配置 qrCodeUrl 后展示）",
   "player.ui.sendbar.placeholder": "发送弹幕...",
   "player.ui.sendbar.send": "发送",
   "player.ui.sendbar.settings": "弹幕设置",
