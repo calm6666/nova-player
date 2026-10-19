@@ -149,7 +149,133 @@ Top 插件按 `mode` 返回不同 VNode；`music` 模式可以渲染歌曲信息
 - `ending.content` 插槽优先级最高，仍可整页替换。
 - 任何插件异常不能阻断 `ended → next()`；core 捕获异常并使用 fallback。
 
-## 8. 当前落地状态
+
+## 9. 插槽体系（在插件化之上）
+
+### 9.1 现状核查
+
+仓库里已经有一套「未完成」的插槽基础：
+
+- `packages/player/src/types/slots.ts` 定义了 `ControlSlotItem` / `EndingSlot` / `SlotContext` / `resolveSlotVNode()` / `pickSlotsByPosition()`；
+- `PlayerConfig.ui.slots` 声明了控制栏插槽；
+- `PlayerConfig.ending.content` 声明了片尾整页替换；
+- 但当前 `PlayerDocker` **没有消费** `ui.slots`，也没有读取 `ending.content`，Top 更没有插槽入口。
+
+所以「插槽」不是从零设计，而是要把这套已声明的契约真正接到 Host 上，并补齐 Top/Ending 的区域槽位。
+
+### 9.2 两级插槽
+
+建议每个 Surface 同时支持：
+
+1. **整面替换（Surface Slot）**
+   ```ts
+   ui.top.content?: SlotVNode;
+   ending.content?: SlotVNode;   // 已有类型，补接线
+   ```
+   传入即完全替换该 Surface 的预设渲染，开发者自己控制 DOM/CSS/定位。
+
+2. **区域插槽（Region Slot）**
+   ```ts
+   interface TopSlotRegions {
+     left?: SlotVNode;      // 标题 / UP / 关注
+     actions?: SlotVNode;   // 外链点赞/评论/分享/更多
+     issue?: SlotVNode;     // 站内反馈按钮
+     extra?: SlotVNode;     // 顶栏附加层
+   }
+
+   interface EndingSlotRegions {
+     header?: SlotVNode;    // 片尾头部（UP/重播/评分等）
+     body?: SlotVNode;      // 推荐区 / 进度回溯区
+     actions?: SlotVNode;   // 操作按钮组
+     extra?: SlotVNode;     // 额外浮层
+   }
+   ```
+   各区域未传时渲染预设；传了只替换该区域，其他预设保持不变。
+
+### 9.3 解析优先级
+
+```text
+config 显式 slot（content / region）
+  > 插件注册的 variant renderer
+  > 内置预设 renderer（standard / ogv / embedded / interactive / music）
+  > 空 fallback
+```
+
+- `ending.content` 优先级最高：开发者显式整页替换时，互动视频插件不再抢根节点。
+- 没有显式 slot 时，按 `endingStyle` / Top `mode` 从注册表选 renderer。
+- 所有内置形态都注册成 **默认启用的 preset**，因此「预设保留」不是靠 if/else 硬编码，而是注册表里的内置项。
+
+### 9.4 预设注册表示例
+
+```ts
+surfaceRegistry.register({
+  id: "builtin.ending.standard",
+  surface: "ending",
+  variant: "standard",
+  priority: 0,
+  render: (ctx) => renderStationEnding(ctx),
+});
+
+surfaceRegistry.register({
+  id: "builtin.ending.interactive",
+  surface: "ending",
+  variant: "interactive",
+  priority: 0,
+  render: (ctx) => renderInteractiveEnding(ctx),
+});
+
+surfaceRegistry.register({
+  id: "builtin.top.music",
+  surface: "top",
+  variant: "music",
+  priority: 0,
+  render: (ctx) => renderMusicTop(ctx),
+});
+```
+
+开发者插件只需注册同 `surface + variant` 的更高优先级 renderer，或直接配置 slot；不注册时预设继续工作。
+
+### 9.5 Slot 上下文
+
+在现有 `SlotContext` 基础上扩展 Surface 专用数据，但只读：
+
+```ts
+interface SurfaceSlotContext extends SlotContext {
+  scene: "station" | "embedded";
+  style: string;                 // endingStyle / top variant
+  data: Readonly<EndingData | TopData>;
+  actions: Readonly<{
+    next(): void;
+    restart(): void;
+    seek(time: number): void;
+    emit(event: string, payload?: unknown): void;
+  }>;
+}
+```
+
+约束：
+
+- slot 函数只在挂载/变体切换时解析一次，不做细粒度响应式；
+- 需要动态更新的开发者在自己的 VNode 内使用播放器事件或 `player` 实例；
+- 核心不把可写 state 暴露给 slot，避免插件绕过播放时序。
+
+### 9.6 与互动视频插件并存
+
+- `ending.content` 存在 → 整页归开发者，互动插件不挂 ending 根；
+- 否则互动插件注册 `surface:"ending", variant:"interactive"`；
+- 互动插件同时可以只注册子区域（如进度回溯）作为 `body` renderer，由预设 EndPanel 组合；
+- 通过 `emit("backtrack", payload)` 通知核心，核心执行 seek / 回溯，插件不直接操作 video。
+
+### 9.7 迁移顺序
+
+1. 接线 `ending.content`（现成类型）；
+2. 增加 `ui.top.content` 与 `TopSlotRegions/EndingSlotRegions` 类型；
+3. Top 先接区域插槽，保留现有 left/actions/issue 为默认；
+4. Ending 按 standard/OGV/embedded/interactive 四个 preset 接 header/body/actions/extra；
+5. 最后把内置组件注册为 preset，Host 只做选择与 fallback。
+
+
+## 10. 当前落地状态
 
 已完成：
 

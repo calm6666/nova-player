@@ -219,8 +219,8 @@
   }
 
   .nova-audio-panel-select {
-    background: rgba(255, 255, 255, 0.16);
-    border: 0;
+    background: #1c1d22;
+    border: 1px solid hsla(0, 0%, 100%, 0.18);
     border-radius: 2px;
     color: #fff;
     font-size: 14px;
@@ -230,8 +230,8 @@
     padding: 0 8px;
 
     option {
-      background: #fff;
-      color: #1a1a1a;
+      background: #1c1d22;
+      color: #fff;
     }
   }
 
