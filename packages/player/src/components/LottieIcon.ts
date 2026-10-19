@@ -117,6 +117,15 @@ export interface LottieIconProps {
   /** 序列模式初始槽位索引，默认 0 */
   initialSlotIndex?: number;
 
+  /**
+   * 动画就绪回调（lottie 动态 import 完成且首个动画实例创建之后触发）
+   *
+   * lottie-web 是异步加载的：就绪前调用 setSequenceSlot/play 会被静默丢弃
+   * （loadLottie 的 await 尚未完成）。父组件可在此回调里把图标补同步到
+   * 当前业务状态对应的槽位，避免「挂载即处于激活态」时图标停在初始槽位。
+   */
+  onReady?: () => void;
+
   // === 交互 ===
   /** 悬停动画 JSON 数据 */
   hoverData?: Record<string, unknown>;
@@ -168,6 +177,8 @@ export const LottieIcon = defineComponent<LottieIconProps, LottieIconApi>(
       sequence,
       /** 序列模式初始槽位索引 */
       initialSlotIndex = 0,
+      /** 动画就绪回调（lottie 加载 + 首帧动画创建完成后触发） */
+      onReady,
       /** 悬停动画 JSON 数据 */
       hoverData,
       /** 悬停动画 URL */
@@ -385,6 +396,8 @@ export const LottieIcon = defineComponent<LottieIconProps, LottieIconApi>(
         // 序列模式
         if (sequence && sequence.length > 0) {
           playSequenceSlot(initialSlotIndex);
+          // 通知父组件：动画实例已创建，可补同步业务状态对应的槽位
+          onReady?.();
           return;
         }
 
@@ -399,6 +412,8 @@ export const LottieIcon = defineComponent<LottieIconProps, LottieIconApi>(
           animationItem.setDirection(direction);
           animationItem.setSpeed(speed);
         }
+        // 通知父组件：动画实例已创建
+        onReady?.();
       } catch {
         // lottie-web 加载失败，进入回退模式
         isFallbackMode = true;

@@ -333,6 +333,41 @@ export const RightControls = defineComponent<
   /** 画中画按钮 API 引用 */
   const pipRef = useTemplateRef<LottieIconApi>(lifecycle, "pipRef");
 
+  // ============================================
+  // 状态图标同步（pip / web 全屏 / 宽屏）
+  // ============================================
+  // 槽位约定：sequence[0] = 未激活态动画，sequence[1] = 已激活（退出）态动画。
+  // 三个按钮的 slot 都是 autoplay:false，setSequenceSlot 会重建动画并停在
+  // 该槽位第一帧——正好满足「切换后默认留在第一帧」；hover 才 play()。
+  // 与 LeftControls 播放/暂停的区别：那边状态切换要播过渡动画（play），
+  // 这里状态切换只换槽位、不播。
+
+  /** 状态值 → 目标槽位（激活态用退出图标） */
+  function resolveSlot(isActive: unknown): number {
+    return Boolean(isActive) ? 1 : 0;
+  }
+
+  /**
+   * 把画中画图标同步到当前状态槽位（不播放，停在第一帧）
+   *
+   * 同时用于三处：状态 effect、hover 移出复位、lottie 异步就绪后的补同步。
+   */
+  function syncPipIcon(): void {
+    pipRef.value?.setSequenceSlot(resolveSlot(isPipSignal.value));
+  }
+
+  /** 把网页全屏图标同步到当前状态槽位（不播放，停在第一帧） */
+  function syncWebFullscreenIcon(): void {
+    webFullscreenRef.value?.setSequenceSlot(
+      resolveSlot(isWebFullscreenSignal.value),
+    );
+  }
+
+  /** 把宽屏图标同步到当前状态槽位（不播放，停在第一帧） */
+  function syncWideIcon(): void {
+    wideRef.value?.setSequenceSlot(resolveSlot(isWideSignal.value));
+  }
+
   /**
    * 全屏悬悬停事件处理函数
    */
@@ -354,8 +389,12 @@ export const RightControls = defineComponent<
 
   /**
    * 网页全屏悬停事件处理函数
+   * 移出后复位到当前状态槽位第一帧（hover 动画 complete 停在末帧，
+   * 不复位会与「默认第一帧」的状态图标不一致）
    */
-  const mouseWebLeave = (): void => {};
+  const mouseWebLeave = (): void => {
+    syncWebFullscreenIcon();
+  };
 
   /**
    * 宽屏悬悬停事件处理函数
@@ -366,8 +405,11 @@ export const RightControls = defineComponent<
 
   /**
    * 宽屏悬停事件处理函数
+   * 移出后复位到当前状态槽位第一帧
    */
-  const mouseWideLeave = (): void => {};
+  const mouseWideLeave = (): void => {
+    syncWideIcon();
+  };
 
   /**
    * 画中画悬悬停事件处理函数
@@ -378,8 +420,11 @@ export const RightControls = defineComponent<
 
   /**
    * 画中画悬停事件处理函数
+   * 移出后复位到当前状态槽位第一帧
    */
-  const mousePipLeave = (): void => {};
+  const mousePipLeave = (): void => {
+    syncPipIcon();
+  };
 
   // ============================================
   // 状态监听（响应式系统：useReactiveState + onEffect）
@@ -408,6 +453,30 @@ export const RightControls = defineComponent<
     onEffect(lifecycle, () => {
       const index = playlistIndexSignal.value;
       if (typeof index === "number") currentIndex = index;
+    });
+
+    /**
+     * 画中画状态 → 图标槽位（状态驱动，只切槽位停第一帧，不播放）
+     *
+     * 与 LeftControls 的播放/暂停通道相同（useReactiveState + onEffect +
+     * LottieIcon 命令 API），但动作不同：那边状态变化要播放过渡动画，
+     * 这里状态变化只把图标切到目标槽位并停在第一帧，hover 才播放。
+     */
+    onEffect(lifecycle, () => {
+      const isPip = isPipSignal.value;
+      pipRef.value?.setSequenceSlot(resolveSlot(isPip));
+    });
+
+    /** 网页全屏状态 → 图标槽位（停第一帧，hover 才播放） */
+    onEffect(lifecycle, () => {
+      const isWeb = isWebFullscreenSignal.value;
+      webFullscreenRef.value?.setSequenceSlot(resolveSlot(isWeb));
+    });
+
+    /** 宽屏状态 → 图标槽位（停第一帧，hover 才播放） */
+    onEffect(lifecycle, () => {
+      const isWide = isWideSignal.value;
+      wideRef.value?.setSequenceSlot(resolveSlot(isWide));
     });
   }
 
@@ -509,6 +578,10 @@ export const RightControls = defineComponent<
                 autoplay: false,
               },
             ],
+            // 初始槽位按挂载时的状态快照选择；lottie 异步就绪后再经
+            // onReady 补同步一次，覆盖「挂载即已激活」与加载时序空窗
+            initialSlotIndex: resolveSlot(isPipSignal.value),
+            onReady: syncPipIcon,
             ref: "pipRef",
           }),
         ),
@@ -548,6 +621,8 @@ export const RightControls = defineComponent<
                 autoplay: false,
               },
             ],
+            initialSlotIndex: resolveSlot(isWideSignal.value),
+            onReady: syncWideIcon,
             ref: "wideRef",
           }),
         ),
@@ -587,6 +662,8 @@ export const RightControls = defineComponent<
                 autoplay: false,
               },
             ],
+            initialSlotIndex: resolveSlot(isWebFullscreenSignal.value),
+            onReady: syncWebFullscreenIcon,
             ref: "webFullscreenRef",
           }),
         ),
