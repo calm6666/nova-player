@@ -21,6 +21,7 @@ type DemoMode =
   | "ogv"
   | "embedded"
   | "share"
+  | "ogv-share"
   | "embedded-play"
   | "settings"
   | "points";
@@ -114,7 +115,7 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
     playback: {
       autoplay: true,
       muted: true,
-      pauseAfterEnd: mode === "share",
+      pauseAfterEnd: mode === "share" || mode === "ogv-share",
       playMode: PlayMode.ORDER,
     },
     playlist: [
@@ -148,7 +149,7 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
     },
   };
 
-  if (mode === "ogv" || mode === "settings") {
+  if (mode === "ogv" || mode === "ogv-share" || mode === "settings") {
     return {
       ...base,
       ui: {
@@ -212,14 +213,14 @@ const runMode = async (mode: DemoMode): Promise<void> => {
     await seekToEnd();
     return;
   }
-  if (mode === "share") {
+  if (mode === "share" || mode === "ogv-share") {
     await seekToEnd();
     setTimeout(() => {
-      container
-        .querySelector<HTMLElement>(
-          '.nova-player-ending-functions-btn[data-action="share"]',
-        )
-        ?.click();
+      const selector =
+        mode === "ogv-share"
+          ? ".nova-ogv-ending-share"
+          : '.nova-player-ending-functions-btn[data-action="share"]';
+      container.querySelector<HTMLElement>(selector)?.click();
     }, 900);
     return;
   }
@@ -281,6 +282,7 @@ document.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => 
     "ogv",
     "embedded",
     "share",
+    "ogv-share",
     "embedded-play",
     "settings",
     "points",

@@ -317,7 +317,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 显示分享面板（data-select="2"，仅 station） */
   const showShareWrap = (): void => {
-    if (isEmbedded || isOgv) return;
     stopCountdown();
     endingWrapRef.value?.setAttribute("data-select", "2");
   };
@@ -1016,7 +1015,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               {
                 class: "nova-ogv-ending-btn nova-ogv-ending-share",
                 role: "button",
-                onClick: props.onShare,
+                onClick: () => {
+                  props.onShare?.();
+                  showShareWrap();
+                },
               },
               h("span", { class: "nova-ogv-ending-btn-icon" }, OgvShareIcon()),
               h(
@@ -1250,12 +1252,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           ? renderOgvEnding()
           : renderStationEnding(),
     ),
-    isEmbedded || isOgv
-      ? null
-      : h(
-          "div",
-          { class: "nova-player-share-panel", "data-option": "2" },
-          renderSharePanel(),
-        ),
+    h(
+      "div",
+      { class: "nova-player-share-panel", "data-option": "2" },
+      renderSharePanel(),
+    ),
   );
 });
