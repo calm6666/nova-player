@@ -274,7 +274,6 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       { element: null, name: "wide", dataName: "ctrl:widescreen" },
       { element: null, name: "web", dataName: "ctrl:webscreen" },
       { element: null, name: "full", dataName: "ctrl:fullscreen" },
-      { element: null, name: "playbackrate", dataName: "ctrl:playbackrate" },
     ];
 
     /** 提示按钮延迟显示的定时器 */
@@ -288,7 +287,6 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       wide: ".nova-player-ctrl-btn.nova-player-ctrl-wide",
       web: ".nova-player-ctrl-btn.nova-player-ctrl-web",
       full: ".nova-player-ctrl-btn.nova-player-ctrl-full",
-      playbackrate: ".nova-player-ctrl-btn.nova-player-ctrl-playbackrate",
     };
 
     /** 当前悬停中的提示按钮（委托去重：按钮内部子元素间移动不重复触发） */

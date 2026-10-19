@@ -67,7 +67,6 @@ const DEFAULT_TOOLTIP_ITEMS: TooltipItem[] = [
   { name: "preventshade", titleKey: "player.ui.tooltip.preventshade" },
   { name: "special-more", titleKey: "player.ui.tooltip.special_more" },
   { name: "feedback-btn", titleKey: "player.ui.tooltip.feedback" },
-  { name: "ctrl:playbackrate", titleKey: "player.ui.controls.playbackRate" },
   { name: "ctrl:widescreen", titleKey: "player.ui.tooltip.widescreen.enter" },
   { name: "ctrl:webscreen", titleKey: "player.ui.tooltip.webscreen.enter" },
   { name: "ctrl:pip", titleKey: "player.ui.tooltip.pip.enter" },

@@ -226,14 +226,19 @@ export const PlaybackRateMenu = defineComponent<
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
     },
-    // 当前倍速显示（编译器自动检测动态表达式并包装为 _reactiveText：
-    // currentRateSignal 变化时自动更新 textContent，无需手动 el.innerText = ...）
+    // 当前倍速显示：显式零参箭头 getter 协议
+    // （t() 内部读取 localeSignal，显式 getter 才能在 currentRate 变化与
+    // setLocale 语言切换时都重新求值；写成直接表达式会被求值成静态文本，
+    // 切语言后「倍速」两个字不会跟着翻译）
     h(
       "div",
       { class: "nova-player-ctrl-playbackrate-result" },
-      currentRateSignal.value === 1
-        ? t("player.ui.controls.playbackRate")
-        : formatRateLabel(currentRateSignal.value),
+      () => {
+        const rateValue = currentRateSignal.value;
+        return rateValue === 1
+          ? t("player.ui.controls.playbackRate")
+          : formatRateLabel(rateValue);
+      },
     ),
     // 倍速下拉菜单（For 组件：key-based 精准更新，每个倍速值只渲染一次）
     h(
