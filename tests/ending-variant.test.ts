@@ -62,6 +62,36 @@ describe("Ending station 场景", () => {
     ).toBe(t("player.ui.ending.related"));
   });
 
+  it("使用 B 站标准片尾 SVG 图标（非占位图标）", () => {
+    const api = mountEnding({ variant: "station", related: RELATED });
+    api.showEndWrap();
+
+    const icons = [
+      ...container.querySelectorAll<SVGElement>(
+        ".nova-player-ending-functions-btn .common-svg-icon svg",
+      ),
+    ];
+    expect(icons.map((svg) => svg.getAttribute("viewBox"))).toEqual([
+      "0 0 28 28",
+      "0 0 24 24",
+      "0 0 24 24",
+      "0 0 24 24",
+      "0 0 24 24",
+    ]);
+    // 关注按钮：B 站标准片尾无加号图标，只有文字
+    expect(
+      container.querySelector(
+        ".nova-player-ending-functions-follow .common-svg-icon",
+      ),
+    ).toBeNull();
+    // 充电：B 站 PNG 素材
+    expect(
+      container
+        .querySelector(".nova-player-ending-functions-electric-icon")
+        ?.getAttribute("src"),
+    ).toContain("hdslb.com");
+  });
+
   it("自动连播开启时显示倒计时，取消后关闭", () => {
     const api = mountEnding({
       variant: "station",

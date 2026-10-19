@@ -819,3 +819,17 @@
     top: 8px !important;
   }
 }
+
+/* 标准片尾图标颜色 / 充电图标 */
+.nova-player-container {
+  .nova-player-ending-functions-btn:hover {
+    color: #fff;
+  }
+
+  .nova-player-ending-functions-electric-icon {
+    height: 16px;
+    margin-right: 4px;
+    vertical-align: middle;
+    width: 16px;
+  }
+}

@@ -115,24 +115,71 @@ const StrokeIcon = (path: string): VNode =>
     h("path", { d: path, stroke: "currentColor" }),
   );
 
-/** 关注（加号）图标 */
-const ADD_ICON =
-  "M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m224 480H544v192a32 32 0 0 1-64 0V544H288a32 32 0 0 1 0-64h192V288a32 32 0 0 1 64 0v192h192a32 32 0 0 1 0 64z";
-/** 重播图标 */
-const RESTART_ICON =
-  "M512 128c-106 0-202 46.4-267.8 120L160 163.8V384h220.2l-90.5-90.5C344.6 240 424.6 208 512 208c167.6 0 304 136.4 304 304s-136.4 304-304 304-304-136.4-304-304h-80c0 212 172 384 384 384s384-172 384-384S724 128 512 128z";
-/** 点赞图标 */
-const LIKE_ICON =
-  "M885.9 533.7c16.8-22.2 26.1-49.4 26.1-77.7 0-44.9-25.1-87.4-65.5-111.1a67.67 67.67 0 0 0-34.3-9.3H572.4l6-122.9c1.4-29.7-9.1-57.9-29.5-79.4A106.62 106.62 0 0 0 468.9 96c-28.1 0-53.6 13.4-68.9 35.9L224 471.4v493.8c0 32.1 26.1 58.2 58.2 58.2h458.9c22.7 0 43.1-13.5 52-34.3l101.9-230.6c2.9-6.7 4.5-13.9 4.5-21.1V576c0-15.2-4.5-29.7-13.6-42.3z";
-/** 投币图标 */
-const COIN_ICON =
-  "M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z m48-532v96h-96v-96c0-26.5-21.5-48-48-48s-48 21.5-48 48v96h-32c-17.7 0-32 14.3-32 32v64c0 17.7 14.3 32 32 32h32v64h-32c-17.7 0-32 14.3-32 32v64c0 17.7 14.3 32 32 32h32v96c0 26.5 21.5 48 48 48s48-21.5 48-48v-96h96v96c0 26.5 21.5 48 48 48s48-21.5 48-48v-96h32c17.7 0 32-14.3 32-32v-64c0-17.7-14.3-32-32-32h-32v-64h32c17.7 0 32-14.3 32-32v-64c0-17.7-14.3-32-32-32h-32v-96c0-26.5-21.5-48-48-48s-48 21.5-48 48z";
-/** 收藏图标 */
-const COLLECT_ICON =
-  "M908.1 353.1l-253.9-36.9L540.7 86.1c-3.1-6.3-8.2-11.4-14.5-14.5-15.8-7.8-35-1.3-42.9 14.5L369.8 316.2l-253.9 36.9c-7 1-13.4 3.8-18.5 8.2-12.8 11.8-13.6 31.8-1.8 44.6l185.1 180.4-43.7 254.1c-1.2 7-0.5 14.2 2.1 20.7 6.1 15.4 23.6 23 39 16.9L512 754.3l227.7 119.7c6.5 3.4 14 4.4 21 3.1 16.9-3.2 28-19.5 24.8-36.4l-43.7-254.1 184.6-179.9c5.1-4.9 8.6-11.3 9.7-18.3 2.6-16.9-8.9-32.6-26-35.3z";
-/** 分享图标 */
-const SHARE_ICON =
-  "M725.3 128a106.7 106.7 0 1 1-88.1 166.5L401.1 425.9a106.8 106.8 0 0 1 0 172.2l236.1 131.4A106.7 106.7 0 1 1 618.7 768c0-6.2 0.5-12.3 1.5-18.2L384.1 618.4a106.7 106.7 0 1 1 0-212.8l236.1-131.4c-1-5.9-1.5-12-1.5-18.2A106.7 106.7 0 0 1 725.3 128z";
+/** ===== B 站片尾标准操作图标（精确取自 B 站 ending DOM） ===== */
+/** 重播 */
+const BILI_RESTART_PATH =
+  "M14.158 6.212c-4.404 0-8.06 3.656-8.06 8.06s3.656 8.06 8.06 8.06c2.806 0 5.318-1.414 6.859-3.717.195-.392.708-.734 1.132-.734.765 0 1.413.594 1.413 1.413 0 .171-.033.307-.093.458a.605.605 0 0 0-.021.145l-.079.123c-1.981 3.096-5.382 5.026-9.096 5.026A10.728 10.728 0 0 1 3.5 14.273 10.73 10.73 0 0 1 14.273 3.5c2.591 0 5.021.919 6.921 2.532v-.549c0-.733.564-1.299 1.297-1.299a1.28 1.28 0 0 1 1.299 1.299v3.996a1.28 1.28 0 0 1-1.299 1.299h-3.996a1.278 1.278 0 0 1-1.297-1.299c0-.783.472-1.413 1.297-1.413h.787c-1.46-1.179-3.26-1.854-5.124-1.854z";
+/** 好评（标准片尾） */
+const BILI_LIKE_PATH =
+  "M20.319 7.75h-4.543c.223-.484.457-1.093.545-1.683.064-.426.07-.948.019-1.445-.05-.485-.163-1.027-.387-1.452-.476-.901-1.13-1.534-1.917-1.688-.837-.163-1.558.263-1.99.916-.36.546-.501 1.001-.63 1.416l-.004.014c-.123.399-.244.791-.556 1.344-.513.909-.932 1.38-1.495 1.873-.29.255-.588.427-.861.538v13.642a108.372 108.372 0 0 0 8.127-.118c1.28-.067 2.504-.713 3.173-1.885.632-1.109 1.44-2.786 1.929-4.792.457-1.88.647-3.407.724-4.445.096-1.278-.943-2.235-2.134-2.235ZM7 21.184V7.75H5.302c-1.543 0-2.914 1.1-3.09 2.698A35.171 35.171 0 0 0 2 14.252c0 1.587.117 3.06.24 4.16.167 1.519 1.42 2.628 2.913 2.698.532.026 1.156.052 1.847.074Z";
+/** 投币（标准片尾） */
+const BILI_COIN_PATH =
+  "M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Zm3.25 4.75a.75.75 0 0 1 0 1.5h-2.5v1.29c1.117.125 2.062.539 2.761 1.253.849.867 1.239 2.077 1.239 3.457v.5a.75.75 0 0 1-1.5 0v-.5c0-1.105-.31-1.895-.81-2.407-.383-.39-.934-.678-1.69-.79V17a.75.75 0 0 1-1.5 0v-5.947c-.756.112-1.307.4-1.69.79-.5.512-.81 1.302-.81 2.407v.5a.75.75 0 0 1-1.5 0v-.5c0-1.38.39-2.59 1.239-3.457.7-.714 1.644-1.128 2.761-1.252V8.25h-2.5a.75.75 0 0 1 0-1.5h6.5Z";
+/** 收藏（标准片尾） */
+const BILI_COLLECT_PATH =
+  "M10.43 2.735c.643-1.3 2.498-1.3 3.14 0l1.87 3.79c.182.37.534.625.941.685l4.183.607c1.436.209 2.009 1.973.97 2.985l-3.027 2.95a1.25 1.25 0 0 0-.36 1.107l.715 4.167c.246 1.43-1.255 2.52-2.539 1.844l-3.741-1.967a1.25 1.25 0 0 0-1.164 0L7.677 20.87c-1.284.675-2.784-.415-2.54-1.844l.715-4.167a1.25 1.25 0 0 0-.36-1.106l-3.026-2.95C1.427 9.79 2 8.025 3.436 7.816l4.183-.607c.407-.06.759-.315.941-.684l1.87-3.79Z";
+/** 分享（标准片尾） */
+const BILI_SHARE_PATH =
+  "M10.25 3.827c0-1.264 1.467-1.961 2.447-1.163l8.574 6.978c.86.7.86 2.015 0 2.715l-8.574 6.978c-.98.798-2.447.1-2.447-1.163v-3.298c-.83.008-1.763.17-2.71.627-1.213.587-2.503 1.686-3.646 3.69-.29.507-.843.636-1.264.527-.43-.111-.867-.513-.827-1.13.283-4.443 1.685-7.268 3.511-9.025 1.58-1.52 3.412-2.18 4.936-2.447V3.827Z";
+/** 好评（OGV 片尾） */
+const OGV_LIKE_PATH =
+  "M4.909 8.543v15.275h-1.78a2.944 2.944 0 0 1-2.947-2.94v-9.395c0-1.624 1.32-2.94 2.948-2.94h1.779zm8.64-8.114c1.282.62 2.128 2.183 2.128 4.272 0 1.25-.156 2.53-.468 3.842h5.655a2.955 2.955 0 0 1 2.868 3.662l-1.865 7.568a5.318 5.318 0 0 1-5.163 4.045H6.682V8.508l.132-.047c2.316-.894 3.634-3.072 3.957-6.64C10.9.396 12.256-.196 13.548.428z";
+/** 投币（OGV 片尾） */
+const OGV_COIN_PATH =
+  "M12 .182C18.527.182 23.818 5.473 23.818 12A11.818 11.818 0 0 1 12 23.818C5.473 23.818.182 18.527.182 12 .182 5.473 5.473.182 12 .182zm3.658 6.753a.844.844 0 1 0 0-1.688H8.342a.844.844 0 0 0 0 1.688h2.814v1.44a5.335 5.335 0 0 0-5.065 5.313v1.126a.844.844 0 0 0 1.688 0v-1.126a3.647 3.647 0 0 1 3.377-3.624v7.879a.844.844 0 1 0 1.688 0v-7.879c1.9.141 3.37 1.72 3.377 3.624v1.126a.844.844 0 0 0 1.688 0v-1.126a5.335 5.335 0 0 0-5.065-5.312v-1.44z";
+/** 分享（OGV 片尾） */
+const OGV_SHARE_PATH =
+  "M12.605 9.649V4.516c0-.837.667-1.516 1.488-1.516.349 0 .687.125.954.353l10.337 8.805a1.773 1.773 0 0 1 0 2.684l-10.337 8.805a1.469 1.469 0 0 1-2.096-.191 1.532 1.532 0 0 1-.346-.972v-4.729c-5.011 0-7.235 1.952-10.034 5.746-.095.13-.571.265-.571-.328C2 15.827 3.901 9.649 12.605 9.649z";
+
+/** 生成 B 站片尾 SVG 图标 */
+const BiliIcon = (
+  viewBox: string,
+  path: string,
+  fill: string,
+  fillRule?: "evenodd" | "nonzero",
+): VNode =>
+  h(
+    "svg",
+    { xmlns: "http://www.w3.org/2000/svg", viewBox, fill: "none" },
+    h("path", {
+      d: path,
+      fill,
+      ...(fillRule ? { "fill-rule": fillRule } : {}),
+    }),
+  );
+
+/** 标准片尾操作图标 */
+const RestartIcon = (): VNode =>
+  BiliIcon("0 0 28 28", BILI_RESTART_PATH, "#fff");
+const LikeIcon = (): VNode =>
+  BiliIcon("0 0 24 24", BILI_LIKE_PATH, "currentColor", "evenodd");
+const CoinIcon = (): VNode =>
+  BiliIcon("0 0 24 24", BILI_COIN_PATH, "currentColor", "evenodd");
+const CollectIcon = (): VNode =>
+  BiliIcon("0 0 24 24", BILI_COLLECT_PATH, "currentColor", "evenodd");
+const ShareIcon = (): VNode =>
+  BiliIcon("0 0 24 24", BILI_SHARE_PATH, "currentColor", "evenodd");
+/** OGV 片尾操作图标 */
+const OgvLikeIcon = (): VNode =>
+  BiliIcon("0 0 24 24", OGV_LIKE_PATH, "currentColor");
+const OgvCoinIcon = (): VNode =>
+  BiliIcon("0 0 24 24", OGV_COIN_PATH, "currentColor", "nonzero");
+const OgvShareIcon = (): VNode =>
+  BiliIcon("0 0 24 24", OGV_SHARE_PATH, "currentColor");
+/** 充电图标（B 站标准片尾使用 PNG 素材） */
+const BILI_ELECTRIC_ICON =
+  "https://i0.hdslb.com/bfs/garb/item/33e2e72d9a0c855f036b4cb55448f44af67a0635.png";
+
 /** 关闭图标 */
 const CLOSE_ICON =
   "M512 444.16l297.088-297.088c17.088-17.152 46.208-15.872 64.96 2.88 18.752 18.752 20.032 47.872 2.88 64.96L579.904 512l297.024 297.088c17.152 17.088 15.872 46.208-2.88 64.96-18.752 18.752-47.872 20.032-64.96 2.88L512 579.904l-297.088 297.024c-17.088 17.152-46.208 15.872-64.96-2.88-18.752-18.752-20.032-47.872-2.88-64.96L444.096 512 147.072 214.912c-17.152-17.088-15.872-46.208 2.88-64.96 18.752-18.752 47.872-20.032 64.96-2.88L512 444.096z";
@@ -495,11 +542,11 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   class: "nova-player-ending-functions-electric state-little",
                   onClick: props.onElectric,
                 },
-                h(
-                  "span",
-                  { class: "common-svg-icon" },
-                  SimpleIcon(ADD_ICON),
-                ),
+                h("img", {
+                  class: "nova-player-ending-functions-electric-icon",
+                  src: BILI_ELECTRIC_ICON,
+                  alt: "",
+                }),
                 t("player.ui.ending.electric"),
               ),
               h(
@@ -512,11 +559,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   "data-action": "follow",
                   onClick: props.onFollow,
                 },
-                h(
-                  "span",
-                  { class: "common-svg-icon" },
-                  SimpleIcon(ADD_ICON),
-                ),
                 props.upInfo?.followed
                   ? t("player.ui.ending.following")
                   : t("player.ui.ending.follow"),
@@ -534,7 +576,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 "data-action": "restart",
                 onClick: props.onRestart,
               },
-              h("span", { class: "common-svg-icon" }, SimpleIcon(RESTART_ICON)),
+              h("span", { class: "common-svg-icon" }, RestartIcon()),
               t("player.ui.ending.replay"),
             ),
             h(
@@ -551,7 +593,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   "data-action": "like",
                   onClick: props.onLike,
                 },
-                h("span", { class: "common-svg-icon" }, SimpleIcon(LIKE_ICON)),
+                h("span", { class: "common-svg-icon" }, LikeIcon()),
                 t("player.ui.ending.like"),
               ),
               h(
@@ -561,7 +603,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   "data-action": "coin",
                   onClick: props.onCoin,
                 },
-                h("span", { class: "common-svg-icon" }, SimpleIcon(COIN_ICON)),
+                h("span", { class: "common-svg-icon" }, CoinIcon()),
                 t("player.ui.ending.coin"),
               ),
               h(
@@ -574,7 +616,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 h(
                   "span",
                   { class: "common-svg-icon" },
-                  SimpleIcon(COLLECT_ICON),
+                  CollectIcon(),
                 ),
                 t("player.ui.ending.collect"),
               ),
@@ -588,7 +630,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                     showShareWrap();
                   },
                 },
-                h("span", { class: "common-svg-icon" }, SimpleIcon(SHARE_ICON)),
+                h("span", { class: "common-svg-icon" }, ShareIcon()),
                 t("player.ui.ending.share"),
               ),
             ),
@@ -685,7 +727,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             h(
               "span",
               { class: "nova-player-top-button-icon" },
-              SimpleIcon(RESTART_ICON),
+              RestartIcon(),
             ),
             h(
               "span",
@@ -703,7 +745,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             h(
               "span",
               { class: "nova-player-top-button-icon" },
-              SimpleIcon(LIKE_ICON),
+              LikeIcon(),
             ),
             h(
               "span",
@@ -724,7 +766,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             h(
               "span",
               { class: "nova-player-top-button-icon" },
-              SimpleIcon(SHARE_ICON),
+              ShareIcon(),
             ),
             h(
               "span",
@@ -929,7 +971,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 role: "button",
                 onClick: props.onRestart,
               },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(RESTART_ICON)),
+              h("span", { class: "nova-ogv-ending-btn-icon" }, RestartIcon()),
               h(
                 "span",
                 { class: "nova-ogv-ending-btn-text" },
@@ -943,7 +985,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 role: "button",
                 onClick: props.onLike,
               },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(LIKE_ICON)),
+              h("span", { class: "nova-ogv-ending-btn-icon" }, OgvLikeIcon()),
               h(
                 "span",
                 { class: "nova-ogv-ending-btn-text" },
@@ -957,7 +999,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 role: "button",
                 onClick: props.onCoin,
               },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(COIN_ICON)),
+              h("span", { class: "nova-ogv-ending-btn-icon" }, OgvCoinIcon()),
               h(
                 "span",
                 { class: "nova-ogv-ending-btn-text" },
@@ -971,7 +1013,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 role: "button",
                 onClick: props.onShare,
               },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, SimpleIcon(SHARE_ICON)),
+              h("span", { class: "nova-ogv-ending-btn-icon" }, OgvShareIcon()),
               h(
                 "span",
                 { class: "nova-ogv-ending-btn-text" },
