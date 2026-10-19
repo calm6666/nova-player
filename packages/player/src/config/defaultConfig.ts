@@ -60,6 +60,7 @@ const defaultConfig: PlayerConfig = {
   // ── 外观与控件 ──
   ui: {
     title: "Nova Player",
+    scene: "station",
     controls: defaultControlConfig,
   },
 

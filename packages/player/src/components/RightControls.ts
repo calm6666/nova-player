@@ -68,6 +68,8 @@ export type RightControlsEvents = {
 };
 
 export interface RightControlsProps {
+  /** 播放场景：embedded 时仅保留清晰度 / 倍速 / 音量 / 全屏 */
+  scene?: "station" | "embedded";
   /**
    * 插件安装标志读取器（getter 形态，Controls 透传）：
    * 字幕按钮按 subtitle 标志显隐，未装 subtitle 插件时整体不显示
@@ -700,19 +702,22 @@ export const RightControls = defineComponent<
       ),
   };
 
-  /** 底部右侧按钮的渲染顺序配置 */
-  const bottomRightOrder = [
-    "quality",
-    "eplist",
-    "playbackrate",
-    "subtitle",
-    "volume",
-    "setting",
-    "pip",
-    "wide",
-    "web",
-    "full",
-  ];
+  /** 底部右侧按钮的渲染顺序配置（embedded 仅保留核心项） */
+  const bottomRightOrder =
+    props.scene === "embedded"
+      ? ["quality", "playbackrate", "volume", "full"]
+      : [
+          "quality",
+          "eplist",
+          "playbackrate",
+          "subtitle",
+          "volume",
+          "setting",
+          "pip",
+          "wide",
+          "web",
+          "full",
+        ];
 
   // ============================================
   // 生命周期钩子

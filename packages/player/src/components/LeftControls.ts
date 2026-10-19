@@ -62,7 +62,10 @@ export type LeftControlsEvents = {
  * config 和 duration 不再通过 props 传递，改为 useContext 获取
  * 避免层级穿透，与 RightControls 保持一致
  */
-export interface LeftControlsProps {}
+export interface LeftControlsProps {
+  /** 播放场景：embedded 时不渲染上一个 / 下一个 */
+  scene?: "station" | "embedded";
+}
 
 /**
  * LeftControls 组件 - 使用 defineComponent 创建独立组件
@@ -72,7 +75,7 @@ export interface LeftControlsProps {}
 export const LeftControls = defineComponent<
   LeftControlsProps,
   LeftControlsEvents
->((_props, lifecycle) => {
+>((props, lifecycle) => {
   /**
    * 通过 useContext 获取配置上下文
    * ConfigContext 由父组件 Controls 通过 provide 注入
@@ -417,6 +420,7 @@ export const LeftControls = defineComponent<
    * - prevConfigSignal：configStore 的 ui.controls.prev 开关
    */
   const isPrevVisible = (): boolean => {
+    if (props.scene === "embedded") return false;
     const total = playlistLengthSignal.value ?? 0;
     const index = playlistIndexSignal.value ?? 0;
     return total > 1 && index > 0 && prevConfigSignal.value;
@@ -424,6 +428,7 @@ export const LeftControls = defineComponent<
 
   /** next 按钮显隐条件 getter（同上，index < total - 1 判断不在最后一个） */
   const isNextVisible = (): boolean => {
+    if (props.scene === "embedded") return false;
     const total = playlistLengthSignal.value ?? 0;
     const index = playlistIndexSignal.value ?? 0;
     return total > 1 && index < total - 1 && nextConfigSignal.value;

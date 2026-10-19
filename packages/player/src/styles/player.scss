@@ -187,6 +187,7 @@ input {
 
     .ui-thumb {
       cursor: pointer;
+
       .ui-thumb-dot {
         -webkit-box-align: center;
         -ms-flex-align: center;
@@ -373,6 +374,8 @@ img {
 .nova-player-ctrl-time {
   font-size: 12px;
   margin-right: 10px;
+  margin-left: 10px;
+  width: auto;
   min-width: 90px;
 }
 
@@ -381,7 +384,7 @@ img {
   width: 100%;
 }
 
-.nova-player-ctrl-btn-icon > .common-svg-icon {
+.nova-player-ctrl-btn-icon>.common-svg-icon {
   height: 22px;
   opacity: 0.9;
   vertical-align: middle;
@@ -658,8 +661,7 @@ img {
     }
   }
 
-  .nova-player-container[data-ctrl-hidden="true"][data-angle="d3d11"]
-    .nova-player-top-wrap {
+  .nova-player-container[data-ctrl-hidden="true"][data-angle="d3d11"] .nova-player-top-wrap {
     clip-path: polygon(0 0, 0 0, 0 0, 0 0);
     opacity: 1;
     visibility: visible;
@@ -698,6 +700,13 @@ img {
       }
     }
 
+    .nova-player-control-bottom {
+      .nova-player-ctrl-btn.nova-player-ctrl-time {
+        width: 120px;
+      }
+    }
+
+
     .nova-player-sending-bar {
       .nova-player-video-info {
         display: none;
@@ -728,6 +737,7 @@ img {
 
     .nova-player-dm-setting-wrap {
       .nova-player-dm-setting-box {
+
         .nova-player-dm-setting-left,
         .nova-player-dm-setting-right {
           font-size: 16px;
@@ -745,6 +755,7 @@ img {
     height: 180px;
     width: 320px;
     z-index: 100000 !important;
+
     .nova-player-primary-area {
       .nova-player-top-wrap {
         display: none;
@@ -800,6 +811,7 @@ img {
     .nova-player-control-wrap {
       .nova-player-control-bottom {
         .nova-player-control-bottom-right {
+
           .nova-player-ctrl-wide,
           .nova-player-ctrl-web {
             display: none;
@@ -810,6 +822,7 @@ img {
   }
 
   @media screen and (min-width: 750px) {
+
     .nova-player-container[data-screen="full"],
     .nova-player-container[data-screen="web"] {
       .nova-player-top-left {
@@ -834,6 +847,7 @@ img {
       .nova-player-toast-wrap {
         bottom: 100px;
       }
+
       .nova-player-control-wrap {
         height: 73px;
         line-height: 73px;
@@ -860,8 +874,10 @@ img {
       }
     }
   }
+
   @mixin screen-style() {
     @media screen and (min-width: 750px) {
+
       .nova-player-container[data-screen="full"],
       .nova-player-container[data-screen="web"] {
         @content;
@@ -882,13 +898,14 @@ img {
       height: 73px;
       line-height: 73px;
     }
+
     .nova-player-control-bottom {
       height: 45px;
       line-height: 34px;
       margin: 20px 0 0;
 
       .nova-player-control-bottom-left {
-        min-width: 316px;
+        min-width: 273px;
       }
 
       .nova-player-ctrl-btn {
@@ -896,7 +913,7 @@ img {
         line-height: 32px;
         width: 54px;
 
-        .nova-player-ctrl-btn-icon > .common-svg-icon {
+        .nova-player-ctrl-btn-icon>.common-svg-icon {
           height: 28px;
         }
       }
@@ -966,8 +983,10 @@ img {
             bottom: 78px;
           }
         }
+
         .nova-player-ctrl-btn.nova-player-ctrl-eplist {
           width: 54px;
+
           .nova-player-ctrl-eplist-result {
             font-size: 16px;
             width: auto;
@@ -979,6 +998,7 @@ img {
         }
 
         .nova-player-ctrl-btn.nova-player-ctrl-playbackrate {
+
           // width: 66px;
           .nova-player-ctrl-playbackrate-result {
             font-size: 16px;
@@ -1024,12 +1044,14 @@ img {
   }
 
   @media screen and (max-width: 1200px) {
+
     .nova-player-container[data-screen="web"],
     .nova-player-container[data-screen="full"] {
       .nova-player-control-wrap {
         .nova-player-control-bottom {
           .nova-player-control-bottom-center {
             padding: 0;
+
             .nova-player-video-inputbar {
               display: none !important;
             }
@@ -1040,18 +1062,20 @@ img {
   }
 
   @media screen and (max-width: 1366px) {
+
     .nova-player-container[data-screen="full"],
     .nova-player-container[data-screen="web"] {
       .nova-player-control-wrap {
         .nova-player-control-bottom {
           .nova-player-control-bottom-left {
-            min-width: 273px;
+            min-width: 316px;
           }
         }
       }
     }
   }
 }
+
 .nova-player-docker-major {
   height: 100%;
   position: relative;
@@ -1070,6 +1094,7 @@ img {
       top: 0;
       z-index: 1002;
     }
+
     .nova-player-container {
       -webkit-box-shadow: none;
       box-shadow: none;

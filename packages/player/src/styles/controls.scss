@@ -7,8 +7,7 @@
     z-index: 75;
 
     .nova-player-control-mask {
-      background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAADGCAYAAAAT+OqFAAAAdklEQVQoz42QQQ7AIAgEF/T/D+kbq/RWAlnQyyazA4aoAB4FsBSA/bFjuF1EOL7VbrIrBuusmrt4ZZORfb6ehbWdnRHEIiITaEUKa5EJqUakRSaEYBJSCY2dEstQY7AuxahwXFrvZmWl2rh4JZ07z9dLtesfNj5q0FU3A5ObbwAAAABJRU5ErkJggg==)
-        repeat-x bottom;
+      background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAADGCAYAAAAT+OqFAAAAdklEQVQoz42QQQ7AIAgEF/T/D+kbq/RWAlnQyyazA4aoAB4FsBSA/bFjuF1EOL7VbrIrBuusmrt4ZZORfb6ehbWdnRHEIiITaEUKa5EJqUakRSaEYBJSCY2dEstQY7AuxahwXFrvZmWl2rh4JZ07z9dLtesfNj5q0FU3A5ObbwAAAABJRU5ErkJggg==) repeat-x bottom;
       bottom: 0;
       height: 100px;
       left: 0;
@@ -52,6 +51,7 @@
     position: relative;
 
     &:hover {
+
       // .nova-player-progress-wrap {
       // .nova-player-progress {
       .nova-player-progress-schedule-wrap {
@@ -71,6 +71,7 @@
         opacity: 1;
         visibility: visible;
       }
+
       // }
       // }
     }
@@ -213,21 +214,19 @@
 
     .nova-player-progress-move-indicator-down {
       border-color: #00a1d6 transparent transparent;
-      border-color: var(--nova-player-primary-color, #00a1d6) transparent
-        transparent;
+      border-color: var(--nova-player-primary-color, #00a1d6) transparent transparent;
       border-width: 4px 4px 0;
     }
 
     .nova-player-progress-move-indicator-up {
       border-color: transparent transparent #00a1d6;
-      border-color: transparent transparent
-        var(--nova-player-primary-color, #00a1d6);
+      border-color: transparent transparent var(--nova-player-primary-color, #00a1d6);
       border-width: 0 4px 4px;
       margin-top: 8px;
     }
   }
 
-  .nova-player-progress-move-indicator > div {
+  .nova-player-progress-move-indicator>div {
     border-style: solid;
     height: 0;
     position: relative;
@@ -306,7 +305,7 @@
     top: 0;
     pointer-events: none;
 
-    > div {
+    >div {
       background: hsla(0, 0%, 100%, 0.35);
       bottom: 0;
       position: absolute;
@@ -402,6 +401,7 @@
         padding: 0;
       }
     }
+
     .state-show {
       .nova-player-ctrl-quality-menu-wrap {
         .nova-player-ctrl-quality-menu {
@@ -435,8 +435,8 @@
     display: -webkit-inline-box;
     display: -ms-inline-flexbox;
     display: inline-flex;
-    -ms-flex: 1;
-    flex: 1;
+    -ms-flex: auto;
+    flex: auto;
 
     .nova-player-ctrl-prev .nova-player-ctrl-btn-icon {
       -webkit-transform: rotate(180deg);
@@ -476,6 +476,7 @@
           outline: none;
         }
       }
+
       .nova-player-ctrl-time-label {
         cursor: pointer;
         height: 100%;
@@ -513,6 +514,7 @@
     font-size: 14px;
     visibility: hidden;
     width: 0;
+
     .nova-player-ctrl-eplist-result {
       cursor: pointer;
       font-weight: 600;
@@ -724,6 +726,7 @@
     .nova-player-control-bottom {
       .nova-player-dm-switch {
         color: #fff;
+
         &:not(.disabled):hover {
           fill: #00a1d6;
           fill: var(--nova-player-primary-color, #00a1d6);
@@ -732,6 +735,7 @@
 
       .nova-player-dm-setting {
         color: #fff;
+
         &:hover {
           fill: #00a1d6;
           fill: var(--nova-player-primary-color, #00a1d6);
@@ -761,18 +765,23 @@
             &::-webkit-input-placeholder {
               color: #fff;
             }
+
             &::-moz-placeholder {
               color: #fff;
             }
+
             &:-ms-input-placeholder {
               color: #fff;
             }
+
             &::-ms-input-placeholder {
               color: #fff;
             }
+
             &::placeholder {
               color: #fff;
             }
+
             &::placeholder {
               color: #fff;
             }

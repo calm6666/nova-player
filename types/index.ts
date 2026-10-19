@@ -607,9 +607,67 @@ export interface KeyboardStepConfig {
 /**
  * UI 外观与控件配置
  */
+/** 播放场景：station=站内完整播放器；embedded=外链 / iframe 嵌入播放器 */
+export type PlayerScene = "station" | "embedded";
+
+/** 片尾相关推荐条目（external 数据由使用方提供，播放器不臆造） */
+export interface EndingRelatedItem {
+  /** 稿件 avid */
+  aid?: number;
+  /** 稿件 bvid */
+  bvid?: string;
+  /** 分 P cid */
+  cid?: number;
+  /** 标题 */
+  title: string;
+  /** 封面图 URL */
+  pic?: string;
+  /** 时长（秒；数字与字符串均可） */
+  duration?: number | string;
+  /** 点击跳转地址 */
+  url?: string;
+}
+
+/** 片尾 UP 主信息（external 数据由使用方提供） */
+export interface EndingUpInfo {
+  /** UP 主 mid */
+  mid?: number;
+  /** 昵称 */
+  name?: string;
+  /** 头像 URL */
+  face?: string;
+  /** 个人空间地址 */
+  url?: string;
+  /** 是否已关注 */
+  followed?: boolean;
+}
+
+/** 外链 / 嵌入场景配置（scene=embedded 时生效） */
+export interface EmbeddedConfig {
+  /** 视频标题（片尾页顶部展示） */
+  title?: string;
+  /** UP 主信息 */
+  up?: EndingUpInfo;
+  /** 片尾相关推荐（最多渲染 10 张卡片） */
+  related?: EndingRelatedItem[];
+  /** 「进入哔哩哔哩观看」按钮跳转地址 */
+  enterUrl?: string;
+  /** 「下载客户端」按钮跳转地址 */
+  downloadUrl?: string;
+}
+
 export interface UiConfig {
   /** 播放器名称（原 playerName），用于 aria-label / 日志 */
   title?: string;
+  /**
+   * 播放场景
+   *
+   * - station（默认）：站内完整播放器，完整控制栏 + 浮层式片尾 + 自动连播倒计时
+   * - embedded：外链 / iframe 嵌入播放器，简化控制栏 + 整页式片尾 + 进入站内入口
+   */
+  scene?: PlayerScene;
+  /** 外链 / 嵌入场景数据 */
+  embedded?: EmbeddedConfig;
   /** 控制条开关（单一来源） */
   controls?: ControlsConfig;
   /**

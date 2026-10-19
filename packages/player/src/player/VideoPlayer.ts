@@ -47,7 +47,7 @@ import { PluginManager } from "@/nova/core/pluginManager";
 import { teardownComponentTree } from "@/nova/core/componentUnmount";
 import { createPlayerStore } from "@/nova/store";
 import type { PlayerStore } from "@/nova/store";
-import { createLogger, loggerManager, LogLevel } from "@/utils";
+import { createLogger, loggerManager, LogLevel, clearStyle } from "@/utils";
 import { isDev } from "@/core/warning";
 import {
   setLocale,
@@ -163,9 +163,9 @@ const LOAD_METADATA_TIMEOUT_MS = 10000;
  */
 interface PlayerDockerMountedElements {
   container: HTMLElement;
-  /** 视频区域（比例计算的尺寸基准，B 站式画面比例需要） */
+  /** 视频区域（比例计算的尺寸基准，画面比例需要） */
   videoArea: HTMLElement;
-  /** 视频包裹层（B 站式画面比例的宽度作用目标） */
+  /** 视频包裹层（画面比例的宽度作用目标） */
   videoWrap: HTMLElement;
   video: HTMLVideoElement;
   /** 弹幕发送区（未装 danmaku 插件时不渲染，为 null） */
@@ -250,16 +250,16 @@ export class VideoPlayer
   /** 播放器容器元素 */
   private containerEl: HTMLElement | null = null;
 
-  /** 视频区域（B 站式画面比例的尺寸基准） */
+  /** 视频区域（画面比例的尺寸基准） */
   private videoAreaEl: HTMLElement | null = null;
 
-  /** 视频包裹层（B 站式画面比例的宽度作用目标） */
+  /** 视频包裹层（画面比例的宽度作用目标） */
   private videoWrapEl: HTMLElement | null = null;
 
   /** 当前画面比例（"0:0" 自适应 | "4:3" | "16:9"） */
   private aspectRatio = "0:0";
 
-  /** 画面比例随容器尺寸重算的观察器（B 站式：wrap 宽度百分比需跟随容器变化） */
+  /** 画面比例随容器尺寸重算的观察器（：wrap 宽度百分比需跟随容器变化） */
   private aspectResizeObserver: ResizeObserver | null = null;
 
   /** 语言切换退订函数（data-locale 标识随语言响应式更新） */
@@ -649,9 +649,12 @@ export class VideoPlayer
     this.state.subscribe(PlayerStateKeyEnum.DANMAKU_FONT_SIZE, (value) => {
       this.store.updateDanmakuSettings({ fontSize: value });
     });
-    this.state.subscribe(PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN, (value) => {
-      this.store.updateDanmakuSettings({ scaleWithScreen: value });
-    });
+    this.state.subscribe(
+      PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN,
+      (value) => {
+        this.store.updateDanmakuSettings({ scaleWithScreen: value });
+      },
+    );
     this.state.subscribe(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED, (value) => {
       this.store.updateDanmakuSettings({ maskEnabled: value });
     });
@@ -1385,7 +1388,7 @@ export class VideoPlayer
         }
 
         /**
-         * B 站式画面比例的动态重算：
+         * 画面比例的动态重算：
          * 1. ResizeObserver——容器尺寸变化时重算 wrap 宽度百分比
          * 2. loadedmetadata 一次性——自适应模式需要视频原生宽高比，
          *    metadata 就绪后才有（在此之前按 contain 兜底不变形）
@@ -1432,7 +1435,7 @@ export class VideoPlayer
           : (this.props.playback?.loudness ?? 0);
         if (initialLoudness !== 0) {
           this.events.emit(PlayerEventEnum.AUDIO_EFFECT_CHANGE, {
-            effect: 'loudness',
+            effect: "loudness",
             mode: initialLoudness,
           });
         }
@@ -1580,8 +1583,14 @@ export class VideoPlayer
       this.state.set(PlayerStateKeyEnum.DURATION, duration);
       // 分辨率写入运行时状态（供「视频统计信息」面板等消费）；
       // 事件绑定归核心层独占后，此处为该键的唯一写入口
-      this.state.set(PlayerStateKeyEnum.VIDEO_WIDTH, this.videoEl?.videoWidth ?? 0);
-      this.state.set(PlayerStateKeyEnum.VIDEO_HEIGHT, this.videoEl?.videoHeight ?? 0);
+      this.state.set(
+        PlayerStateKeyEnum.VIDEO_WIDTH,
+        this.videoEl?.videoWidth ?? 0,
+      );
+      this.state.set(
+        PlayerStateKeyEnum.VIDEO_HEIGHT,
+        this.videoEl?.videoHeight ?? 0,
+      );
       this.setState(PlayerState.IDLE);
       this.events.emit(PlayerEventEnum.LOADED_METADATA, { duration });
       this.callbacks.loadedmetadata?.(duration);
@@ -1729,10 +1738,9 @@ export class VideoPlayer
       // 播放完成：清除该源的进度记忆（下次从头播放）
       this.clearSavedProgress();
 
-      // 列表连播：非末尾或循环/随机模式时自动切下一集
-      if (this.playlist.length > 1 && this.shouldAutoAdvance()) {
-        void this.next();
-      }
+      // 列表连播交由片尾面板的倒计时驱动（5s 可取消）：
+      // 此处不立即切集，否则片尾面板会刚显示就被下一集覆盖。
+      // 片尾面板在倒计时结束后通过 lifecycle「next」回到 VideoPlayer.next()。
     });
 
     // ============================================
@@ -2179,9 +2187,7 @@ export class VideoPlayer
    */
   private syncPluginFlags(name: string, installed: boolean): void {
     /** 仅五个 UI 相关键有效，其它插件名直接忽略 */
-    const isUIPluginKey = (
-      key: string,
-    ): key is keyof PlayerPluginFlags =>
+    const isUIPluginKey = (key: string): key is keyof PlayerPluginFlags =>
       key === "danmaku" ||
       key === "subtitle" ||
       key === "interaction" ||
@@ -2961,17 +2967,12 @@ export class VideoPlayer
   }
 
   /**
-   * 设置视频画面比例（B 站式实现，参考 .bpx-player-video-wrap）
-   *
-   * B 站写法：`.bpx-player-video-wrap { width: 75.0499%; height: 100%; }`
-   * + `video { object-fit: fill; }`——wrap 宽度被计算为「指定比例在容器内
-   * contain 适配的百分比」，video 恒 fill 铺满 wrap。
-   *
+   * 设置视频画面比例
    * 本实现同款：
    * - "0:0" 自适应：目标比例 = 视频原生宽高比（metadata 就绪后），
    *   未就绪时 wrap 100% + contain 兜底不变形
    * - "4:3" / "16:9"：目标比例 = 指定值（与视频原生比例无关，
-   *   画面会被拉伸到指定比例，与 B 站行为一致）
+   *   画面会被拉伸到指定比例）
    * - 容器 resize（ResizeObserver）与 loadedmetadata 时自动重算
    *
    * 三路同步：运行时状态（面板单选受控回显）+ 持久化（localStorage，
@@ -2986,7 +2987,7 @@ export class VideoPlayer
   }
 
   /**
-   * 应用画面比例到 DOM（B 站式：wrap 宽度百分比 + video fill）
+   * 应用画面比例到 DOM（wrap 宽度百分比 + video fill）
    *
    * 纯样式计算（读取 clientWidth/Height + 写两个 style 属性），
    * ResizeObserver 回调频率下开销可忽略；不进响应式系统（DOM 度量
@@ -2998,32 +2999,40 @@ export class VideoPlayer
     const area = this.videoAreaEl;
     if (!video || !wrap || !area) return;
 
-    // 目标比例：自适应取视频原生宽高比，指定比例直接解析
-    let target: number | null = null;
-    if (this.aspectRatio === "0:0") {
-      if (video.videoWidth > 0 && video.videoHeight > 0) {
-        target = video.videoWidth / video.videoHeight;
-      }
-    } else {
-      const [w, h] = this.aspectRatio.split(":");
-      const wNum = Number(w);
-      const hNum = Number(h);
-      if (wNum > 0 && hNum > 0) target = wNum / hNum;
-    }
+    const clear = () => {
+      clearStyle(wrap, ["width", "height"]);
+      clearStyle(video, "object-fit");
+    };
 
-    if (target === null) {
-      // 原生比例未知（metadata 未就绪）：wrap 恢复全尺寸，contain 兜底
-      wrap.style.width = "100%";
-      video.style.objectFit = "contain";
+    // 原始比例：只清除，不设置
+    if (this.aspectRatio === "0:0") {
+      clear();
       return;
     }
 
-    // contain 适配宽度：高度撑满容器时所需的宽度占容器宽的百分比
+    // 指定比例：解析
+    const [w, h] = this.aspectRatio.split(":");
+    const wNum = Number(w);
+    const hNum = Number(h);
+    if (!(wNum > 0 && hNum > 0)) {
+      clear(); // 非法比例：避免残留上一次的样式
+      return;
+    }
+
+    const target = wNum / hNum;
     const areaW = area.clientWidth;
     const areaH = area.clientHeight;
     if (areaW <= 0 || areaH <= 0) return;
+
+    // contain 双向适配：
+    // - 容器更宽 → 宽度收缩，高度撑满
+    // - 容器更窄 → 高度收缩，宽度撑满
+    // 未撑满的一边按目标比例计算，撑满的一边恒为 100%
     const widthPct = Math.min(100, ((areaH * target) / areaW) * 100);
+    const heightPct = Math.min(100, (areaW / target / areaH) * 100);
+
     wrap.style.width = `${widthPct.toFixed(4)}%`;
+    wrap.style.height = `${heightPct.toFixed(4)}%`;
     video.style.objectFit = "fill";
   }
 
@@ -3601,15 +3610,6 @@ export class VideoPlayer
     await this.switchTo(target);
   }
 
-  /** ended 时是否应自动连播下一集 */
-  private shouldAutoAdvance(): boolean {
-    const mode = this.props.playback?.playMode ?? PlayMode.ORDER;
-    if (mode === PlayMode.ORDER) {
-      return this.currentIndex < this.playlist.length - 1;
-    }
-    return true;
-  }
-
   /**
    * 获取播放列表（只读副本）
    */
@@ -4049,7 +4049,7 @@ export class VideoPlayer
     // ── 1. 暂停并取消竞态 ──
     this.pause();
 
-    // ── 释放 B 站式画面比例的动态重算资源 + 语言标识订阅 ──
+    // ── 释放 画面比例的动态重算资源 + 语言标识订阅 ──
     this.aspectResizeObserver?.disconnect();
     this.aspectResizeObserver = null;
     this.localeUnsubscribe?.();

@@ -111,6 +111,8 @@ pnpm vite --config demo/vite.config.ts
 | `playlist` | `MediaItem[]` | `[]` | 是（`setConfig`） | 播放列表 |
 | `playlistIndex` | `number` | `0` | 是（`switchTo`） | 起始下标 |
 | `ui.title` | `string` | `'嗨哩播放器'` | 是（`setConfig`） | 播放器名称 |
+| `ui.scene` | `'station' \| 'embedded'` | `'station'` | 否（挂载期读取） | 播放场景：站内完整 / 外链嵌入（见 §7.5） |
+| `ui.embedded` | `EmbeddedConfig` | `undefined` | 否（挂载期读取） | 外链场景的标题 / UP / 推荐 / 跳转地址（见 §7.5） |
 | `ui.controls` | `ControlsConfig` | `defaultControlConfig` | 否 | 控件开关（见下） |
 | `ui.slots` | `ControlSlotItem[]` | `undefined` | 否 | 控制栏插槽（见 §7） |
 | `interaction.keyboard` | `boolean \| KeyboardStepConfig` | `true` | 否 | 快捷键开关或步长配置 |
@@ -764,6 +766,43 @@ interface SlotContext {
 ```
 
 `player` / `state` 任一缺失时，函数式 vnode 跳过渲染（返回 null）。`PlayerContext` 由 `VideoPlayer.render()` 通过 `__providers` 注入，子组件 `useContext(PlayerContext)` 获取。
+
+### 7.5 播放场景：站内 / 外链嵌入
+
+`ui.scene` 控制整棵 UI 的形态，默认 `station`：
+
+| 能力 | `station`（默认） | `embedded`（外链 / iframe） |
+|---|---|---|
+| 控制栏 | 完整（pip / 宽屏 / 网页全屏 / 设置 / 选集 / 字幕等） | 简化（播放 / 时间 / 弹幕开关+输入框 / 清晰度 / 倍速 / 音量 / 全屏） |
+| 播放/暂停覆盖按钮 | ✓ | ✓（居中 50px） |
+| 右上角「进入站内」按钮 | ✗ | ✓ |
+| 底部悬浮相关推荐条 | ✗ | ✓（显示控制栏时浮出，最多 6 张） |
+| 片尾形态 | 710×390 浮层（UP / 功能按钮 / 8 张推荐卡） | 1060×498 整页（标题 / UP / 顶部操作 / 5×2 推荐卡 / 下载与进入站内） |
+| 自动连播倒计时 + 取消连播 | ✓（5s，可取消） | ✗（改为进入站内 / 下载客户端） |
+| 充电 / 评分 / 稍后再看按钮 | ✓（纯 UI 占位） | ✗ |
+
+外链场景配置：
+
+```ts
+new VideoPlayer({
+  ui: {
+    scene: "embedded",
+    embedded: {
+      title: "视频标题",
+      up: { mid: 123, name: "UP 主", face: "https://...", followed: false },
+      related: [
+        { aid: 1, bvid: "BV...", title: "推荐标题", pic: "https://...", duration: 125, url: "https://..." },
+      ],
+      enterUrl: "https://www.bilibili.com/video/BV...",
+      downloadUrl: "https://app.bilibili.com/",
+    },
+  },
+});
+```
+
+- 推荐 / UP 数据由使用方注入，未提供时只渲染空容器，不臆造数据。
+- `station` 场景下若 `playback.pauseAfterEnd=false` 且播放列表存在下一集，片尾第一张推荐卡会出现 5s 倒计时；用户点击「取消连播」会取消自动切集。
+- 外链片尾不自动切集，推荐卡 / 「进入哔哩哔哩观看」按 `url` / `enterUrl` 跳转。
 
 ---
 

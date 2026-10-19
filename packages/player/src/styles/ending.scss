@@ -702,3 +702,122 @@
     visibility: hidden;
   }
 }
+
+/* ============================================
+ * station 片尾补充：推荐标题 / 倒计时显隐 / 时长角标 / 大屏宽度
+ * ============================================ */
+.nova-player-container {
+  .nova-player-ending-related:not(:empty):before {
+    content: none;
+  }
+
+  .nova-player-ending-related-title {
+    color: #fff;
+    font-size: 16px;
+    line-height: 20px;
+    margin-bottom: 10px;
+  }
+
+  .nova-player-ending-related-item-duration {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 2px;
+    bottom: 6px;
+    color: #e7e9eb;
+    font-size: 12px;
+    height: 16px;
+    line-height: 16px;
+    padding: 0 4px;
+    position: absolute;
+    right: 6px;
+    z-index: 3;
+  }
+
+  .nova-player-ending-related-item-cancel,
+  .nova-player-ending-related-item-countdown {
+    display: none;
+  }
+
+  .nova-player-ending-wrap[data-countdown="true"] {
+    .nova-player-ending-related-item.state-countdown-host {
+      .nova-player-ending-related-item-cancel,
+      .nova-player-ending-related-item-countdown {
+        display: block;
+      }
+
+      .nova-player-ending-related-item-cover {
+        background: rgba(0, 0, 0, 0.62);
+      }
+    }
+  }
+
+  .nova-player-ending-related-item-countdown {
+    margin-left: 50%;
+    margin-top: 40px;
+    transform: translateX(-50%);
+    width: 64px;
+
+    .common-svg-icon {
+      display: block;
+      height: 64px;
+      width: 64px;
+    }
+  }
+
+  &[data-screen="full"] .nova-player-ending-content,
+  &[data-screen="web"] .nova-player-ending-content {
+    margin-left: -476px;
+    width: 952px;
+  }
+}
+
+/* ============================================
+ * station 片尾：图标尺寸 / 按钮排版修正 / 取消连播位置
+ * ============================================ */
+.nova-player-container {
+  .nova-player-ending {
+    .common-svg-icon {
+      align-items: center;
+      display: inline-flex;
+      height: 18px;
+      justify-content: center;
+      width: 18px;
+
+      svg {
+        fill: currentColor;
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    .nova-player-ending-functions-buttons {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      position: relative;
+    }
+
+    .nova-player-ending-functions-electric,
+    .nova-player-ending-functions-follow {
+      align-items: center;
+      display: flex;
+      gap: 2px;
+      position: static;
+    }
+
+    .nova-player-ending-functions-electric .common-svg-icon,
+    .nova-player-ending-functions-follow .common-svg-icon {
+      height: 16px;
+      width: 16px;
+    }
+
+    .nova-player-ending-functions-btn .common-svg-icon {
+      height: 20px;
+      width: 20px;
+    }
+  }
+
+  .nova-player-ending-related-item-cancel {
+    right: 8px !important;
+    top: 8px !important;
+  }
+}

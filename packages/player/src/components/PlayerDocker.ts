@@ -13,6 +13,7 @@ import {
   useContext,
   useState,
   Show,
+  t,
 } from "@/core";
 import type { TypedStateManager } from "@/core";
 import type { PlayerEventBus } from "@/core/events";
@@ -68,6 +69,7 @@ import { Top } from "@/nova/components/Top";
 import { ColorPanel, type ColorPanelApi } from "@/nova/components/ColorPanel";
 import { VideoInfo, type VideoInfoApi } from "@/nova/components/VideoInfo";
 import { Ending, type EndingApi } from "@/nova/components/Ending";
+import { RelationStrip } from "@/nova/components/RelationStrip";
 import { Mini, type MiniApi } from "@/nova/components/Mini";
 
 // ============================================
@@ -438,6 +440,22 @@ export const PlayerDocker = defineComponent<
   PlayerDockerProps,
   PlayerDockerEvents
 >((props, lifecycle) => {
+  // ============================================
+  // 播放场景（station：站内完整；embedded：外链 / iframe 嵌入）
+  // ============================================
+
+  /** 是否外链嵌入场景 */
+  const embeddedMode = props.config?.ui?.scene === "embedded";
+
+  /** 外链场景数据（标题 / UP / 推荐 / 跳转地址） */
+  const embeddedConfig = props.config?.ui?.embedded;
+
+  /** 打开外链场景的跳转地址（无地址时静默忽略） */
+  const openEmbeddedUrl = (url?: string): void => {
+    if (!url || !isBrowser()) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   // ============================================
   // DOM 元素引用
   // ============================================
@@ -1297,6 +1315,12 @@ export const PlayerDocker = defineComponent<
       stateMgr,
       PlayerStateKeyEnum.STATE,
       (state) => {
+        // 片尾打开期间隐藏控制栏 / 进入按钮 / 推荐条（避免与片尾面板叠层）
+        if (state === PlayerState.ENDED) {
+          playerContainerRef.value?.classList.add("state-ended");
+        } else {
+          playerContainerRef.value?.classList.remove("state-ended");
+        }
         if (state === PlayerState.PLAYING) {
           // playing 语义：缓冲恢复后的实际播放，同时撤下暂停与缓冲样式
           cancelBuffIndicator();
@@ -2324,8 +2348,10 @@ export const PlayerDocker = defineComponent<
     h(
       "div",
       {
-        class:
+        class: [
           "nova-player-container state-paused state-no-cursor state-disable-box-shadow",
+          { "is-embedded": embeddedMode },
+        ],
         "data-angle": "d3d11",
         "data-screen": "normal",
         // 初始隐藏控制栏（与既有实现模板一致），由鼠标移动 / 播放交互驱动显示
@@ -2513,6 +2539,19 @@ export const PlayerDocker = defineComponent<
           // 片尾推荐面板（默认隐藏，播放结束时显示、重新播放时隐藏；
           // 推荐列表无真实数据源，仅渲染面板结构）
           h(Ending, {
+            variant: embeddedMode ? "embedded" : "station",
+            title:
+              embeddedConfig?.title ??
+              props.config?.ui?.title ??
+              props.playerName,
+            upInfo: embeddedConfig?.up,
+            related: embeddedConfig?.related,
+            autoNext: embeddedMode
+              ? false
+              : () =>
+                  (stateMgr?.get(PlayerStateKeyEnum.PLAYLIST_LENGTH) ?? 0) >
+                    1 &&
+                  !(props.config?.playback?.pauseAfterEnd ?? false),
             onRestart: () => {
               seekTo(0);
               void videoRef.value?.play();
@@ -2528,6 +2567,18 @@ export const PlayerDocker = defineComponent<
             },
             onFollow: () => {
               lifecycle.emit?.("follow");
+            },
+            onAutoNext: () => {
+              lifecycle.emit?.("next");
+            },
+            onRelatedClick: (item) => {
+              if (item.url) openEmbeddedUrl(item.url);
+            },
+            onEnterSite: () => {
+              openEmbeddedUrl(embeddedConfig?.enterUrl);
+            },
+            onDownloadApp: () => {
+              openEmbeddedUrl(embeddedConfig?.downloadUrl);
             },
             onEndingMounted: (api: EndingApi) => {
               Object.assign(endingApi, api);
@@ -2571,6 +2622,7 @@ export const PlayerDocker = defineComponent<
             duration: readDuration(),
             volume: readVolume(),
             backrate: readBackrate(),
+            scene: embeddedMode ? "embedded" : "station",
             /** 插件安装标志读取器：字幕按钮按 subtitle 标志显隐（getter 本体透传给 SubtitleMenu） */
             plugins: props.plugins,
             previewProvider: props.previewProvider,
@@ -2738,6 +2790,39 @@ export const PlayerDocker = defineComponent<
           ),
         ),
       ),
+      // 外链场景：底部相关推荐条（播放中显示，站内不渲染）
+      embeddedMode
+        ? h(RelationStrip, {
+            related: embeddedConfig?.related,
+            onSelect: (item) => {
+              if (item.url) openEmbeddedUrl(item.url);
+            },
+          })
+        : null,
+      // 外链场景：右上角「进入哔哩哔哩」胶囊按钮
+      embeddedMode
+        ? h(
+            "div",
+            {
+              class: "nova-player-enter-button",
+              role: "button",
+              "aria-label": t("player.ui.embed.enter_quality"),
+              onClick: () => openEmbeddedUrl(embeddedConfig?.enterUrl),
+            },
+            t("player.ui.embed.enter_quality"),
+            h(
+              "svg",
+              {
+                xmlns: "http://www.w3.org/2000/svg",
+                viewBox: "0 0 16 16",
+                "data-pointer": "none",
+              },
+              h("path", {
+                d: "m9.188 7.999-3.359 3.359a.75.75 0 1 0 1.061 1.061l3.889-3.889a.75.75 0 0 0 0-1.061L6.89 3.58a.75.75 0 1 0-1.061 1.061l3.359 3.358z",
+              }),
+            ),
+          )
+        : null,
       // 按钮悬停提示工具（既有实现挂载于 .nova-player-container：
       // new Tooltips(this.playerContainer!)；Controls / SendBar / Top 的
       // tooltip 事件经 handleShowTooltip / handleHideTooltip 接通至此）

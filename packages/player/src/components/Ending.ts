@@ -2,30 +2,70 @@
  * ============================================
  * 片尾推荐面板组件 (Ending)
  * ============================================
- * 相关推荐列表没有真实数据源，仅渲染容器结构、列表为空，不臆造数据。
+ * 兼容两种场景：
+ * - station：站内浮层片尾（UP 信息 / 功能按钮 / 8 张推荐卡 / 自动连播倒计时）
+ * - embedded：外链嵌入整页片尾（标题 / UP / 顶部操作 / 5×2 推荐卡 / 下载与进入站内）
+ *
+ * 推荐 / UP 数据均由使用方通过 props 注入，播放器不臆造数据；
+ * 未提供数据时只渲染容器结构，列表为空。
  */
 
 import { h, defineComponent, useTemplateRef, t } from "@/core";
 import type { VNode } from "@/types";
+import type {
+  EndingRelatedItem,
+  EndingUpInfo,
+  PlayerScene,
+} from "@/types";
+import { LottieIcon, type LottieIconApi } from "./LottieIcon";
+import endingCountdownAnimationData from "../assets/lottie-icon/ending-countdown-animation.json";
 
 /**
  * Ending 组件 Props 接口
  */
 export interface EndingProps {
+  /** 渲染形态（默认 station） */
+  variant?: PlayerScene;
+  /** 视频标题（embedded 顶部展示） */
+  title?: string;
+  /** UP 主信息（无数据时不渲染详情内容） */
+  upInfo?: EndingUpInfo;
+  /** 相关推荐列表 */
+  related?: EndingRelatedItem[];
+  /**
+   * 是否启用自动连播（station 生效）
+   *
+   * 传函数时在每次展示片尾时求值，避免挂载期播放列表尚未写入。
+   */
+  autoNext?: boolean | (() => boolean);
+  /** 自动连播倒计时秒数（默认 5） */
+  countdownSeconds?: number;
   /** 点击重播按钮时的回调 */
   onRestart?: () => void;
   /** 点击关注按钮时的回调 */
   onFollow?: () => void;
+  /** 点击充电按钮时的回调 */
+  onElectric?: () => void;
   /** 点击点赞（好评）按钮时的回调 */
   onLike?: () => void;
   /** 点击投币按钮时的回调 */
   onCoin?: () => void;
   /** 点击收藏按钮时的回调 */
   onCollect?: () => void;
-  /** 点击分享按钮时的回调（内部会切换到分享面板） */
+  /** 点击分享按钮时的回调（station 内部会切换到分享面板） */
   onShare?: () => void;
-  /** 关闭分享面板时的回调（内部会回到片尾面板） */
+  /** 关闭分享面板时的回调 */
   onCloseShare?: () => void;
+  /** 倒计时结束：自动连播下一集 */
+  onAutoNext?: () => void;
+  /** 用户取消自动连播 */
+  onCancelAutoNext?: () => void;
+  /** 点击推荐卡片 */
+  onRelatedClick?: (item: EndingRelatedItem) => void;
+  /** embedded：进入站内观看 */
+  onEnterSite?: () => void;
+  /** embedded：下载客户端 */
+  onDownloadApp?: () => void;
 }
 
 /**
@@ -36,13 +76,15 @@ export interface EndingApi {
   showEndWrap: () => void;
   /** 关闭片尾面板（移除 data-select） */
   closeEndWrap: () => void;
-  /** 显示分享面板（data-select="2"） */
+  /** 显示分享面板（data-select="2"，仅 station） */
   showShareWrap: () => void;
   /** 关闭分享面板（回到片尾面板 data-select="1"） */
   closeShareWrap: () => void;
+  /** 当前是否处于自动连播倒计时 */
+  isCountdownActive: () => boolean;
 }
 
-/** 通用装饰图标（静态 SVG，与既有实现的静态图标一致；控制栏图标不在此列） */
+/** 通用装饰图标（静态 SVG 填充图标） */
 const SimpleIcon = (path: string): VNode =>
   h(
     "svg",
@@ -52,6 +94,21 @@ const SimpleIcon = (path: string): VNode =>
       xmlns: "http://www.w3.org/2000/svg",
     },
     h("path", { d: path }),
+  );
+
+/** 线性描边图标（embedded 下载 / 进入箭头） */
+const StrokeIcon = (path: string): VNode =>
+  h(
+    "svg",
+    {
+      viewBox: "0 0 24 24",
+      fill: "none",
+      "stroke-width": 2,
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      xmlns: "http://www.w3.org/2000/svg",
+    },
+    h("path", { d: path, stroke: "currentColor" }),
   );
 
 /** 关注（加号）图标 */
@@ -75,13 +132,37 @@ const SHARE_ICON =
 /** 关闭图标 */
 const CLOSE_ICON =
   "M512 444.16l297.088-297.088c17.088-17.152 46.208-15.872 64.96 2.88 18.752 18.752 20.032 47.872 2.88 64.96L579.904 512l297.024 297.088c17.152 17.088 15.872 46.208-2.88 64.96-18.752 18.752-47.872 20.032-64.96 2.88L512 579.904l-297.088 297.024c-17.088 17.152-46.208 15.872-64.96-2.88-18.752-18.752-20.032-47.872-2.88-64.96L444.096 512 147.072 214.912c-17.152-17.088-15.872-46.208 2.88-64.96 18.752-18.752 47.872-20.032 64.96-2.88L512 444.096z";
+/** 下载图标（线性） */
+const DOWNLOAD_ICON = "M12 3v12m0 0 4-4m-4 4-4-4M4 21h16";
+/** 进入箭头（线性） */
+const ENTER_ICON = "m9 6 6 6-6 6";
+
+/**
+ * 秒数格式化为 mm:ss / hh:mm:ss
+ * @param value - 秒数或已格式化字符串
+ */
+const formatDuration = (value?: number | string): string => {
+  if (value === undefined || value === "") return "";
+  if (typeof value === "string") return value;
+  if (!Number.isFinite(value) || value < 0) return "";
+  const total = Math.floor(value);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
 
 /**
  * 片尾推荐面板组件
  */
 export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
+  const variant: PlayerScene = props.variant ?? "station";
+  const isEmbedded = variant === "embedded";
+
   // ============================================
-  // DOM 元素引用
+  // DOM 引用
   // ============================================
 
   /** 片尾面板外层容器 DOM 引用，通过 data-select 属性控制显示哪个子面板 */
@@ -90,36 +171,267 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     "endingWrapRef",
   );
 
+  /** 倒计时 lottie 实例 */
+  const countdownRef = useTemplateRef<LottieIconApi>(
+    lifecycle,
+    "countdownRef",
+  );
+
+  /** 当前是否处于倒计时（普通变量，供 LottieIcon onReady 同步） */
+  let countdownActive = false;
+
+  /** 倒计时定时器 */
+  let countdownTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** 倒计时秒数 */
+  const countdownSeconds = Math.max(1, props.countdownSeconds ?? 5);
+
+  /** 解析自动连播开关（支持 getter，展示时求值） */
+  const resolveAutoNext = (): boolean =>
+    typeof props.autoNext === "function"
+      ? Boolean(props.autoNext())
+      : Boolean(props.autoNext);
+
+  /** 推荐列表（默认空，不臆造数据） */
+  const related: EndingRelatedItem[] = props.related ?? [];
+
   // ============================================
-  // 面板显隐（data-select 属性机制，与既有实现一致）
+  // 自动连播倒计时
+  // ============================================
+
+  /** 清理倒计时定时器 */
+  const clearCountdownTimer = (): void => {
+    if (countdownTimer !== null) {
+      clearTimeout(countdownTimer);
+      countdownTimer = null;
+    }
+  };
+
+  /** 停止倒计时并复位动画 / 属性 */
+  const stopCountdown = (): void => {
+    countdownActive = false;
+    clearCountdownTimer();
+    countdownRef.value?.stop();
+    endingWrapRef.value?.removeAttribute("data-countdown");
+  };
+
+  /** 启动自动连播倒计时（仅 station 且存在推荐数据时） */
+  const startCountdown = (): void => {
+    if (isEmbedded || !resolveAutoNext()) return;
+    countdownActive = true;
+    // 有推荐卡时在第一张卡上展示倒计时；没有数据时仍保留 5s 自动连播兜底
+    if (related.length > 0) {
+      endingWrapRef.value?.setAttribute("data-countdown", "true");
+    }
+    countdownRef.value?.play();
+    clearCountdownTimer();
+    countdownTimer = setTimeout(() => {
+      countdownTimer = null;
+      stopCountdown();
+      props.onAutoNext?.();
+    }, countdownSeconds * 1000);
+  };
+
+  /** 用户取消自动连播 */
+  const cancelCountdown = (): void => {
+    if (!countdownActive) return;
+    stopCountdown();
+    props.onCancelAutoNext?.();
+  };
+
+  // ============================================
+  // 面板显隐（data-select 属性机制）
   // ============================================
 
   /** 显示片尾面板（data-select="1"） */
   const showEndWrap = (): void => {
     endingWrapRef.value?.setAttribute("data-select", "1");
+    startCountdown();
   };
 
   /** 关闭片尾面板（移除 data-select） */
   const closeEndWrap = (): void => {
     endingWrapRef.value?.removeAttribute("data-select");
+    stopCountdown();
   };
 
-  /** 显示分享面板（data-select="2"） */
+  /** 显示分享面板（data-select="2"，仅 station） */
   const showShareWrap = (): void => {
+    if (isEmbedded) return;
+    stopCountdown();
     endingWrapRef.value?.setAttribute("data-select", "2");
   };
 
   /** 关闭分享面板，回到片尾面板（data-select="1"） */
   const closeShareWrap = (): void => {
     endingWrapRef.value?.setAttribute("data-select", "1");
+    startCountdown();
   };
 
   // ============================================
-  // 渲染函数
+  // 渲染：推荐卡片（两场景共用）
   // ============================================
 
-  /** 渲染片尾内容面板（结构与既有实现一致；无真实数据源时相关列表为空） */
-  const renderEndingContent = (): VNode =>
+  /**
+   * 渲染单张推荐卡片
+   * @param item - 推荐数据
+   * @param index - 下标（第 0 张承担自动连播倒计时）
+   */
+  const renderRelatedCard = (
+    item: EndingRelatedItem,
+    index: number,
+  ): VNode => {
+    // ===== embedded：5×2 网格卡片（poster + title） =====
+    if (isEmbedded) {
+      const cardContent: VNode[] = [
+        h(
+          "div",
+          { class: "nova-player-relation-context-poster" },
+          item.pic
+            ? h("img", {
+                src: item.pic,
+                alt: item.title,
+              })
+            : null,
+          formatDuration(item.duration)
+            ? h(
+                "div",
+                { class: "nova-player-relation-context-poster-duration" },
+                formatDuration(item.duration),
+              )
+            : null,
+        ),
+        h("div", { class: "nova-player-relation-context-title" }, item.title),
+      ];
+      const handleEmbeddedClick = (): void => {
+        props.onRelatedClick?.(item);
+      };
+      return item.url
+        ? h(
+            "a",
+            {
+              class: "nova-player-relation-context-item",
+              href: item.url,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              onClick: (event: MouseEvent) => {
+                if (props.onRelatedClick) event.preventDefault();
+                handleEmbeddedClick();
+              },
+            },
+            ...cardContent,
+          )
+        : h(
+            "div",
+            {
+              class: "nova-player-relation-context-item",
+              role: "button",
+              onClick: handleEmbeddedClick,
+            },
+            ...cardContent,
+          );
+    }
+
+    /** 是否第一张卡（station 倒计时载体） */
+    const isCountdownHost = !isEmbedded && index === 0;
+    /** 卡片点击：优先走外部回调，未提供时由 <a> 自身跳转 */
+    const handleClick = (): void => {
+      props.onRelatedClick?.(item);
+    };
+    /** 卡片内容 */
+    const content: VNode[] = [
+      h("div", {
+        class: "nova-player-ending-related-item-img",
+        style: item.pic
+          ? { backgroundImage: `url("${item.pic}")` }
+          : undefined,
+      }),
+      h(
+        "div",
+        { class: "nova-player-ending-related-item-cover" },
+        formatDuration(item.duration)
+          ? h(
+              "div",
+              { class: "nova-player-ending-related-item-duration" },
+              formatDuration(item.duration),
+            )
+          : null,
+        h(
+          "div",
+          { class: "nova-player-ending-related-item-title" },
+          item.title,
+        ),
+        h("div", { class: "nova-player-ending-related-item-watchlater" }),
+        isCountdownHost
+          ? h(
+              "div",
+              {
+                class: "nova-player-ending-related-item-cancel",
+                onClick: (event: MouseEvent) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  cancelCountdown();
+                },
+              },
+              t("player.ui.ending.cancel_auto_next"),
+            )
+          : null,
+        isCountdownHost
+          ? h(
+              "div",
+              { class: "nova-player-ending-related-item-countdown" },
+              h(LottieIcon, {
+                name: "ending-countdown",
+                animationData: endingCountdownAnimationData,
+                autoplay: false,
+                loop: false,
+                ref: "countdownRef",
+                onReady: () => {
+                  if (countdownActive) countdownRef.value?.play();
+                },
+              }),
+            )
+          : null,
+      ),
+    ];
+
+    /** 有跳转地址时用 <a>，否则用 div 承载点击回调 */
+    return item.url
+      ? h(
+          "a",
+          {
+            class: isCountdownHost
+              ? "nova-player-ending-related-item state-countdown-host"
+              : "nova-player-ending-related-item",
+            href: item.url,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            onClick: (event: MouseEvent) => {
+              if (props.onRelatedClick) event.preventDefault();
+              handleClick();
+            },
+          },
+          ...content,
+        )
+      : h(
+          "div",
+          {
+            class: isCountdownHost
+              ? "nova-player-ending-related-item state-countdown-host"
+              : "nova-player-ending-related-item",
+            role: "button",
+            onClick: handleClick,
+          },
+          ...content,
+        );
+  };
+
+  // ============================================
+  // 渲染：station 片尾
+  // ============================================
+
+  /** 渲染站内片尾内容面板 */
+  const renderStationEnding = (): VNode =>
     h(
       "div",
       { class: "nova-player-ending" },
@@ -132,14 +444,23 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         h(
           "div",
           { class: "nova-player-ending-functions" },
-          // UP 主头像（无真实数据源，仅保留结构）
+          // UP 主头像
           h(
             "div",
             {
               class: "nova-player-ending-functions-avatar",
               "data-action": "upinfo",
             },
-            h("a", {}, h("img", {})),
+            h(
+              "a",
+              { href: props.upInfo?.url ?? undefined },
+              props.upInfo?.face
+                ? h("img", {
+                    src: props.upInfo.face,
+                    alt: props.upInfo.name ?? "",
+                  })
+                : null,
+            ),
           ),
           // UP 主信息
           h(
@@ -151,23 +472,46 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             h(
               "div",
               { class: "nova-player-ending-functions-name" },
-              h("a", {}),
+              h(
+                "a",
+                { href: props.upInfo?.url ?? undefined },
+                props.upInfo?.name ?? "",
+              ),
             ),
             h(
               "div",
               { class: "nova-player-ending-functions-buttons" },
-              h("div", {
-                class: "nova-player-ending-functions-electric state-little",
-              }),
               h(
                 "div",
                 {
-                  class: "nova-player-ending-functions-follow",
+                  class: "nova-player-ending-functions-electric state-little",
+                  onClick: props.onElectric,
+                },
+                h(
+                  "span",
+                  { class: "common-svg-icon" },
+                  SimpleIcon(ADD_ICON),
+                ),
+                t("player.ui.ending.electric"),
+              ),
+              h(
+                "div",
+                {
+                  class: [
+                    "nova-player-ending-functions-follow",
+                    { "state-disabled": Boolean(props.upInfo?.followed) },
+                  ],
                   "data-action": "follow",
                   onClick: props.onFollow,
                 },
-                h("span", { class: "common-svg-icon" }, SimpleIcon(ADD_ICON)),
-                "关注",
+                h(
+                  "span",
+                  { class: "common-svg-icon" },
+                  SimpleIcon(ADD_ICON),
+                ),
+                props.upInfo?.followed
+                  ? t("player.ui.ending.following")
+                  : t("player.ui.ending.follow"),
               ),
             ),
           ),
@@ -183,7 +527,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 onClick: props.onRestart,
               },
               h("span", { class: "common-svg-icon" }, SimpleIcon(RESTART_ICON)),
-              "重播",
+              t("player.ui.ending.replay"),
             ),
             h(
               "div",
@@ -200,7 +544,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   onClick: props.onLike,
                 },
                 h("span", { class: "common-svg-icon" }, SimpleIcon(LIKE_ICON)),
-                "好评",
+                t("player.ui.ending.like"),
               ),
               h(
                 "div",
@@ -210,7 +554,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   onClick: props.onCoin,
                 },
                 h("span", { class: "common-svg-icon" }, SimpleIcon(COIN_ICON)),
-                "投币",
+                t("player.ui.ending.coin"),
               ),
               h(
                 "div",
@@ -224,7 +568,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   { class: "common-svg-icon" },
                   SimpleIcon(COLLECT_ICON),
                 ),
-                "收藏",
+                t("player.ui.ending.collect"),
               ),
               h(
                 "div",
@@ -237,17 +581,193 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   },
                 },
                 h("span", { class: "common-svg-icon" }, SimpleIcon(SHARE_ICON)),
-                "分享",
+                t("player.ui.ending.share"),
               ),
             ),
           ),
         ),
-        // 相关推荐列表（无真实数据源，仅渲染容器结构、列表为空）
-        h("div", { class: "nova-player-ending-related" }),
+        // 相关推荐列表（数据由外部注入；未提供时为空列表）
+        h(
+          "div",
+          { class: "nova-player-ending-related" },
+          h(
+            "div",
+            { class: "nova-player-ending-related-title" },
+            t("player.ui.ending.related"),
+          ),
+          ...related.slice(0, 8).map(renderRelatedCard),
+        ),
       ),
     );
 
-  /** 渲染分享面板（结构与既有实现一致；分享地址无真实数据源，值为空） */
+  // ============================================
+  // 渲染：embedded 片尾
+  // ============================================
+
+  /** 渲染外链嵌入场景的整页片尾 */
+  const renderEmbeddedEnding = (): VNode =>
+    h(
+      "div",
+      { class: "nova-player-embedded-ending-wrap-box" },
+      // 顶部：标题 / UP / 操作
+      h(
+        "div",
+        { class: "nova-player-embedded-ending-top-wrap" },
+        h(
+          "div",
+          { class: "nova-player-embedded-ending-top-left" },
+          h(
+            "div",
+            { class: "nova-player-top-left-title" },
+            h(
+              "span",
+              { class: "nova-player-top-left-logo" },
+              t("player.ui.ending.logo"),
+            ),
+            h(
+              "span",
+              { class: "nova-player-top-left-title-text" },
+              props.title ?? "",
+            ),
+          ),
+          props.upInfo?.name
+            ? h(
+                "div",
+                { class: "nova-player-top-left-follow" },
+                h(
+                  "div",
+                  { class: "nova-player-follow" },
+                  h(
+                    "span",
+                    { class: "nova-player-follow-face" },
+                    props.upInfo.face
+                      ? h("img", {
+                          src: props.upInfo.face,
+                          alt: props.upInfo.name,
+                        })
+                      : null,
+                  ),
+                  h(
+                    "span",
+                    { class: "nova-player-follow-name" },
+                    props.upInfo.name,
+                  ),
+                  h(
+                    "span",
+                    { class: "nova-player-follow-text" },
+                    props.upInfo.followed
+                      ? t("player.ui.ending.following")
+                      : t("player.ui.ending.follow"),
+                  ),
+                ),
+              )
+            : null,
+        ),
+        h(
+          "div",
+          { class: "nova-player-top-buttons" },
+          h(
+            "div",
+            {
+              class:
+                "nova-player-top-button nova-player-top-buttons-replay",
+              role: "button",
+              onClick: props.onRestart,
+            },
+            h(
+              "span",
+              { class: "nova-player-top-button-icon" },
+              SimpleIcon(RESTART_ICON),
+            ),
+            h(
+              "span",
+              { class: "nova-player-top-button-text" },
+              t("player.ui.ending.replay"),
+            ),
+          ),
+          h(
+            "div",
+            {
+              class: "nova-player-top-button nova-player-top-buttons-like",
+              role: "button",
+              onClick: props.onLike,
+            },
+            h(
+              "span",
+              { class: "nova-player-top-button-icon" },
+              SimpleIcon(LIKE_ICON),
+            ),
+            h(
+              "span",
+              { class: "nova-player-top-button-text" },
+              t("player.ui.ending.like"),
+            ),
+          ),
+          h(
+            "div",
+            {
+              class: "nova-player-top-button nova-player-top-buttons-share",
+              role: "button",
+              onClick: () => {
+                props.onShare?.();
+                showShareWrap();
+              },
+            },
+            h(
+              "span",
+              { class: "nova-player-top-button-icon" },
+              SimpleIcon(SHARE_ICON),
+            ),
+            h(
+              "span",
+              { class: "nova-player-top-button-text" },
+              t("player.ui.ending.share"),
+            ),
+          ),
+        ),
+      ),
+      // 相关推荐：5 列 × 2 行
+      h(
+        "div",
+        { class: "nova-player-embedded-ending-relation-wrap" },
+        h(
+          "div",
+          { class: "nova-player-embedded-ending-relation-context" },
+          ...related.slice(0, 10).map(renderRelatedCard),
+        ),
+      ),
+      // 底部：下载客户端 / 进入站内
+      h(
+        "div",
+        { class: "nova-player-embedded-ending-button-group" },
+        h(
+          "div",
+          {
+            class: "nova-player-downlowd",
+            role: "button",
+            onClick: props.onDownloadApp,
+          },
+          StrokeIcon(DOWNLOAD_ICON),
+          t("player.ui.ending.download_app"),
+        ),
+        h(
+          "div",
+          {
+            class: "nova-player-enter",
+            role: "button",
+            onClick: props.onEnterSite,
+          },
+          StrokeIcon(ENTER_ICON),
+          t("player.ui.ending.enter_site"),
+        ),
+      ),
+    );
+
+  // ============================================
+  // 渲染：station 分享面板
+  // ============================================
+
+  /** 渲染分享面板（分享地址无真实数据源，值为空） */
   const renderSharePanel = (): VNode =>
     h(
       "div",
@@ -273,7 +793,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         h(
           "div",
           { class: "nova-player-video-share-left" },
-          // 分享渠道按钮
           h(
             "div",
             { class: "nova-player-video-share-source" },
@@ -288,7 +807,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               h("span", { class: "common-svg-icon" }),
             ),
           ),
-          // 视频地址
           h(
             "div",
             { class: "nova-player-video-share-link" },
@@ -307,10 +825,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               h(
                 "div",
                 {
-                  class: "nova-player-video-share-link-copy html ui ui-button",
+                  class:
+                    "nova-player-video-share-link-copy html ui ui-button",
                   onClick: (event: MouseEvent) => {
                     if (event.currentTarget instanceof HTMLElement) {
-                      /** 待复制的视频地址 */
                       const value =
                         event.currentTarget.getAttribute("value") ?? "";
                       if (navigator.clipboard) {
@@ -327,7 +845,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               ),
             ),
           ),
-          // 嵌入代码
           h(
             "div",
             { class: "nova-player-video-share-link" },
@@ -350,7 +867,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                     "nova-player-video-share-link-copy iframe ui ui-button",
                   onClick: (event: MouseEvent) => {
                     if (event.currentTarget instanceof HTMLElement) {
-                      /** 待复制的嵌入代码 */
                       const value =
                         event.currentTarget.getAttribute("value") ?? "";
                       if (navigator.clipboard) {
@@ -368,7 +884,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             ),
           ),
         ),
-        // 二维码
         h(
           "div",
           { class: "nova-player-video-share-right" },
@@ -397,26 +912,39 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       closeEndWrap,
       showShareWrap,
       closeShareWrap,
+      isCountdownActive: () => countdownActive,
     } satisfies EndingApi);
   };
 
+  /** 组件销毁前清理倒计时定时器 */
+  lifecycle.onBeforeDestroy = (): void => {
+    stopCountdown();
+  };
+
   // ============================================
-  // 组件渲染（DOM 结构与既有实现一致）
+  // 组件渲染
   // ============================================
+
+  const rootClass = isEmbedded
+    ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
+    : "nova-player-ending-wrap";
 
   return h(
     "div",
-    { class: "nova-player-ending-wrap", ref: "endingWrapRef" },
-    h("div", { class: "nova-player-ending-backdrop" }),
+    { class: rootClass, ref: "endingWrapRef" },
+    // station 使用模糊封面背景；embedded 使用纯色整页背景
+    isEmbedded ? null : h("div", { class: "nova-player-ending-backdrop" }),
     h(
       "div",
       { class: "nova-player-ending-panel", "data-option": "1" },
-      renderEndingContent(),
+      isEmbedded ? renderEmbeddedEnding() : renderStationEnding(),
     ),
-    h(
-      "div",
-      { class: "nova-player-share-panel", "data-option": "2" },
-      renderSharePanel(),
-    ),
+    isEmbedded
+      ? null
+      : h(
+          "div",
+          { class: "nova-player-share-panel", "data-option": "2" },
+          renderSharePanel(),
+        ),
   );
 });
