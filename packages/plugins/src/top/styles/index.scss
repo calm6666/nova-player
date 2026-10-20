@@ -94,6 +94,8 @@
 
       svg {
         fill: hsla(0, 0%, 100%, 0.8);
+        height: 100%;
+        width: 100%;
       }
     }
   }
@@ -304,12 +306,14 @@
   margin-bottom: 12px;
 }
 
+.nova-player-container[data-screen="normal"] .nova-player-top-issue,
 .nova-player-container[data-screen="web"] .nova-player-top-issue,
 .nova-player-container[data-screen="full"] .nova-player-top-issue {
   font-size: 28px;
   width: 54px;
 }
 
+.nova-player-container[data-screen="normal"] .nova-player-top-issue-icon,
 .nova-player-container[data-screen="web"] .nova-player-top-issue-icon,
 .nova-player-container[data-screen="full"] .nova-player-top-issue-icon {
   height: 28px;
