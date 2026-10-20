@@ -268,6 +268,36 @@ export class VideoPlayer
     return this.endingPluginMount;
   }
 
+  /** Top / Ending 视图动态刷新（不重建播放器） */
+  private topViewRefresh: (() => void) | null = null;
+  private endingViewRefresh: (() => void) | null = null;
+
+  registerTopViewRefresh(refresh: (() => void) | null): void {
+    this.topViewRefresh = refresh;
+  }
+
+  unregisterTopViewRefresh(refresh?: (() => void) | null): void {
+    if (!refresh || this.topViewRefresh === refresh) this.topViewRefresh = null;
+  }
+
+  refreshTop(): void {
+    this.topViewRefresh?.();
+  }
+
+  registerEndingViewRefresh(refresh: (() => void) | null): void {
+    this.endingViewRefresh = refresh;
+  }
+
+  unregisterEndingViewRefresh(refresh?: (() => void) | null): void {
+    if (!refresh || this.endingViewRefresh === refresh) {
+      this.endingViewRefresh = null;
+    }
+  }
+
+  refreshEnding(): void {
+    this.endingViewRefresh?.();
+  }
+
   /** 播放器配置（命名空间形态，可被 setConfig 动态更新） */
   props: PlayerConfig;
 
@@ -1169,6 +1199,7 @@ export class VideoPlayer
    */
   render(): VNode {
     return h(PlayerDocker, {
+      player: this,
       src: this.getCurrentSourceUrl(),
       playerName: this.props.ui?.title,
       autoplay: this.props.playback?.autoplay,

@@ -15,6 +15,8 @@ import {
   type SlotMount,
 } from "@lumina/nova";
 import { Ending as EndingView, type EndingProps } from "./EndingView";
+import { injectPluginStyle } from "../utils/injectStyle";
+import endingCss from "./style.scss?inline";
 
 export interface EndingPluginMountContext extends SlotContext {
   props?: EndingProps;
@@ -29,6 +31,7 @@ export interface EndingPluginConfig {
 interface EndingPluginHost {
   registerEndingPluginMount(mount: SlotMount["mount"]): void;
   unregisterEndingPluginMount(mount?: SlotMount["mount"]): void;
+  refreshEnding?(): void;
 }
 
 class EndingPluginClass implements Plugin {
@@ -47,6 +50,7 @@ class EndingPluginClass implements Plugin {
 
   install(player: Parameters<Plugin["install"]>[0]): void {
     this.player = player as unknown as EndingPluginHost;
+    injectPluginStyle("ending", endingCss);
     const custom = this.config.mount;
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
@@ -57,12 +61,14 @@ class EndingPluginClass implements Plugin {
     };
     this.registered = registered;
     this.player.registerEndingPluginMount(registered);
+    this.player.refreshEnding?.();
   }
 
   uninstall(): void {
     if (this.registered) {
       this.player?.unregisterEndingPluginMount(this.registered);
     }
+    this.player?.refreshEnding?.();
     this.registered = null;
     this.player = null;
   }

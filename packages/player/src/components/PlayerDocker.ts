@@ -51,6 +51,7 @@ import {
   type PlayerStateMap,
 } from "@/store/runtimeState";
 import { ConfigStoreContext, type ConfigStore } from "@/store/configStore";
+import type { VideoPlayer } from "@/player/VideoPlayer";
 import {
   PlayerContext,
   isSlotMount,
@@ -387,6 +388,8 @@ export interface QualitySnapshot {
 }
 
 export interface PlayerDockerProps {
+  /** 所属播放器实例（用于插件视图动态刷新，不参与 DOM 渲染） */
+  player?: VideoPlayer;
   /** 事件总线（供插件层订阅播放器事件） */
   events?: PlayerEventBus;
   /** 视频源地址 */
@@ -478,9 +481,6 @@ export const PlayerDocker = defineComponent<
   /** 片尾形态：standard（普通）/ ogv（电视剧 / 番剧） */
   const endingStyle = props.config?.ui?.endingStyle ?? "standard";
 
-  /** Top 形态：default / tv / music */
-  const topStyle =
-    props.config?.ui?.topStyle ?? (endingStyle === "ogv" ? "tv" : "default");
 
   /** 电视剧 / 番剧片尾数据 */
   const ogvConfig = props.config?.ui?.ogv;
@@ -558,9 +558,18 @@ export const PlayerDocker = defineComponent<
   /** 可订阅配置中心（由 VideoPlayer 通过 __providers 注入；未注入时为 null） */
   const configStore = useContext<ConfigStore | null>(ConfigStoreContext);
   /** 插件 / 插槽上下文 */
-  const slotPlayer = useContext(PlayerContext);
+  const slotPlayer = props.player ?? useContext(PlayerContext);
+  const providerPlayer = (
+    props as unknown as {
+      __providers?: Array<{ contextId: PropertyKey; value: unknown }>;
+    }
+  ).__providers?.find((provider) => provider.contextId === PlayerContext.id)
+    ?.value as VideoPlayer | undefined;
+  const resolvedPlayer = slotPlayer ?? providerPlayer;
   const slotContext: SlotContext | null =
-    slotPlayer && stateMgr ? { player: slotPlayer, state: stateMgr } : null;
+    resolvedPlayer && stateMgr
+      ? { player: resolvedPlayer, state: stateMgr }
+      : null;
 
   type MountFn = (container: HTMLElement) => void | (() => void);
 
@@ -582,22 +591,75 @@ export const PlayerDocker = defineComponent<
     return null;
   };
 
-  /** 插槽优先于插件；都没有时走内置 Top / Ending */
-  const topPluginMount = slotPlayer?.getTopPluginMount() ?? null;
-  const topMount =
-    createSlotMount(props.config?.ui?.top) ??
-    (topPluginMount
-      ? (container: HTMLElement, ctx?: SlotContext | null) =>
-          topPluginMount(container, ctx ?? slotContext)
-      : null);
+  /** 插槽优先于插件；每次刷新时重新解析，支持插件动态装载 / 卸载 */
+  const getTopMount = (): SlotMount["mount"] | null => {
+    const pluginMount = resolvedPlayer?.getTopPluginMount() ?? null;
+    return (
+      createSlotMount(readUi()?.top) ??
+      (pluginMount
+        ? (container: HTMLElement, ctx?: SlotContext | null) =>
+            pluginMount(container, ctx ?? slotContext)
+        : null)
+    );
+  };
 
-  const endingPluginMount = slotPlayer?.getEndingPluginMount() ?? null;
-  const endingMount =
-    createSlotMount(props.config?.ui?.ending) ??
-    (endingPluginMount
-      ? (container: HTMLElement, ctx?: SlotContext | null) =>
-          endingPluginMount(container, ctx ?? slotContext)
-      : null);
+  const getEndingMount = (): SlotMount["mount"] | null => {
+    const pluginMount = resolvedPlayer?.getEndingPluginMount() ?? null;
+    return (
+      createSlotMount(readUi()?.ending) ??
+      (pluginMount
+        ? (container: HTMLElement, ctx?: SlotContext | null) =>
+            pluginMount(container, ctx ?? slotContext)
+        : null)
+    );
+  };
+
+  const mountTopView = (): void => {
+    topMountCleanup?.();
+    topMountCleanup = null;
+    const root = topRootRef.value;
+    if (!root) return;
+    root.replaceChildren();
+    const mount = getTopMount();
+    if (mount) {
+      topMountCleanup =
+        mount(root, {
+          ...(slotContext ?? {}),
+          props: buildTopProps(),
+        } as SlotContext) ?? null;
+    }
+  };
+
+  const syncEndingRootClass = (): void => {
+    const root = endingRootRef.value;
+    if (!root) return;
+    const style = readUi()?.endingStyle ?? endingStyle;
+    root.className =
+      style === "ogv"
+        ? "nova-player-ending-wrap nova-ogv-ending-wrap"
+        : style === "interactive"
+          ? "nova-player-ending-wrap nova-interactive-ending-wrap"
+          : embeddedMode
+            ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
+            : "nova-player-ending-wrap";
+  };
+
+  const mountEndingView = (): void => {
+    endingMountCleanup?.();
+    endingMountCleanup = null;
+    const root = endingRootRef.value;
+    if (!root) return;
+    syncEndingRootClass();
+    root.replaceChildren();
+    const mount = getEndingMount();
+    if (mount) {
+      endingMountCleanup =
+        mount(root, {
+          ...(slotContext ?? {}),
+          props: buildEndingProps(),
+        } as SlotContext) ?? null;
+    }
+  };
 
 
   // ============================================
@@ -2339,23 +2401,10 @@ export const PlayerDocker = defineComponent<
   // ============================================
 
   lifecycle.onMounted = (): void => {
-    const topRoot = topRootRef.value;
-    if (topRoot && topMount) {
-      topMountCleanup =
-        (topMount as SlotMount["mount"])(topRoot, {
-          ...(slotContext ?? {}),
-          props: buildTopProps(),
-        } as SlotContext) ?? null;
-    }
-
-    const endingRoot = endingRootRef.value;
-    if (endingRoot && endingMount) {
-      endingMountCleanup =
-        (endingMount as SlotMount["mount"])(endingRoot, {
-          ...(slotContext ?? {}),
-          props: buildEndingProps(),
-        } as SlotContext) ?? null;
-    }
+    resolvedPlayer?.registerTopViewRefresh(mountTopView);
+    resolvedPlayer?.registerEndingViewRefresh(mountEndingView);
+    mountTopView();
+    mountEndingView();
 
     // 初始化视频
     initVideo();
@@ -2502,22 +2551,30 @@ export const PlayerDocker = defineComponent<
    * 渲染播放器主容器
    */
 
+  const readUi = () =>
+    (resolvedPlayer?.props ?? configStore?.get() ?? props.config)?.ui;
+
+  const readTopStyle = (): "default" | "tv" | "music" =>
+    readUi()?.topStyle ??
+    ((readUi()?.endingStyle ?? endingStyle) === "ogv" ? "tv" : "default");
+  const readEndingStyle = () => readUi()?.endingStyle ?? endingStyle;
+
   /** 插件视图数据（挂载时构造，避免提前引用未初始化函数） */
   const buildTopProps = () => ({
             title:
               (embeddedMode
-                ? (embeddedConfig?.title ?? props.config?.ui?.title)
-                : props.config?.ui?.title) ?? props.playerName,
+                ? (embeddedConfig?.title ?? readUi()?.title)
+                : readUi()?.title) ?? props.playerName,
             avatar:
-              embeddedConfig?.up?.face ?? props.config?.ui?.up?.face,
+              embeddedConfig?.up?.face ?? readUi()?.up?.face,
             upName:
-              embeddedConfig?.up?.name ?? props.config?.ui?.up?.name,
+              embeddedConfig?.up?.name ?? readUi()?.up?.name,
             embedded: embeddedMode,
-            tv: topStyle === "tv",
-            music: topStyle === "music",
-            musicTitle: props.config?.ui?.musicTitle,
+            tv: readTopStyle() === "tv",
+            music: readTopStyle() === "music",
+            musicTitle: readUi()?.musicTitle,
             followed: Boolean(
-              embeddedConfig?.up?.followed ?? props.config?.ui?.up?.followed,
+              embeddedConfig?.up?.followed ?? readUi()?.up?.followed,
             ),
             likeCount: embeddedConfig?.stats?.like,
             commentCount: embeddedConfig?.stats?.comment,
@@ -2544,41 +2601,41 @@ export const PlayerDocker = defineComponent<
   const buildEndingProps = () => ({
             variant: embeddedMode
               ? "embedded"
-              : endingStyle === "ogv"
+              : readEndingStyle() === "ogv"
                 ? "ogv"
-                : endingStyle === "interactive"
+                : readEndingStyle() === "interactive"
                   ? "interactive"
                   : "station",
             title: embeddedMode
               ? (embeddedConfig?.title ??
-                props.config?.ui?.title ??
+                readUi()?.title ??
                 props.playerName)
-              : endingStyle === "ogv"
+              : readEndingStyle() === "ogv"
                 ? (ogvConfig?.title ??
-                  props.config?.ui?.title ??
+                  readUi()?.title ??
                   props.playerName)
-                : (props.config?.ui?.title ?? props.playerName),
+                : (readUi()?.title ?? props.playerName),
             cover: ogvConfig?.cover,
             followed: ogvConfig?.followed,
-            followers: props.config?.ui?.interactive?.followers,
-            backtrack: props.config?.ui?.interactive?.backtrack,
+            followers: readUi()?.interactive?.followers,
+            backtrack: readUi()?.interactive?.backtrack,
             activeBacktrackIndex:
-              props.config?.ui?.interactive?.activeBacktrackIndex,
-            ratingPrompt: props.config?.ui?.interactive?.ratingPrompt,
+              readUi()?.interactive?.activeBacktrackIndex,
+            ratingPrompt: readUi()?.interactive?.ratingPrompt,
             upInfo: embeddedMode
               ? embeddedConfig?.up
-              : props.config?.ui?.up,
-            shareUrl: props.config?.ui?.share?.url,
-            embedCode: props.config?.ui?.share?.embedCode,
-            qrCodeUrl: props.config?.ui?.share?.qrCodeUrl,
+              : readUi()?.up,
+            shareUrl: readUi()?.share?.url,
+            embedCode: readUi()?.share?.embedCode,
+            qrCodeUrl: readUi()?.share?.qrCodeUrl,
             related: embeddedMode
               ? embeddedConfig?.related
-              : endingStyle === "ogv"
+              : readEndingStyle() === "ogv"
                 ? ogvConfig?.related
-                : endingStyle === "interactive"
-                  ? (props.config?.ui?.interactive?.related ??
-                    props.config?.ui?.related)
-                  : props.config?.ui?.related,
+                : readEndingStyle() === "interactive"
+                  ? (readUi()?.interactive?.related ??
+                    readUi()?.related)
+                  : readUi()?.related,
             autoNext: embeddedMode
               ? false
               : () =>

@@ -15,6 +15,8 @@ import {
   type SlotMount,
 } from "@lumina/nova";
 import { Top as TopView, type TopProps } from "./TopView";
+import { injectPluginStyle } from "../utils/injectStyle";
+import topCss from "./style.scss?inline";
 
 export interface TopPluginMountContext extends SlotContext {
   props?: TopProps;
@@ -29,6 +31,7 @@ export interface TopPluginConfig {
 interface TopPluginHost {
   registerTopPluginMount(mount: SlotMount["mount"]): void;
   unregisterTopPluginMount(mount?: SlotMount["mount"]): void;
+  refreshTop?(): void;
 }
 
 class TopPluginClass implements Plugin {
@@ -47,6 +50,7 @@ class TopPluginClass implements Plugin {
 
   install(player: Parameters<Plugin["install"]>[0]): void {
     this.player = player as unknown as TopPluginHost;
+    injectPluginStyle("top", topCss);
     const custom = this.config.mount;
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
@@ -57,12 +61,14 @@ class TopPluginClass implements Plugin {
     };
     this.registered = registered;
     this.player.registerTopPluginMount(registered);
+    this.player.refreshTop?.();
   }
 
   uninstall(): void {
     if (this.registered) {
       this.player?.unregisterTopPluginMount(this.registered);
     }
+    this.player?.refreshTop?.();
     this.registered = null;
     this.player = null;
   }

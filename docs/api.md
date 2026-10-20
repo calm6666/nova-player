@@ -799,7 +799,6 @@ new VideoPlayer({
 Top / Ending 的完整视图、样式依赖和 Ending 倒计时/自动连播行为都已迁到 `@lumina/plugins`。播放器核心只保留空根容器，**必须显式安装插件**：
 
 ```ts
-import "@lumina/plugins/style.css";
 import { TopPlugin, EndingPlugin } from "@lumina/plugins";
 
 new VideoPlayer({
@@ -824,6 +823,23 @@ TopPlugin({
 - `EndingPlugin` 挂载到核心的 `.nova-player-ending-wrap`
 - 插件不创建包装 DOM、不加类名、不替换根容器
 - 不安装插件时核心不渲染任何 Top / Ending 内容
+- Top / Ending 的 SCSS 在插件 `install()` 时通过 `injectPluginStyle` 自动注入，无需单独引入 CSS
+
+动态更新 Top / Ending（不重建播放器）：
+
+```ts
+player.setConfig({ ui: { topStyle: "tv" } });
+player.refreshTop();
+
+player.setConfig({ ui: { endingStyle: "ogv", ogv: { title: "第 1 话" } } });
+player.refreshEnding();
+
+// 动态卸载 / 装载
+player.uninstallPlugin("top");
+player.use(TopPlugin());
+```
+
+`refreshTop()` / `refreshEnding()` 会清理旧视图并用最新配置重新挂载，播放器实例、video、播放进度保持不变。
 
 优先级：`ui.top` / `ui.ending` 插槽优先于同名插件。
 

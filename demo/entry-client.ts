@@ -33,6 +33,7 @@
  */
 
 import { hydrate } from "@/core";
+import { PlayerEventEnum } from "@/core/events";
 // 内置语言包：随 i18n 配置注入播放器（core/index.ts 已自动注册，这里显式传入保证配置完整）
 import zhCN from "@/core/locales/zh-CN.json";
 import enUS from "@/core/locales/en-US.json";
@@ -894,6 +895,8 @@ if (root) {
         }
       });
 
+      attachAllPlayerEvents(playerInstance);
+
       // 暴露到全局便于调试
       (window as unknown as { player: VideoPlayer }).player = playerInstance;
 
@@ -1584,13 +1587,14 @@ function removeSourceAt(index: number): void {
     return;
   }
   if (wasCurrent) {
-    void rebuildPlayer(Math.min(index, MEDIA_LIST.length - 1));
+    syncPlayerSource(Math.min(index, MEDIA_LIST.length - 1));
     return;
   }
   if (index < current) {
-    void rebuildPlayer(current - 1);
+    syncPlayerSource(current - 1);
     return;
   }
+  playerInstance?.setConfig({ playlist: MEDIA_LIST });
   renderSourceList();
 }
 
@@ -1639,10 +1643,7 @@ function renderSourceList(): void {
     li.appendChild(remove);
 
     li.addEventListener("click", () => {
-      const target = playerInstance;
-      if (target) {
-        void target.switchTo(index).catch(() => undefined);
-      }
+      syncPlayerSource(index);
       renderSourceList();
     });
 
@@ -1661,6 +1662,27 @@ function renderSourceList(): void {
  *
  * @param targetIndex - 目标源下标
  */
+const loggedEventPlayers = new WeakSet<object>();
+/** 订阅全部播放器事件并写日志（demo 展示 on 回调） */
+function attachAllPlayerEvents(player: VideoPlayer): void {
+  if (loggedEventPlayers.has(player)) return;
+  loggedEventPlayers.add(player);
+  const events = Object.values(PlayerEventEnum) as string[];
+  for (const event of events) {
+    try {
+      player.on(event as never, ((...args: unknown[]) => {
+        const payload = args.length ? JSON.stringify(args[0])?.slice(0, 120) : "";
+        appEventBus.emit("ACTION_LOG", {
+          action: "Player.on(" + event + ")" + (payload ? " " + payload : ""),
+          timestamp: Date.now(),
+        });
+      }) as never);
+    } catch {
+      // 事件不存在时忽略
+    }
+  }
+}
+
 async function rebuildPlayer(targetIndex: number): Promise<void> {
   const wrapper = document.getElementById("player-wrapper");
 
@@ -1767,6 +1789,7 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
     const next = new VideoPlayer(config);
     setPlayerInstance(next);
     next.mount(wrapper);
+    attachAllPlayerEvents(next);
     // 新建播放器的初始语言固定为 zh-CN（config.i18n.locale），
     // 同步语言按钮高亮态，避免「重建后按钮停在旧语言」的观感错位
     for (const [otherId] of LOCALE_BUTTONS) {
@@ -1799,9 +1822,26 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
   renderSegmentList();
 }
 
+/** 不重建播放器：同步 playlist / 当前标题 / 插件视图 */
+function syncPlayerSource(index: number): void {
+  const player = playerInstance;
+  if (!player) {
+    void rebuildPlayer(index);
+    return;
+  }
+  player.setConfig({
+    playlist: MEDIA_LIST,
+    ui: { title: MEDIA_LIST[index]?.title ?? "Lumina Demo" },
+  });
+  void player.switchTo(index).catch(() => undefined);
+  player.refreshTop();
+  player.refreshEnding();
+  renderSourceList();
+}
+
 function addSource(source: PlayerSource, title: string): void {
   MEDIA_LIST.push({ src: source, title });
-  void rebuildPlayer(MEDIA_LIST.length - 1);
+  syncPlayerSource(MEDIA_LIST.length - 1);
 }
 
 function handleAddSource(): void {
@@ -4414,17 +4454,43 @@ function updateBadgeToFailed(errorMsg: string): void {
 // Top / Ending 插件演示（并入唯一 demo 入口）
 // ============================================
 
-function rebuildForPluginDemo(): void {
-  const index =
-    playerInstance?.getCurrentIndex() ??
-    Math.max(0, MEDIA_LIST.length - 1);
-  void rebuildPlayer(index);
-}
-
-function seekToEnding(): void {
+function applyTopStyle(style: "default" | "tv" | "music"): void {
   const player = playerInstance;
   if (!player) return;
-  player.seek(Math.max(0, player.getDuration() - 0.1));
+  demoTopStyle = style;
+  player.setConfig({ ui: { topStyle: style } });
+  player.refreshTop();
+}
+
+function applyEndingStyle(style: "standard" | "ogv"): void {
+  const player = playerInstance;
+  if (!player) return;
+  demoEndingStyle = style;
+  player.setConfig({
+    ui: {
+      endingStyle: style,
+      ...(style === "ogv"
+        ? {
+            ogv: {
+              title: player.props.ui?.title ?? "Lumina Demo",
+              related: [],
+            },
+          }
+        : {}),
+    },
+  });
+  player.refreshEnding();
+  setTimeout(() => {
+    player.seek(Math.max(0, player.getDuration() - 0.1));
+  }, 300);
+}
+
+function updateDemoTitle(title: string): void {
+  const player = playerInstance;
+  if (!player) return;
+  player.setConfig({ ui: { title } });
+  player.refreshTop();
+  player.refreshEnding();
 }
 
 function installPluginDemoControls(): void {
@@ -4432,11 +4498,16 @@ function installPluginDemoControls(): void {
   panel.style.cssText =
     "position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:rgba(20,20,28,.92);border:1px solid rgba(255,255,255,.14);border-radius:8px;font:12px/1.4 sans-serif;color:#ddd";
   const buttons: Array<[string, () => void]> = [
-    ["普通 Top", () => { demoTopStyle = "default"; rebuildForPluginDemo(); }],
-    ["电视剧 Top", () => { demoTopStyle = "tv"; rebuildForPluginDemo(); }],
-    ["音乐 Top", () => { demoTopStyle = "music"; rebuildForPluginDemo(); }],
-    ["标准片尾", () => { demoEndingStyle = "standard"; rebuildForPluginDemo(); setTimeout(seekToEnding, 300); }],
-    ["OGV 片尾", () => { demoEndingStyle = "ogv"; rebuildForPluginDemo(); setTimeout(seekToEnding, 300); }],
+    ["普通 Top", () => applyTopStyle("default")],
+    ["电视剧 Top", () => applyTopStyle("tv")],
+    ["音乐 Top", () => applyTopStyle("music")],
+    ["标准片尾", () => applyEndingStyle("standard")],
+    ["OGV 片尾", () => applyEndingStyle("ogv")],
+    ["更新标题", () => updateDemoTitle("动态更新标题 " + Date.now())],
+    ["卸载 Top 插件", () => playerInstance?.uninstallPlugin("top")],
+    ["重装 Top 插件", () => playerInstance?.use(TopPlugin())],
+    ["卸载 Ending 插件", () => playerInstance?.uninstallPlugin("ending")],
+    ["重装 Ending 插件", () => playerInstance?.use(EndingPlugin())],
   ];
   for (const [label, onClick] of buttons) {
     const button = document.createElement("button");
@@ -4455,3 +4526,49 @@ installPluginDemoControls();
 if (MEDIA_LIST.length > 0) {
   void rebuildPlayer(0);
 }
+
+
+// ============================================
+// 深浅色主题：真实切换页面 CSS 变量（不依赖组件内部状态）
+// ============================================
+function wireThemeToggle(): void {
+  const button = document.querySelector<HTMLButtonElement>(
+    ".theme-switcher button",
+  );
+  const root = document.querySelector<HTMLElement>(".app-root");
+  if (!button || !root) return;
+  const apply = (theme: "dark" | "light"): void => {
+    const isDark = theme === "dark";
+    document.documentElement.dataset.theme = theme;
+    document.body.dataset.theme = theme;
+    const vars: Record<string, string> = {
+      "--accent": isDark ? "#00b4d8" : "#1976D2",
+      "--accent-hover": isDark ? "#0096b7" : "#1565C0",
+      "--bg-base": isDark ? "#1a1a2e" : "#f5f5f5",
+      "--panel-bg": isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)",
+      "--btn-bg": isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+      "--border-color": isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+      "--text-primary": isDark ? "#e0e0e0" : "#333333",
+      "--text-secondary": isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)",
+    };
+    for (const [key, value] of Object.entries(vars)) {
+      root.style.setProperty(key, value);
+    }
+    button.textContent = isDark ? "切换到亮色" : "切换到暗色";
+    button.dataset.theme = theme;
+  };
+  apply(
+    (document.documentElement.dataset.theme as "dark" | "light") ?? "dark",
+  );
+  button.addEventListener("click", () => {
+    const next =
+      document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    apply(next);
+    appEventBus.emit("ACTION_LOG", {
+      action: "主题切换: " + next,
+      timestamp: Date.now(),
+    });
+  });
+}
+
+wireThemeToggle();

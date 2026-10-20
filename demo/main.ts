@@ -15,12 +15,10 @@
  * 图标系统：icons.ts 中的 SVG 组件，无 Unicode emoji
  *
  * 组件覆盖清单（核心 SSR + 水合测试）
- * 1.  CounterDisplay   - 纯展示组件 + ref 获取子组件 DOM
- * 2.  CounterPanel     - onClick + Context + 生命周期 + useState 手动 DOM 更新
- * 3.  ThemeSwitcher    - lifecycle.emit + 状态管理
- * 4.  EventLog         - ref 回调 + 事件总线
- * 5.  PlayerSection    - VideoPlayer SSR 原生渲染 + 水合（非占位，直接输出播放器 HTML）
- * 6.  App              - 根组件
+ * 1.  ThemeSwitcher    - lifecycle.emit + 状态管理
+ * 2.  EventLog         - ref 回调 + 事件总线
+ * 3.  PlayerSection    - VideoPlayer SSR 原生渲染 + 水合（非占位，直接输出播放器 HTML）
+ * 4.  App              - 根组件
  * 7.  RootLayout       - 根布局（注入 Context）
  */
 
@@ -41,9 +39,6 @@ import {
   IconSun,
   IconMoon,
   IconSettings,
-  IconPlus,
-  IconMinus,
-  IconRefresh,
   IconTrash,
   IconTerminal,
   IconVideo,
@@ -114,155 +109,6 @@ const darkTheme: ThemeContextValue = {
 // ============================================
 // 所有样式已提取到 demo/styles.css
 // 组件通过 class 属性引用 CSS 类名
-
-// ============================================
-// 子组件1：计数器显示（纯展示组件）
-// ============================================
-
-interface CounterDisplayProps {
-  count: number;
-}
-
-const CounterDisplay = defineComponent<CounterDisplayProps>(
-  (props, lifecycle) => {
-    const counterRef = useTemplateRef<HTMLSpanElement>(lifecycle, 'counterRef');
-
-    lifecycle.onBeforeMount = () => {
-      appEventBus.emit("ACTION_LOG", {
-        action: "CounterDisplay: onBeforeMount",
-        timestamp: Date.now(),
-      });
-    };
-
-    lifecycle.onMounted = () => {
-      appEventBus.emit("ACTION_LOG", {
-        action: "CounterDisplay: onMounted",
-        timestamp: Date.now(),
-      });
-      lifecycle.expose?.(counterRef.value);
-    };
-
-    return h(
-      "span",
-      {
-        class: "counter-value",
-        ref: 'counterRef',
-      },
-      String(props.count),
-    );
-  },
-);
-
-// ============================================
-// 子组件2：计数器面板
-// ============================================
-
-interface CounterPanelEvents {
-  increment: undefined;
-  decrement: undefined;
-  reset: undefined;
-}
-
-const CounterPanel = defineComponent<
-  Record<string, unknown>,
-  CounterPanelEvents
->((_props, lifecycle) => {
-  const counterRef = useTemplateRef<HTMLElement>(lifecycle, 'counterRef');
-
-  lifecycle.onBeforeMount = () => {
-    appEventBus.emit("ACTION_LOG", {
-      action: "CounterPanel: onBeforeMount",
-      timestamp: Date.now(),
-    });
-  };
-
-  lifecycle.onMounted = () => {
-    appEventBus.emit("ACTION_LOG", {
-      action: "CounterPanel: onMounted",
-      timestamp: Date.now(),
-    });
-
-    useState(
-      appState,
-      "app.count",
-      (newVal: number) => {
-        if (counterRef.value) {
-          counterRef.value.textContent = String(newVal);
-        }
-      },
-      lifecycle,
-    );
-  };
-
-  const handleIncrement = () => {
-    const newCount = (appState.get("app.count") ?? 0) + 1;
-    appState.set("app.count", newCount);
-    appState.set("app.lastAction", "increment");
-    appEventBus.emit("COUNT_INCREMENT", { count: newCount });
-    lifecycle.emit?.("increment");
-  };
-
-  const handleDecrement = () => {
-    const newCount = (appState.get("app.count") ?? 0) - 1;
-    appState.set("app.count", newCount);
-    appState.set("app.lastAction", "decrement");
-    appEventBus.emit("COUNT_DECREMENT", { count: newCount });
-    lifecycle.emit?.("decrement");
-  };
-
-  const handleReset = () => {
-    appState.set("app.count", 0);
-    appState.set("app.lastAction", "reset");
-    lifecycle.emit?.("reset");
-  };
-
-  const count = appState.get("app.count") ?? 0;
-
-  return h(
-    "div",
-    { class: "panel counter-panel" },
-    h("div", { class: "panel-title" }, h(IconTerminal, { size: 16 }), "计数器（onClick + useState）"),
-    h(
-      "div",
-      {
-        class: "counter-controls",
-      },
-      h(
-        "button",
-        {
-          onClick: handleDecrement,
-          class: "btn-danger",
-          "aria-label": "减少",
-        },
-        h(IconMinus, { size: 14 }),
-        "减少",
-      ),
-      h(CounterDisplay, { count, ref: 'counterRef' }),
-      h(
-        "button",
-        {
-          onClick: handleIncrement,
-          class: "btn-success",
-          "aria-label": "增加",
-        },
-        h(IconPlus, { size: 14 }),
-        "增加",
-      ),
-      h(
-        "button",
-        {
-          onClick: handleReset,
-          class: "btn-warning",
-          "aria-label": "重置",
-        },
-        h(IconRefresh, { size: 14 }),
-        "重置",
-      ),
-    ),
-  );
-});
-
-// ============================================
 // 子组件4：主题切换
 // ============================================
 
@@ -319,6 +165,10 @@ const ThemeSwitcher = defineComponent<
   };
 
   const isDark = (appState.get("app.theme") ?? "dark") === "dark";
+  if (typeof document !== "undefined") {
+    document.documentElement.dataset.theme = isDark ? "dark" : "light";
+    document.body.dataset.theme = isDark ? "dark" : "light";
+  }
 
   return h(
     "div",
@@ -1232,6 +1082,10 @@ const App = defineComponent((_props, lifecycle) => {
       (newTheme: string) => {
         const isDark = newTheme === "dark";
         const vars = getThemeVars(isDark);
+        if (typeof document !== "undefined") {
+          document.documentElement.dataset.theme = newTheme;
+          document.body.dataset.theme = newTheme;
+        }
         if (appRootRef.value) {
           for (const [key, value] of Object.entries(vars)) {
             appRootRef.value.style.setProperty(key, value);
@@ -1286,27 +1140,6 @@ const App = defineComponent((_props, lifecycle) => {
       // 主题切换
       h(ThemeSwitcher, {}),
 
-      // 计数器
-      h(CounterPanel, {
-        onIncrement: () => {
-          appEventBus.emit("ACTION_LOG", {
-            action: "父组件收到 increment 回调",
-            timestamp: Date.now(),
-          });
-        },
-        onDecrement: () => {
-          appEventBus.emit("ACTION_LOG", {
-            action: "父组件收到 decrement 回调",
-            timestamp: Date.now(),
-          });
-        },
-        onReset: () => {
-          appEventBus.emit("ACTION_LOG", {
-            action: "父组件收到 reset 回调",
-            timestamp: Date.now(),
-          });
-        },
-      }),
 
       // 事件日志
       h(EventLog, {}),

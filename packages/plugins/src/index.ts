@@ -107,9 +107,6 @@ export type {
 export { AudioEffectPlugin, createAudioEffectPlugin } from './audioeffect';
 export type { AudioEffectPluginConfig, AudioEffectPluginAPI } from './audioeffect';
 
-import "./top/style.scss";
-import "./ending/style.scss";
-
 // 导出 Top / Ending 插件
 export { TopPlugin } from './top';
 export type { TopPluginConfig } from './top';

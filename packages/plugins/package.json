@@ -34,8 +34,7 @@
     "./interaction": {
       "import": "./dist/interaction/index.js",
       "types": "./dist/interaction/index.d.ts"
-    },
-    "./style.css": "./dist/style.css"
+    }
   },
   "files": [
     "dist"
