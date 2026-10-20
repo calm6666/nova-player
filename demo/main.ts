@@ -32,9 +32,11 @@ import {
   createTypedEventBus,
   useState,
 } from "@/core";
+import "@/styles/style.scss";
 import { VideoPlayer } from "@/nova/player";
 import { TopPlugin } from "@/lumina/plugins/top/index";
 import { EndingPlugin } from "@/lumina/plugins/ending/index";
+import { DanmakuPlugin } from "@/lumina/plugins/danmaku";
 
 // SVG 图标组件（替代 Unicode emoji）
 import {
@@ -267,7 +269,7 @@ const PlayerSection = defineComponent(() => {
     src: "/sample.mp4",
     ui: { title: "示例视频" },
     playback: { autoplay: false, muted: true },
-    plugins: { list: [TopPlugin(), EndingPlugin()] },
+    plugins: { list: [TopPlugin(), EndingPlugin(), DanmakuPlugin()] },
   });
   if (typeof window !== "undefined") {
     (window as unknown as { __ssrPlayer?: VideoPlayer }).__ssrPlayer = player;

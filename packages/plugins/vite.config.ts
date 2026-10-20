@@ -38,6 +38,7 @@ export default defineConfig({
     outDir: resolve(__dirname, 'dist'),
     sourcemap: true,
     minify: false,
+    cssMinify: false,
   },
   resolve: {
     alias: [

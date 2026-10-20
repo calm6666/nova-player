@@ -22,7 +22,6 @@ import type {
   ProgressSkipPoints,
 } from "@/types";
 import { PlayerState, PlayMode } from "@/types";
-import "../styles/style.scss";
 import {
   h,
   mount,

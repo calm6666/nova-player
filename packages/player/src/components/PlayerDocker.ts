@@ -2228,6 +2228,38 @@ export const PlayerDocker = defineComponent<
 
     if (!container || !videoArea || !perch || !docker) return;
 
+    // --- 控制栏点击兜底：SSR 水合时组件内 onClick 可能未重新绑定 ---
+    const onControlCapture = (event: MouseEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest<HTMLElement>(".nova-player-ctrl-btn");
+      if (!button) return;
+      const classes = button.classList;
+      if (classes.contains("nova-player-ctrl-play")) {
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        togglePlayPause();
+      } else if (classes.contains("nova-player-ctrl-mute")) {
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        toggleMute();
+      } else if (classes.contains("nova-player-ctrl-full")) {
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        toggleFullscreen();
+      } else if (classes.contains("nova-player-ctrl-web")) {
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        toggleWebFullscreen();
+      } else if (classes.contains("nova-player-ctrl-wide")) {
+        event.stopImmediatePropagation();
+        event.preventDefault();
+        toggleWide();
+      }
+    };
+    container.addEventListener("click", onControlCapture, true);
+    cleanupFns.push(() => container.removeEventListener("click", onControlCapture, true));
+
     // --- ResizeObserver 容器尺寸变化 ---
     resizeObserver?.observe(docker);
 

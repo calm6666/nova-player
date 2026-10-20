@@ -2088,11 +2088,12 @@ function hydrateNode(
    * 若 el 是旧版 SSR 输出的 <__flow> 空元素，先替换为注释锚点再 init。
    */
   if (vnode.__flow !== undefined) {
-    let anchor: Comment;
+    let anchor: Text;
     if (isCommentNode(el)) {
-      anchor = el;
+      anchor = document.createTextNode("");
+      el.parentNode?.replaceChild(anchor, el);
     } else {
-      anchor = document.createComment("flow");
+      anchor = document.createTextNode("");
       el.parentNode?.insertBefore(anchor, el);
       el.parentNode?.removeChild(el);
     }
@@ -2191,26 +2192,28 @@ function hydrateNode(
      * 编译器将 onXxx → __events: { xxx: handler }，跳过 startsWith+typeof 检查
      */
     const preClassifiedEvents = attrs.__events as Record<string, EventListener> | undefined;
+    const boundEvents = new Set<string>();
     if (preClassifiedEvents) {
       for (const eventName in preClassifiedEvents) {
         if (!Object.prototype.hasOwnProperty.call(preClassifiedEvents, eventName)) continue;
         const handler = preClassifiedEvents[eventName];
         if (typeof handler === "function") {
           el.addEventListener(eventName, handler);
+          boundEvents.add(eventName);
           cleanups.push(() => el.removeEventListener(eventName, handler));
         }
       }
-    } else {
-      // fallback：未编译代码，遍历 attrs 按 onXxx 约定查找
-      for (const key in attrs) {
-        if (!Object.prototype.hasOwnProperty.call(attrs, key)) continue;
-        if (!key.startsWith("on") || typeof attrs[key] !== "function") continue;
+    }
 
-        const eventType = key.slice(2).toLowerCase();
-        const handler: EventListener = attrs[key] as EventListener;
-        el.addEventListener(eventType, handler);
-        cleanups.push(() => el.removeEventListener(eventType, handler));
-      }
+    // SSR 水合兼容：编译器未把 onXxx 归入 __events 时，补齐绑定
+    for (const key in attrs) {
+      if (!Object.prototype.hasOwnProperty.call(attrs, key)) continue;
+      if (!key.startsWith("on") || typeof attrs[key] !== "function") continue;
+      const eventType = key.slice(2).toLowerCase();
+      if (boundEvents.has(eventType)) continue;
+      const handler: EventListener = attrs[key] as EventListener;
+      el.addEventListener(eventType, handler);
+      cleanups.push(() => el.removeEventListener(eventType, handler));
     }
 
     /**

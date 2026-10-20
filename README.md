@@ -344,7 +344,9 @@ player.destroy();         // 卸载并清理全部监听、插件与订阅
 ### 服务端渲染
 
 服务端 `new VideoPlayer(config)` 是安全的：构造函数内部对 `window` / `localStorage` 都有守卫，
-不会触碰 DOM。渲染时取其 VNode，或使用 `isServer()` / `createSSRConfig()`：
+不会触碰 DOM。渲染时取其 VNode，或使用 `isServer()` / `createSSRConfig()`。
+
+> `VideoPlayer` 不再副作用导入 CSS；父应用需显式 `import "@lumina/nova/style.css"`，SSR 时由父应用把该 CSS 内联到首屏。
 
 ```ts
 import { isServer, createSSRConfig, VideoPlayer, renderPlayerToString } from '@lumina/nova';
