@@ -32,11 +32,12 @@ import {
   createTypedEventBus,
   useState,
 } from "@/core";
-import "@/styles/style.scss";
 import { VideoPlayer } from "@/nova/player";
 import { TopPlugin } from "@/lumina/plugins/top/index";
 import { EndingPlugin } from "@/lumina/plugins/ending/index";
 import { DanmakuPlugin } from "@/lumina/plugins/danmaku";
+import zhCN from "@/core/locales/zh-CN.json";
+import enUS from "@/core/locales/en-US.json";
 
 // SVG 图标组件（替代 Unicode emoji）
 import {
@@ -269,6 +270,12 @@ const PlayerSection = defineComponent(() => {
     src: "/sample.mp4",
     ui: { title: "示例视频" },
     playback: { autoplay: false, muted: true },
+    i18n: {
+      enabled: true,
+      locale: "zh-CN",
+      fallbackLocale: "en-US",
+      messages: { "zh-CN": zhCN, "en-US": enUS },
+    },
     plugins: { list: [TopPlugin(), EndingPlugin(), DanmakuPlugin()] },
   });
   if (typeof window !== "undefined") {

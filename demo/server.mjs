@@ -146,8 +146,11 @@ async function createServer() {
       if (!mod || visited.has(mod.url)) return;
       visited.add(mod.url);
 
-      // 检查是否为 CSS/SCSS/LESS 模块
-      const isCss = /\.(css|scss|less|styl|sass)($|\?)/.test(mod.url);
+      // 检查是否为 CSS/SCSS/LESS 模块（插件样式只走客户端，不参与 SSR）
+      const isCss =
+        !mod.url.includes('?inline') &&
+        !mod.url.includes('/packages/plugins/') &&
+        /\.(css|scss|less|styl|sass)($|\?)/.test(mod.url);
       if (isCss) {
         try {
           /**
@@ -252,6 +255,10 @@ async function createServer() {
        */
       const ssrCss = await collectSSRCss('/entry-server.ts');
 
+      // 服务端专用播放器 CSS：直接取 ?inline 字符串，注入首屏 <head>
+      const ssrCssModule = await vite.ssrLoadModule('/ssr-css.ts');
+      const playerCss = ssrCssModule.default;
+
       /**
        * 2d. 注入 SSR 元信息（meta 标签）
        * 客户端 entry-client.ts 通过 document.querySelector 读取这些 meta：
@@ -271,7 +278,11 @@ async function createServer() {
        */
       let html = template.replace('<!--ssr-outlet-->', appHtml);
       html = html.replace('<!--ssr-meta-outlet-->', metaTags);
-      html = html.replace('<!--ssr-css-outlet-->', ssrCss ? '<style>' + ssrCss + '</style>' : '');
+      html = html.replace(
+        '<!--ssr-css-outlet-->',
+        (playerCss ? '<style data-player-css>' + playerCss + '</style>' : '') +
+          (ssrCss ? '<style>' + ssrCss + '</style>' : ''),
+      );
 
       /**
        * 2f. 发送完整的 HTML 给浏览器
