@@ -356,26 +356,25 @@ export const Top = defineComponent<TopProps>(
       return h(
         Fragment,
         {},
-        h("div", { class: "nova-player-top-mask bpx-player-top-mask" }),
+        h("div", { class: "nova-player-top-mask" }),
         h(
           "div",
-          { class: "nova-player-top-title bpx-player-top-title" },
+          { class: "nova-player-top-title" },
           h("div", { id: "player-title" }, props.title ?? ""),
         ),
         h(
           "div",
-          { class: "nova-player-top-follow bpx-player-top-follow" },
+          { class: "nova-player-top-follow" },
           h(
             "div",
             {
               id: "player-follow",
-              class: "videoHeader_follow__DxAhd",
               style: { display: "flex" },
               onClick: handleFollowClick,
             },
             h(
               "span",
-              { class: "videoHeader_icon___1LSb" },
+              {},
               h(
                 "svg",
                 { viewBox: "0 -3 16 16" },
@@ -393,7 +392,7 @@ export const Top = defineComponent<TopProps>(
         ),
         h(
           "div",
-          { class: "nova-player-top-left bpx-player-top-left" },
+          { class: "nova-player-top-left" },
           h("div", { class: "nova-player-top-left-title" }),
           h("div", { class: "nova-player-top-left-follow" }),
           h("div", { class: "nova-player-top-left-music" }),
@@ -401,7 +400,7 @@ export const Top = defineComponent<TopProps>(
         ),
         h(
           "div",
-          { class: "nova-player-top-issue bpx-player-top-issue" },
+          { class: "nova-player-top-issue" },
           h(
             "span",
             {
