@@ -369,12 +369,13 @@ export const Top = defineComponent<TopProps>(
             "div",
             {
               id: "player-follow",
+              class: "videoHeader_follow__DxAhd",
               style: { display: "flex" },
               onClick: handleFollowClick,
             },
             h(
               "span",
-              {},
+              { class: "videoHeader_icon___1LSb" },
               h(
                 "svg",
                 { viewBox: "0 -3 16 16" },
@@ -383,7 +384,10 @@ export const Top = defineComponent<TopProps>(
             ),
             h(
               "span",
-              { style: { marginLeft: "2px" } },
+              {
+                class: "videoHeader_follow_text__SxdT6",
+                style: { marginLeft: "2px" },
+              },
               props.followed
                 ? t("player.ui.ending.watching_series")
                 : t("player.ui.ending.watch_series"),

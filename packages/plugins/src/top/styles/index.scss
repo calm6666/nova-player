@@ -196,30 +196,44 @@
   overflow: hidden;
 }
 
-.nova-player-top-follow #player-follow {
+/* Nova 真实电视剧追剧按钮规则（来自 bbf2b6d733563728.css） */
+.videoHeader_follow__DxAhd {
   align-items: center;
-  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  color: var(--text_white, #fff);
   cursor: pointer;
   display: flex;
-  font-size: 16px;
-  font-weight: 500;
+  flex-direction: row;
+  height: 24px;
   line-height: 24px;
-  margin: 0;
+  margin: 18px 5px 0 0;
+  min-width: 64px;
   pointer-events: all;
-  white-space: nowrap;
+  text-align: center;
 }
 
-.nova-player-top-wrap #player-follow > span:first-child {
+.videoHeader_follow__DxAhd:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.videoHeader_icon___1LSb {
+  color: var(--text_white, #fff);
   display: inline-block;
-  height: 16px;
-  width: 16px;
+  fill: #fff;
+  height: 100%;
+  margin-left: 10px;
+  margin-right: 2px;
+  width: 14px;
 }
 
-.nova-player-top-wrap #player-follow > span:first-child svg {
-  display: block;
-  fill: currentColor;
-  height: 16px;
-  width: 16px;
+.videoHeader_icon___1LSb svg {
+  height: 100%;
+  width: 100%;
+}
+
+.videoHeader_follow_text__SxdT6 {
+  margin: 0 12px 0 4px;
 }
 
 /* 音乐模式 Top */
