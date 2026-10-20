@@ -207,33 +207,6 @@
   white-space: nowrap;
 }
 
-/* 电视剧「追剧」：真实页面为粉色胶囊 + 白色心形/文字 */
-.nova-player-top-follow #player-follow.nova-player-tv-follow {
-  background: #fb7299;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
-  height: 24px;
-  line-height: 24px;
-  padding: 0 8px;
-}
-
-.nova-player-top-follow
-  #player-follow.nova-player-tv-follow
-  > span:first-child {
-  display: inline-block;
-  height: 14px;
-  width: 14px;
-}
-
-.nova-player-top-follow
-  #player-follow.nova-player-tv-follow
-  > span:first-child
-  svg {
-  fill: #fff;
-}
-
 .nova-player-top-wrap #player-follow > span:first-child {
   display: inline-block;
   height: 16px;

@@ -369,7 +369,6 @@ export const Top = defineComponent<TopProps>(
             "div",
             {
               id: "player-follow",
-              class: "nova-player-tv-follow",
               style: { display: "flex" },
               onClick: handleFollowClick,
             },
