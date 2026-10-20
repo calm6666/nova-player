@@ -226,9 +226,8 @@
       }
     }
 
-    // 进入观看入口跟随控制栏显隐；暂停时始终显示（与真实页面一致）
-    &[data-ctrl-hidden="true"]:not(.state-paused)
-      .nova-player-relation-button {
+    // 进入观看入口跟随控制栏 / Top 显隐；卡片始终显示
+    &[data-ctrl-hidden="true"] .nova-player-relation-button {
       opacity: 0;
       pointer-events: none;
       visibility: hidden;
@@ -275,11 +274,6 @@
       position: relative;
       width: 100%;
       z-index: 1;
-    }
-
-    // 容器过小：隐藏卡片，进入观看入口仍保留
-    &.is-embedded-compact .nova-player-relation-wrap .nova-player-relation-context {
-      display: none;
     }
 
     .nova-player-relation-wrap .nova-player-relation-context-item {

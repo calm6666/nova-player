@@ -3,16 +3,15 @@
  * 外链播放器底部相关推荐条 (RelationStrip)
  * ============================================
  * 对应 B 站 external player 的 bpx-player-relation-wrap：
- * 播放中悬停/显示控制栏时，在底部浮出 6 张相关推荐卡片。
- * 仅在 scene=embedded 且外部提供 related 数据时渲染。
+ * 卡片始终显示，按容器宽度动态增删；进入按钮跟随控制栏 / Top 显隐。
  */
 
-import { h, defineComponent, t } from "@/core";
+import { h, defineComponent, t, signal, For } from "@/core";
 import type { EndingRelatedItem } from "@/types";
 import type { VNode } from "@/types";
 
 export interface RelationStripProps {
-  /** 相关推荐列表（最多渲染 6 张） */
+  /** 相关推荐列表 */
   related?: EndingRelatedItem[];
   /** 点击推荐卡片回调 */
   onSelect?: (item: EndingRelatedItem) => void;
@@ -68,18 +67,53 @@ const renderItem = (
 };
 
 export const RelationStrip = defineComponent<RelationStripProps>(
-  (props, _lifecycle) => {
-    const related = (props.related ?? []).slice(0, 6);
-    if (related.length === 0) {
+  (props, lifecycle) => {
+    const all = props.related ?? [];
+    if (all.length === 0) {
       return h("div", {
         class: "nova-player-relation-wrap",
         style: { display: "none" },
       });
     }
 
+    /** 按容器宽度动态计算卡片数量（最多 6 张） */
+    const visibleItems = signal<EndingRelatedItem[]>(all.slice(0, 6));
+    let wrapEl: HTMLElement | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const updateCount = (): void => {
+      const width =
+        wrapEl?.parentElement?.clientWidth ?? wrapEl?.clientWidth ?? 0;
+      if (width <= 0) return;
+      const count = Math.max(
+        2,
+        Math.min(6, Math.floor((width - 40) / 140)),
+      );
+      visibleItems.value = all.slice(0, count);
+    };
+
+    lifecycle.onMounted = (): void => {
+      updateCount();
+      const target = wrapEl?.parentElement ?? wrapEl;
+      if (target && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => updateCount());
+        resizeObserver.observe(target);
+      }
+    };
+
+    lifecycle.onBeforeDestroy = (): void => {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+    };
+
     return h(
       "div",
-      { class: "nova-player-relation-wrap" },
+      {
+        class: "nova-player-relation-wrap",
+        ref: (el: Element) => {
+          wrapEl = el instanceof HTMLElement ? el : null;
+        },
+      },
       h(
         "div",
         { class: "nova-player-relation-button" },
@@ -99,7 +133,13 @@ export const RelationStrip = defineComponent<RelationStripProps>(
       h(
         "div",
         { class: "nova-player-relation-context" },
-        ...related.map((item) => renderItem(item, props.onSelect)),
+        h(For, {
+          each: (): EndingRelatedItem[] => visibleItems.value,
+          key: (item: EndingRelatedItem, index: number): string =>
+            `${index}:${item.title}`,
+          render: (item: EndingRelatedItem): VNode =>
+            renderItem(item, props.onSelect),
+        }),
       ),
     );
   },

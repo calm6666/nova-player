@@ -2842,6 +2842,15 @@ export const PlayerDocker = defineComponent<
           // 顶部栏（标题 / 关注 / 问题反馈，既有实现挂载于视频区域；
           // ui.title 动态更新时由 configStore 订阅驱动 setTitle）
           h("div", { class: "nova-player-top-wrap", ref: "topRootRef" }),
+          // 外链场景：相关推荐条与 Top 同级，跟随控制栏显隐
+          embeddedMode
+            ? h(RelationStrip, {
+                related: embeddedConfig?.related,
+                onSelect: (item) => {
+                  if (item.url) openEmbeddedUrl(item.url);
+                },
+              })
+            : null,
           // 字幕容器（按需渲染：未装 subtitle 插件时不挂载字幕层 DOM）
           // 位于 Top 容器与 Ending 容器之间；定位规则全部由
           // subtitlelayer.scss 纯 CSS 派生（档位 data-position /
@@ -3118,15 +3127,6 @@ export const PlayerDocker = defineComponent<
           ),
         ),
       ),
-      // 外链场景：底部相关推荐条（播放中显示，站内不渲染）
-      embeddedMode
-        ? h(RelationStrip, {
-            related: embeddedConfig?.related,
-            onSelect: (item) => {
-              if (item.url) openEmbeddedUrl(item.url);
-            },
-          })
-        : null,
       // 外链场景：右上角「进入哔哩哔哩」胶囊按钮
       // 外链暂停页的进入观看入口由 RelationStrip 统一渲染（卡片上方），
       // 不再额外渲染居中的重复胶囊按钮。
