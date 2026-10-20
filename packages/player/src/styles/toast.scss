@@ -40,11 +40,14 @@
 
 .nova-player-toast-cancel {
   align-items: center;
+  box-sizing: border-box;
   cursor: pointer;
   display: inline-flex;
   fill: #fff;
+  flex: 0 0 24px;
   height: 24px;
   justify-content: center;
+  line-height: 0;
   margin-right: 6px;
   width: 24px;
 }
@@ -56,6 +59,7 @@
 }
 
 .nova-player-toast-cancel svg {
+  display: block;
   fill: currentColor;
   height: 12px;
   width: 12px;
