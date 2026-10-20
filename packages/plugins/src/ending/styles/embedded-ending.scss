@@ -12,9 +12,9 @@
   }
 
   .nova-player-embedded-ending-wrap-box {
-    max-width: 100%;
+    max-width: 1060px;
     position: relative;
-    width: 1060px;
+    width: calc(100% - 40px);
   }
 
   .nova-player-embedded-ending-top-wrap {
@@ -313,19 +313,82 @@
   }
 }
 
-// 与 B 站外链尾页一致：窄容器只展示一行，不强行折成多行
-@container (max-width: 940px) {
-  .nova-player-ending-wrap.nova-player-embedded-ending-wrap
-    .nova-player-embedded-ending-relation-context
-    .nova-player-relation-context-item:nth-child(n + 5) {
+// 小窗口专用入口 / 重播（默认隐藏）
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap {
+  .nova-player-ending-enter-button,
+  .nova-player-replay {
     display: none;
+  }
+
+  .nova-player-ending-enter-button {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 26px;
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    font-size: 14px;
+    height: 32px;
+    justify-content: center;
+    padding: 0 10px;
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    z-index: 56;
+
+    svg {
+      fill: currentColor;
+      height: 16px;
+      margin-left: 3px;
+      width: 16px;
+    }
+  }
+
+  .nova-player-replay {
+    align-items: center;
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    flex-direction: column;
+    height: 65px;
+    justify-content: center;
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 65px;
+    z-index: 56;
+  }
+
+  .nova-player-replay-icon {
+    display: block;
+    height: 45px;
+    width: 45px;
+
+    svg {
+      fill: currentColor;
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  .nova-player-replay-text {
+    font-size: 12px;
+    line-height: 16px;
   }
 }
 
-@container (min-width: 941px) and (max-width: 1159px) {
+// 真实 B 站：窗口小于 750px 时整块片尾内容隐藏，只保留小窗入口/重播
+@container (max-width: 749px) {
   .nova-player-ending-wrap.nova-player-embedded-ending-wrap
-    .nova-player-embedded-ending-relation-context
-    .nova-player-relation-context-item:nth-child(n + 6) {
+    .nova-player-embedded-ending-wrap-box {
     display: none;
+  }
+
+  .nova-player-ending-wrap.nova-player-embedded-ending-wrap
+    .nova-player-ending-enter-button,
+  .nova-player-ending-wrap.nova-player-embedded-ending-wrap
+    .nova-player-replay {
+    display: flex;
   }
 }

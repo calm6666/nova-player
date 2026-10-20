@@ -10,7 +10,7 @@
  * 未提供数据时只渲染容器结构，列表为空。
  */
 
-import { h, defineComponent, useTemplateRef, signal, t, Fragment, LottieIcon, type LottieIconApi } from "@lumina/nova";
+import { h, defineComponent, useTemplateRef, signal, t, Fragment, For, LottieIcon, type LottieIconApi } from "@lumina/nova";
 import type { VNode } from "@lumina/nova";
 import type {
   EndingRelatedItem,
@@ -297,6 +297,12 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 推荐列表（默认空，不臆造数据） */
   const related: EndingRelatedItem[] = props.related ?? [];
+
+  /**
+   * 外链尾页实际渲染的卡片，按播放器宽度动态决定数量：
+   * <750 不渲染；<941 渲染 4 张；<1160 渲染 5 张；否则 10 张。
+   */
+  const embeddedRelated = signal<EndingRelatedItem[]>(related.slice(0, 10));
 
   // ============================================
   // 自动连播倒计时
@@ -740,6 +746,44 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   /** 渲染外链嵌入场景的整页片尾 */
   const renderEmbeddedEnding = (): VNode =>
     h(
+      Fragment,
+      {},
+      // 小窗口（<750）显示：右上进入站内 + 居中重播
+      h(
+        "div",
+        {
+          class: "nova-player-ending-enter-button",
+          role: "button",
+          onClick: props.onEnterSite,
+        },
+        t("player.ui.embed.enter_quality"),
+        h(
+          "svg",
+          {
+            xmlns: "http://www.w3.org/2000/svg",
+            viewBox: "0 0 16 16",
+            "data-pointer": "none",
+          },
+          h("path", {
+            d: "m9.188 7.999-3.359 3.359a.75.75 0 1 0 1.061 1.061l3.889-3.889a.75.75 0 0 0 0-1.061L6.89 3.58a.75.75 0 1 0-1.061 1.061l3.359 3.358z",
+          }),
+        ),
+      ),
+      h(
+        "div",
+        {
+          class: "nova-player-replay",
+          role: "button",
+          onClick: props.onRestart,
+        },
+        h("span", { class: "nova-player-replay-icon" }, RestartIcon()),
+        h(
+          "span",
+          { class: "nova-player-replay-text" },
+          t("player.ui.ending.replay"),
+        ),
+      ),
+      h(
       "div",
       { class: "nova-player-embedded-ending-wrap-box" },
       // 顶部：标题 / UP / 操作
@@ -859,14 +903,20 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           ),
         ),
       ),
-      // 相关推荐：真实 B 站外链尾页为 flex-wrap，两行 × 5 张
+      // 相关推荐：真实 B 站外链尾页为 flex-wrap，DOM 数量随宽度变化
       h(
         "div",
         { class: "nova-player-embedded-ending-relation-wrap" },
         h(
           "div",
           { class: "nova-player-embedded-ending-relation-context" },
-          ...related.slice(0, 10).map(renderRelatedCard),
+          h(For, {
+            each: (): EndingRelatedItem[] => embeddedRelated.value,
+            key: (item: EndingRelatedItem, index: number): string =>
+              `${index}:${item.title}`,
+            render: (item: EndingRelatedItem, index: number): VNode =>
+              renderRelatedCard(item, index),
+          }),
         ),
       ),
       // 底部：下载客户端 / 进入站内
@@ -893,6 +943,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           StrokeIcon(ENTER_ICON),
           t("player.ui.ending.enter_site"),
         ),
+      ),
       ),
     );
 
@@ -1514,6 +1565,22 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     const availableWidth = root.clientWidth;
     const availableHeight = root.clientHeight;
     if (availableWidth <= 0 || availableHeight <= 0) return;
+
+    // 外链尾页：按播放器宽度直接决定 DOM 卡片数量（不是渲染后隐藏）
+    if (isEmbedded) {
+      const count =
+        availableWidth < 750
+          ? 0
+          : availableWidth < 941
+            ? 4
+            : availableWidth < 1160
+              ? 5
+              : 10;
+      const next = related.slice(0, count);
+      if (next.length !== embeddedRelated.value.length) {
+        embeddedRelated.value = next;
+      }
+    }
 
     // 外链片尾不参与整体缩放，保持原有布局
     const contents = root.querySelectorAll<HTMLElement>(

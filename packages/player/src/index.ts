@@ -83,6 +83,7 @@ export {
   useTemplateRef,
   signal,
   Fragment,
+  For,
   t,
 } from '@/core';
 export { Plus, Issue } from '@/nova/components/icons';
