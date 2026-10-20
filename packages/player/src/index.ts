@@ -14,7 +14,6 @@
 
 // 导出播放器
 export { VideoPlayer } from './player';
-export { renderPlayerToString } from './ssr';
 
 // 导出便捷入口（createPlayer / mountPlayer / 实例查询）
 // 此前只定义在 src/player/index.ts，未从包入口导出，消费者无法使用
@@ -58,13 +57,6 @@ export type {
   ErrorInfo,
   ErrorHandlerConfig,
 } from '@/error';
-
-// 导出 SSR 相关功能
-export {
-  isServer,
-  createSSRConfig,
-} from '@/utils';
-export type { SSRConfig } from '@/utils';
 
 // 导出清单协议判定（唯一实现，供流媒体插件按内容判定协议）
 export {

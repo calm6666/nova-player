@@ -14,7 +14,7 @@
 7. [插槽机制](#7-插槽机制)
 8. [h 函数 / VNode / defineComponent 用法](#8-h-函数--vnode--definecomponent-用法)
 9. [持久化机制](#9-持久化机制)
-10. [SSR 用法](#10-ssr-用法)
+10. [页面 SSR 与播放器渲染](#10-页面-ssr-与播放器渲染)
 11. [完整示例](#11-完整示例)
 12. [FAQ / 常见问题](#12-faq--常见问题)
 
@@ -137,9 +137,6 @@ pnpm demo
 | `ending.content` | `VNode \| ((ctx: SlotContext) => VNode)` | `undefined` | 否 | 片尾页面插槽（见 §7） |
 | `storage.enabled` | `boolean` | `true` | 否 | 持久化开关 |
 | `storage.prefix` | `string` | `'nova-player:'` | 否 | 进度等键前缀 |
-| `ssr.enabled` | `boolean` | `false` | 否 | SSR 模式 |
-| `ssr.placeholder` | `string` | `'<div class="nova-player-placeholder">视频加载中...</div>'` | 否 | SSR 占位符 |
-| `ssr.deferHydration` | `boolean` | `false` | 否 | 延迟水合 |
 | `advanced.logLevel` | `LogLevel` | `LogLevel.SILENT` | 是（`setConfig`） | 日志级别 |
 | `advanced.debug` | `boolean` | `false` | 是 | 调试模式（等价 `logLevel: 'debug'`） |
 | `callbacks` | `EventListeners` | `{}` | 否 | 配置式事件回调，键名与 `PlayerEvents` 一致 |
@@ -171,16 +168,15 @@ pnpm demo
 
 ## 4. VideoPlayer 全公开方法表
 
-构造：`new VideoPlayer(config: PlayerConfig)`。SSR 安全（不访问 DOM），DOM 绑定在 `mount` / `hydrate` 时进行。
+构造：`new VideoPlayer(config: PlayerConfig)`。播放器是纯客户端组件，DOM 创建与事件绑定在 `mount` 时进行。
 
 ### 4.1 生命周期
 
 | 方法 | 签名 | 说明 |
 | --- | --- | --- |
 | `mount` | `(container: HTMLElement) => void` | 渲染 VNode 并挂载到容器，触发 `mounted` 事件 |
-| `hydrate` | `(container: HTMLElement) => void` | SSR 水合：与服务端输出 HTML 匹配绑定事件 |
 | `destroy` | `() => void` | 暂停、取消竞态、卸载插件监听、销毁 VNode、触发 `destroy` 事件 |
-| `render` | `() => VNode` | 返回播放器 VNode 树（SSR 与客户端共用） |
+| `render` | `() => VNode` | 返回客户端播放器 VNode 树 |
 
 ### 4.2 播放控制
 
@@ -843,19 +839,20 @@ player.use(TopPlugin());
 
 优先级：`ui.top` / `ui.ending` 插槽优先于同名插件。
 
-### 7.4.1 播放器 SSR
+### 7.4.1 渲染方式
 
-播放器 UI 可以在服务端直接序列化为 HTML：
+`VideoPlayer` 是纯客户端组件，不提供服务端渲染 API。
+
+页面可以由 SSR 输出播放器占位容器，客户端水合后再创建并挂载播放器：
 
 ```ts
-import { VideoPlayer, renderPlayerToString } from "@lumina/nova";
+// 页面 SSR 输出
+<div id="player"></div>
 
-const player = new VideoPlayer({ src: "/video.mp4" });
-const html = renderPlayerToString(player);
-// html 包含 video / 控制栏 / 弹幕层等完整结构
+// 客户端
+const player = new VideoPlayer(config);
+player.mount(document.getElementById("player")!);
 ```
-
-客户端使用同一份 VNode 树 hydration 后即可交互，无需二次挂载。
 
 ### 7.4 SlotContext
 
@@ -1071,41 +1068,26 @@ new VideoPlayer({ storage: { enabled: false } });
 
 ---
 
-## 10. SSR 用法
+## 10. 页面 SSR 与播放器渲染
 
-### 10.1 服务端渲染
+`VideoPlayer` 是纯客户端组件，不提供服务端渲染 API。
 
-```ts
-import { createSSRPlayer, renderToString } from "@lumina/nova";
+Demo 页面由 `demo/server.mjs` 做页面级 SSR，但播放器位置只输出占位容器：
 
-const player = createSSRPlayer({
-  src: "https://example.com/video.mp4",
-  ssr: { enabled: true },
-});
-
-const html = renderToString(player.render());
-// 将 html 注入到页面模板的占位符
+```html
+<div id="player-wrapper" class="player-wrapper">
+  <div class="player-empty">请先添加视频来源</div>
+</div>
 ```
 
-`createSSRPlayer` 是 `new VideoPlayer({ ssr: { enabled: true } })` 的便捷封装；构造函数 SSR 安全，不访问 DOM。
-
-### 10.2 客户端水合
+页面水合完成后，客户端创建并挂载播放器：
 
 ```ts
-const player = createSSRPlayer({
-  src: "https://example.com/video.mp4",
-  ssr: { enabled: false }, // 客户端无需 SSR 模式
-});
-
-const container = document.getElementById("player")!;
-player.hydrate(container); // 与已有 DOM 匹配，绑定事件/ref/生命周期
+const player = new VideoPlayer(config);
+player.mount(document.getElementById("player-wrapper")!);
 ```
 
-### 10.3 配置占位符
-
-`ssr.placeholder` 用于首屏占位 HTML（默认 `<div class="nova-player-placeholder">视频加载中...</div>`）；`ssr.deferHydration` 控制是否延迟水合。
-
-完整 SSR demo 见 [`demo/`](../demo)（`main.ts` + `entry-server.ts` + `entry-client.ts` + `server.mjs`），包含 `VideoPlayer` 原生 SSR 集成与水合检测。
+这样页面的静态 UI 可以 SSR，播放器及其全部交互、插件、响应式状态都在客户端初始化。
 
 ---
 
@@ -1183,9 +1165,9 @@ new VideoPlayer({
 
 检查 `storage.enabled` 是否为 `true`（默认），以及 `src` 是否稳定（进度键按 `src` 索引）。播放结束会清除该源进度。
 
-### Q8：SSR 模式下 `mount` 会执行吗？
+### Q8：播放器支持 SSR 吗？
 
-`createSSRPlayer` 在服务端只创建实例，`mount` 不调用；客户端调用 `hydrate(container)` 与服务端输出 HTML 匹配。
+不支持。`VideoPlayer` 是纯客户端组件；页面可以 SSR，但播放器容器由服务端输出占位，客户端水合后再 `mount`。
 
 ### Q9：如何禁用快捷键？
 

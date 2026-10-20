@@ -25,7 +25,7 @@
 | **弹幕智能防挡** | 外部遮罩 provider 或本地语义分割（MediaPipe ImageSegmenter，Web Worker + GPU delegate，懒加载不阻塞主线程），开关持久化 |
 | **字幕** | SRT / ASS / WebVTT 解析与渲染；样式语义化持久化 |
 | **互动插件** | 引导 / 投票 / 评分 / 外链四个子插件，二分查找 + 增量 diff，编辑态拖拽 |
-| **SSR + Hydration** | 服务端可输出占位符或完整结构，客户端可激活 |
+| **页面 SSR + Hydration** | Demo 页面服务端渲染；播放器本身为纯客户端组件，水合后创建挂载 |
 | **播放列表** | 换源复用同一个 `video` 元素与整棵 DOM |
 | **37 个 UI 组件** | 控制栏、进度条、音量、画质菜单、弹幕设置、快捷键面板、迷你播放器等，图标走 Lottie 动画系统 |
 | **持久化** | 音量 / 静音 / 倍速 / 画质偏好 / 进度条偏好（localStorage） |
@@ -334,7 +334,7 @@ player.isPaused();        player.isPlaying();    player.isFullscreen();   player
 
 // 生命周期
 player.mount(el);         // 挂载
-player.render();          // 取 VNode（SSR / 内嵌到自己的 VNode 树）
+player.render();          // 取客户端 VNode（调试 / 内嵌到自己的客户端 VNode 树）
 player.hydrate(el);       // 客户端激活
 player.use(plugin);       // 安装插件（可链式）
 player.uninstallPlugin('danmaku');
@@ -343,27 +343,20 @@ player.destroy();         // 卸载并清理全部监听、插件与订阅
 
 ### 服务端渲染
 
-服务端 `new VideoPlayer(config)` 是安全的：构造函数内部对 `window` / `localStorage` 都有守卫，
-不会触碰 DOM。渲染时取其 VNode，或使用 `isServer()` / `createSSRConfig()`。
+`VideoPlayer` 是纯客户端组件，不做服务端渲染。
 
-> `VideoPlayer` 不再副作用导入 CSS；父应用需显式 `import "@lumina/nova/style.css"`，SSR 时由父应用把该 CSS 内联到首屏。
+Demo 页面本身仍由 `demo/server.mjs` SSR 输出，但只输出播放器占位容器；页面水合完成后，客户端创建并挂载播放器。
 
 ```ts
-import { isServer, createSSRConfig, VideoPlayer, renderPlayerToString } from '@lumina/nova';
+// 页面 SSR：只输出容器
+<div id="player"></div>
 
-const config = {
-  src: videoUrl,
-  poster: posterUrl,
-  ssr: createSSRConfig({ enabled: isServer(), placeholder: '<div class="nova-player-placeholder">视频加载中…</div>' }),
-};
-
+// 客户端水合后
 const player = new VideoPlayer(config);
-const vnode = player.render();     // 交给你的 SSR 框架输出 HTML
-const html = renderPlayerToString(player); // 或直接拿到完整播放器 HTML
-
-// 客户端
-player.mount(document.getElementById('player')!);   // 或 player.hydrate(el) 复用服务端结构
+player.mount(document.getElementById('player')!);
 ```
+
+> 播放器 CSS 由父应用显式 `import "@lumina/nova/style.css"`，不由 `VideoPlayer` 副作用导入。
 
 ### 自己写组件（框架用法）
 

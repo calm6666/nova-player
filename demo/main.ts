@@ -17,7 +17,7 @@
  * 组件覆盖清单（核心 SSR + 水合测试）
  * 1.  ThemeSwitcher    - lifecycle.emit + 状态管理
  * 2.  EventLog         - ref 回调 + 事件总线
- * 3.  PlayerSection    - VideoPlayer SSR 原生渲染 + 水合（非占位，直接输出播放器 HTML）
+ * 3.  PlayerSection    - 页面 SSR 输出播放器占位，播放器由客户端创建挂载
  * 4.  App              - 根组件
  * 7.  RootLayout       - 根布局（注入 Context）
  */
@@ -33,11 +33,6 @@ import {
   useState,
 } from "@/core";
 import { VideoPlayer } from "@/nova/player";
-import { TopPlugin } from "@/lumina/plugins/top/index";
-import { EndingPlugin } from "@/lumina/plugins/ending/index";
-import { DanmakuPlugin } from "@/lumina/plugins/danmaku";
-import zhCN from "@/core/locales/zh-CN.json";
-import enUS from "@/core/locales/en-US.json";
 
 // SVG 图标组件（替代 Unicode emoji）
 import {
@@ -252,44 +247,20 @@ export function setPlayerInstance(p: VideoPlayer | null): void {
 }
 
 /**
- * VideoPlayer SSR 原生集成组件
+ * VideoPlayer 客户端集成组件
  *
- * 工作原理：
- * 1. 创建 VideoPlayer 实例（构造函数 SSR 安全，不访问 DOM）
- * 2. 调用 player.render() 获取 VNode（包含完整播放器 UI 结构）
- * 3. SSR 阶段：renderToString 将 VNode 序列化为 HTML，播放器 UI 直接在首屏
- * 4. 客户端水合：hydrate() 调用 PlayerDocker 的 onMounted，自动绑定事件到已有 DOM
- *
- * 优势：
- * - 首屏即包含完整播放器 HTML（非空占位）
- * - 水合后立即可交互，无需二次挂载
- * - 与框架的 SSR/Hydrate 流程完全一致
+ * 页面 SSR 只输出播放器占位容器；
+ * entry-client 在页面水合完成后创建并挂载播放器。
  */
 const PlayerSection = defineComponent(() => {
-  const player = new VideoPlayer({
-    src: "/sample.mp4",
-    ui: { title: "示例视频" },
-    playback: { autoplay: false, muted: true },
-    i18n: {
-      enabled: true,
-      locale: "zh-CN",
-      fallbackLocale: "en-US",
-      messages: { "zh-CN": zhCN, "en-US": enUS },
-    },
-    plugins: { list: [TopPlugin(), EndingPlugin(), DanmakuPlugin()] },
-  });
-  if (typeof window !== "undefined") {
-    (window as unknown as { __ssrPlayer?: VideoPlayer }).__ssrPlayer = player;
-  }
 
   return h(
     "div",
     { class: "panel player-section" },
-    h("div", { class: "panel-title" }, h(IconVideo, { size: 16 }), "VideoPlayer SSR 原生渲染 + 水合"),
+    h("div", { class: "panel-title" }, h(IconVideo, { size: 16 }), "VideoPlayer 客户端渲染 + 页面 SSR"),
     /**
      * 播放器容器
-     * 直接嵌入 player.render() 返回的 VNode
-     * SSR 阶段输出完整播放器 HTML，水合阶段绑定事件
+     * 页面由 SSR 输出占位容器，播放器在水合后由 entry-client 创建挂载
      */
     h(
       "div",
@@ -297,7 +268,7 @@ const PlayerSection = defineComponent(() => {
         id: "player-wrapper",
         class: "player-wrapper",
       },
-      player.render(),
+      h("div", { class: "player-empty" }, "请先添加视频来源"),
     ),
     h(
       "div",
@@ -1062,7 +1033,7 @@ const PlayerSection = defineComponent(() => {
       {
         class: "player-description",
       },
-      "SSR 阶段直接输出播放器完整 HTML（video + 控制栏 + 图层），水合阶段复用服务端 DOM；Top / Ending 插件安装后同样参与渲染。视频源切换走 switchTo / refresh，不重建播放器。",
+      "页面由 SSR 输出，播放器完全在客户端水合后创建挂载；视频源切换走 switchTo / refresh，不重建播放器。",
     ),
   );
 });

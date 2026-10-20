@@ -2930,11 +2930,8 @@ export const PlayerDocker = defineComponent<
               },
             }),
           ),
-          // 视频控制栏：由框架 SSR 处理，服务端不输出，客户端挂载后创建
-          h(
-            Show,
-            { when: true },
-            h(Controls, {
+          // 视频控制栏
+          h(Controls, {
             duration: readDuration(),
             volume: readVolume(),
             backrate: readBackrate(),
@@ -3041,7 +3038,6 @@ export const PlayerDocker = defineComponent<
               progressBarApi.rebuildSegments = api.rebuildSegments;
             },
           }),
-          ),
           // 错误面板（视频区域内最后一个容器：加载 / 播放失败时覆盖整个播放器；
           // 显隐由上方 setupErrorEventSubscriptions 订阅 ERROR / ERROR_RECOVERY 驱动）
           h(ErrorSign, {
@@ -3059,8 +3055,10 @@ export const PlayerDocker = defineComponent<
         // .nova-player-sending-area > .nova-player-sending-bar。
         // 按需渲染：未装 danmaku 插件时整个发送区域不挂载——
         // 连容器一起省掉，避免空 sending-area 撑高播放器底部布局）
-        (hasPlugin("danmaku") || embeddedMode)
-          ? h(
+        h(
+          Show,
+          { when: (): boolean => hasPlugin("danmaku") || embeddedMode },
+          h(
             "div",
             {
               class: "nova-player-sending-area",
@@ -3105,9 +3103,9 @@ export const PlayerDocker = defineComponent<
             onSendBarMounted: (api: SendBarAPI) => {
               Object.assign(sendBarApi, api);
             },
-           }),
-          )
-          : null,
+          }),
+          ),
+        ),
       ),
       // 外链场景：底部相关推荐条（播放中显示，站内不渲染）
       embeddedMode

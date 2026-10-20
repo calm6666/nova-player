@@ -2089,13 +2089,21 @@ function hydrateNode(
    */
   if (vnode.__flow !== undefined) {
     let anchor: Text;
+    let next: ChildNode | null;
     if (isCommentNode(el)) {
       anchor = document.createTextNode("");
       el.parentNode?.replaceChild(anchor, el);
+      next = anchor.nextSibling;
+    } else if (el && el.parentNode) {
+      // SSR 现代输出不写 flow 占位：不能把下一个兄弟节点当锚点删除，
+      // 否则发送栏/后续响应式子树会被整段移除，事件也不会绑定。
+      anchor = document.createTextNode("");
+      el.parentNode.insertBefore(anchor, el);
+      next = el;
     } else {
       anchor = document.createTextNode("");
-      el.parentNode?.insertBefore(anchor, el);
-      el.parentNode?.removeChild(el);
+      (parent ?? el?.parentNode)?.appendChild(anchor);
+      next = null;
     }
     vnode.el = anchor;
 
@@ -2114,7 +2122,7 @@ function hydrateNode(
       if (!vnode._cleanups) vnode._cleanups = [];
       vnode._cleanups.push(dispose);
     }
-    return anchor.nextSibling;
+    return next;
   }
 
   /**
