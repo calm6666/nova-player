@@ -1298,7 +1298,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     const count = Math.max(1, ogvRelated.value.length);
     const content = h(
       "div",
-      { class: "EndPageRecommendItem_wrap__1mC5h" },
+      { class: "EndPageRecommendItem_wrap" },
       h(
         item.url ? "a" : "div",
         {
@@ -1311,22 +1311,22 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         },
         h(
           "div",
-          { class: "EndPageRecommendItem_cover__NNRJ5" },
+          { class: "EndPageRecommendItem_cover" },
           item.pic
             ? h("img", {
                 src: item.pic,
                 alt: item.title,
-                class: "image_ogv_weslie_common_image__Rg7Xm",
+                class: "image_ogv_weslie_common_image",
                 loading: "lazy",
               })
             : null,
-          h("div", { class: "EndPageRecommendItem_mask__m6qrd" }),
+          h("div", { class: "EndPageRecommendItem_mask" }),
         ),
         h(
           "div",
           {
             class:
-              "EndPageRecommendItem_title__m9X8S ogv-endpage-recommmend-title",
+              "EndPageRecommendItem_title ogv-endpage-recommmend-title",
           },
           item.title,
         ),
@@ -1335,7 +1335,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     return h(
       "div",
       {
-        class: "endpageRecommend_itemWrap__tXswP",
+        class: "endpageRecommend_itemWrap",
         style: { flex: `0 0 ${100 / count}%` },
       },
       ...[content],
@@ -1346,19 +1346,19 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const renderOgvEnding = (): VNode =>
     h(
       "div",
-      { class: "endpage_wrap__hNQ7J" },
+      { class: "endpage_wrap" },
       h(
         "div",
-        { class: "endpage_content__z9rdN" },
+        { class: "endpage_content" },
         h(
           "div",
-          { class: "endpageHeader_header__a1ZwI" },
+          { class: "endpageHeader_header" },
           h(
             "div",
-            { class: "endpageHeader_epInfo__fevE_" },
+            { class: "endpageHeader_epInfo" },
             h(
               "div",
-              { class: "endpageHeader_cover__IeKFh" },
+              { class: "endpageHeader_cover" },
               props.cover
                 ? h(
                     "picture",
@@ -1366,7 +1366,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                     h("img", {
                       src: props.cover,
                       alt: props.title ?? "",
-                      class: "image_ogv_weslie_common_image__Rg7Xm",
+                      class: "image_ogv_weslie_common_image",
                       loading: "lazy",
                     }),
                   )
@@ -1374,11 +1374,11 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             ),
             h(
               "div",
-              { class: "endpageHeader_epInfo_right__u_bBc" },
+              { class: "endpageHeader_epInfo_right" },
               h(
                 "div",
                 {
-                  class: "endpageHeader_title__2Fxdi",
+                  class: "endpageHeader_title",
                   "data-testid": "end-page-header-title",
                 },
                 props.title ?? "",
@@ -1386,13 +1386,13 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               h(
                 "div",
                 {
-                  class: "endpageHeader_follow_btn__b6OK7",
+                  class: "endpageHeader_follow_btn",
                   "data-testid": "end-page-header-follow-btn",
                   onClick: props.onFollow,
                 },
                 h(
                   "span",
-                  { class: "endpageHeader_icon__U3hSy" },
+                  { class: "endpageHeader_icon" },
                   h(
                     "svg",
                     { viewBox: "0 -3 16 16" },
@@ -1410,43 +1410,43 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           h(
             "div",
             {
-              class: "endpageHeader_btn_group__pmZsT",
+              class: "endpageHeader_btn_group",
               "data-testid": "end-page-header-btn-group",
             },
             h(
               "div",
-              { class: "endpageHeader_restart__7eqmj", onClick: props.onRestart },
+              { class: "endpageHeader_restart", onClick: props.onRestart },
               h("span", {}, RestartIcon()),
               h(
                 "span",
-                { class: "endpageHeader_text__DmrwG", style: { marginTop: "4px" } },
+                { class: "endpageHeader_text", style: { marginTop: "4px" } },
                 t("player.ui.ending.replay"),
               ),
             ),
             h(
               "div",
-              { class: "endpageHeader_like__BpT1F", onClick: props.onLike },
+              { class: "endpageHeader_like", onClick: props.onLike },
               h("span", {}, OgvLikeIcon()),
               h(
                 "span",
-                { class: "endpageHeader_text__DmrwG" },
+                { class: "endpageHeader_text" },
                 t("player.ui.ending.like"),
               ),
             ),
             h(
               "div",
-              { class: "endpageHeader_coin__BLrqj", onClick: props.onCoin },
+              { class: "endpageHeader_coin", onClick: props.onCoin },
               h("span", {}, OgvCoinIcon()),
               h(
                 "span",
-                { class: "endpageHeader_text__DmrwG" },
+                { class: "endpageHeader_text" },
                 t("player.ui.ending.coin"),
               ),
             ),
             h(
               "div",
               {
-                class: "endpageHeader_share__OmhLB",
+                class: "endpageHeader_share",
                 onClick: () => {
                   props.onShare?.();
                   showShareWrap();
@@ -1455,7 +1455,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               h("span", {}, OgvShareIcon()),
               h(
                 "span",
-                { class: "endpageHeader_text__DmrwG" },
+                { class: "endpageHeader_text" },
                 t("player.ui.ending.share"),
               ),
             ),
@@ -1463,16 +1463,16 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         ),
         h(
           "div",
-          { class: "endpageRecommend_wrap__QeMEd" },
+          { class: "endpageRecommend_wrap" },
           h(
             "div",
-            { class: "endpageRecommend_title__sksZV" },
+            { class: "endpageRecommend_title" },
             t("player.ui.ending.related"),
           ),
           h(
             "div",
             {
-              class: "endpageRecommend_list__AVIfN",
+              class: "endpageRecommend_list",
               style: { width: "calc(125% - 140px)" },
             },
             h(For, {
