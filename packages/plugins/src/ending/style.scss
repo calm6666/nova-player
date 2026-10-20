@@ -9,3 +9,10 @@
 .nova-player-container[data-screen="mini"] .nova-player-ending-wrap {
   display: none;
 }
+
+/* 未打开片尾时整块面板不参与渲染，避免内部 visibility 覆盖父级隐藏 */
+.nova-player-ending-wrap:not([data-select]) .nova-player-ending-panel,
+.nova-player-ending-wrap:not([data-select]) .nova-player-ending-backdrop,
+.nova-player-ending-wrap:not([data-select]) .nova-player-share-panel {
+  display: none;
+}
