@@ -227,9 +227,6 @@ export const Toast = defineComponent<ToastProps>(
               )
             : null,
           h("span", { class: "nova-player-toast-text" }, item.text),
-          item.time
-            ? h("span", { class: "nova-player-toast-time" }, item.time)
-            : null,
           item.confirmText
             ? h(
                 "span",
