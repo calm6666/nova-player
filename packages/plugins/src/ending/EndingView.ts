@@ -1710,8 +1710,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       // 四周留出安全边距，不贴播放器边缘
       const horizontalPadding = 64;
       const verticalPadding = 48;
+      // 真实站内片尾 second-screen 固定 0.8 缩放；其余场景按可用空间缩放
+      const maxScale = variant === "station" ? 0.8 : 1;
       const scale = Math.min(
-        1,
+        maxScale,
         (availableWidth - horizontalPadding) / width,
         (availableHeight - verticalPadding) / height,
       );
