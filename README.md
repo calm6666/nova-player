@@ -112,8 +112,8 @@ git submodule update --init
 # 安装依赖
 pnpm install
 
-# 启动开发服务器（Vite，默认 http://localhost:5173）
-pnpm dev
+# 启动唯一 demo（SSR + Hydrate，默认 http://localhost:5174）
+pnpm demo
 
 # 类型检查 / 代码检查 / 测试
 pnpm typecheck
@@ -126,7 +126,7 @@ pnpm build:player
 pnpm build:plugins
 ```
 
-`demo/` 是 SSR + 水合的完整演示，含独立 Vite 配置与 Express 服务端（`demo/server.mjs`）。
+`demo/` 是 SSR + 水合的完整演示，入口为 `demo/server.mjs`；包含 Top / Ending 插件演示控制。启动：`pnpm demo`。
 
 ---
 

@@ -45,6 +45,7 @@ import {
 import { VideoPlayer } from "@/nova/player";
 import { createHlsPlugin } from "@/lumina/plugins/hls";
 import { createDashPlugin } from "@/lumina/plugins/dash";
+import { TopPlugin, EndingPlugin } from "@/lumina/plugins/index";
 import { DanmakuPlugin } from "@/lumina/plugins/danmaku";
 import type { DanmakuPluginAPI } from "@/lumina/plugins/danmaku";
 import { InteractionPlugin } from "@/lumina/plugins/interaction";
@@ -1094,7 +1095,9 @@ for (const [buttonId, locale] of LOCALE_BUTTONS) {
   });
 }
 
-const MEDIA_LIST: MediaItem[] = [];
+const MEDIA_LIST: MediaItem[] = [
+  { src: "/sample.mp4", title: "示例视频" },
+];
 const OBJECT_URLS: string[] = [];
 
 // ============================================
@@ -1446,10 +1449,15 @@ async function playHuaqiangInteractive(): Promise<void> {
   }
 }
 
+let demoTopStyle: "default" | "tv" | "music" = "default";
+let demoEndingStyle: "standard" | "ogv" = "standard";
+
 function collectPlugins(source?: PlayerSource): Plugin[] {
   // 模式 B 当前激活的服务端轨 id（activateTrack 写入，fetch 读取）
   let activeRemoteTrack = "zh-ai";
   const list: Plugin[] = [
+    TopPlugin(),
+    EndingPlugin(),
     // 弹幕插件：Tip 操作回调接线 + 本地发送汇入页面弹幕列表
     // （onSendSuccess 对本地直发与服务端确认两条链路均触发）
     DanmakuPlugin({
@@ -1723,6 +1731,20 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
     },
     interaction: {
       keyboard: true,
+    },
+    ui: {
+      title: current?.title ?? "Lumina Demo",
+      topStyle: demoTopStyle,
+      endingStyle: demoEndingStyle,
+      ...(demoEndingStyle === "ogv"
+        ? {
+            ogv: {
+              title: current?.title ?? "Lumina Demo",
+              cover: current?.poster,
+              related: [],
+            },
+          }
+        : {}),
     },
     plugins: {
       list: collectPlugins(current ? current.src : undefined),
@@ -4385,4 +4407,51 @@ function updateBadgeToFailed(errorMsg: string): void {
     errorMsgEl.textContent = errorMsg;
     errorOverlay.classList.add("show");
   }
+}
+
+
+// ============================================
+// Top / Ending 插件演示（并入唯一 demo 入口）
+// ============================================
+
+function rebuildForPluginDemo(): void {
+  const index =
+    playerInstance?.getCurrentIndex() ??
+    Math.max(0, MEDIA_LIST.length - 1);
+  void rebuildPlayer(index);
+}
+
+function seekToEnding(): void {
+  const player = playerInstance;
+  if (!player) return;
+  player.seek(Math.max(0, player.getDuration() - 0.1));
+}
+
+function installPluginDemoControls(): void {
+  const panel = document.createElement("div");
+  panel.style.cssText =
+    "position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:rgba(20,20,28,.92);border:1px solid rgba(255,255,255,.14);border-radius:8px;font:12px/1.4 sans-serif;color:#ddd";
+  const buttons: Array<[string, () => void]> = [
+    ["普通 Top", () => { demoTopStyle = "default"; rebuildForPluginDemo(); }],
+    ["电视剧 Top", () => { demoTopStyle = "tv"; rebuildForPluginDemo(); }],
+    ["音乐 Top", () => { demoTopStyle = "music"; rebuildForPluginDemo(); }],
+    ["标准片尾", () => { demoEndingStyle = "standard"; rebuildForPluginDemo(); setTimeout(seekToEnding, 300); }],
+    ["OGV 片尾", () => { demoEndingStyle = "ogv"; rebuildForPluginDemo(); setTimeout(seekToEnding, 300); }],
+  ];
+  for (const [label, onClick] of buttons) {
+    const button = document.createElement("button");
+    button.textContent = label;
+    button.style.cssText =
+      "cursor:pointer;border:1px solid rgba(255,255,255,.18);border-radius:6px;background:#2a2a36;color:#eee;padding:5px 9px";
+    button.addEventListener("click", onClick);
+    panel.appendChild(button);
+  }
+  document.body.appendChild(panel);
+}
+
+installPluginDemoControls();
+
+// 唯一 demo 入口：启动即加载示例视频（Top/Ending 插件演示可见）
+if (MEDIA_LIST.length > 0) {
+  void rebuildPlayer(0);
 }

@@ -81,11 +81,13 @@ const p = createPlayer({ src: "video.mp4" });
 
 ### 2.3 完整 demo 引用
 
-仓库内置独立 demo [`demo/player-demo/`](../demo/player-demo)，演示插件注入、插槽、自定义片尾、事件回调与插件 API 调用，运行：
+仓库内置唯一 demo（`demo/server.mjs`），演示插件注入、插槽、Top/Ending 插件与事件回调，运行：
 
 ```bash
-pnpm vite --config demo/vite.config.ts
+pnpm demo
 ```
+
+打开 `http://localhost:5174/`。
 
 ---
 
@@ -878,7 +880,7 @@ new VideoPlayer({
 
 **分享面板**：`ui.share: { url, embedCode, qrCodeUrl }`，分享面板会填充视频地址 / 嵌入代码；`qrCodeUrl` 不传时展示占位提示，不绘制假二维码。
 
-**在线演示**：`/demo/ending-demo/index.html` 提供「标准片尾 / 电视剧 OGV / 外链片尾 / 分享面板 / 外链播放中 / 设置-跳过头尾 / 进度条断点」一键切换。
+**在线演示**：`pnpm demo` 启动唯一入口，页面左下角提供「普通 Top / 电视剧 Top / 音乐 Top / 标准片尾 / OGV 片尾」切换。
 
 ---
 
@@ -1078,11 +1080,11 @@ player.hydrate(container); // 与已有 DOM 匹配，绑定事件/ref/生命周�
 
 ## 11. 完整示例
 
-综合 demo 见 [`demo/player-demo/main.ts`](../demo/player-demo/main.ts)，覆盖：
+综合 demo 见 [`demo/entry-client.ts`](../demo/entry-client.ts)，覆盖：
 
 1. 通过 `plugins.list` 注入 `DanmakuPlugin` / `SubtitlePlugin` / `InteractionPlugin` / `createHlsPlugin`
 2. `ui.slots` 在 `rightStart` 位置注入倍速预设按钮（`useContext(PlayerContext)` 调用 `setPlaybackRate`）
-3. `ending.content` 整页替换默认片尾组件
+3. `TopPlugin()` / `EndingPlugin()` 内置 Top / Ending，`ui.top` / `ui.ending` 整体插槽
 4. `callbacks` 配置式订阅 `play` / `pause` / `ended` / `timeupdate` / `wideScreenChange` / `webFullscreenChange` / `displayModeChange` / `danmakuToggle` / `subtitleToggle`
 5. `player.on` 运行时订阅（与 callbacks 并存）
 6. `player.getPlugin<T>('name')` 调用 `loadDanmaku` / `setStyle` 等插件 API

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "demo": "node demo/server.mjs",
     "demo:live": "vite --config demo/live-player-demo/vite.config.ts",
     "preview": "vite preview",
     "build": "cd packages/player && pnpm build && cd ../plugins && pnpm build && cd ../live-player && pnpm build",
