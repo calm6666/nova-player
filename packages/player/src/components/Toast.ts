@@ -34,6 +34,12 @@ export interface ToastOptions {
   fixed?: boolean;
   /** 时间文本 */
   time?: string;
+  /** 自定义颜色/样式类 */
+  customClassName?: string;
+  /** 确认按钮颜色 */
+  confirmColor?: string;
+  /** 确认按钮悬停颜色 */
+  confirmHoverColor?: string;
 }
 
 interface ToastRecord extends ToastOptions {
@@ -160,6 +166,7 @@ export const Toast = defineComponent<ToastProps>(
         showFixedToast,
         hideFixedToast,
         showToast,
+        removeToast: remove,
       });
     };
 
@@ -177,7 +184,21 @@ export const Toast = defineComponent<ToastProps>(
           class: [
             "nova-player-toast-row",
             { "nova-player-toast-unfold": !item.hidden },
+            item.customClassName
+              ? `nova-player-custom-toast-${item.customClassName}`
+              : "",
           ],
+          style: {
+            ...(item.confirmColor
+              ? { "--nova-toast-confirm-color": item.confirmColor }
+              : {}),
+            ...(item.confirmHoverColor
+              ? {
+                  "--nova-toast-confirm-hover-color":
+                    item.confirmHoverColor,
+                }
+              : {}),
+          },
           onMouseEnter: () => pauseTimer(item.iid),
           onMouseLeave: () => resumeTimer(item.iid),
         },

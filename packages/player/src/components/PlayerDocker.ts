@@ -123,6 +123,8 @@ interface ToastAPI {
   hideFixedToast: () => void;
   /** 通用 Toast（自动 / 手动关闭 / 徽章 / 确认 / 固定） */
   showToast?: (options: ToastOptions) => number | void;
+  /** 移除指定 Toast */
+  removeToast?: (iid: number) => void;
 }
 
 /** Loading 组件挂载后回传的控制 API */
@@ -1312,6 +1314,9 @@ export const PlayerDocker = defineComponent<
   /** 最近一次清晰度切换请求的目标档位 id */
   let requestedQualityTo = "";
 
+  /** 清晰度切换中的常驻 Toast id */
+  let qualityToastId: number | null = null;
+
   // ============================================
   // 清晰度切换 UI 反馈（B 站风格短文案）
   // ============================================
@@ -1326,27 +1331,45 @@ export const PlayerDocker = defineComponent<
   const driveQualitySwitchUI = (
     phase: "idle" | "switching" | "switched" | "failed",
   ): void => {
+    const clearQualityToast = (): void => {
+      if (qualityToastId !== null) {
+        toastApi.removeToast?.(qualityToastId);
+        qualityToastId = null;
+      }
+    };
     if (phase === "switching") {
-      loadingApi.show?.();
-      loadingApi.setText?.(
-        requestedQualityLabel
-          ? `正在切换至 ${requestedQualityLabel}`
-          : "正在切换清晰度",
-      );
+      loadingApi.hide?.();
+      clearQualityToast();
+      const id = toastApi.showToast?.({
+        text: requestedQualityLabel
+          ? `正在切换至 ${requestedQualityLabel}…`
+          : "正在切换清晰度…",
+        manualMode: true,
+        customClassName: "quality-switching",
+      });
+      if (typeof id === "number") qualityToastId = id;
       return;
     }
     if (phase === "switched") {
       loadingApi.hide?.();
-      toastApi.showAutoToast?.(
-        `已切换至 ${requestedQualityLabel || requestedQualityTo || "目标清晰度"}`,
-      );
+      clearQualityToast();
+      toastApi.showToast?.({
+        text: `已切换至 ${requestedQualityLabel || requestedQualityTo || "目标清晰度"}`,
+        duration: 2000,
+        customClassName: "quality-success",
+      });
       requestedQualityLabel = "";
       requestedQualityTo = "";
       return;
     }
     if (phase === "failed") {
       loadingApi.hide?.();
-      toastApi.showAutoToast?.("清晰度切换失败");
+      clearQualityToast();
+      toastApi.showToast?.({
+        text: `切换至 ${requestedQualityLabel || requestedQualityTo || "目标清晰度"} 失败`,
+        duration: 3000,
+        customClassName: "quality-error",
+      });
       requestedQualityLabel = "";
       requestedQualityTo = "";
     }
@@ -2900,6 +2923,7 @@ export const PlayerDocker = defineComponent<
               toastApi.showFixedToast = api.showFixedToast;
               toastApi.hideFixedToast = api.hideFixedToast;
               toastApi.showToast = api.showToast;
+              toastApi.removeToast = api.removeToast;
             },
           }),
           // 加载遮罩（清晰度切换中）

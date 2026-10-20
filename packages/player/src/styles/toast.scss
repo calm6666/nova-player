@@ -46,6 +46,18 @@
   width: 24px;
 }
 
+.nova-player-toast-cancel .common-svg-icon {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.nova-player-toast-cancel svg {
+  fill: currentColor;
+  height: 100%;
+  width: 100%;
+}
+
 .nova-player-toast-cancel:hover {
   fill: #ff85ad;
 }
@@ -78,12 +90,17 @@
 }
 
 .nova-player-toast-confirm {
-  color: #f25d8e;
+  color: var(--nova-toast-confirm-color, #f25d8e);
   cursor: pointer;
   margin-left: 12px;
   transition: color 0.15s ease-in-out;
 }
 
 .nova-player-toast-confirm:hover {
+  color: var(--nova-toast-confirm-hover-color, #ff85ad);
+}
+
+/* 清晰度切换失败：文字使用 B 站警示粉色 */
+.nova-player-custom-toast-quality-error .nova-player-toast-text {
   color: #ff85ad;
 }
