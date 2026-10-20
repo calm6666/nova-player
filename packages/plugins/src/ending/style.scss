@@ -2,6 +2,7 @@
 @use "./styles/ogv-ending.scss" as *;
 @use "./styles/interactive-ending.scss" as *;
 @use "./styles/embedded-ending.scss" as *;
+@use "./styles/standard-reference.scss" as *;
 
 /* 迷你窗口隐藏片尾 */
 .nova-player-container[data-screen="mini"] .nova-player-ending-wrap {

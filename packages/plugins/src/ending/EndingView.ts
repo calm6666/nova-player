@@ -507,7 +507,11 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           { class: "nova-player-ending-related-item-title" },
           item.title,
         ),
-        h("div", { class: "nova-player-ending-related-item-watchlater" }),
+        h(
+          "div",
+          { class: "nova-player-ending-related-item-watchlater" },
+          h("i", {}),
+        ),
         isCountdownHost
           ? h(
               "div",
@@ -589,7 +593,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         },
         h(
           "div",
-          { class: "nova-player-ending-functions" },
+          {
+            class:
+              "nova-player-ending-functions nova-player-ending-functions-customize",
+          },
           // UP 主头像
           h(
             "div",
@@ -629,16 +636,25 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               { class: "nova-player-ending-functions-buttons" },
               h(
                 "div",
-                {
-                  class: "nova-player-ending-functions-electric state-little",
-                  onClick: props.onElectric,
-                },
-                h("img", {
-                  class: "nova-player-ending-functions-electric-icon",
-                  src: endingElectricIcon,
-                  alt: "",
-                }),
-                t("player.ui.ending.electric"),
+                { class: "nova-player-ending-functions-electric" },
+                h(
+                  "div",
+                  {
+                    class: "nova-player-ending-functions-electric-inner",
+                    "data-action": "electric",
+                    onClick: props.onElectric,
+                  },
+                  h("img", {
+                    class: "nova-player-ending-functions-electric-icon",
+                    src: endingElectricIcon,
+                    alt: "",
+                  }),
+                  h(
+                    "span",
+                    { class: "nova-player-ending-functions-electric-text" },
+                    t("player.ui.ending.electric"),
+                  ),
+                ),
               ),
               h(
                 "div",
@@ -650,9 +666,17 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                   "data-action": "follow",
                   onClick: props.onFollow,
                 },
-                props.upInfo?.followed
-                  ? t("player.ui.ending.following")
-                  : t("player.ui.ending.follow"),
+                h(
+                  "span",
+                  {
+                    "data-i18n": props.upInfo?.followed
+                      ? "following"
+                      : "follow",
+                  },
+                  props.upInfo?.followed
+                    ? t("player.ui.ending.following")
+                    : t("player.ui.ending.follow"),
+                ),
               ),
             ),
           ),
@@ -668,7 +692,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
                 onClick: props.onRestart,
               },
               h("span", { class: "common-svg-icon" }, RestartIcon()),
-              t("player.ui.ending.replay"),
+              h("span", { "data-i18n": "replay" }, t("player.ui.ending.replay")),
             ),
             h(
               "div",
@@ -730,12 +754,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         // 相关推荐列表（数据由外部注入；未提供时为空列表）
         h(
           "div",
-          { class: "nova-player-ending-related" },
-          h(
-            "div",
-            { class: "nova-player-ending-related-title" },
-            t("player.ui.ending.related"),
-          ),
+          {
+            class: "nova-player-ending-related",
+            "data-i18n-label": t("player.ui.ending.related"),
+          },
           ...related.slice(0, 8).map(renderRelatedCard),
         ),
       ),
