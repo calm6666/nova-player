@@ -1092,7 +1092,10 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
                     "nova-player-progress-point nova-player-progress-point-oped",
                   title: point.label,
                   "data-point": point.key,
-                  style: { left: `${(point.time / total) * 100}%` },
+                  style: {
+                    width: "6px",
+                    left: `${(point.time / total) * 100}%`,
+                  },
                   onClick: (event: MouseEvent) => {
                     event.stopPropagation();
                     lifecycle.emit?.("seek", point.time);

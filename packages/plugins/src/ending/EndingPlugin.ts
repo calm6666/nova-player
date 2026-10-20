@@ -24,6 +24,8 @@ export interface EndingPluginMountContext extends SlotContext {
 
 export interface EndingPluginConfig {
   id?: string;
+  /** 片尾数据（推荐 / UP / OGV / 外链等）由插件自己持有 */
+  data?: Partial<EndingProps>;
   /** 自定义挂载；不传则使用内置完整 Ending 视图 */
   mount?: SlotMount["mount"];
 }
@@ -55,7 +57,11 @@ class EndingPluginClass implements Plugin {
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
       const viewProps = (ctx as EndingPluginMountContext | null)?.props;
-      const vnode = h(EndingView, { ...viewProps, host: container });
+      const vnode = h(EndingView, {
+        ...viewProps,
+        ...this.config.data,
+        host: container,
+      });
       mount(vnode, container);
       return () => destroy(vnode);
     };

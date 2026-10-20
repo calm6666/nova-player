@@ -24,6 +24,8 @@ export interface TopPluginMountContext extends SlotContext {
 
 export interface TopPluginConfig {
   id?: string;
+  /** Top 数据（标题 / UP / 追剧态 / 音乐信息等）由插件自己持有 */
+  data?: Partial<TopProps>;
   /** 自定义挂载；不传则使用内置完整 Top 视图 */
   mount?: SlotMount["mount"];
 }
@@ -55,7 +57,11 @@ class TopPluginClass implements Plugin {
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
       const viewProps = (ctx as TopPluginMountContext | null)?.props;
-      const vnode = h(TopView, { ...viewProps, host: container });
+      const vnode = h(TopView, {
+        ...viewProps,
+        ...this.config.data,
+        host: container,
+      });
       mount(vnode, container);
       return () => destroy(vnode);
     };

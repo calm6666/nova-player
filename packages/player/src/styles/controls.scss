@@ -1,762 +1,767 @@
-.nova-player-docker {
-  .nova-player-control-wrap {
+.nova-player-control-wrap {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  width: 100%;
+  z-index: 75;
+
+  .nova-player-control-mask {
+    background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAADGCAYAAAAT+OqFAAAAdklEQVQoz42QQQ7AIAgEF/T/D+kbq/RWAlnQyyazA4aoAB4FsBSA/bFjuF1EOL7VbrIrBuusmrt4ZZORfb6ehbWdnRHEIiITaEUKa5EJqUakRSaEYBJSCY2dEstQY7AuxahwXFrvZmWl2rh4JZ07z9dLtesfNj5q0FU3A5ObbwAAAABJRU5ErkJggg==)
+      repeat-x bottom;
+    bottom: 0;
+    height: 100px;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    -webkit-transition: opacity 0.2s ease-in-out;
+    transition: opacity 0.2s ease-in-out;
+    width: 100%;
+    z-index: -1;
+  }
+
+  .state-active {
+    .nova-player-progress-popup {
+      display: block;
+    }
+  }
+
+  .show {
+    bottom: 100%;
+    left: 0;
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+.nova-player-control-top {
+  bottom: 44px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  left: 0;
+  opacity: 1;
+  padding: 0 12px;
+  position: absolute;
+  right: 0;
+  -webkit-transition: opacity 0.2s ease-out;
+  transition: opacity 0.2s ease-out;
+  visibility: visible;
+}
+
+.nova-player-progress-area {
+  position: relative;
+
+  &:hover {
+    // .nova-player-progress-wrap {
+    // .nova-player-progress {
+    .nova-player-progress-schedule-wrap {
+      -webkit-transform: scaleY(1.5);
+      -ms-transform: scaleY(1.5);
+      transform: scaleY(1.5);
+    }
+
+    .nova-player-progress-thumb {
+      .nova-player-progress-thumb-active {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+      }
+    }
+
+    .nova-player-progress-move-indicator {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    // }
+    // }
+  }
+}
+
+.nova-player-progress-wrap {
+  -webkit-box-align: end;
+  -ms-flex-align: end;
+  align-items: flex-end;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  padding-bottom: 6px;
+}
+
+.nova-player-progress-schedule-wrap {
+  height: 100%;
+  position: absolute;
+  width: 100%;
+
+  .nova-player-progress-schedule {
+    background-color: hsla(0, 0%, 100%, 0.2);
+    border-radius: 1.5px;
     bottom: 0;
     left: 0;
-    position: absolute;
-    width: 100%;
-    z-index: 75;
-
-    .nova-player-control-mask {
-      background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAADGCAYAAAAT+OqFAAAAdklEQVQoz42QQQ7AIAgEF/T/D+kbq/RWAlnQyyazA4aoAB4FsBSA/bFjuF1EOL7VbrIrBuusmrt4ZZORfb6ehbWdnRHEIiITaEUKa5EJqUakRSaEYBJSCY2dEstQY7AuxahwXFrvZmWl2rh4JZ07z9dLtesfNj5q0FU3A5ObbwAAAABJRU5ErkJggg==) repeat-x bottom;
-      bottom: 0;
-      height: 100px;
-      left: 0;
-      pointer-events: none;
-      position: absolute;
-      -webkit-transition: opacity 0.2s ease-in-out;
-      transition: opacity 0.2s ease-in-out;
-      width: 100%;
-      z-index: -1;
-    }
-
-    .state-active {
-      .nova-player-progress-popup {
-        display: block;
-      }
-    }
-
-    .show {
-      bottom: 100%;
-      left: 0;
-      width: 100%;
-      opacity: 1;
-    }
-  }
-
-  .nova-player-control-top {
-    bottom: 44px;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    left: 0;
-    opacity: 1;
-    padding: 0 12px;
+    overflow: hidden;
     position: absolute;
     right: 0;
-    -webkit-transition: opacity 0.2s ease-out;
-    transition: opacity 0.2s ease-out;
-    visibility: visible;
-  }
+    top: 0;
 
-  .nova-player-progress-area {
-    position: relative;
-
-    &:hover {
-
-      // .nova-player-progress-wrap {
-      // .nova-player-progress {
-      .nova-player-progress-schedule-wrap {
-        -webkit-transform: scaleY(1.5);
-        -ms-transform: scaleY(1.5);
-        transform: scaleY(1.5);
-      }
-
-      .nova-player-progress-thumb {
-        .nova-player-progress-thumb-active {
-          -webkit-transform: scale(1);
-          transform: scale(1);
-        }
-      }
-
-      .nova-player-progress-move-indicator {
-        opacity: 1;
-        visibility: visible;
-      }
-
-      // }
-      // }
-    }
-  }
-
-  .nova-player-progress-wrap {
-    -webkit-box-align: end;
-    -ms-flex-align: end;
-    align-items: flex-end;
-    cursor: pointer;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    padding-bottom: 6px;
-  }
-
-  .nova-player-progress-schedule-wrap {
-    height: 100%;
-    position: absolute;
-    width: 100%;
-
-    .nova-player-progress-schedule {
-      background-color: hsla(0, 0%, 100%, 0.2);
-      border-radius: 1.5px;
+    .nova-player-progress-schedule-buffer,
+    .nova-player-progress-schedule-current {
       bottom: 0;
       left: 0;
-      overflow: hidden;
       position: absolute;
       right: 0;
       top: 0;
-
-      .nova-player-progress-schedule-buffer,
-      .nova-player-progress-schedule-current {
-        bottom: 0;
-        left: 0;
-        position: absolute;
-        right: 0;
-        top: 0;
-        -webkit-transform: scaleX(0);
-        transform: scaleX(0);
-        -webkit-transform-origin: 0 0;
-        transform-origin: 0 0;
-      }
-
-      .nova-player-progress-schedule-buffer {
-        background-color: hsla(0, 0%, 100%, 0.3);
-      }
-
-      .nova-player-progress-schedule-current {
-        background-color: #00a1d6;
-        background-color: var(--nova-player-primary-color, #00aeec);
-      }
+      -webkit-transform: scaleX(0);
+      transform: scaleX(0);
+      -webkit-transform-origin: 0 0;
+      transform-origin: 0 0;
     }
 
-    .nova-player-progress-schedule.nova-player-progress-schedule-segment {
-      border-radius: 0;
-      -webkit-transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
-      transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
-      transition: transform 0.1s cubic-bezier(0, 0, 0.2, 1);
-      transition:
-        transform 0.1s cubic-bezier(0, 0, 0.2, 1),
-        -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+    .nova-player-progress-schedule-buffer {
+      background-color: hsla(0, 0%, 100%, 0.3);
     }
 
-    .nova-player-progress-schedule.nova-player-progress-schedule-segment.hover {
-      -webkit-transform: scaleY(1.8);
-      -ms-transform: scaleY(1.8);
-      transform: scaleY(1.8);
-    }
-
-    .nova-player-progress-schedule-padding {
-      bottom: 0;
-      height: 14px;
-      position: absolute;
-      width: 100%;
-      z-index: 1;
+    .nova-player-progress-schedule-current {
+      background-color: #00a1d6;
+      background-color: var(--nova-player-primary-color, #00aeec);
     }
   }
 
-  .nova-player-progress {
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    height: 4px;
-    position: relative;
+  .nova-player-progress-schedule.nova-player-progress-schedule-segment {
+    border-radius: 0;
     -webkit-transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
     transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
     transition: transform 0.1s cubic-bezier(0, 0, 0.2, 1);
     transition:
       transform 0.1s cubic-bezier(0, 0, 0.2, 1),
       -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .nova-player-progress-schedule.nova-player-progress-schedule-segment.hover {
+    -webkit-transform: scaleY(1.8);
+    -ms-transform: scaleY(1.8);
+    transform: scaleY(1.8);
+  }
+
+  .nova-player-progress-schedule-padding {
+    bottom: 0;
+    height: 14px;
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+  }
+}
+
+.nova-player-progress {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  height: 4px;
+  position: relative;
+  -webkit-transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+  transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+  transition: transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+  transition:
+    transform 0.1s cubic-bezier(0, 0, 0.2, 1),
+    -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+  width: 100%;
+
+  .nova-player-progress-point-wrap {
+    height: 100%;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
     width: 100%;
 
-    .nova-player-progress-point-wrap {
+    .nova-player-progress-point {
+      background-color: #fff;
+      cursor: pointer;
+      display: inline-block;
       height: 100%;
-      left: 0;
-      pointer-events: none;
+      pointer-events: auto;
       position: absolute;
       top: 0;
-      width: 100%;
+      width: 0;
+      z-index: 3;
+    }
 
-      .nova-player-progress-point {
-        -webkit-transform: translate(-50%, -50%);
-        background: hsla(0, 0%, 100%, 0.8);
-        border-radius: 50%;
-        box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-        cursor: pointer;
-        height: 6px;
-        pointer-events: auto;
-        position: absolute;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        -webkit-transition: transform 0.15s ease-in-out;
-        transition: transform 0.15s ease-in-out;
-        width: 6px;
-        z-index: 3;
-
-        &:hover {
-          -webkit-transform: translate(-50%, -50%) scale(1.5);
-          background: #fff;
-          transform: translate(-50%, -50%) scale(1.5);
-        }
-      }
+    .nova-player-progress-point-oped {
+      background-color: #fff;
     }
   }
+}
 
-  .nova-player-progress-thumb {
-    height: 20px;
-    pointer-events: none;
-    width: 20px;
+.nova-player-progress-thumb {
+  height: 20px;
+  pointer-events: none;
+  width: 20px;
 
-    .nova-player-progress-thumb-icon {
-      height: 100%;
-      line-height: 12px;
-      -webkit-transform: scale(0);
-      transform: scale(0);
-      -webkit-transition: all 0.2s;
-      transition: all 0.2s;
-      width: 100%;
-
-      svg {
-        width: 18px;
-        height: 18px;
-        transform: translate3d(0px, 0px, 0px);
-      }
-    }
-  }
-
-  .nova-player-progress-move-indicator {
-    height: 16px;
-    margin-left: -4px;
-    opacity: 0;
-    overflow: hidden;
-    pointer-events: none;
-    position: absolute;
-    -webkit-transition: opacity 0.1s;
-    transition: opacity 0.1s;
-    visibility: hidden;
-    width: 8px;
-
-    .nova-player-progress-move-indicator-down {
-      border-color: #00a1d6 transparent transparent;
-      border-color: var(--nova-player-primary-color, #00a1d6) transparent transparent;
-      border-width: 4px 4px 0;
-    }
-
-    .nova-player-progress-move-indicator-up {
-      border-color: transparent transparent #00a1d6;
-      border-color: transparent transparent var(--nova-player-primary-color, #00a1d6);
-      border-width: 0 4px 4px;
-      margin-top: 8px;
-    }
-  }
-
-  .nova-player-progress-move-indicator>div {
-    border-style: solid;
-    height: 0;
-    position: relative;
-    width: 0;
-  }
-
-  .nova-player-progress-popup {
-    background-color: transparent;
-    border-radius: 2px;
-    bottom: 22px;
-    display: none;
-    line-height: 36px;
-    overflow: hidden;
-    pointer-events: none;
-    position: absolute;
-    width: 160px;
-    -moz-transition: left linear;
-    -webkit-transition: left linear;
-    transition: left linear;
-
-    .nova-player-progress-preview {
-      height: 90px;
-      position: relative;
-      width: 160px;
-
-      .nova-player-progress-preview-image {
-        height: 100%;
-        margin: 0 auto;
-        position: relative;
-        vertical-align: inherit;
-        width: 100%;
-      }
-
-      .nova-player-progress-preview-time {
-        background-color: hsla(0, 0%, 8%, 0.9);
-        border-radius: 2px;
-        bottom: 0;
-        color: #fff;
-        display: inline-block;
-        font-size: 12px;
-        height: 18px;
-        left: 50%;
-        line-height: 18px;
-        padding: 0 5px;
-        position: absolute;
-        -webkit-transform: translateX(-50%);
-        transform: translateX(-50%);
-        vertical-align: bottom;
-      }
-    }
-
-    .nova-player-progress-hotspot {
-      background-color: hsla(0, 0%, 8%, 0.9);
-      -webkit-box-sizing: border-box;
-      box-sizing: border-box;
-      color: #fff;
-      line-height: 18px;
-      max-height: 48px;
-      overflow: hidden;
-      padding: 6px 8px;
-      text-align: left;
-      white-space: normal;
-      word-break: break-all;
-    }
-
-    .nova-player-progress-hotspot:empty {
-      display: none;
-    }
-  }
-
-  .nova-player-progress-scaleplate {
-    bottom: 0;
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    pointer-events: none;
-
-    >div {
-      background: hsla(0, 0%, 100%, 0.35);
-      bottom: 0;
-      position: absolute;
-      width: 1px;
-    }
-
-    .nova-player-progress-scaleplate-1m {
-      height: 50%;
-    }
-
-    .nova-player-progress-scaleplate-2m {
-      height: 75%;
-    }
-  }
-
-  .nova-player-progress-pull-indicator {
-    height: 18px;
-    line-height: 18px;
-    position: absolute;
-    width: 18px;
-    opacity: 0;
-    display: none;
+  .nova-player-progress-thumb-icon {
+    height: 100%;
+    line-height: 12px;
+    -webkit-transform: scale(0);
+    transform: scale(0);
+    -webkit-transition: all 0.2s;
+    transition: all 0.2s;
+    width: 100%;
 
     svg {
-      width: 100%;
-      height: 100%;
+      width: 18px;
+      height: 18px;
       transform: translate3d(0px, 0px, 0px);
     }
   }
+}
 
-  .nova-player-progress-cursor {
-    background-color: #fff;
-    border-radius: 5px;
-    height: 10px;
-    left: -5px;
-    opacity: 0;
-    position: absolute;
-    -webkit-transition: opacity 0.2s 0.1s;
-    transition: opacity 0.2s 0.1s;
-    visibility: hidden;
-    width: 10px;
+.nova-player-progress-move-indicator {
+  height: 16px;
+  margin-left: -4px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  -webkit-transition: opacity 0.1s;
+  transition: opacity 0.1s;
+  visibility: hidden;
+  width: 8px;
+
+  .nova-player-progress-move-indicator-down {
+    border-color: #00a1d6 transparent transparent;
+    border-color: var(--nova-player-primary-color, #00a1d6) transparent
+      transparent;
+    border-width: 4px 4px 0;
   }
 
-  .nova-player-control-bottom {
-    -webkit-box-pack: justify;
-    -ms-flex-pack: justify;
+  .nova-player-progress-move-indicator-up {
+    border-color: transparent transparent #00a1d6;
+    border-color: transparent transparent
+      var(--nova-player-primary-color, #00a1d6);
+    border-width: 0 4px 4px;
+    margin-top: 8px;
+  }
+}
+
+.nova-player-progress-move-indicator > div {
+  border-style: solid;
+  height: 0;
+  position: relative;
+  width: 0;
+}
+
+.nova-player-progress-popup {
+  background-color: transparent;
+  border-radius: 2px;
+  bottom: 22px;
+  display: none;
+  line-height: 36px;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  width: 160px;
+  -moz-transition: left linear;
+  -webkit-transition: left linear;
+  transition: left linear;
+
+  .nova-player-progress-preview {
+    height: 90px;
+    position: relative;
+    width: 160px;
+
+    .nova-player-progress-preview-image {
+      height: 100%;
+      margin: 0 auto;
+      position: relative;
+      vertical-align: inherit;
+      width: 100%;
+    }
+
+    .nova-player-progress-preview-time {
+      background-color: hsla(0, 0%, 8%, 0.9);
+      border-radius: 2px;
+      bottom: 0;
+      color: #fff;
+      display: inline-block;
+      font-size: 12px;
+      height: 18px;
+      left: 50%;
+      line-height: 18px;
+      padding: 0 5px;
+      position: absolute;
+      -webkit-transform: translateX(-50%);
+      transform: translateX(-50%);
+      vertical-align: bottom;
+    }
+  }
+
+  .nova-player-progress-hotspot {
+    background-color: hsla(0, 0%, 8%, 0.9);
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    height: 35px;
-    justify-content: space-between;
-    line-height: 22px;
-    margin: 20px 0 0;
-    padding: 0 12px;
-    -webkit-transition: all 0.2s ease-out;
-    transition: all 0.2s ease-out;
+    color: #fff;
+    line-height: 18px;
+    max-height: 48px;
+    overflow: hidden;
+    padding: 6px 8px;
+    text-align: left;
+    white-space: normal;
+    word-break: break-all;
+  }
+
+  .nova-player-progress-hotspot:empty {
+    display: none;
+  }
+}
+
+.nova-player-progress-scaleplate {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  pointer-events: none;
+
+  > div {
+    background: hsla(0, 0%, 100%, 0.35);
+    bottom: 0;
+    position: absolute;
+    width: 1px;
+  }
+
+  .nova-player-progress-scaleplate-1m {
+    height: 50%;
+  }
+
+  .nova-player-progress-scaleplate-2m {
+    height: 75%;
+  }
+}
+
+.nova-player-progress-pull-indicator {
+  height: 18px;
+  line-height: 18px;
+  position: absolute;
+  width: 18px;
+  opacity: 0;
+  display: none;
+
+  svg {
     width: 100%;
+    height: 100%;
+    transform: translate3d(0px, 0px, 0px);
+  }
+}
 
-    .state-muted {
-      .nova-player-ctrl-volume-icon {
-        display: none;
-      }
+.nova-player-progress-cursor {
+  background-color: #fff;
+  border-radius: 5px;
+  height: 10px;
+  left: -5px;
+  opacity: 0;
+  position: absolute;
+  -webkit-transition: opacity 0.2s 0.1s;
+  transition: opacity 0.2s 0.1s;
+  visibility: hidden;
+  width: 10px;
+}
 
-      .nova-player-ctrl-muted-icon {
-        display: block;
-      }
+.nova-player-control-bottom {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  height: 35px;
+  justify-content: space-between;
+  line-height: 22px;
+  margin: 20px 0 0;
+  padding: 0 12px;
+  -webkit-transition: all 0.2s ease-out;
+  transition: all 0.2s ease-out;
+  width: 100%;
+
+  .state-muted {
+    .nova-player-ctrl-volume-icon {
+      display: none;
     }
 
-    .nova-player-sending-bar {
-      background: none;
-      border: none;
+    .nova-player-ctrl-muted-icon {
+      display: block;
+    }
+  }
+
+  .nova-player-sending-bar {
+    background: none;
+    border: none;
+    height: 34px !important;
+    line-height: 34px !important;
+    margin: 0 auto;
+    max-width: 729px;
+    padding: 0;
+    box-sizing: border-box;
+    width: 100%;
+    font-size: 13px;
+
+    .nova-player-video-inputbar {
       height: 34px !important;
-      line-height: 34px !important;
-      margin: 0 auto;
       max-width: 729px;
+      border-radius: 8px;
+      min-width: 300px;
+      width: calc(100% - 72px);
+      background: none;
+      background-color: hsla(0, 0%, 100%, 0.3);
+      color: hsla(0, 0%, 100%, 0.6);
+      margin: 0 auto;
       padding: 0;
-      box-sizing: border-box;
-      width: 100%;
-      font-size: 13px;
-
-      .nova-player-video-inputbar {
-        height: 34px !important;
-        max-width: 729px;
-        border-radius: 8px;
-        min-width: 300px;
-        width: calc(100% - 72px);
-        background: none;
-        background-color: hsla(0, 0%, 100%, 0.3);
-        color: hsla(0, 0%, 100%, 0.6);
-        margin: 0 auto;
-        padding: 0;
-      }
     }
+  }
 
-    .state-show {
-      .nova-player-ctrl-quality-menu-wrap {
-        .nova-player-ctrl-quality-menu {
-          display: block;
-        }
-      }
-
-      .nova-player-ctrl-eplist-menu-wrap {
-        opacity: 1;
-        visibility: visible;
-      }
-
-      .nova-player-ctrl-playbackrate-menu-wrap {
-        .nova-player-ctrl-playbackrate-menu {
-          display: block;
-        }
-      }
-
-      .nova-player-ctrl-volume-box {
+  .state-show {
+    .nova-player-ctrl-quality-menu-wrap {
+      .nova-player-ctrl-quality-menu {
         display: block;
       }
-
-      .nova-player-ctrl-setting-box {
-        display: block;
-      }
-    }
-  }
-
-  .nova-player-control-bottom-left {
-    -webkit-box-flex: 0;
-    display: -webkit-inline-box;
-    display: -ms-inline-flexbox;
-    display: inline-flex;
-    -ms-flex: auto;
-    flex: auto;
-
-    .nova-player-ctrl-prev .nova-player-ctrl-btn-icon {
-      -webkit-transform: rotate(180deg);
-      transform: rotate(180deg);
-    }
-
-    .nova-player-ctrl-play {
-      .nova-player-ctrl-btn-icon {
-        -webkit-transition: all 0.2s;
-        transition: all 0.2s;
-      }
-    }
-
-    .nova-player-ctrl-time {
-      .nova-player-ctrl-time-seek {
-        background: hsla(0, 0%, 100%, 0.2);
-        border: 1px solid hsla(0, 0%, 100%, 0.25);
-        border-radius: 4px;
-        box-sizing: border-box;
-        color: inherit;
-        font-size: 12px;
-        // 适当放大输入框：加宽加高 + 左右留出呼吸空间，避免文字紧贴边框
-        height: 24px;
-        left: 6px;
-        line-height: 22px;
-        padding: 0 10px;
-        position: absolute;
-        text-align: center;
-        top: 50%;
-        transform: translateY(-50%);
-        transition: border-color 0.2s, background-color 0.2s;
-        width: 88px;
-
-        &:focus {
-          background: hsla(0, 0%, 100%, 0.3);
-          border-color: hsla(0, 0%, 100%, 0.6);
-          outline: none;
-        }
-      }
-
-      .nova-player-ctrl-time-label {
-        cursor: pointer;
-        height: 100%;
-        position: absolute;
-        text-align: center;
-        white-space: nowrap;
-        width: 100%;
-
-        .nova-player-ctrl-time-divide {
-          padding: 0 2px;
-        }
-      }
-    }
-  }
-
-  .nova-player-dm-switch {
-    fill: hsla(0, 0%, 100%, 0.9);
-  }
-
-  .nova-player-dm-setting {
-    fill: hsla(0, 0%, 100%, 0.9);
-    color: hsla(0, 0%, 100%, 0.9);
-  }
-
-  .nova-player-control-bottom-right {
-    -webkit-box-pack: end;
-    -ms-flex-pack: end;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .nova-player-ctrl-eplist {
-    font-size: 14px;
-    visibility: hidden;
-    width: 0;
-
-    .nova-player-ctrl-eplist-result {
-      cursor: pointer;
-      font-weight: 600;
-      width: 100%;
     }
 
     .nova-player-ctrl-eplist-menu-wrap {
-      background-color: hsla(0, 0%, 8%, 0.9);
-      border-radius: 2px;
-      bottom: 41px;
-      -webkit-box-sizing: border-box;
-      box-sizing: border-box;
-      left: 50%;
-      max-height: 580px;
-      opacity: 0;
-      overflow: hidden;
-      position: absolute;
-      text-align: left;
-      -webkit-transform: translateX(-50%);
-      transform: translateX(-50%);
-      visibility: hidden;
-      width: 320px;
-
-      .nova-player-ctrl-eplist-section {
-        padding: 0;
-        width: 100%;
-
-        .nova-player-ctrl-eplist-section-bottom {
-          max-height: 520px;
-          overflow: hidden;
-          position: relative;
-
-          .nova-player-ctrl-eplist-section-content {
-            margin: 0;
-            padding: 0;
-
-            .nova-player-ctrl-eplist-multi-menu-item {
-              -webkit-box-align: center;
-              -ms-flex-align: center;
-              align-items: center;
-              cursor: pointer;
-              display: -webkit-box;
-              display: -ms-flexbox;
-              display: flex;
-              font-size: 12px;
-              height: 30px;
-              line-height: 30px;
-              padding: 0 20px;
-              position: relative;
-
-              .common-svg-icon {
-                fill: #00a1d6;
-                fill: var(--nova-player-primary-color, #00a1d6);
-                -ms-flex-negative: 0;
-                flex-shrink: 0;
-                margin-right: 4px;
-                width: 12px;
-              }
-
-              .nova-player-ctrl-eplist-multi-menu-item-text {
-                -webkit-box-flex: 1;
-                -ms-flex-positive: 1;
-                flex-grow: 1;
-                overflow: hidden;
-                pointer-events: none;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              }
-
-              &:hover {
-                background-color: hsla(0, 0%, 100%, 0.1);
-              }
-            }
-
-            .state-multi-active-item {
-              color: #00a1d6;
-              color: var(--nova-player-primary-color, #00a1d6);
-            }
-          }
-        }
-      }
+      opacity: 1;
+      visibility: visible;
     }
-  }
 
-  .nova-player-ctrl-volume {
-    .nova-player-ctrl-muted-icon {
-      display: none;
+    .nova-player-ctrl-playbackrate-menu-wrap {
+      .nova-player-ctrl-playbackrate-menu {
+        display: block;
+      }
     }
 
     .nova-player-ctrl-volume-box {
-      background: hsla(0, 0%, 8%, 0.9);
-      border-radius: 2px;
-      bottom: 41px;
-      display: none;
-      height: 100px;
-      left: 50%;
-      margin-left: -16px;
+      display: block;
+    }
+
+    .nova-player-ctrl-setting-box {
+      display: block;
+    }
+  }
+}
+
+.nova-player-control-bottom-left {
+  -webkit-box-flex: 0;
+  display: -webkit-inline-box;
+  display: -ms-inline-flexbox;
+  display: inline-flex;
+  -ms-flex: auto;
+  flex: auto;
+
+  .nova-player-ctrl-prev .nova-player-ctrl-btn-icon {
+    -webkit-transform: rotate(180deg);
+    transform: rotate(180deg);
+  }
+
+  .nova-player-ctrl-play {
+    .nova-player-ctrl-btn-icon {
+      -webkit-transition: all 0.2s;
+      transition: all 0.2s;
+    }
+  }
+
+  .nova-player-ctrl-time {
+    .nova-player-ctrl-time-seek {
+      background: hsla(0, 0%, 100%, 0.2);
+      border: 1px solid hsla(0, 0%, 100%, 0.25);
+      border-radius: 4px;
+      box-sizing: border-box;
+      color: inherit;
+      font-size: 12px;
+      // 适当放大输入框：加宽加高 + 左右留出呼吸空间，避免文字紧贴边框
+      height: 24px;
+      left: 6px;
+      line-height: 22px;
+      padding: 0 10px;
       position: absolute;
-      width: 32px;
+      text-align: center;
+      top: 50%;
+      transform: translateY(-50%);
+      transition:
+        border-color 0.2s,
+        background-color 0.2s;
+      width: 88px;
 
-      .nova-player-ctrl-volume-number {
-        color: #e5e9ef;
-        font-size: 12px;
-        height: 28px;
-        line-height: 28px;
-        margin-bottom: 2px;
-        text-align: center;
-        width: 100%;
+      &:focus {
+        background: hsla(0, 0%, 100%, 0.3);
+        border-color: hsla(0, 0%, 100%, 0.6);
+        outline: none;
       }
+    }
 
-      .nova-player-ctrl-volume-progress {
-        height: 60px;
-        margin: 0 auto;
-        -webkit-box-pack: center !important;
-        -ms-flex-pack: center !important;
-        justify-content: center !important;
+    .nova-player-ctrl-time-label {
+      cursor: pointer;
+      height: 100%;
+      position: absolute;
+      text-align: center;
+      white-space: nowrap;
+      width: 100%;
 
-        .slider-area {
-          -webkit-box-pack: center !important;
-          -ms-flex-pack: center !important;
-          justify-content: center !important;
-          -webkit-box-align: end;
-          -ms-flex-align: end;
-          align-items: flex-end;
-          height: 100%;
-          width: 2px;
-          position: relative;
+      .nova-player-ctrl-time-divide {
+        padding: 0 2px;
+      }
+    }
+  }
+}
 
-          .slider-bar-wrap {
-            background: #e7e7e7;
-            border-radius: 1.5px;
-            bottom: 0;
-            left: 0;
-            overflow: hidden;
-            position: absolute;
-            right: 0;
-            top: 0;
+.nova-player-dm-switch {
+  fill: hsla(0, 0%, 100%, 0.9);
+}
 
-            .slider-bar {
-              background: #00a1d6;
-              background: var(--nova-player-fn-color, #00a1d6);
-              bottom: 0;
-              left: 0;
-              position: absolute;
-              right: 0;
-              top: 0;
-              -webkit-transform-origin: 0 100%;
-              transform-origin: 0 100%;
+.nova-player-dm-setting {
+  fill: hsla(0, 0%, 100%, 0.9);
+  color: hsla(0, 0%, 100%, 0.9);
+}
+
+.nova-player-control-bottom-right {
+  -webkit-box-pack: end;
+  -ms-flex-pack: end;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nova-player-ctrl-eplist {
+  font-size: 14px;
+  visibility: hidden;
+  width: 0;
+
+  .nova-player-ctrl-eplist-result {
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-eplist-menu-wrap {
+    background-color: hsla(0, 0%, 8%, 0.9);
+    border-radius: 2px;
+    bottom: 41px;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    left: 50%;
+    max-height: 580px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    text-align: left;
+    -webkit-transform: translateX(-50%);
+    transform: translateX(-50%);
+    visibility: hidden;
+    width: 320px;
+
+    .nova-player-ctrl-eplist-section {
+      padding: 0;
+      width: 100%;
+
+      .nova-player-ctrl-eplist-section-bottom {
+        max-height: 520px;
+        overflow: hidden;
+        position: relative;
+
+        .nova-player-ctrl-eplist-section-content {
+          margin: 0;
+          padding: 0;
+
+          .nova-player-ctrl-eplist-multi-menu-item {
+            -webkit-box-align: center;
+            -ms-flex-align: center;
+            align-items: center;
+            cursor: pointer;
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            font-size: 12px;
+            height: 30px;
+            line-height: 30px;
+            padding: 0 20px;
+            position: relative;
+
+            .common-svg-icon {
+              fill: #00a1d6;
+              fill: var(--nova-player-primary-color, #00a1d6);
+              -ms-flex-negative: 0;
+              flex-shrink: 0;
+              margin-right: 4px;
+              width: 12px;
+            }
+
+            .nova-player-ctrl-eplist-multi-menu-item-text {
+              -webkit-box-flex: 1;
+              -ms-flex-positive: 1;
+              flex-grow: 1;
+              overflow: hidden;
+              pointer-events: none;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            &:hover {
+              background-color: hsla(0, 0%, 100%, 0.1);
             }
           }
 
-          .slider-thumb {
-            bottom: 0;
-            position: relative;
-            top: auto;
-
-            .slider-thumb-dot {
-              -webkit-box-align: center;
-              -ms-flex-align: center;
-              align-items: center;
-              background-color: #00a1d6;
-              background-color: var(--nova-player-fn-color, #00a1d6);
-              border-radius: 50%;
-              display: -webkit-box;
-              display: -ms-flexbox;
-              display: flex;
-              height: 12px;
-              height: var(--nova-player-ui-font-size, 12px);
-              -webkit-transform: translateZ(0);
-              transform: translateZ(0);
-              -webkit-transition: all 0.2s;
-              transition: all 0.2s;
-              vertical-align: middle;
-              width: 12px;
-              width: var(--nova-player-ui-font-size, 12px);
-              cursor: pointer;
-            }
+          .state-multi-active-item {
+            color: #00a1d6;
+            color: var(--nova-player-primary-color, #00a1d6);
           }
         }
       }
     }
   }
+}
 
-  .nova-player-ctrl-setting-handoff,
-  .nova-player-ctrl-setting-aspect,
-  .nova-player-ctrl-setting-codec {
-    width: 100%;
-    color: #ffffff;
-    margin-bottom: 8px;
-  }
+.nova-player-ctrl-muted-icon {
+  display: none;
+}
 
-  .nova-player-ctrl-setting-handoff-title,
-  .nova-player-ctrl-setting-aspect-title,
-  .nova-player-ctrl-setting-codec-title {
-    height: 16px;
-    line-height: 16px;
+.nova-player-ctrl-volume-box {
+  background: hsla(0, 0%, 8%, 0.9);
+  border-radius: 2px;
+  bottom: 41px;
+  display: none;
+  height: 100px;
+  left: 50%;
+  margin-left: -16px;
+  position: absolute;
+  width: 32px;
+
+  .nova-player-ctrl-volume-number {
+    color: #e5e9ef;
     font-size: 12px;
-    margin-bottom: 8px;
-  }
-
-  .nova-player-ctrl-setting-handoff-content,
-  .nova-player-ctrl-setting-aspect-content,
-  .nova-player-ctrl-setting-codec-content {
-    height: 24px;
+    height: 28px;
+    line-height: 28px;
+    margin-bottom: 2px;
+    text-align: center;
     width: 100%;
   }
 
-  .nova-player-control-wrap {
-    .nova-player-control-bottom {
-      .nova-player-dm-switch {
-        color: #fff;
+  .nova-player-ctrl-volume-progress {
+    height: 60px;
+    margin: 0 auto;
+    -webkit-box-pack: center !important;
+    -ms-flex-pack: center !important;
+    justify-content: center !important;
 
-        &:not(.disabled):hover {
-          fill: #00a1d6;
-          fill: var(--nova-player-primary-color, #00a1d6);
+    .slider-area {
+      -webkit-box-pack: center !important;
+      -ms-flex-pack: center !important;
+      justify-content: center !important;
+      -webkit-box-align: end;
+      -ms-flex-align: end;
+      align-items: flex-end;
+      height: 100%;
+      width: 2px;
+      position: relative;
+
+      .slider-bar-wrap {
+        background: #e7e7e7;
+        border-radius: 1.5px;
+        bottom: 0;
+        left: 0;
+        overflow: hidden;
+        position: absolute;
+        right: 0;
+        top: 0;
+
+        .slider-bar {
+          background: #00a1d6;
+          background: var(--nova-player-fn-color, #00a1d6);
+          bottom: 0;
+          left: 0;
+          position: absolute;
+          right: 0;
+          top: 0;
+          -webkit-transform-origin: 0 100%;
+          transform-origin: 0 100%;
         }
       }
 
-      .nova-player-dm-setting {
+      .slider-thumb {
+        bottom: 0;
+        position: relative;
+        top: auto;
+
+        .slider-thumb-dot {
+          -webkit-box-align: center;
+          -ms-flex-align: center;
+          align-items: center;
+          background-color: #00a1d6;
+          background-color: var(--nova-player-fn-color, #00a1d6);
+          border-radius: 50%;
+          display: -webkit-box;
+          display: -ms-flexbox;
+          display: flex;
+          height: 12px;
+          height: var(--nova-player-ui-font-size, 12px);
+          -webkit-transform: translateZ(0);
+          transform: translateZ(0);
+          -webkit-transition: all 0.2s;
+          transition: all 0.2s;
+          vertical-align: middle;
+          width: 12px;
+          width: var(--nova-player-ui-font-size, 12px);
+          cursor: pointer;
+        }
+      }
+    }
+  }
+}
+
+.nova-player-ctrl-setting-handoff,
+.nova-player-ctrl-setting-aspect,
+.nova-player-ctrl-setting-codec {
+  width: 100%;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.nova-player-ctrl-setting-handoff-title,
+.nova-player-ctrl-setting-aspect-title,
+.nova-player-ctrl-setting-codec-title {
+  height: 16px;
+  line-height: 16px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.nova-player-ctrl-setting-handoff-content,
+.nova-player-ctrl-setting-aspect-content,
+.nova-player-ctrl-setting-codec-content {
+  height: 24px;
+  width: 100%;
+}
+
+.nova-player-control-wrap {
+  .nova-player-control-bottom {
+    .nova-player-dm-switch {
+      color: #fff;
+
+      &:not(.disabled):hover {
+        fill: #00a1d6;
+        fill: var(--nova-player-primary-color, #00a1d6);
+      }
+    }
+
+    .nova-player-dm-setting {
+      color: #fff;
+
+      &:hover {
+        fill: #00a1d6;
+        fill: var(--nova-player-primary-color, #00a1d6);
+      }
+    }
+
+    .nova-player-video-inputbar {
+      .nova-player-video-btn-dm {
+        fill: hsla(0, 0%, 100%, 0.9);
         color: #fff;
 
         &:hover {
@@ -765,49 +770,37 @@
         }
       }
 
-      .nova-player-video-inputbar {
-        .nova-player-video-btn-dm {
-          fill: hsla(0, 0%, 100%, 0.9);
+      .nova-player-video-inputbar-wrap {
+        .nova-player-dm-input:focus {
+          caret-color: #fff;
           color: #fff;
-
-          &:hover {
-            fill: #00a1d6;
-            fill: var(--nova-player-primary-color, #00a1d6);
-          }
         }
 
-        .nova-player-video-inputbar-wrap {
-          .nova-player-dm-input:focus {
-            caret-color: #fff;
+        .nova-player-dm-input {
+          color: #fff;
+
+          &::-webkit-input-placeholder {
             color: #fff;
           }
 
-          .nova-player-dm-input {
+          &::-moz-placeholder {
             color: #fff;
+          }
 
-            &::-webkit-input-placeholder {
-              color: #fff;
-            }
+          &:-ms-input-placeholder {
+            color: #fff;
+          }
 
-            &::-moz-placeholder {
-              color: #fff;
-            }
+          &::-ms-input-placeholder {
+            color: #fff;
+          }
 
-            &:-ms-input-placeholder {
-              color: #fff;
-            }
+          &::placeholder {
+            color: #fff;
+          }
 
-            &::-ms-input-placeholder {
-              color: #fff;
-            }
-
-            &::placeholder {
-              color: #fff;
-            }
-
-            &::placeholder {
-              color: #fff;
-            }
+          &::placeholder {
+            color: #fff;
           }
         }
       }

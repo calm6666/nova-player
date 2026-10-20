@@ -303,6 +303,8 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
    * <750 不渲染；<941 渲染 4 张；<1160 渲染 5 张；否则 10 张。
    */
   const embeddedRelated = signal<EndingRelatedItem[]>(related.slice(0, 10));
+  /** OGV 卡片按容器宽度动态增删，默认最多 5 张 */
+  const ogvRelated = signal<EndingRelatedItem[]>(related.slice(0, 5));
 
   // ============================================
   // 自动连播倒计时
@@ -1393,7 +1395,13 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           h(
             "div",
             { class: "nova-ogv-ending-recommend-list" },
-            ...related.slice(0, 5).map(renderOgvCard),
+            h(For, {
+              each: (): EndingRelatedItem[] => ogvRelated.value,
+              key: (item: EndingRelatedItem, index: number): string =>
+                `${index}:${item.title}`,
+              render: (item: EndingRelatedItem): VNode =>
+                renderOgvCard(item),
+            }),
           ),
         ),
       ),
@@ -1591,6 +1599,24 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       const next = related.slice(0, count);
       if (next.length !== embeddedRelated.value.length) {
         embeddedRelated.value = next;
+      }
+      // 真实页面 10 张卡片时给推荐容器加 fix-context（卡片固定 200px）
+      root
+        .querySelector<HTMLElement>(
+          ".nova-player-embedded-ending-relation-context",
+        )
+        ?.classList.toggle("fix-context", count > 5);
+    }
+
+    // OGV 片尾：按容器宽度动态增删推荐卡片（最多 5 张）
+    if (isOgv) {
+      const count = Math.max(
+        1,
+        Math.min(5, Math.floor((availableWidth - 64) / 200)),
+      );
+      const next = related.slice(0, count);
+      if (next.length !== ogvRelated.value.length) {
+        ogvRelated.value = next;
       }
     }
 
