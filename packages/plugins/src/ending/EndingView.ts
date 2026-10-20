@@ -547,6 +547,19 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       ),
     ];
 
+    /** 外链尾页卡片真实 DOM 是 div，不是 a */
+    if (isEmbedded) {
+      return h(
+        "div",
+        {
+          class: "nova-player-ending-related-item",
+          role: "button",
+          onClick: handleClick,
+        },
+        ...content,
+      );
+    }
+
     /** 有跳转地址时用 <a>，否则用 div 承载点击回调 */
     return item.url
       ? h(
@@ -581,6 +594,36 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   // ============================================
   // 渲染：station 片尾
   // ============================================
+
+  /** 外链尾页推荐卡片：真实 DOM 为 div.relation-context-item */
+  const renderEmbeddedCard = (item: EndingRelatedItem): VNode =>
+    h(
+      "div",
+      {
+        class: "nova-player-relation-context-item",
+        role: "button",
+        onClick: () => props.onRelatedClick?.(item),
+      },
+      h(
+        "div",
+        { class: "nova-player-relation-context-poster" },
+        item.pic
+          ? h("img", {
+              class: "nova-player-relation-context-poster-img",
+              src: item.pic,
+              alt: item.title,
+            })
+          : null,
+        formatDuration(item.duration)
+          ? h(
+              "div",
+              { class: "nova-player-relation-context-poster-duration" },
+              formatDuration(item.duration),
+            )
+          : null,
+      ),
+      h("div", { class: "nova-player-relation-context-title" }, item.title),
+    );
 
   /** 渲染站内片尾内容面板 */
   const renderStationEnding = (): VNode =>
@@ -940,8 +983,8 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             each: (): EndingRelatedItem[] => embeddedRelated.value,
             key: (item: EndingRelatedItem, index: number): string =>
               `${index}:${item.title}`,
-            render: (item: EndingRelatedItem, index: number): VNode =>
-              renderRelatedCard(item, index),
+            render: (item: EndingRelatedItem): VNode =>
+              renderEmbeddedCard(item),
           }),
         ),
       ),

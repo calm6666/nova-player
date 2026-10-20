@@ -56,35 +56,20 @@ const renderItem = (
     h("div", { class: "nova-player-relation-context-title" }, item.title),
   ];
 
-  return item.url
-    ? h(
-        "a",
-        {
-          class: "nova-player-relation-context-item",
-          href: item.url,
-          target: "_blank",
-          rel: "noopener noreferrer",
-          onClick: (event: MouseEvent) => {
-            if (onSelect) event.preventDefault();
-            onSelect?.(item);
-          },
-        },
-        ...content,
-      )
-    : h(
-        "div",
-        {
-          class: "nova-player-relation-context-item",
-          role: "button",
-          onClick: () => onSelect?.(item),
-        },
-        ...content,
-      );
+  return h(
+    "div",
+    {
+      class: "nova-player-relation-context-item",
+      role: "button",
+      onClick: () => onSelect?.(item),
+    },
+    ...content,
+  );
 };
 
 export const RelationStrip = defineComponent<RelationStripProps>(
   (props, _lifecycle) => {
-    const related = (props.related ?? []).slice(0, 5);
+    const related = (props.related ?? []).slice(0, 6);
     if (related.length === 0) {
       return h("div", {
         class: "nova-player-relation-wrap",
