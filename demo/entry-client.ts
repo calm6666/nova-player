@@ -4531,10 +4531,21 @@ function applyEndingStyle(style: "standard" | "ogv"): void {
 }
 
 /** 切换站内 / 外链场景（场景影响播放器整体结构，需要重建播放器） */
-function applyScene(scene: "station" | "embedded"): void {
+async function applyScene(
+  scene: "station" | "embedded",
+  showEnding = false,
+): Promise<void> {
   demoScene = scene;
   const index = playerInstance?.getCurrentIndex() ?? 0;
-  void rebuildPlayer(index);
+  await rebuildPlayer(index);
+  if (showEnding) {
+    // 外链尾页：等播放器重建完成后触发 ended，进入真实外链片尾
+    setTimeout(() => {
+      document
+        .querySelector<HTMLVideoElement>("#player-wrapper video")
+        ?.dispatchEvent(new Event("ended"));
+    }, 400);
+  }
 }
 
 function updateDemoTitle(title: string): void {
@@ -4555,7 +4566,8 @@ function installPluginDemoControls(): void {
     ["音乐 Top", () => applyTopStyle("music")],
     ["标准片尾", () => applyEndingStyle("standard")],
     ["OGV 片尾", () => applyEndingStyle("ogv")],
-    ["外链场景", () => applyScene("embedded")],
+    ["外链暂停页", () => applyScene("embedded")],
+    ["外链尾页", () => applyScene("embedded", true)],
     ["站内场景", () => applyScene("station")],
     ["更新标题", () => updateDemoTitle("动态更新标题 " + Date.now())],
     ["卸载 Top 插件", () => playerInstance?.uninstallPlugin("top")],
