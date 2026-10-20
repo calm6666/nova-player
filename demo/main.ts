@@ -33,6 +33,8 @@ import {
   useState,
 } from "@/core";
 import { VideoPlayer } from "@/nova/player";
+import { TopPlugin } from "@/lumina/plugins/top/index";
+import { EndingPlugin } from "@/lumina/plugins/ending/index";
 
 // SVG 图标组件（替代 Unicode emoji）
 import {
@@ -261,6 +263,15 @@ export function setPlayerInstance(p: VideoPlayer | null): void {
  * - 与框架的 SSR/Hydrate 流程完全一致
  */
 const PlayerSection = defineComponent(() => {
+  const player = new VideoPlayer({
+    src: "/sample.mp4",
+    ui: { title: "示例视频" },
+    playback: { autoplay: false, muted: true },
+    plugins: { list: [TopPlugin(), EndingPlugin()] },
+  });
+  if (typeof window !== "undefined") {
+    (window as unknown as { __ssrPlayer?: VideoPlayer }).__ssrPlayer = player;
+  }
 
   return h(
     "div",
@@ -277,7 +288,7 @@ const PlayerSection = defineComponent(() => {
         id: "player-wrapper",
         class: "player-wrapper",
       },
-      h("div", { class: "player-empty" }, "请先添加视频来源"),
+      player.render(),
     ),
     h(
       "div",
@@ -1042,7 +1053,7 @@ const PlayerSection = defineComponent(() => {
       {
         class: "player-description",
       },
-      "SSR 输出页面外壳与播放器容器，水合后挂载播放器；播放器完整 HTML 可通过 renderPlayerToString() 在服务端生成。视频源切换走 switchTo / refresh，不重建播放器。",
+      "SSR 阶段直接输出播放器完整 HTML（video + 控制栏 + 图层），水合阶段复用服务端 DOM；Top / Ending 插件安装后同样参与渲染。视频源切换走 switchTo / refresh，不重建播放器。",
     ),
   );
 });

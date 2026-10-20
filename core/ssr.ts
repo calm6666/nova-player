@@ -427,7 +427,8 @@ function serializeAttrs(attrs: VNodeAttrs): string {
       const val = reactiveAttrs[rKey]();
       if (val === undefined || val === null) continue;
       if (rKey === "class" || rKey === "className") {
-        if (val) parts.push(` class="${escapeHtml(val)}"`);
+        const cls = normalizeClass(val as never);
+        if (cls) parts.push(` class="${escapeHtml(cls)}"`);
       } else {
         parts.push(` ${rKey}="${escapeHtml(val)}"`);
       }

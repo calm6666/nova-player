@@ -864,6 +864,12 @@ if (root) {
     // 更新 SSR 徽章为 "Hydrated"
     updateBadgeToHydrated();
 
+    // PlayerSection 在 SSR / hydration 阶段创建的播放器实例
+    const ssrPlayer = (
+      window as unknown as { __ssrPlayer?: VideoPlayer }
+    ).__ssrPlayer;
+    if (ssrPlayer && !playerInstance) setPlayerInstance(ssrPlayer);
+
     // playerInstance 由 PlayerSection 组件创建，水合后应已就绪
     if (playerInstance) {
       // 监听播放器关键事件并写入日志
@@ -895,7 +901,7 @@ if (root) {
         }
       });
 
-      attachAllPlayerEvents(playerInstance);
+      setTimeout(() => attachAllPlayerEvents(playerInstance!), 0);
 
       // 暴露到全局便于调试
       (window as unknown as { player: VideoPlayer }).player = playerInstance;
@@ -4523,7 +4529,7 @@ function installPluginDemoControls(): void {
 installPluginDemoControls();
 
 // 唯一 demo 入口：启动即加载示例视频（Top/Ending 插件演示可见）
-if (MEDIA_LIST.length > 0) {
+if (!playerInstance && MEDIA_LIST.length > 0) {
   void rebuildPlayer(0);
 }
 
