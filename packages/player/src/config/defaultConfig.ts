@@ -82,17 +82,6 @@ const defaultConfig: PlayerConfig = {
     segments: [],
   },
 
-  // ── 弹幕 ──
-  danmaku: {
-    enabled: false,
-    url: "",
-    visible: true,
-    opacity: 0.8,
-    speed: 1,
-    fontSize: 25,
-    area: 0.5,
-  },
-
   // ── 字幕 ──
   subtitle: {
     enabled: false,
@@ -109,13 +98,6 @@ const defaultConfig: PlayerConfig = {
   storage: {
     enabled: true,
     prefix: "nova-player:",
-  },
-
-  // ── SSR ──
-  ssr: {
-    enabled: false,
-    placeholder: '<div class="nova-player-placeholder">视频加载中...</div>',
-    deferHydration: false,
   },
 
   // ── 高级 ──

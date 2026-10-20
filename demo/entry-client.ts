@@ -1487,6 +1487,13 @@ function collectPlugins(source?: PlayerSource): Plugin[] {
     // 弹幕插件：Tip 操作回调接线 + 本地发送汇入页面弹幕列表
     // （onSendSuccess 对本地直发与服务端确认两条链路均触发）
     DanmakuPlugin({
+      source: {
+        // 弹幕数据由插件自己持有，播放器不再提供 danmaku 配置入口
+        provider: (startTime, endTime) =>
+          danmakuPanelList.filter(
+            (item) => item.time >= startTime && item.time < endTime,
+          ),
+      },
       callbacks: {
         onSendSuccess: (danmaku) => {
           appendDanmakuToList(danmaku);
@@ -1745,6 +1752,8 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
     playlist: MEDIA_LIST,
     playlistIndex: targetIndex,
     progress: {
+      // 分段进度条常驻展开：仅 segments 多段且显式开启时生效
+      shadowPermanent: true,
       // 拷贝数据三字段构造纯净对象：控件会给分段挂 element 等内部 DOM 引用，
       // 直接透传原数组会把上一实例的 DOM 引用带进新播放器
       segments: demoSegments.map((segment) => ({
@@ -1760,14 +1769,6 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
       // 高能进度条数据 Provider：demo 侧拉取 /x/player/pbp 并归一化后注入，
       // 播放器只负责绘制曲线（数据获取与绘制彻底解耦）
       energyProvider: () => energy,
-    },
-    danmaku: {
-      // 弹幕数据 Provider：demo 侧从 mock-server 拉取后按时间窗过滤返回，
-      // 播放器调度器分段调用（已发射弹幕由 markEmitted 集合去重）
-      provider: (startTime, endTime) =>
-        danmakuPanelList.filter(
-          (item) => item.time >= startTime && item.time < endTime,
-        ),
     },
     playback: {
       autoplay: true,

@@ -32,6 +32,7 @@ import {
 } from "@/core";
 import type { TypedStateManager, TypedEventBus } from "@/core";
 import type { Plugin } from "@/nova/core/plugin";
+import type { ControlsAPI } from "@/nova/components/Controls";
 import { PlayerEventEnum, PlayerEventMap } from "@/core/events";
 import {
   PlayerStateKeyEnum,
@@ -226,7 +227,6 @@ function normalizePlaylist(props: PlayerConfig): MediaItem[] {
       src,
       poster: props.poster,
       startTime: props.playback?.startTime,
-      danmakuUrl: props.danmaku?.url,
       subtitleList: props.subtitle?.list,
     },
   ];
@@ -299,6 +299,9 @@ export class VideoPlayer
 
   /** 播放器配置（命名空间形态，可被 setConfig 动态更新） */
   props: PlayerConfig;
+
+  /** 控制栏 API（控制栏挂载后由 PlayerDocker 回填） */
+  private controlsApi: ControlsAPI | null = null;
 
   /** 播放器根元素 */
   el?: HTMLElement;
@@ -622,9 +625,9 @@ export class VideoPlayer
         loadProgress: 0,
         controlsVisible: true,
         controlsHover: false,
-        danmakuVisible: this.props.danmaku?.visible ?? true,
-        danmakuOpacity: this.props.danmaku?.opacity ?? 1,
-        danmakuSpeed: this.props.danmaku?.speed ?? 1,
+        danmakuVisible: true,
+        danmakuOpacity: 1,
+        danmakuSpeed: 1,
         danmakuDensity: 0.5,
         subtitleVisible: this.props.subtitle?.enabled ?? true,
         subtitleLang: "zh-CN",
@@ -953,6 +956,28 @@ export class VideoPlayer
     loggerManager.setLevel(level);
   }
 
+  /** 控制栏挂载后回填 API（仅内部 PlayerDocker 调用） */
+  attachControlsApi(api: ControlsAPI): void {
+    this.controlsApi = api;
+    this.controlsApi.setShadowPermanent(
+      this.props.progress?.shadowPermanent === true,
+    );
+  }
+
+  /**
+   * 设置分段进度条常驻展开
+   *
+   * 仅在 progress.segments 多段时生效；关闭后底部影子进度条不再展开。
+   */
+  setShadowPermanent(enabled: boolean): void {
+    this.props.progress = {
+      ...(this.props.progress ?? {}),
+      shadowPermanent: enabled,
+    };
+    this.syncSegmentsToControls();
+    this.controlsApi?.setShadowPermanent(enabled);
+  }
+
   /** 把 progress.segments 同步进 ui.controls.progressSegments（Controls 读取路径） */
   private syncSegmentsToControls(): void {
     const segments = this.props.progress?.segments;
@@ -961,6 +986,7 @@ export class VideoPlayer
     const controls = {
       ...(this.props.ui?.controls ?? defaultControlConfig),
       progressSegments: segments,
+      shadowPermanent: this.props.progress?.shadowPermanent === true,
     };
     this.props.ui = { ...(this.props.ui ?? {}), controls };
   }
@@ -1079,40 +1105,6 @@ export class VideoPlayer
     this.browserCapability =
       BrowserCapabilityDetector.getFullCapabilityResult();
     this.state.set("browser", this.browserCapability);
-  }
-
-  /**
-   * SSR 水合：将服务端渲染的 DOM 与播放器实例关联，复用已有 DOM
-   *
-   * @param container - 服务端渲染的容器元素
-   */
-  hydrate(container: HTMLElement): void {
-    this.containerEl = container;
-    this.el = container;
-
-    /** 查找或创建 video 元素 */
-    const existingVideo = container.querySelector("video");
-    if (existingVideo instanceof HTMLVideoElement) {
-      this.videoEl = existingVideo;
-    } else {
-      this.videoEl = document.createElement("video");
-      const videoWrap = container.querySelector(".nova-player-video-wrap");
-      if (videoWrap) {
-        videoWrap.appendChild(this.videoEl);
-      }
-    }
-
-    /** 注册到 WeakMap */
-    playerInstanceMap.set(container, this);
-
-    this.setupStreamMiddleware();
-    this.setupQualityPipeline();
-    this.bindVideoEvents();
-    this.registerPlugins();
-    this.detectCapability();
-
-    /** 触发 ready 事件（经总线桥接转发到 emitter） */
-    this.events.emit(PlayerEventEnum.READY);
   }
 
   /**
@@ -2394,28 +2386,6 @@ export class VideoPlayer
       }
     }
 
-    // ── danmaku ──
-    if (partial.danmaku !== undefined) {
-      const dn = next.danmaku ?? {};
-      const prevDn = prev.danmaku ?? {};
-      if (dn.visible !== undefined && dn.visible !== prevDn.visible) {
-        this.setDanmakuVisible(dn.visible);
-      }
-      if (dn.opacity !== undefined && dn.opacity !== prevDn.opacity) {
-        this.setDanmakuOpacity(dn.opacity);
-      }
-      if (dn.speed !== undefined && dn.speed !== prevDn.speed) {
-        this.setDanmakuSpeed(dn.speed);
-      }
-      // provider 优先：更换 provider 时通知插件换源（函数引用比较）
-      if (dn.provider !== undefined && dn.provider !== prevDn.provider) {
-        this.getDanmakuApi()?.load?.({ provider: dn.provider });
-      }
-      if (dn.url !== undefined && dn.url !== prevDn.url) {
-        this.setDanmakuSource(dn.url);
-      }
-    }
-
     // ── subtitle ──
     if (partial.subtitle !== undefined) {
       const st = next.subtitle ?? {};
@@ -3577,11 +3547,8 @@ export class VideoPlayer
     this.store.setLoading(true);
     this.store.setEnded(false);
 
-    // 3. 弹幕清空（并按新源重拉）
+    // 3. 弹幕清空；数据源换源完全由弹幕插件控制
     this.clearDanmaku();
-    const nextDanmakuUrl =
-      this.playlist[this.currentIndex]?.danmakuUrl ?? this.props.danmaku?.url;
-    if (nextDanmakuUrl) this.setDanmakuSource(nextDanmakuUrl);
 
     // 更新源并重建 sources
     this.props.src = source;
@@ -3806,7 +3773,6 @@ export class VideoPlayer
    */
   setDanmakuVisible(visible: boolean): void {
     this.state.set(PlayerStateKeyEnum.DANMAKU_VISIBLE, visible);
-    this.props.danmaku = { ...(this.props.danmaku ?? {}), visible };
     // 插件订阅 DANMAKU_VISIBLE 状态键自动应用；此处仅向外部广播切换事件
     this.events.emit(PlayerEventEnum.DANMAKU_TOGGLE, { visible });
   }
@@ -3832,7 +3798,6 @@ export class VideoPlayer
   setDanmakuOpacity(opacity: number): void {
     const value = clamp(opacity, 0, 1);
     this.state.set(PlayerStateKeyEnum.DANMAKU_OPACITY, value);
-    this.props.danmaku = { ...(this.props.danmaku ?? {}), opacity: value };
     // 插件订阅 DANMAKU_OPACITY 状态键自动应用；此处仅向外部广播变化事件
     this.events.emit(PlayerEventEnum.DANMAKU_OPACITY_CHANGE, value);
   }
@@ -3841,7 +3806,6 @@ export class VideoPlayer
   setDanmakuSpeed(speed: number): void {
     const value = speed <= 0 ? 0.1 : speed;
     this.state.set(PlayerStateKeyEnum.DANMAKU_SPEED, value);
-    this.props.danmaku = { ...(this.props.danmaku ?? {}), speed: value };
     // 插件订阅 DANMAKU_SPEED 状态键自动应用；此处仅向外部广播变化事件
     this.events.emit(PlayerEventEnum.DANMAKU_SPEED_CHANGE, value);
   }
@@ -3853,9 +3817,7 @@ export class VideoPlayer
    * 播放器不再内置 fetch，避免与插件的分段加载协议冲突。
    */
   setDanmakuSource(url: string): void {
-    this.props.danmaku = { ...(this.props.danmaku ?? {}), url };
-    // 插件内部处理换源：provider 已配置时忽略 url 变化；
-    // url 通道首次全量拉取完成后由插件广播 danmakuLoaded（§4.2）
+    // 数据源由弹幕插件持有；播放器只把换源请求转交插件 API
     this.getDanmakuApi()?.load?.({ url });
   }
 

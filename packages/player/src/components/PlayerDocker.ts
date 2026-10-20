@@ -2942,6 +2942,7 @@ export const PlayerDocker = defineComponent<
             // 控制栏挂载完成：持有其操作 API（时间/音量/缓冲等显示更新的入口）
             onControlsMounted: (api: ControlsAPI) => {
               Object.assign(controlsApi, api);
+              props.player?.attachControlsApi?.(api);
             },
             // 播放 / 暂停
             onPlayPause: togglePlayPause,

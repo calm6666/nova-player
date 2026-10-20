@@ -12,6 +12,8 @@
     }
 
     .nova-player-embedded-ending-wrap-box {
+      display: flex;
+      flex-direction: column;
       max-width: 92%;
       position: relative;
       width: 1060px;
@@ -22,6 +24,7 @@
       display: flex;
       justify-content: space-between;
       margin-bottom: 16px;
+      order: 1;
       position: relative;
       width: 100%;
     }
@@ -174,6 +177,7 @@
     }
 
     .nova-player-embedded-ending-relation-wrap {
+      order: 3;
       width: 100%;
     }
 
@@ -195,6 +199,7 @@
     .nova-player-relation-context-poster,
     .nova-player-ending-related-item-img {
       border-radius: 6px;
+      overflow: hidden;
       padding-top: 56.25%;
       position: relative;
       width: 100%;
@@ -209,10 +214,11 @@
       top: 0;
       transition: transform 0.2s;
       width: 100%;
+    }
 
-      &:hover {
-        transform: scale(1.05);
-      }
+    .nova-player-relation-context-item:hover
+      .nova-player-relation-context-poster img {
+      transform: scale(1.05);
     }
 
     .nova-player-relation-context-poster-duration {
@@ -251,8 +257,11 @@
     .nova-player-embedded-ending-button-group {
       align-items: center;
       display: flex;
-      justify-content: center;
-      margin-top: 26px;
+      justify-content: flex-start;
+      margin-bottom: 12px;
+      margin-top: 0;
+      order: 2;
+      transition: opacity 0.2s, visibility 0.2s;
       width: 100%;
     }
 
@@ -288,4 +297,12 @@
       margin-right: 20px;
     }
   }
+}
+
+// 外链尾页底部入口随控制栏一起显隐（卡片保持显示）
+.nova-player-container[data-ctrl-hidden="true"]
+  .nova-player-embedded-ending-button-group {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }

@@ -59,8 +59,8 @@
       position: absolute;
 
       .nova-player-top-left-title {
-        margin: 0 0 8px;
         display: none;
+        margin: 0 0 8px;
       }
 
       .nova-player-top-left-follow {
@@ -266,4 +266,10 @@
   height: 16px;
   line-height: 1;
   width: 16px;
+}
+
+// 非网页全屏 / 非全屏隐藏标题；全屏与网页全屏才显示
+.nova-player-container[data-screen="full"] .nova-player-top-left-title,
+.nova-player-container[data-screen="web"] .nova-player-top-left-title {
+  display: block;
 }

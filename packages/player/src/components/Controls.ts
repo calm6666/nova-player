@@ -151,6 +151,8 @@ export interface ControlsAPI {
   setDuration: (duration: number) => void;
   /** 重建底部影子进度条分段（progress.segments 运行时变化时调用） */
   setProgressSegments: (segments?: ProgressSegment[]) => void;
+  /** 分段进度条常驻展开开关（仅多段时生效） */
+  setShadowPermanent: (enabled: boolean) => void;
 }
 
 /**
@@ -201,6 +203,20 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       stateMgr?.set(PlayerStateKeyEnum.PBP_PERMANENT, next);
     };
 
+    /**
+     * 分段进度条常驻展开：
+     * 必须同时满足「配置开启」+「多段」，否则 .permanent 不展开。
+     */
+    let shadowPermanentEnabled = config.shadowPermanent === true;
+    let shadowSegments = config.progressSegments ?? [];
+
+    /** 同步影子进度条常驻态：只由分段开关 + 多段决定 */
+    const syncShadowPermanent = (): void => {
+      shadowApi?.setPermanent(
+        shadowPermanentEnabled && shadowSegments.length > 1,
+      );
+    };
+
     // 常驻态订阅：图钉点击写入运行时状态，这里落到影子条与高能条。
     // ★ 必须在 setup 阶段调用 onEffect：mount 在 onMounted 阶段先启动 _effects 再执行用户钩子，
     //   若在 onMounted 回调内注册，effect 将错过启动窗口永不运行，pin 点击后状态无人消费（点击失效根因）
@@ -212,7 +228,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       );
       onEffect(lifecycle, () => {
         permanent = Boolean(pbpPermanentSignal.value);
-        shadowApi?.setPermanent(permanent);
+        syncShadowPermanent();
         pbpApi?.setPermanent(permanent);
       });
 
@@ -492,8 +508,16 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
      * @param next - 最新分段数据
      */
     const setProgressSegments = (next?: ProgressSegment[]): void => {
+      shadowSegments = next ?? [];
       shadowApi?.rebuildSegments(next);
-      applyPermanent((next?.length ?? 0) > 1);
+      // 不再因「多段」自动常驻；只有 progress.shadowPermanent 开启才展开
+      syncShadowPermanent();
+    };
+
+    /** 运行时切换分段进度条常驻展开（仅多段时生效） */
+    const setShadowPermanent = (enabled: boolean): void => {
+      shadowPermanentEnabled = enabled;
+      syncShadowPermanent();
     };
 
     // ============================================
@@ -507,7 +531,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     lifecycle.onMounted = (): void => {
       // 常驻态订阅已在 setup 阶段注册（onEffect 依赖 mount 的 _effects 启动窗口，onMounted 回调内注册不会生效）
-      shadowApi?.setPermanent(permanent);
+      syncShadowPermanent();
       pbpApi?.setPermanent(permanent);
 
       // 填充菜单配置：子组件（LeftControls / RightControls）先于父组件挂载，
@@ -540,6 +564,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         initDuration,
         setDuration,
         setProgressSegments,
+        setShadowPermanent,
       });
     };
 
@@ -692,11 +717,12 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         // 底部影子进度条（控制栏隐藏时常驻下沿，与顶部进度条同几何同数据源）
         h(ShadowProgressArea, {
           duration,
-          progressSegments: config.progressSegments,
-          permanent,
+          progressSegments: shadowSegments,
+          permanent:
+            shadowPermanentEnabled && shadowSegments.length > 1,
           onShadowProgressAreaMounted: (api: ShadowProgressAreaApi) => {
             shadowApi = api;
-            api.setPermanent(permanent);
+            syncShadowPermanent();
           },
         }),
         // 高能进度条（常驻 DOM，控制栏展开时由 setShow(true) 抬到控制栏之上）

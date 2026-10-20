@@ -79,6 +79,12 @@ export interface DanmakuPluginConfig {
    * - 'auto'：弹幕量超过阈值（200 条）时自动切换 Canvas
    */
   renderer?: RenderMode;
+  /** 弹幕数据源（由插件自己持有，播放器配置不再提供 danmaku 入口） */
+  source?: DanmakuSourceConfig;
+  /** 智能防挡数据源（外部 provider） */
+  mask?: {
+    provider?: MaskLoader;
+  };
 }
 
 /** 弹幕数据源配置（provider 优先，url 兜底） */
@@ -235,6 +241,10 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   private callbacks: DanmakuCallbacks;
   /** 弹幕渲染方式（'dom' 默认 / 'canvas' / 'auto'），创建引擎时传入 */
   private renderer: RenderMode;
+  /** 插件自持的数据源（播放器不再提供 danmaku 配置入口） */
+  private source?: DanmakuSourceConfig;
+  /** 插件自持的智能防挡 provider */
+  private maskProvider?: MaskLoader;
   private player: VideoPlayer | null = null;
   private video: HTMLVideoElement | null = null;
   /**
@@ -254,6 +264,8 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     this.callbacks = config?.callbacks ?? {};
     this.options = config?.options;
     this.renderer = config?.renderer ?? RenderMode.DOM;
+    this.source = config?.source;
+    this.maskProvider = config?.mask?.provider;
   }
 
   install(player: VideoPlayer): void {
@@ -473,7 +485,7 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     }
 
     // 模式 1：外部 provider（免模型，遮罩由外部获取）
-    const external = this.player?.props.danmaku?.mask?.provider;
+    const external = this.maskProvider;
     if (external) {
       manager.setMaskConfig({ enabled: true, maskLoader: external });
       return;
@@ -484,15 +496,7 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
       if (!this.maskSegmenter) {
         // 动态 import：只有用户真正开启防挡才会加载模块与下载模型
         const { DanmakuMaskSegmenter } = await import("../utils/danmakuMask");
-        const localModel = this.player?.props.danmaku?.mask?.localModel;
-        const segmenter = new DanmakuMaskSegmenter({
-          ...(localModel?.modelUrl !== undefined
-            ? { modelUrl: localModel.modelUrl }
-            : {}),
-          ...(localModel?.threshold !== undefined
-            ? { threshold: localModel.threshold }
-            : {}),
-        });
+        const segmenter = new DanmakuMaskSegmenter({});
         await segmenter.init();
         // init 期间用户可能已关闭（竞态）：复核当前状态再落位
         const stillEnabled =
@@ -540,9 +544,9 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   // 数据源接线（provider 优先 + url 兜底）
   // ============================================
 
-  /** 挂载时按播放器配置接线数据源（provider 优先于 url） */
+  /** 挂载时接线插件自持的数据源（provider 优先于 url） */
   private wireDataSource(): void {
-    const danmakuConfig = this.player?.props.danmaku;
+    const danmakuConfig = this.source;
     if (!danmakuConfig || !this.manager) return;
 
     if (danmakuConfig.provider) {
@@ -670,9 +674,8 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     if (options?.speed !== undefined) danmaku.speed = options.speed;
     if (options?.like !== undefined) danmaku.like = options.like;
 
-    // 发送确认提供者：插件 callbacks.onSend 优先，播放器 danmaku.onSend 兜底
-    const sendProvider =
-      this.callbacks.onSend ?? this.player?.props.danmaku?.onSend;
+    // 发送确认提供者：完全由插件 callbacks 控制
+    const sendProvider = this.callbacks.onSend;
 
     if (sendProvider) {
       try {
@@ -726,8 +729,8 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     const manager = this.manager;
     if (!manager) return;
 
-    const danmakuConfig = this.player?.props.danmaku;
-    // provider 优先：入参 provider → 播放器配置 provider 依次取值
+    const danmakuConfig = this.source;
+    // provider 优先：入参 provider → 插件 source provider 依次取值
     const provider = config.provider ?? danmakuConfig?.provider;
     // 配置了 provider 时忽略 url 变化（url 仅作占位）
     const url = provider ? undefined : (config.url ?? danmakuConfig?.url);

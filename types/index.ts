@@ -860,6 +860,13 @@ export interface ProgressConfig {
   /** 进度条分段数据 */
   segments?: ProgressSegment[];
   /**
+   * 分段进度条常驻展开开关
+   *
+   * 仅在存在多段（segments.length > 1）时生效；开启后底部影子进度条
+   * 才添加 .permanent 展开分段文本，默认关闭。
+   */
+  shadowPermanent?: boolean;
+  /**
    * 预览图提供者（进度条悬停时按时间获取预览帧）
    *
    * 数据获取逻辑由外部实现（如雪碧图下标裁切、逐帧 URL、服务端接口），
@@ -980,18 +987,6 @@ export interface StorageConfig {
 }
 
 /**
- * SSR 配置（命名空间形态）
- */
-export interface SsrConfig {
-  /** 是否启用 SSR 模式 */
-  enabled?: boolean;
-  /** SSR 占位符 HTML */
-  placeholder?: string;
-  /** 是否延迟 hydration */
-  deferHydration?: boolean;
-}
-
-/**
  * 高级配置
  */
 export interface AdvancedConfig {
@@ -1049,22 +1044,15 @@ export type PlayerConfig = {
   /** 进度条 */
   progress?: ProgressConfig;
   /**
-   * 弹幕 / 字幕配置（命名空间形态）
-   *
-   * 阶段 B.2：弹幕与字幕的运行时能力由 DanmakuPlugin / SubtitlePlugin 提供，
-   * 默认配置不再包含 danmaku / subtitle 顶层字段。下列可选字段保留是为兼容
-   * 旧调用方在配置层传递弹幕 URL / 字幕轨道列表（normalizePlaylist 会读取），
-   * 以及 setSubtitleList / setDanmakuSource 等运行时 API 写回props 之用。
+   * 弹幕数据与运行时能力完全由 DanmakuPlugin 管理；
+   * PlayerConfig 不再提供 danmaku 配置入口。
    */
-  danmaku?: DanmakuConfigSpace;
-  /** 字幕配置（命名空间形态，与 danmaku 同理保留） */
+  /** 字幕配置（命名空间形态） */
   subtitle?: SubtitleConfigSpace;
   /** 插件 */
   plugins?: PluginsConfig;
   /** 持久化 */
   storage?: StorageConfig;
-  /** SSR */
-  ssr?: SsrConfig;
   /** 高级 */
   advanced?: AdvancedConfig;
   /** 配置式事件回调 */
@@ -1116,10 +1104,6 @@ export interface LegacyPlayerConfig {
   playerName?: string;
   /** 字幕轨道列表 */
   subtitles?: SubtitleConfig[];
-  /** 弹幕配置（兼容旧的 `source` 字段） */
-  danmaku?: DanmakuConfigSpace & { source?: string };
-  /** SSR 配置 */
-  ssr?: SSRConfig;
   /** 插件列表 */
   plugins?: Plugin[];
   /** 是否开启调试模式 */
@@ -1155,6 +1139,8 @@ export interface ControlsConfig {
   webFullscreen?: boolean;
   /** 进度条分段（运行时从配置透传给控制条） */
   progressSegments?: ProgressSegment[];
+  /** 分段进度条常驻展开开关（仅多段时生效） */
+  shadowPermanent?: boolean;
 }
 
 /**
@@ -1181,19 +1167,6 @@ export interface ProgressSegment {
   shadowTextElement?: HTMLDivElement;
   /** 分段文本描述 */
   label: string;
-}
-
-/**
- * SSR 配置接口
- * 用于服务端渲染时的配置选项
- */
-export interface SSRConfig {
-  /** 是否启用 SSR 模式 */
-  enabled: boolean;
-  /** SSR 占位符 HTML */
-  placeholder?: string;
-  /** 是否延迟 hydration */
-  deferHydration?: boolean;
 }
 
 /**
@@ -1888,10 +1861,8 @@ export interface PlayerMethods {
   // ===== 生命周期与插件 =====
   /** 挂载到容器 */
   mount(container: HTMLElement): void;
-  /** 取渲染用 VNode（SSR / 内嵌） */
+  /** 取客户端渲染 VNode */
   render(): VNode;
-  /** 客户端激活（复用服务端结构） */
-  hydrate(container: HTMLElement): void;
   /** 安装插件（可链式） */
   use(plugin: Plugin): PlayerMethods;
   /** 卸载插件 */

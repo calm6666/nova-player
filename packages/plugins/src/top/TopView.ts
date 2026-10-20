@@ -456,7 +456,7 @@ export const Top = defineComponent<TopProps>(
                 "https://io.v.hblog.top/hfs/face/706353e46fe1c390d6d2cb72a704818a.jpg@240w_240h_1c_1s_!web-avatar-nav.webp",
               ref: "avatarRef",
             }),
-            props.upName
+            props.embedded && props.upName
               ? h("span", { class: "nova-player-follow-name" }, props.upName)
               : null,
             !props.followed

@@ -129,8 +129,8 @@ pnpm demo
 | `quality.max` / `quality.min` | `number` | `undefined` | 是（`applyQualityLimits`） | 画质上下限（像素高度） |
 | `quality.labels` | `Record<string, string>` | `undefined` | 否 | 自定义画质文案 |
 | `progress.segments` | `ProgressSegment[]` | `[]` | 是（`setConfig`） | 进度条分段 |
+| `progress.shadowPermanent` | `boolean` | `false` | 是（`setShadowPermanent`） | 多段时展开底部影子进度条 |
 | `progress.skipPoints` | `ProgressSkipPoints` | `undefined` | 是（`setSkipPoints`） | 片头结束 / 片尾开始断点（进度条圆点 + 跳过头尾） |
-| `danmaku` | `DanmakuConfigSpace` | `undefined` | 是 | 兼容旧调用方；运行时能力由 `DanmakuPlugin` 提供 |
 | `subtitle` | `SubtitleConfigSpace` | `undefined` | 是 | 兼容旧调用方；运行时能力由 `SubtitlePlugin` 提供 |
 | `plugins.list` | `Plugin[]` | `[]` | 是（`use` / `uninstallPlugin`） | 插件实例列表 |
 | `plugins.options` | `Record<string, unknown>` | `{}` | 否 | 按插件名索引的选项 |
@@ -528,27 +528,31 @@ DanmakuPlugin({
 | `setRenderMode` | `(mode: RenderMode) => void` |
 | `setScreenMode` | `(mode: ScreenMode) => void` |
 
-#### 6.5.1 弹幕智能防挡（`danmaku.mask`）
+#### 6.5.1 弹幕智能防挡（`DanmakuPlugin` 配置）
+
+弹幕数据与智能防挡全部由 `DanmakuPlugin` 自己持有，播放器配置不再提供 `danmaku` 入口。
 
 用户在弹幕设置面板勾选「智能防挡」后生效（开关持久化于 `danmakuSettings.maskEnabled`，默认关闭）。两种模式按优先级自动选择：
 
 ```ts
+import { DanmakuPlugin } from "@lumina/plugins";
+
 new VideoPlayer({
-  danmaku: {
-    mask: {
-      // 方式一（优先）：外部遮罩 provider —— 播放器按更新间隔调用，
-      // 返回当前时间的镂空遮罩图（SVG/PNG data URL 或图片 URL）
-      provider: async (currentTime) => {
-        const { maskImage } = await fetch(`/api/mask?t=${currentTime}`).then(r => r.json());
-        return maskImage ? { maskImage } : { maskImage: "", clearMask: true };
-      },
-      // 方式二：本地语义分割（未配置 provider 时启用）
-      localModel: {
-        // MediaPipe ImageSegmenter 模型地址（tflite）
-        modelUrl: '/mediapipe/models/selfie_multiclass_256x256.tflite',
-        threshold: 0.25, // 置信度阈值，默认 0.25
-      },
-    },
+  plugins: {
+    list: [
+      DanmakuPlugin({
+        source: {
+          provider: (startTime, endTime) => fetchDanmaku(startTime, endTime),
+        },
+        mask: {
+          // 外部遮罩 provider 优先；未配置时使用本地语义分割
+          provider: async (currentTime) => {
+            const { maskImage } = await fetch(`/api/mask?t=${currentTime}`).then(r => r.json());
+            return maskImage ? { maskImage } : { maskImage: "", clearMask: true };
+          },
+        },
+      }),
+    ],
   },
 });
 ```

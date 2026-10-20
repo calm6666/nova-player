@@ -17,7 +17,6 @@
 import type {
   AdvancedConfig,
   ControlsConfig,
-  DanmakuConfigSpace,
   EventListeners,
   I18nPlayerConfig,
   InteractionConfig,
@@ -32,8 +31,6 @@ import type {
   ProgressConfig,
   ProgressSegment,
   QualityConfig,
-  SsrConfig,
-  SSRConfig,
   StorageConfig,
   SubtitleConfig,
   SubtitleConfigSpace,
@@ -119,11 +116,9 @@ type NormalizeInput = {
   interaction?: InteractionConfig;
   quality?: QualityConfig;
   progress?: ProgressConfig;
-  danmaku?: DanmakuConfigSpace & { source?: string };
   subtitle?: SubtitleConfigSpace;
   plugins?: PluginsConfig | Plugin[];
   storage?: StorageConfig;
-  ssr?: SsrConfig | SSRConfig;
   advanced?: AdvancedConfig;
   callbacks?: EventListeners;
   i18n?: I18nPlayerConfig;
@@ -257,28 +252,6 @@ export function normalizeConfig(
   // 分段 / 预览提供者 / 高能提供者任一存在即保留 progress 命名空间（白名单式拷贝）
   if (Object.keys(progress).length > 0) out.progress = progress;
 
-  // ── danmaku：source → url（其余字段同名）──
-  const dn = input.danmaku;
-  if (dn !== undefined) {
-    const danmaku: DanmakuConfigSpace = {};
-    if (dn.enabled !== undefined) danmaku.enabled = dn.enabled;
-    if (dn.visible !== undefined) danmaku.visible = dn.visible;
-    if (dn.opacity !== undefined) danmaku.opacity = dn.opacity;
-    if (dn.speed !== undefined) danmaku.speed = dn.speed;
-    if (dn.fontSize !== undefined) danmaku.fontSize = dn.fontSize;
-    if (dn.area !== undefined) danmaku.area = dn.area;
-    // provider / onSend：弹幕数据获取与发送确认的 Provider 通道（函数引用直接透传）
-    if (dn.provider !== undefined) danmaku.provider = dn.provider;
-    if (dn.onSend !== undefined) danmaku.onSend = dn.onSend;
-    if (dn.url !== undefined) {
-      danmaku.url = dn.url;
-    } else if (dn.source !== undefined) {
-      warnMigrate('danmaku.source', LEGACY_KEY_MAP['danmaku.source']);
-      danmaku.url = dn.source;
-    }
-    out.danmaku = danmaku;
-  }
-
   // ── subtitle：subtitles → list ──
   const subtitle: SubtitleConfigSpace = { ...(input.subtitle ?? {}) };
   if (subtitle.list === undefined && input.subtitles !== undefined) {
@@ -297,9 +270,8 @@ export function normalizeConfig(
     }
   }
 
-  // ── storage / ssr：新键，直接透传 ──
+  // ── storage：新键，直接透传 ──
   if (input.storage !== undefined) out.storage = { ...input.storage };
-  if (input.ssr !== undefined) out.ssr = { ...input.ssr };
 
   // ── advanced：debug → debug ──
   const advanced: AdvancedConfig = { ...(input.advanced ?? {}) };

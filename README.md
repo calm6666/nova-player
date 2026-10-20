@@ -169,22 +169,11 @@ const player = new VideoPlayer({
   ui:          { controls: { quality: true, episodes: true, pip: true, wideScreen: true } },
   interaction: { keyboard: true },
   quality:     { mode: 'auto' },
-  progress:    { segments: [{ startTime: 0, endTime: 90, label: 'OP' }] },
-  danmaku:     {
-    enabled: true, url: '/danmaku/1.xml', opacity: 0.8, fontSize: 24, area: 0.75,
-    // 弹幕智能防挡（可选）：用户在弹幕设置面板勾选后生效，开关持久化
-    mask: {
-      // 方式一：外部遮罩 provider（优先）——按更新间隔回调，返回当前时间遮罩
-      // provider: async (currentTime) => ({ maskImage: `/api/mask?t=${currentTime}` }),
-      // 方式二：本地语义分割——懒加载 MediaPipe ImageSegmenter（Web Worker 推理，
-      // GPU/WebGL delegate 自动启用，主线程零阻塞；模型按需下载）
-      localModel: { modelUrl: '/mediapipe/models/selfie_multiclass_256x256.tflite', threshold: 0.25 },
-    },
-  },
+  progress:    { segments: [{ startTime: 0, endTime: 90, label: 'OP' }], shadowPermanent: true },
   subtitle:    { enabled: true, list: [{ lang: 'zh-CN', label: '中文', url: '/sub/1.vtt', isDefault: true }] },
-  plugins:     { /* ... */ },
+  plugins:     { /* ... DanmakuPlugin({ source: { provider } }) ... */ },
   storage:     { /* ... */ },
-  ssr:         { enabled: false },
+  advanced:    { debug: false },
   advanced:    { debug: false },
   callbacks:   { ready: () => console.log('ready') },
 });
@@ -335,7 +324,6 @@ player.isPaused();        player.isPlaying();    player.isFullscreen();   player
 // 生命周期
 player.mount(el);         // 挂载
 player.render();          // 取客户端 VNode（调试 / 内嵌到自己的客户端 VNode 树）
-player.hydrate(el);       // 客户端激活
 player.use(plugin);       // 安装插件（可链式）
 player.uninstallPlugin('danmaku');
 player.destroy();         // 卸载并清理全部监听、插件与订阅
