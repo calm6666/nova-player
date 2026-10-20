@@ -815,6 +815,9 @@ export const PlayerDocker = defineComponent<
   /** 缓冲指示的延迟句柄：短暂换档（画面未停）不显示，真正卡住才显示 */
   let buffDelayTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** 同一次缓冲是否已提示过网络卡顿，恢复播放后重置 */
+  let stallToastShown = false;
+
   /** 取消尚未到期的缓冲指示 */
   const cancelBuffIndicator = (): void => {
     if (buffDelayTimer !== null) {
@@ -862,6 +865,11 @@ export const PlayerDocker = defineComponent<
           buffDelayTimer = null;
           playerContainerRef.value?.classList.add("state-buff");
           stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, true);
+          // 真正卡住后提示网络异常（同一次缓冲只提示一次）
+          if (!stallToastShown) {
+            stallToastShown = true;
+            toastApi.showAutoToast?.("网络卡顿，正在缓冲…", 3000);
+          }
         }, 300);
       }),
     );
@@ -869,6 +877,7 @@ export const PlayerDocker = defineComponent<
     cleanupFns.push(
       props.events.on(PlayerEventEnum.CAN_PLAY, () => {
         cancelBuffIndicator();
+        stallToastShown = false;
         playerContainerRef.value?.classList.remove("state-buff");
         stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
       }),
