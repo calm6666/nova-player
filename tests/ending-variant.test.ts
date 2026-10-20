@@ -68,8 +68,9 @@ describe("Ending station 场景", () => {
       container.querySelectorAll(".nova-player-ending-related-item").length,
     ).toBe(3);
     expect(
-      container.querySelector(".nova-player-ending-related-title")
-        ?.textContent,
+      container
+        .querySelector(".nova-player-ending-related")
+        ?.getAttribute("data-i18n-label"),
     ).toBe(t("player.ui.ending.related"));
   });
 
