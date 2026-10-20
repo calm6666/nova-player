@@ -745,23 +745,81 @@ new VideoPlayer({
 }
 ```
 
-### 7.3 片尾页面插槽
+### 7.3 Top / Ending 整体插槽
 
-`config.ending.content?: VNode | ((ctx: SlotContext) => VNode)`，传入即整页替换默认 `Ending` 组件：
+Top 与 Ending 各只有一个整体插槽，只保留根容器，不创建任何包装 DOM：
 
 ```ts
-const CustomEnding = defineComponent(() => {
-  const player = useContext(PlayerContext);
-  return h(
-    "div",
-    { class: "custom-ending" },
-    h("h2", {}, "播放结束"),
-    h("button", { onClick: () => { player?.seek(0); void player?.play(); } }, "重新播放"),
-  );
-});
+type SlotContent =
+  | Node
+  | { mount(container: HTMLElement, ctx: SlotContext | null): void | (() => void) }
+  | ((ctx: SlotContext) => Node | { mount(...): void | (() => void) } | null);
 
-new VideoPlayer({ ending: { content: () => h(CustomEnding, {}) } });
+interface PlayerConfig {
+  ui?: {
+    top?: SlotContent;    // 只替换 .nova-player-top-wrap 内部
+    ending?: SlotContent; // 只替换 .nova-player-ending-wrap 内部
+  };
+}
 ```
+
+原生 DOM：
+
+```ts
+const customTop = document.createElement("div");
+customTop.textContent = "自定义 Top";
+
+new VideoPlayer({
+  ui: { top: customTop },
+});
+```
+
+其它框架通过 `mount` 直接挂到已有容器，播放器不额外建节点：
+
+```ts
+new VideoPlayer({
+  ui: {
+    ending: {
+      mount(container, ctx) {
+        const root = ReactDOM.createRoot(container);
+        root.render(React.createElement(MyEnding, { player: ctx?.player }));
+        return () => root.unmount();
+      },
+    },
+  },
+});
+```
+
+不传 `ui.top` / `ui.ending` 时，默认 Top / Ending DOM 与行为完全不变。
+
+### 7.4 Top / Ending 插件
+
+插件结构与 `DanmakuPlugin` 一致，只负责在已有根容器内挂载：
+
+```ts
+import { TopPlugin, EndingPlugin } from "@lumina/plugins";
+
+new VideoPlayer({
+  plugins: {
+    list: [
+      TopPlugin({
+        id: "my-top",
+        mount(container, ctx) {
+          container.textContent = ctx?.player ? "自定义 Top" : "";
+        },
+      }),
+      EndingPlugin({
+        id: "my-ending",
+        mount(container) {
+          container.textContent = "自定义 Ending";
+        },
+      }),
+    ],
+  },
+});
+```
+
+优先级：`ui.top` / `ui.ending` 插槽优先于同名插件；两者都没有时使用内置 Top / Ending。
 
 ### 7.4 SlotContext
 
@@ -772,7 +830,7 @@ interface SlotContext {
 }
 ```
 
-`player` / `state` 任一缺失时，函数式 vnode 跳过渲染（返回 null）。`PlayerContext` 由 `VideoPlayer.render()` 通过 `__providers` 注入，子组件 `useContext(PlayerContext)` 获取。
+`player` / `state` 任一缺失时，函数式插槽跳过执行（返回 null）。`PlayerContext` 由 `VideoPlayer.render()` 通过 `__providers` 注入，子组件 `useContext(PlayerContext)` 获取。
 
 ### 7.5 播放场景：站内 / 外链嵌入
 

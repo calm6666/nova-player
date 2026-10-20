@@ -230,7 +230,7 @@ export function normalizeConfig(
       ui.controls = input.controls;
     }
   }
-  if (ui.title !== undefined || ui.controls !== undefined) out.ui = ui;
+  if (Object.keys(ui).length > 0) out.ui = ui;
 
   // ── interaction：keyboard ──
   const interaction: InteractionConfig = { ...(input.interaction ?? {}) };

@@ -27,8 +27,6 @@ const TopIcon = (path: string): VNode =>
     h("path", { d: path, fill: "currentColor", "fill-rule": "evenodd" }),
   );
 
-
-
 /**
  * 顶栏提示信息（与既有实现的 Tooltip 结构一致）
  */
@@ -40,6 +38,10 @@ export interface TopTooltip {
   /** 提示的数据属性名（对应 Tooltips 提示项的 name） */
   dataName: string;
 }
+
+/** 电视剧追剧心形图标 */
+const TOP_TV_HEART_PATH =
+  "M8 14c-.1 0-.25-.05-.35-.1-.45-.35-4.3-3.35-5.1-4.5-.9-1.2-1.05-1.85-1.05-3C1.5 4 3.25 2 5.45 2 6.4 2 7.3 2.35 8 3c.7-.65 1.6-1 2.55-1 2.2 0 3.95 2 3.95 4.4 0 1.1-.15 1.75-1.05 3-.8 1.1-4.7 4.15-5.1 4.5-.1.05-.25.1-.35.1z";
 
 /**
  * 顶部栏组件 Props 接口
@@ -69,6 +71,14 @@ export interface TopProps {
   avatar?: string;
   /** 是否显示顶部栏 */
   visible?: boolean;
+  /** 电视剧 / 番剧 Top 形态 */
+  tv?: boolean;
+  /** 音乐模式 Top 形态 */
+  music?: boolean;
+  /** 音乐模式跑马灯文案 */
+  musicTitle?: string;
+  /** 插件 / 插槽：在已有 .nova-player-top-wrap 内挂载 */
+  mount?: ((container: HTMLElement) => void | (() => void)) | null;
   /** 问题反馈点击回调 */
   onIssueClick?: () => void;
   /** 关注按钮点击回调 */
@@ -90,6 +100,7 @@ export const Top = defineComponent<TopProps>(
 
     /** 根容器元素引用 */
     const topWrapRef = useTemplateRef<HTMLDivElement>(lifecycle, "topWrapRef");
+    let mountCleanup: (() => void) | null = null;
 
     /** 标题文本元素引用 */
     const titleRef = useTemplateRef<HTMLDivElement>(lifecycle, "titleRef");
@@ -201,6 +212,11 @@ export const Top = defineComponent<TopProps>(
         hide();
       }
 
+      // 插件 / 插槽：直接挂到已有 Top 根容器
+      if (props.mount && topWrapRef.value) {
+        mountCleanup = props.mount(topWrapRef.value) ?? null;
+      }
+
       // 悬停提示的目标元素（挂载后才有 DOM 引用）
       issueTooltip.element = issueIconRef.value;
 
@@ -212,11 +228,208 @@ export const Top = defineComponent<TopProps>(
       });
     };
 
-    lifecycle.onBeforeDestroy = (): void => {};
+    lifecycle.onBeforeDestroy = (): void => {
+      mountCleanup?.();
+      mountCleanup = null;
+    };
 
     // ============================================
     // 主渲染函数
     // ============================================
+
+    if (props.mount) {
+      return h("div", {
+        class: "nova-player-top-wrap",
+        ref: "topWrapRef",
+      });
+    }
+
+    if (props.music) {
+      return h(
+        "div",
+        { class: "nova-player-top-wrap", ref: "topWrapRef" },
+        h("div", { class: "nova-player-top-mask", hidden: true }),
+        h("div", { class: "nova-player-top-title" }),
+        h("div", { class: "nova-player-top-follow" }),
+        h(
+          "div",
+          { class: "nova-player-top-left" },
+          h(
+            "div",
+            {
+              class: "nova-player-top-left-title",
+              style: { display: "none", fontSize: "20px" },
+            },
+            props.title ?? "",
+          ),
+          h(
+            "div",
+            { class: "nova-player-top-left-follow" },
+            h(
+              "div",
+              { class: "nova-player-follow", onClick: handleFollowClick },
+              h("img", {
+                class: "nova-player-follow-face",
+                src:
+                  props.avatar ??
+                  "https://io.v.hblog.top/hfs/face/706353e46fe1c390d6d2cb72a704818a.jpg@240w_240h_1c_1s_!web-avatar-nav.webp",
+              }),
+              !props.followed
+                ? h(
+                    "span",
+                    { class: "nova-player-follow-icon" },
+                    h("span", { class: "common-svg-icon" }, Plus()),
+                  )
+                : null,
+              h(
+                "span",
+                { class: "nova-player-follow-text" },
+                props.followed
+                  ? t("player.ui.ending.following")
+                  : t("player.ui.top.follow"),
+              ),
+            ),
+          ),
+          h(
+            "div",
+            { class: "nova-player-top-left-music" },
+            h(
+              "div",
+              { class: "nova-player-music" },
+              h(
+                "span",
+                { class: "nova-player-music-icon" },
+                h(
+                  "span",
+                  { class: "common-svg-icon" },
+                  h(
+                    "svg",
+                    { fill: "none", viewBox: "0 0 13 14" },
+                    h("path", {
+                      fill: "#fff",
+                      "fill-rule": "evenodd",
+                      d: "M12.358.393a1.72 1.72 0 0 0-1.427-.359l-6.658 1.07A1.686 1.686 0 0 0 2.94 2.749v6.959a2.189 2.189 0 0 0-.734-.129C.987 9.58 0 10.57 0 11.79 0 13.012.987 14 2.205 14a2.207 2.207 0 0 0 2.203-2.195L4.41 3.98c0-.097.07-.183.14-.198l6.658-1.069a.26.26 0 0 1 .224.055c.037.03.1.098.1.21v4.888a2.189 2.189 0 0 0-.736-.128c-1.217 0-2.204.99-2.204 2.21s.987 2.21 2.204 2.21A2.207 2.207 0 0 0 13 9.963L13 1.745c0-.527-.234-1.02-.642-1.352Z",
+                      "clip-rule": "evenodd",
+                    }),
+                  ),
+                ),
+              ),
+              h(
+                "div",
+                { class: "nova-player-music-marquee" },
+                h(
+                  "div",
+                  { class: "nova-player-music-marquee-root" },
+                  h(
+                    "span",
+                    {
+                      class: "nova-player-music-marquee-content",
+                      style: { opacity: "1", animationPlayState: "paused" },
+                    },
+                    props.musicTitle ?? "发现《雨爱》",
+                  ),
+                ),
+              ),
+              h(
+                "span",
+                { class: "nova-player-music-arrow" },
+                h(
+                  "span",
+                  { class: "common-svg-icon" },
+                  h(
+                    "svg",
+                    { viewBox: "0 0 16 16" },
+                    h("path", {
+                      d: "m9.188 7.999-3.359 3.359a.75.75 0 1 0 1.061 1.061l3.889-3.889a.75.75 0 0 0 0-1.061L6.89 3.58a.75.75 0 1 0-1.061 1.061l3.359 3.358z",
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          h("div", { class: "nova-player-top-left-panorama" }),
+        ),
+        h(
+          "div",
+          { class: "nova-player-top-issue" },
+          h(
+            "span",
+            {
+              class: "nova-player-top-issue-icon",
+              ref: "issueIconRef",
+              onMouseEnter: handleIssueEnter,
+              onMouseLeave: handleIssueLeave,
+              onClick: handleIssueClick,
+            },
+            Issue(),
+          ),
+        ),
+      );
+    }
+
+    if (props.tv) {
+      return h(
+        "div",
+        { class: "nova-player-top-wrap", ref: "topWrapRef" },
+        h("div", { class: "nova-player-top-mask" }),
+        h(
+          "div",
+          { class: "nova-player-top-title" },
+          h("div", { id: "player-title" }, props.title ?? ""),
+        ),
+        h(
+          "div",
+          { class: "nova-player-top-follow" },
+          h(
+            "div",
+            {
+              id: "player-follow",
+              style: { display: "flex" },
+              onClick: handleFollowClick,
+            },
+            h(
+              "span",
+              {},
+              h(
+                "svg",
+                { viewBox: "0 -3 16 16" },
+                h("path", { d: TOP_TV_HEART_PATH }),
+              ),
+            ),
+            h(
+              "span",
+              { style: { marginLeft: "2px" } },
+              props.followed
+                ? t("player.ui.ending.watching_series")
+                : t("player.ui.ending.watch_series"),
+            ),
+          ),
+        ),
+        h(
+          "div",
+          { class: "nova-player-top-left" },
+          h("div", { class: "nova-player-top-left-title" }),
+          h("div", { class: "nova-player-top-left-follow" }),
+          h("div", { class: "nova-player-top-left-music" }),
+          h("div", { class: "nova-player-top-left-panorama" }),
+        ),
+        h(
+          "div",
+          { class: "nova-player-top-issue" },
+          h(
+            "span",
+            {
+              class: "nova-player-top-issue-icon",
+              ref: "issueIconRef",
+              onMouseEnter: handleIssueEnter,
+              onMouseLeave: handleIssueLeave,
+              onClick: handleIssueClick,
+            },
+            Issue(),
+          ),
+        ),
+      );
+    }
 
     return h(
       "div",
@@ -262,11 +475,7 @@ export const Top = defineComponent<TopProps>(
               ref: "avatarRef",
             }),
             props.upName
-              ? h(
-                  "span",
-                  { class: "nova-player-follow-name" },
-                  props.upName,
-                )
+              ? h("span", { class: "nova-player-follow-name" }, props.upName)
               : null,
             !props.followed
               ? h(

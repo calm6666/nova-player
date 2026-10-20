@@ -86,6 +86,8 @@ export interface EndingProps {
   onEnterSite?: () => void;
   /** embedded：下载客户端 */
   onDownloadApp?: () => void;
+  /** 插件 / 插槽：在已有 .nova-player-ending-wrap 内挂载 */
+  mount?: ((container: HTMLElement) => void | (() => void)) | null;
 }
 
 /**
@@ -242,6 +244,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   // ============================================
 
   /** 片尾面板外层容器 DOM 引用，通过 data-select 属性控制显示哪个子面板 */
+  let mountCleanup: (() => void) | null = null;
   const endingWrapRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
     "endingWrapRef",
@@ -1464,6 +1467,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 组件挂载后，通过事件向外暴露面板显隐控制方法 */
   lifecycle.onMounted = (): void => {
+    if (props.mount && endingWrapRef.value) {
+      mountCleanup = props.mount(endingWrapRef.value) ?? null;
+    }
+
     lifecycle.emit?.("endingMounted", {
       showEndWrap,
       closeEndWrap,
@@ -1475,6 +1482,8 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 组件销毁前清理倒计时定时器 */
   lifecycle.onBeforeDestroy = (): void => {
+    mountCleanup?.();
+    mountCleanup = null;
     stopCountdown();
   };
 
@@ -1489,6 +1498,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       : isInteractive
         ? "nova-player-ending-wrap nova-interactive-ending-wrap"
         : "nova-player-ending-wrap";
+
+  if (props.mount) {
+    return h("div", { class: rootClass, ref: "endingWrapRef" });
+  }
 
   return h(
     "div",

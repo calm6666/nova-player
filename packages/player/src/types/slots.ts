@@ -70,15 +70,38 @@ export interface SlotContext {
 }
 
 /**
- * 片尾页面插槽
+ * 其它框架 UI 的挂载函数：播放器只提供已有容器，不创建包装 DOM。
  */
-export interface EndingSlot {
-  /**
-   * 整页替换；不传用默认 Ending 组件
-   *
-   * 函数形式接收 SlotContext，可读取播放结束时的状态（如 currentTime / duration）。
-   */
-  content?: VNode | ((ctx: SlotContext) => VNode);
+export interface SlotMount {
+  mount: (
+    container: HTMLElement,
+    ctx: SlotContext | null,
+  ) => void | (() => void);
+}
+
+/** 插槽输入：原生 DOM / 其它框架挂载函数 / 返回它们的函数 */
+export type SlotContent =
+  | Node
+  | SlotMount
+  | ((ctx: SlotContext) => SlotContent | null);
+
+/** Top / Ending 单插槽类型别名 */
+export type TopSlot = SlotContent;
+export type EndingSlot = SlotContent;
+
+/**
+ * 解析插槽内容；函数形式在 ctx 为空时不执行
+ */
+export function resolveSlotContent(
+  content: SlotContent | undefined,
+  ctx: SlotContext | null,
+): Node | SlotMount | null {
+  let current: SlotContent | null | undefined = content;
+  while (typeof current === "function") {
+    current = ctx ? current(ctx) : null;
+    if (current == null) return null;
+  }
+  return current ?? null;
 }
 
 /**
@@ -129,4 +152,14 @@ export function resolveSlotVNode(
     return vnode(ctx);
   }
   return vnode;
+}
+
+/** 判断其它框架挂载描述 */
+export function isSlotMount(value: unknown): value is SlotMount {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "mount" in value &&
+    typeof (value as SlotMount).mount === "function"
+  );
 }

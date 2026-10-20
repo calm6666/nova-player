@@ -106,3 +106,9 @@ export type {
 // 导出音效插件 - 使用工厂函数
 export { AudioEffectPlugin, createAudioEffectPlugin } from './audioeffect';
 export type { AudioEffectPluginConfig, AudioEffectPluginAPI } from './audioeffect';
+
+// 导出 Top / Ending 插件
+export { TopPlugin } from './top';
+export type { TopPluginConfig } from './top';
+export { EndingPlugin } from './ending';
+export type { EndingPluginConfig } from './ending';

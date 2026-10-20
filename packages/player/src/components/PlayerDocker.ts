@@ -51,6 +51,13 @@ import {
   type PlayerStateMap,
 } from "@/store/runtimeState";
 import { ConfigStoreContext, type ConfigStore } from "@/store/configStore";
+import {
+  PlayerContext,
+  isSlotMount,
+  resolveSlotContent,
+  type SlotContent,
+  type SlotContext,
+} from "@/nova/types/slots";
 import { PlayerState } from "@/types";
 import type {
   DisplayMode,
@@ -467,6 +474,10 @@ export const PlayerDocker = defineComponent<
   /** 片尾形态：standard（普通）/ ogv（电视剧 / 番剧） */
   const endingStyle = props.config?.ui?.endingStyle ?? "standard";
 
+  /** Top 形态：default / tv / music */
+  const topStyle =
+    props.config?.ui?.topStyle ?? (endingStyle === "ogv" ? "tv" : "default");
+
   /** 电视剧 / 番剧片尾数据 */
   const ogvConfig = props.config?.ui?.ogv;
 
@@ -533,6 +544,46 @@ export const PlayerDocker = defineComponent<
 
   /** 可订阅配置中心（由 VideoPlayer 通过 __providers 注入；未注入时为 null） */
   const configStore = useContext<ConfigStore | null>(ConfigStoreContext);
+  /** 插件 / 插槽上下文 */
+  const slotPlayer = useContext(PlayerContext);
+  const slotContext: SlotContext | null =
+    slotPlayer && stateMgr ? { player: slotPlayer, state: stateMgr } : null;
+
+  type MountFn = (container: HTMLElement) => void | (() => void);
+
+  /** 把插槽内容转成挂载函数；不创建包装 DOM */
+  const createSlotMount = (content: SlotContent | undefined): MountFn | null => {
+    const resolved = resolveSlotContent(content, slotContext);
+    if (!resolved) return null;
+    if (isSlotMount(resolved)) {
+      return (container) => resolved.mount(container, slotContext);
+    }
+    if (typeof Node !== "undefined" && resolved instanceof Node) {
+      return (container) => {
+        container.appendChild(resolved);
+        return () => {
+          if (resolved.parentNode === container) container.removeChild(resolved);
+        };
+      };
+    }
+    return null;
+  };
+
+  /** 插槽优先于插件；都没有时走内置 Top / Ending */
+  const topPluginMount = slotPlayer?.getTopPluginMount() ?? null;
+  const topMount =
+    createSlotMount(props.config?.ui?.top) ??
+    (topPluginMount
+      ? (container: HTMLElement) => topPluginMount(container, slotContext)
+      : null);
+
+  const endingPluginMount = slotPlayer?.getEndingPluginMount() ?? null;
+  const endingMount =
+    createSlotMount(props.config?.ui?.ending) ??
+    (endingPluginMount
+      ? (container: HTMLElement) => endingPluginMount(container, slotContext)
+      : null);
+
 
   // ============================================
   // 状态读取辅助（单一来源：stateMgr；为 null 时安全降级到 props）
@@ -2541,10 +2592,18 @@ export const PlayerDocker = defineComponent<
               (embeddedMode
                 ? (embeddedConfig?.title ?? props.config?.ui?.title)
                 : props.config?.ui?.title) ?? props.playerName,
-            avatar: embeddedConfig?.up?.face,
-            upName: embeddedConfig?.up?.name,
+            avatar:
+              embeddedConfig?.up?.face ?? props.config?.ui?.up?.face,
+            upName:
+              embeddedConfig?.up?.name ?? props.config?.ui?.up?.name,
             embedded: embeddedMode,
-            followed: Boolean(embeddedConfig?.up?.followed),
+            mount: topMount,
+            tv: topStyle === "tv",
+            music: topStyle === "music",
+            musicTitle: props.config?.ui?.musicTitle,
+            followed: Boolean(
+              embeddedConfig?.up?.followed ?? props.config?.ui?.up?.followed,
+            ),
             likeCount: embeddedConfig?.stats?.like,
             commentCount: embeddedConfig?.stats?.comment,
             onFollowClick: () => {
@@ -2690,6 +2749,7 @@ export const PlayerDocker = defineComponent<
             onDownloadApp: () => {
               openEmbeddedUrl(embeddedConfig?.downloadUrl);
             },
+            mount: endingMount,
             onEndingMounted: (api: EndingApi) => {
               Object.assign(endingApi, api);
             },

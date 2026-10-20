@@ -470,12 +470,15 @@ import type {
   MaskLoader,
 } from "@/types/danmaku";
 // 阶段 C.1：插槽类型（ControlSlotItem / EndingSlot / SlotContext / ControlSlotPosition）
-import type {
+import type { ControlSlotItem, SlotContent } from "@/nova/types/slots";
+// 沿用 slots.ts 中已定义的同名类型，避免在此重复声明导致类型漂移
+export type {
   ControlSlotItem,
   EndingSlot,
+  TopSlot,
+  SlotContent,
+  SlotMount,
 } from "@/nova/types/slots";
-// 沿用 slots.ts 中已定义的同名类型，避免在此重复声明导致类型漂移
-export type { ControlSlotItem, EndingSlot } from "@/nova/types/slots";
 
 // ============================================
 // 播放器配置接口（命名空间化）
@@ -685,6 +688,10 @@ export interface UiConfig {
   scene?: PlayerScene;
   /** 片尾形态（默认 standard；电视剧 / 番剧使用 ogv） */
   endingStyle?: PlayerEndingStyle;
+  /** Top 形态：default（普通）/ tv（电视剧）/ music（音乐） */
+  topStyle?: "default" | "tv" | "music";
+  /** 音乐模式 Top 跑马灯文案 */
+  musicTitle?: string;
   /** 外链 / 嵌入场景数据 */
   embedded?: EmbeddedConfig;
   /** 电视剧 / 番剧片尾数据（endingStyle=ogv 时生效） */
@@ -699,6 +706,10 @@ export interface UiConfig {
   share?: ShareInfo;
   /** 控制条开关（单一来源） */
   controls?: ControlsConfig;
+  /** Top 整体插槽：替换 .nova-player-top-wrap 内部内容 */
+  top?: SlotContent;
+  /** Ending 整体插槽：替换 .nova-player-ending-wrap 内部内容 */
+  ending?: SlotContent;
   /**
    * 控制栏插槽列表
    *
@@ -1056,12 +1067,6 @@ export type PlayerConfig = {
   ssr?: SsrConfig;
   /** 高级 */
   advanced?: AdvancedConfig;
-  /**
-   * 片尾页面插槽
-   *
-   * 阶段 C.2：传入 ending.content 即整页替换默认 Ending 组件渲染。
-   */
-  ending?: EndingSlot;
   /** 配置式事件回调 */
   callbacks?: EventListeners;
   /** i18n 国际化配置（未配置时 t() 走零开销英文字面量路径） */

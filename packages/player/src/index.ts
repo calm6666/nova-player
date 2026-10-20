@@ -77,3 +77,6 @@ export type {
   ManifestSegmentMode,
   ManifestProtocolProfile,
 } from '@/nova/utils/media/manifestProtocol';
+
+// 导出插槽类型（插件 / 配置共用）
+export type { SlotContent, SlotMount, SlotContext } from './types/slots';

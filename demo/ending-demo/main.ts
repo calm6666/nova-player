@@ -20,6 +20,7 @@ import type { EndingRelatedItem, PlayerConfig } from "@/types";
 type DemoMode =
   | "standard"
   | "ogv"
+  | "music"
   | "interactive"
   | "embedded"
   | "share"
@@ -254,6 +255,24 @@ const buildConfig = (mode: DemoMode): PlayerConfig => {
     };
   }
 
+  if (mode === "music") {
+    return {
+      ...base,
+      playback: { ...base.playback, loop: true },
+      ui: {
+        ...base.ui,
+        title: "【Hi-Res无损】相遇的结局就注定要分开的话",
+        topStyle: "music",
+        musicTitle: "发现《雨爱》",
+        up: {
+          name: "音乐UP主",
+          face: svgPic(8, 96, 96, "音乐"),
+          followed: false,
+        },
+      },
+    };
+  }
+
   if (mode === "ogv" || mode === "ogv-share" || mode === "settings") {
     return {
       ...base,
@@ -435,6 +454,7 @@ document.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => 
   modes: [
     "standard",
     "ogv",
+    "music",
     "interactive",
     "embedded",
     "share",

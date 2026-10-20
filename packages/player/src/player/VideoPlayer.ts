@@ -44,6 +44,7 @@ import {
 import { createConfigStore, ConfigStoreContext } from "@/store/configStore";
 import type { ConfigStore } from "@/store/configStore";
 import type { PlayerPlaylistItem } from "@/store/runtimeState";
+import { PlayerContext, type SlotMount } from "@/nova/types/slots";
 import { PluginManager } from "@/nova/core/pluginManager";
 import { teardownComponentTree } from "@/nova/core/componentUnmount";
 import { createPlayerStore } from "@/nova/store";
@@ -239,6 +240,34 @@ function normalizePlaylist(props: PlayerConfig): MediaItem[] {
 export class VideoPlayer
   implements ComponentInstance<PlayerConfig>, PlayerMethods
 {
+  /** Top / Ending 插件挂载入口（插件 install 时注册，PlayerDocker 读取） */
+  private topPluginMount: SlotMount["mount"] | null = null;
+  private endingPluginMount: SlotMount["mount"] | null = null;
+
+  registerTopPluginMount(mount: SlotMount["mount"]): void {
+    this.topPluginMount = mount;
+  }
+
+  unregisterTopPluginMount(mount?: SlotMount["mount"]): void {
+    if (!mount || this.topPluginMount === mount) this.topPluginMount = null;
+  }
+
+  getTopPluginMount(): SlotMount["mount"] | null {
+    return this.topPluginMount;
+  }
+
+  registerEndingPluginMount(mount: SlotMount["mount"]): void {
+    this.endingPluginMount = mount;
+  }
+
+  unregisterEndingPluginMount(mount?: SlotMount["mount"]): void {
+    if (!mount || this.endingPluginMount === mount) this.endingPluginMount = null;
+  }
+
+  getEndingPluginMount(): SlotMount["mount"] | null {
+    return this.endingPluginMount;
+  }
+
   /** 播放器配置（命名空间形态，可被 setConfig 动态更新） */
   props: PlayerConfig;
 
@@ -1340,6 +1369,7 @@ export class VideoPlayer
       },
       __providers: [
         { contextId: StateContext.id, value: this.state },
+        { contextId: PlayerContext.id, value: this },
         {
           contextId: ConfigContext.id,
           value: this.props.ui?.controls ?? defaultControlConfig,
