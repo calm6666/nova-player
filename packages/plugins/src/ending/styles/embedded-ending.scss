@@ -1,6 +1,7 @@
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap {
   align-items: center;
   background: rgba(33, 33, 33, 0.9);
+  container-type: inline-size;
   display: flex;
   justify-content: center;
 
@@ -11,7 +12,7 @@
   }
 
   .nova-player-embedded-ending-wrap-box {
-    max-width: 92%;
+    max-width: 100%;
     position: relative;
     width: 1060px;
   }
@@ -173,22 +174,46 @@
   }
 
   .nova-player-embedded-ending-relation-wrap {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
     width: 100%;
+    z-index: 54;
   }
 
   .nova-player-embedded-ending-relation-context {
-    display: grid;
-    gap: 20px 14px;
-    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    display: flex;
+    flex-flow: wrap;
+    justify-content: center;
     margin-top: 16px;
     width: 100%;
+    z-index: 1;
   }
 
   .nova-player-relation-context-item {
     cursor: pointer;
     display: block;
+    flex: 1 1 0%;
+    margin-left: 14px;
+    max-width: 200px;
     min-width: 0;
+    pointer-events: all;
     position: relative;
+    user-select: none;
+
+    &:first-child {
+      margin-left: 0;
+    }
+
+    &:nth-child(6) {
+      margin-left: 0;
+    }
+
+    &:nth-child(n + 6) {
+      margin-top: 20px;
+    }
   }
 
   .nova-player-relation-context-poster,
@@ -285,5 +310,22 @@
 
   .nova-player-enter {
     margin-right: 20px;
+  }
+}
+
+// 与 B 站外链尾页一致：窄容器只展示一行，不强行折成多行
+@container (max-width: 940px) {
+  .nova-player-ending-wrap.nova-player-embedded-ending-wrap
+    .nova-player-embedded-ending-relation-context
+    .nova-player-relation-context-item:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+@container (min-width: 941px) and (max-width: 1159px) {
+  .nova-player-ending-wrap.nova-player-embedded-ending-wrap
+    .nova-player-embedded-ending-relation-context
+    .nova-player-relation-context-item:nth-child(n + 6) {
+    display: none;
   }
 }

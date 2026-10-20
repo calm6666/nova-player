@@ -161,7 +161,7 @@ describe("Ending station 场景", () => {
 });
 
 describe("Ending embedded 场景", () => {
-  it("渲染外链整页结构、单行 5 张卡片与底部按钮", () => {
+  it("渲染外链整页结构、5×2 卡片与底部按钮", () => {
     const api = mountEnding({
       variant: "embedded",
       title: "测试视频",
@@ -186,7 +186,7 @@ describe("Ending embedded 场景", () => {
     ).toBe("测试视频");
     expect(
       container.querySelectorAll(".nova-player-relation-context-item").length,
-    ).toBe(5);
+    ).toBe(10);
     expect(container.querySelector(".nova-player-downlowd")?.textContent).toBe(
       t("player.ui.ending.download_app"),
     );

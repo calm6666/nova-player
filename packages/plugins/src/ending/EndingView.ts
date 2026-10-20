@@ -432,7 +432,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     item: EndingRelatedItem,
     index: number,
   ): VNode => {
-    // ===== embedded：5×2 网格卡片（poster + title） =====
+    // ===== embedded：flex-wrap 两行 × 5 张卡片（poster + title） =====
     if (isEmbedded) {
       const cardContent: VNode[] = [
         h(
@@ -457,30 +457,17 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       const handleEmbeddedClick = (): void => {
         props.onRelatedClick?.(item);
       };
-      return item.url
-        ? h(
-            "a",
-            {
-              class: "nova-player-relation-context-item",
-              href: item.url,
-              target: "_blank",
-              rel: "noopener noreferrer",
-              onClick: (event: MouseEvent) => {
-                if (props.onRelatedClick) event.preventDefault();
-                handleEmbeddedClick();
-              },
-            },
-            ...cardContent,
-          )
-        : h(
-            "div",
-            {
-              class: "nova-player-relation-context-item",
-              role: "button",
-              onClick: handleEmbeddedClick,
-            },
-            ...cardContent,
-          );
+      // 真实 B 站外链尾页卡片是 div，不是 a 标签
+      return h(
+        "div",
+        {
+          class: "nova-player-relation-context-item",
+          role: "button",
+          tabIndex: 0,
+          onClick: handleEmbeddedClick,
+        },
+        ...cardContent,
+      );
     }
 
     /** 是否第一张卡（station 倒计时载体） */
@@ -872,14 +859,14 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           ),
         ),
       ),
-      // 相关推荐：与参考图一致，单行 5 张
+      // 相关推荐：真实 B 站外链尾页为 flex-wrap，两行 × 5 张
       h(
         "div",
         { class: "nova-player-embedded-ending-relation-wrap" },
         h(
           "div",
           { class: "nova-player-embedded-ending-relation-context" },
-          ...related.slice(0, 5).map(renderRelatedCard),
+          ...related.slice(0, 10).map(renderRelatedCard),
         ),
       ),
       // 底部：下载客户端 / 进入站内

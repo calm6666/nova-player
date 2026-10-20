@@ -264,7 +264,7 @@
       }
     }
 
-    .nova-player-relation-context {
+    .nova-player-relation-wrap .nova-player-relation-context {
       align-items: center;
       box-sizing: border-box;
       display: flex;
@@ -277,15 +277,14 @@
     }
 
     // 容器过小：隐藏卡片，进入观看入口仍保留
-    &.is-embedded-compact .nova-player-relation-context {
+    &.is-embedded-compact .nova-player-relation-wrap .nova-player-relation-context {
       display: none;
     }
 
-    .nova-player-relation-context-item {
+    .nova-player-relation-wrap .nova-player-relation-context-item {
       cursor: pointer;
       flex: 1 1 0;
       margin-left: 14px;
-      margin-left: 20px;
       max-width: none;
       min-width: 0;
       pointer-events: all;
@@ -296,7 +295,7 @@
       }
     }
 
-    .nova-player-relation-context-poster {
+    .nova-player-relation-wrap .nova-player-relation-context-poster {
       border-radius: 6px;
       overflow: hidden;
       padding-top: 56.25%;
@@ -304,7 +303,7 @@
       width: 100%;
     }
 
-    .nova-player-relation-context-poster-img {
+    .nova-player-relation-wrap .nova-player-relation-context-poster-img {
       border-radius: 6px;
       height: 100%;
       left: 0;
@@ -319,7 +318,7 @@
       }
     }
 
-    .nova-player-relation-context-poster-duration {
+    .nova-player-relation-wrap .nova-player-relation-context-poster-duration {
       background: #17181a;
       border-radius: 2px;
       bottom: 4px;
@@ -335,7 +334,7 @@
       width: auto;
     }
 
-    .nova-player-relation-context-title {
+    .nova-player-relation-wrap .nova-player-relation-context-title {
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 2;
       color: #fff;

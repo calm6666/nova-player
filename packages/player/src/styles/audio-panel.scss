@@ -8,307 +8,306 @@
  * - 均衡器页：预设/分段选择 + 5/10 段竖向 EQ
  */
 
-.nova-player-container {
-  .nova-player-audio-panel {
-    align-items: center;
-    display: none;
+.nova-player-audio-panel {
+  align-items: center;
+  display: none;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  z-index: 90;
+
+  &.nova-player-panel-active {
     display: flex;
-    inset: 0;
-    justify-content: center;
-    pointer-events: none;
-    position: absolute;
-    z-index: 90;
-
-    &.nova-player-panel-active {
-      display: flex;
-    }
   }
+}
 
-  .nova-audio-panel-move {
-    background: rgba(23, 24, 28, 0.92);
-    border-radius: 6px;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-    color: #fff;
-    pointer-events: auto;
-    position: relative;
-    width: 516px;
-  }
+.nova-audio-panel-move {
+  background: rgba(23, 24, 28, 0.92);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  pointer-events: auto;
+  position: relative;
+  width: 516px;
+}
 
-  .nova-audio-panel-view {
-    display: none;
+.nova-audio-panel-view {
+  display: none;
 
-    &.nova-player-panel-active {
-      display: block;
-    }
-  }
-
-  .nova-audio-panel-page {
-    box-sizing: border-box;
-    padding: 16px 18px 20px;
-    position: relative;
-  }
-
-  .nova-audio-panel-title {
-    color: #fff;
-    font-size: 16px;
-    line-height: 24px;
-    margin-bottom: 26px;
-    text-align: center;
-  }
-
-  .nova-audio-panel-close {
-    color: hsla(0, 0%, 100%, 0.8);
-    cursor: pointer;
-    height: 20px;
-    position: absolute;
-    right: 14px;
-    top: 14px;
-    width: 20px;
-
-    svg {
-      height: 100%;
-      width: 100%;
-    }
-
-    &:hover {
-      color: #fff;
-    }
-  }
-
-  // ---------- 预设页 ----------
-  .nova-audio-panel-presets {
-    display: grid;
-    gap: 12px 30px;
-    grid-template-columns: repeat(3, 1fr);
-    margin-bottom: 22px;
-  }
-
-  .nova-audio-panel-preset {
-    background: rgba(255, 255, 255, 0.18);
-    border: 0;
-    border-radius: 2px;
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    height: 30px;
-    line-height: 30px;
-    padding: 0;
-    text-align: center;
-    transition: background 0.2s;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-  }
-
-  .nova-audio-panel-gain {
-    align-items: center;
-    display: flex;
-    margin-bottom: 24px;
-  }
-
-  .nova-audio-panel-gain-title {
-    color: #fff;
-    flex: 0 0 72px;
-    font-size: 14px;
-  }
-
-  .nova-audio-panel-gain-control {
-    align-items: center;
-    display: flex;
-    flex: 1 1 auto;
-    gap: 12px;
-  }
-
-  .nova-audio-panel-gain-edge {
-    color: hsla(0, 0%, 100%, 0.8);
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  .nova-audio-panel-range {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    flex: 1 1 auto;
-    height: 20px;
-
-    &::-webkit-slider-runnable-track {
-      background: hsla(0, 0%, 100%, 0.35);
-      border-radius: 3px;
-      height: 3px;
-    }
-
-    &::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      background: #00aeec;
-      border-radius: 50%;
-      height: 16px;
-      margin-top: -6px;
-      width: 16px;
-    }
-  }
-
-  .nova-audio-panel-footer {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-    position: relative;
-  }
-
-  .nova-audio-panel-reset {
-    background: rgba(255, 255, 255, 0.18);
-    border: 0;
-    border-radius: 2px;
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-    height: 30px;
-    padding: 0 36px;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-  }
-
-  .nova-audio-panel-more {
-    bottom: 0;
-    color: hsla(0, 0%, 100%, 0.85);
-    cursor: pointer;
-    font-size: 14px;
-    position: absolute;
-    right: 0;
-
-    &:hover {
-      color: #00aeec;
-    }
-  }
-
-  // ---------- 均衡器页 ----------
-  .nova-audio-panel-eq-page {
-    min-height: 0;
-  }
-
-  .nova-audio-panel-eq-header {
-    align-items: center;
-    display: flex;
-    height: 28px;
-    margin-bottom: 20px;
-    position: relative;
-  }
-
-  .nova-audio-panel-back {
-    color: hsla(0, 0%, 100%, 0.9);
-    cursor: pointer;
-    font-size: 15px;
-    margin-right: 28px;
-
-    &:hover {
-      color: #00aeec;
-    }
-  }
-
-  .nova-audio-panel-select-label {
-    align-items: center;
-    color: #fff;
-    display: flex;
-    font-size: 14px;
-    margin-right: 22px;
-    white-space: nowrap;
-  }
-
-  .nova-audio-panel-select {
-    background: #1c1d22;
-    border: 1px solid hsla(0, 0%, 100%, 0.18);
-    border-radius: 2px;
-    color: #fff;
-    font-size: 14px;
-    height: 28px;
-    margin-left: 8px;
-    min-width: 92px;
-    padding: 0 8px;
-
-    option {
-      background: #1c1d22;
-      color: #fff;
-    }
-  }
-
-  .nova-audio-panel-eq-scale {
-    color: hsla(0, 0%, 100%, 0.85);
-    display: flex;
-    flex-direction: column;
-    font-size: 12px;
-    height: 150px;
-    justify-content: space-between;
-    left: 16px;
-    position: absolute;
-    top: 78px;
-  }
-
-  .nova-audio-panel-eq-bands {
-    align-items: flex-end;
-    display: flex;
-    height: 178px;
-    justify-content: space-around;
-    margin: 0 10px 22px 46px;
-  }
-
-  .nova-audio-panel-eq-band {
-    align-items: center;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    justify-content: flex-end;
-    width: 34px;
-  }
-
-  .nova-audio-panel-eq-range {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    height: 150px;
-    writing-mode: vertical-lr;
-    direction: rtl;
-
-    &::-webkit-slider-runnable-track {
-      background: hsla(0, 0%, 100%, 0.35);
-      border-radius: 2px;
-      width: 3px;
-    }
-
-    &::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      background: #00aeec;
-      border-radius: 50%;
-      height: 14px;
-      margin-left: -5.5px;
-      width: 14px;
-    }
-  }
-
-  .nova-audio-panel-eq-key {
-    color: #fff;
-    font-size: 13px;
-    margin-top: 8px;
-  }
-
-  .nova-audio-panel-eq-reset {
-    background: rgba(255, 255, 255, 0.18);
-    border: 0;
-    border-radius: 2px;
-    color: #fff;
-    cursor: pointer;
+  &.nova-player-panel-active {
     display: block;
-    font-size: 14px;
-    height: 30px;
-    margin: 0 auto;
-    padding: 0 30px;
+  }
+}
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
+.nova-audio-panel-page {
+  box-sizing: border-box;
+  padding: 16px 18px 20px;
+  position: relative;
+}
+
+.nova-audio-panel-title {
+  color: #fff;
+  font-size: 16px;
+  line-height: 24px;
+  margin-bottom: 26px;
+  text-align: center;
+}
+
+.nova-audio-panel-close {
+  color: hsla(0, 0%, 100%, 0.8);
+  cursor: pointer;
+  height: 20px;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 20px;
+
+  svg {
+    height: 100%;
+    width: 100%;
+  }
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+// ---------- 预设页 ----------
+.nova-audio-panel-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 30px;
+  margin-bottom: 22px;
+}
+
+.nova-audio-panel-preset {
+  background: rgba(255, 255, 255, 0.18);
+  border: 0;
+  border-radius: 2px;
+  color: #fff;
+  cursor: pointer;
+  flex: 0 0 calc((100% - 60px) / 3);
+  font-size: 14px;
+  height: 30px;
+  line-height: 30px;
+  padding: 0;
+  text-align: center;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.nova-audio-panel-gain {
+  align-items: center;
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.nova-audio-panel-gain-title {
+  color: #fff;
+  flex: 0 0 72px;
+  font-size: 14px;
+}
+
+.nova-audio-panel-gain-control {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 12px;
+}
+
+.nova-audio-panel-gain-edge {
+  color: hsla(0, 0%, 100%, 0.8);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.nova-audio-panel-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  flex: 1 1 auto;
+  height: 20px;
+
+  &::-webkit-slider-runnable-track {
+    background: hsla(0, 0%, 100%, 0.35);
+    border-radius: 3px;
+    height: 3px;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #00aeec;
+    border-radius: 50%;
+    height: 16px;
+    margin-top: -6px;
+    width: 16px;
+  }
+}
+
+.nova-audio-panel-footer {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.nova-audio-panel-reset {
+  background: rgba(255, 255, 255, 0.18);
+  border: 0;
+  border-radius: 2px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  height: 30px;
+  padding: 0 36px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.nova-audio-panel-more {
+  bottom: 0;
+  color: hsla(0, 0%, 100%, 0.85);
+  cursor: pointer;
+  font-size: 14px;
+  position: absolute;
+  right: 0;
+
+  &:hover {
+    color: #00aeec;
+  }
+}
+
+// ---------- 均衡器页 ----------
+.nova-audio-panel-eq-page {
+  min-height: 0;
+}
+
+.nova-audio-panel-eq-header {
+  align-items: center;
+  display: flex;
+  height: 28px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.nova-audio-panel-back {
+  color: hsla(0, 0%, 100%, 0.9);
+  cursor: pointer;
+  font-size: 15px;
+  margin-right: 28px;
+
+  &:hover {
+    color: #00aeec;
+  }
+}
+
+.nova-audio-panel-select-label {
+  align-items: center;
+  color: #fff;
+  display: flex;
+  font-size: 14px;
+  margin-right: 22px;
+  white-space: nowrap;
+}
+
+.nova-audio-panel-select {
+  background: #1c1d22;
+  border: 1px solid hsla(0, 0%, 100%, 0.18);
+  border-radius: 2px;
+  color: #fff;
+  font-size: 14px;
+  height: 28px;
+  margin-left: 8px;
+  min-width: 92px;
+  padding: 0 8px;
+
+  option {
+    background: #1c1d22;
+    color: #fff;
+  }
+}
+
+.nova-audio-panel-eq-scale {
+  color: hsla(0, 0%, 100%, 0.85);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  height: 150px;
+  justify-content: space-between;
+  left: 16px;
+  position: absolute;
+  top: 78px;
+}
+
+.nova-audio-panel-eq-bands {
+  align-items: flex-end;
+  display: flex;
+  height: 178px;
+  justify-content: space-around;
+  margin: 0 10px 22px 46px;
+}
+
+.nova-audio-panel-eq-band {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-end;
+  width: 34px;
+}
+
+.nova-audio-panel-eq-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 150px;
+  writing-mode: vertical-lr;
+  direction: rtl;
+
+  &::-webkit-slider-runnable-track {
+    background: hsla(0, 0%, 100%, 0.35);
+    border-radius: 2px;
+    width: 3px;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #00aeec;
+    border-radius: 50%;
+    height: 14px;
+    margin-left: -5.5px;
+    width: 14px;
+  }
+}
+
+.nova-audio-panel-eq-key {
+  color: #fff;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.nova-audio-panel-eq-reset {
+  background: rgba(255, 255, 255, 0.18);
+  border: 0;
+  border-radius: 2px;
+  color: #fff;
+  cursor: pointer;
+  display: block;
+  font-size: 14px;
+  height: 30px;
+  margin: 0 auto;
+  padding: 0 30px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
   }
 }
