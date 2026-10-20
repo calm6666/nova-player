@@ -1,47 +1,89 @@
+/* Toast（按 B 站真实 toast CSS 规则） */
 .nova-player-toast-wrap {
-  box-sizing: content-box;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: -webkit-flex;
-  display: -ms-flexbox;
-  align-items: center;
-  display: flex;
-  bottom: 70px;
+  bottom: 60px;
   font-size: 14px;
-  font-size: var(--nova-player-toast-font-size, 14px);
   left: 10px;
-  line-height: 36px;
+  line-height: 28px;
   pointer-events: none;
   position: absolute;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
-  z-index: 65;
-  color: #fff;
-  padding: 0 10px;
-  -ms-transition: all 0.3s;
-  -webkit-transition: all 0.3s;
-  transition: all 0.3s;
+  z-index: 76;
+}
+
+.nova-player-container[data-screen="web"] .nova-player-toast-wrap,
+.nova-player-container[data-screen="full"] .nova-player-toast-wrap {
+  bottom: 86px;
+}
+
+.nova-player-toast-row {
+  cursor: default;
   opacity: 0;
-  display: none;
+  overflow: hidden;
+  transition: all 0.25s ease-out;
+  will-change: height, opacity;
+}
 
-  .nova-player-toast-close {
-    fill: #fff;
-    float: left;
-    height: 100%;
-    margin-right: 4px;
-    position: relative;
-    height: 20px;
-    width: 20px;
-    line-height: 28px;
-  }
+.nova-player-toast-row.nova-player-toast-unfold {
+  opacity: 1;
+}
 
-  .nova-player-toast-jump {
-    color: var(--nova-player-brand_pink, #ff6699);
-    margin: 0 6px 0 6px;
-    text-decoration: none;
-    cursor: pointer;
-    pointer-events: all;
-  }
+.nova-player-toast-item {
+  align-items: center;
+  background-color: rgba(25, 25, 25, 0.88);
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 7px 16px;
+  pointer-events: auto;
+}
+
+.nova-player-toast-cancel {
+  fill: #fff;
+  cursor: pointer;
+  height: 24px;
+  margin-right: 6px;
+  width: 24px;
+}
+
+.nova-player-toast-cancel:hover {
+  fill: #ff85ad;
+}
+
+.nova-player-toast-badge {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  margin-right: 8px;
+  max-height: 24px;
+  max-width: 24px;
+  padding: 2px;
+}
+
+.nova-player-toast-badge img {
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.nova-player-toast-text {
+  max-width: 32em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-player-toast-time {
+  color: #ddd;
+  margin-left: 12px;
+}
+
+.nova-player-toast-confirm {
+  color: #f25d8e;
+  cursor: pointer;
+  margin-left: 12px;
+  transition: color 0.15s ease-in-out;
+}
+
+.nova-player-toast-confirm:hover {
+  color: #ff85ad;
 }

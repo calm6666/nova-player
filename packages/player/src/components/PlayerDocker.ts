@@ -69,6 +69,7 @@ import type {
 } from "@/types";
 import type { QualityLevel } from "@/types/streamPlugin";
 import { Toast } from "@/nova/components/Toast";
+import type { ToastOptions } from "@/nova/components/Toast";
 import { Loading } from "@/nova/components/Loading";
 import { State } from "@/nova/components/State";
 import { createBufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
@@ -120,6 +121,8 @@ interface ToastAPI {
   showFixedToast: (text: string, jumpTime: string) => void;
   /** 隐藏固定提示 */
   hideFixedToast: () => void;
+  /** 通用 Toast（自动 / 手动关闭 / 徽章 / 确认 / 固定） */
+  showToast?: (options: ToastOptions) => number | void;
 }
 
 /** Loading 组件挂载后回传的控制 API */
@@ -2887,6 +2890,7 @@ export const PlayerDocker = defineComponent<
               toastApi.hideAutoToast = api.hideAutoToast;
               toastApi.showFixedToast = api.showFixedToast;
               toastApi.hideFixedToast = api.hideFixedToast;
+              toastApi.showToast = api.showToast;
             },
           }),
           // 加载遮罩（清晰度切换中）

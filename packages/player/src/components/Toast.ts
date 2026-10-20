@@ -1,216 +1,188 @@
 /**
  * ============================================
- * Toast 提示组件
+ * Toast 提示组件（按 B 站真实 toastStore / toast DOM 实现）
  * ============================================
- * 提供自动消失的短暂提示和带跳转功能的固定提示两种模式
- *
- * 声明式响应式版本：两类提示的可见性与文本由内部 signal 驱动，
- * 外层容器（.nova-player-toast-wrap）的可见性由两个可见性 signal 派生，
- * 渲染层零 DOM 操作（style 由编译器自动包装为 __reactiveAttrs）。
- *
- * 对外保留 showAutoToast/hideAutoToast/showFixedToast/hideFixedToast
- * 命令式 API 契约不变（父组件经 toastMounted 持有引用，零改动）；
- * API 内部仅写 signal，不再触碰 DOM。
+ * 结构：toast-wrap > toast-row > toast-item
+ * item 内可选：toast-cancel / toast-badge / toast-text / toast-confirm
  */
 
-import { h, defineComponent, signal, t } from "@/core";
+import { h, defineComponent, signal, t, For } from "@/core";
 import { Close } from "@/nova/components/icons";
 import type { ComponentLifecycle } from "@/types";
 
-/**
- * Toast 组件 Props 接口
- */
-export interface ToastProps {
-  /** 是否显示 Toast 提示（保留字段：原实现初始即隐藏，此字段不参与初值） */
-  visible?: boolean;
-  /** 提示文本内容（仅作初值快照，运行时由 showFixedToast 更新） */
-  text?: string;
-  /** 跳转目标时间点，格式为 "mm:ss"（仅作初值快照） */
-  jumpTime?: string;
-  /** 关闭固定提示时的回调函数 */
+/** 单条 Toast 配置 */
+export interface ToastOptions {
+  /** 文本 */
+  text: string;
+  /** 自动消失时间（毫秒）；不传则不自动消失 */
+  duration?: number;
+  /** 显示左侧关闭按钮 */
+  manualMode?: boolean;
+  /** 左侧徽章图片 */
+  badgeUrl?: string;
+  /** 右侧确认按钮文字 */
+  confirmText?: string;
+  /** 确认回调 */
+  onConfirm?: () => void;
+  /** 关闭回调 */
   onClose?: () => void;
-  /** 点击跳转按钮时的回调函数 */
+  /** 固定提示（不自动消失） */
+  fixed?: boolean;
+  /** 固定提示附带的时间文本 */
+  time?: string;
+}
+
+interface ToastRecord extends ToastOptions {
+  iid: number;
+}
+
+export interface ToastProps {
+  /** 保留字段 */
+  visible?: boolean;
+  /** 初始文本 */
+  text?: string;
+  /** 初始跳转时间 */
+  jumpTime?: string;
+  /** 关闭固定提示回调 */
+  onClose?: () => void;
+  /** 跳转回调 */
   onJump?: () => void;
 }
 
-/**
- * Toast 提示组件
- */
 export const Toast = defineComponent<ToastProps>(
   (props, lifecycle: ComponentLifecycle) => {
-    // ============================================
-    // 响应式状态（渲染层唯一数据源）
-    // ============================================
+    const records = signal<ToastRecord[]>([]);
+    const timers = new Map<number, ReturnType<typeof setTimeout>>();
+    let nextId = 1;
 
-    /**
-     * 自动消失提示是否可见
-     * 初值 false：与原实现 onMounted 调用 hideAutoToast() 的初始隐藏语义一致
-     */
-    const autoVisibleSig = signal<boolean>(false);
-
-    /** 自动消失提示文本 */
-    const autoTextSig = signal<string>("");
-
-    /**
-     * 固定提示是否可见
-     * 初值 false：与原实现 onMounted 调用 hideFixedToast() 的初始隐藏语义一致
-     */
-    const fixedVisibleSig = signal<boolean>(false);
-
-    /**
-     * 固定提示文本（null 表示未设置，渲染时回落到既有 i18n 文案）
-     * 保留 null 回落结构：getter 内 t() 读取 localeSignal，
-     * 语言动态切换时文案精准更新（原实现为一次性快照，此处行为兼容且增强）
-     */
-    const fixedTextSig = signal<string | null>(props.text ?? null);
-
-    /** 固定提示跳转时间（null 表示未设置，渲染时回落 "00:00"） */
-    const fixedTimeSig = signal<string | null>(props.jumpTime ?? null);
-
-    // ============================================
-    // 事件处理函数
-    // ============================================
-
-    /** 自动隐藏定时器，用于控制自动提示的延迟消失（时序行为，保留命令式） */
-    let autoToastTimer: ReturnType<typeof setTimeout> | null = null;
-
-    /** 关闭固定提示并触发 onClose 回调 */
-    const handleClose = (): void => {
-      hideFixedToast();
-      props.onClose?.();
+    const remove = (iid: number): void => {
+      const timer = timers.get(iid);
+      if (timer) clearTimeout(timer);
+      timers.delete(iid);
+      records.value = records.value.filter((item) => item.iid !== iid);
     };
 
-    /** 触发跳转回调，跳转到指定时间点 */
-    const handleJump = (): void => {
-      props.onJump?.();
-    };
-
-    // ============================================
-    // 对外命令式 API（契约与原实现完全一致）
-    // ——内部仅写 signal，容器/提示的可见性与文本由渲染层自动同步
-    // ============================================
-
-    /**
-     * 显示自动消失的短暂提示
-     * @param text - 提示文本内容
-     * @param duration - 显示持续时间（毫秒），默认 3000ms
-     */
-    const showAutoToast = (text: string, duration?: number): void => {
-      autoTextSig.value = text;
-      autoVisibleSig.value = true;
-      // 清除之前的定时器
-      if (autoToastTimer !== null) {
-        clearTimeout(autoToastTimer);
-        autoToastTimer = null;
+    const add = (options: ToastOptions): number => {
+      const record: ToastRecord = { ...options, iid: nextId++ };
+      records.value = [...records.value, record];
+      if (options.duration && options.duration > 0) {
+        timers.set(
+          record.iid,
+          setTimeout(() => remove(record.iid), options.duration),
+        );
       }
-      /** 自动隐藏的延迟时间（毫秒） */
-      const timeout = duration ?? 3000;
-      autoToastTimer = setTimeout(() => {
-        hideAutoToast();
-      }, timeout);
+      return record.iid;
     };
 
-    /** 隐藏自动消失的短暂提示 */
+    const showToast = (options: ToastOptions): number => add(options);
+
+    const showAutoToast = (text: string, duration = 3000): void => {
+      add({ text, duration });
+    };
+
     const hideAutoToast = (): void => {
-      autoVisibleSig.value = false;
-      if (autoToastTimer !== null) {
-        clearTimeout(autoToastTimer);
-        autoToastTimer = null;
-      }
+      const lastAuto = [...records.value]
+        .reverse()
+        .find((item) => !item.fixed && item.duration);
+      if (lastAuto) remove(lastAuto.iid);
     };
 
-    /**
-     * 显示固定提示（带关闭和跳转功能）
-     * @param text - 提示文本内容
-     * @param jumpTime - 跳转目标时间点字符串
-     */
     const showFixedToast = (text: string, jumpTime: string): void => {
-      fixedTextSig.value = text;
-      fixedTimeSig.value = jumpTime;
-      fixedVisibleSig.value = true;
+      add({
+        text,
+        fixed: true,
+        manualMode: true,
+        time: jumpTime,
+        confirmText: t("player.ui.toast.jump"),
+        onConfirm: () => props.onJump?.(),
+        onClose: () => props.onClose?.(),
+      });
     };
 
-    /** 隐藏固定提示 */
     const hideFixedToast = (): void => {
-      fixedVisibleSig.value = false;
+      records.value
+        .filter((item) => item.fixed)
+        .forEach((item) => remove(item.iid));
     };
 
-    // ============================================
-    // 生命周期钩子
-    // ============================================
-
-    /** 组件挂载后对外暴露控制方法（初始隐藏已由 signal 初值覆盖） */
     lifecycle.onMounted = (): void => {
       lifecycle.emit?.("toastMounted", {
         showAutoToast,
         hideAutoToast,
         showFixedToast,
         hideFixedToast,
+        showToast,
       });
     };
 
-    /** 组件销毁前清理定时器 */
     lifecycle.onBeforeDestroy = (): void => {
-      // 清理定时器
-      if (autoToastTimer !== null) {
-        clearTimeout(autoToastTimer);
-        autoToastTimer = null;
-      }
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
-
-    // ============================================
-    // 声明式渲染（零 DOM 操作）：
-    // - 外层容器可见性 = 任一提示可见（flex/none），
-    //   与原 updateWrapVisibility 的语义一致
-    // - 各提示的 display 由自身可见性 signal 驱动
-    // - 文本使用显式 getter 协议（signal + t() 内的 localeSignal 双依赖）
-    // ============================================
 
     return h(
       "div",
       {
         class: "nova-player-toast-wrap",
-        style: {
-          display:
-            autoVisibleSig.value || fixedVisibleSig.value ? "flex" : "none",
-        },
+        style: { display: records.value.length > 0 ? "block" : "none" },
       },
-      h(
-        "div",
-        {
-          class: "nova-player-toast-auto",
-          style: { display: autoVisibleSig.value ? "" : "none" },
-        },
-        () => autoTextSig.value,
-      ),
-      h(
-        "div",
-        {
-          class: "nova-player-toast-fixed",
-          style: { display: fixedVisibleSig.value ? "" : "none" },
-        },
-        h(
-          "div",
-          { class: "nova-player-toast-close", onClick: handleClose },
-          // 关闭图标使用既有实现 icons 的 Close SVG（禁止用 unicode 字符当图标）
-          h("span", { class: "common-svg-icon" }, Close()),
-        ),
-        h(
-          "span",
-          { class: "nova-player-toast-text" },
-          () => fixedTextSig.value ?? t("player.ui.toast.last_seen"),
-        ),
-        h(
-          "span",
-          { class: "nova-player-toast-time" },
-          () => fixedTimeSig.value ?? "00:00",
-        ),
-        h(
-          "span",
-          { class: "nova-player-toast-jump", onClick: handleJump },
-          t("player.ui.toast.jump"),
-        ),
-      ),
+      h(For, {
+        each: (): ToastRecord[] => records.value,
+        key: (item: ToastRecord): number => item.iid,
+        render: (item: ToastRecord) =>
+          h(
+            "div",
+            {
+              class: [
+                "nova-player-toast-row",
+                { "nova-player-toast-unfold": true },
+              ],
+            },
+            h(
+              "div",
+              { class: "nova-player-toast-item" },
+              item.manualMode
+                ? h(
+                    "span",
+                    {
+                      class: "nova-player-toast-cancel",
+                      onClick: (event: MouseEvent) => {
+                        event.stopPropagation();
+                        item.onClose?.();
+                        remove(item.iid);
+                      },
+                    },
+                    h("span", { class: "common-svg-icon" }, Close()),
+                  )
+                : null,
+              item.badgeUrl
+                ? h(
+                    "span",
+                    { class: "nova-player-toast-badge" },
+                    h("img", { src: item.badgeUrl, alt: "badge-icon" }),
+                  )
+                : null,
+              h("span", { class: "nova-player-toast-text" }, item.text),
+              item.time
+                ? h("span", { class: "nova-player-toast-time" }, item.time)
+                : null,
+              item.confirmText
+                ? h(
+                    "span",
+                    {
+                      class: "nova-player-toast-confirm",
+                      onClick: (event: MouseEvent) => {
+                        event.stopPropagation();
+                        item.onConfirm?.();
+                        remove(item.iid);
+                      },
+                    },
+                    item.confirmText,
+                  )
+                : null,
+            ),
+          ),
+      }),
     );
   },
 );
