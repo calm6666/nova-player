@@ -1516,7 +1516,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     if (availableWidth <= 0 || availableHeight <= 0) return;
 
     const contents = root.querySelectorAll<HTMLElement>(
-      ".nova-player-ending-content, .nova-ogv-ending-content",
+      ".nova-player-ending-content, .nova-ogv-ending-content, .nova-player-embedded-ending-wrap-box",
     );
     contents.forEach((content) => {
       const width = content.offsetWidth;

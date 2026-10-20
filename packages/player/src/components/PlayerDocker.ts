@@ -482,9 +482,6 @@ export const PlayerDocker = defineComponent<
   const endingStyle = props.config?.ui?.endingStyle ?? "standard";
 
 
-  /** 电视剧 / 番剧片尾数据 */
-  const ogvConfig = props.config?.ui?.ogv;
-
   /** 打开外链场景的跳转地址（无地址时静默忽略） */
   const openEmbeddedUrl = (url?: string): void => {
     if (!url || !isBrowser()) return;
@@ -2643,12 +2640,12 @@ export const PlayerDocker = defineComponent<
                 readUi()?.title ??
                 props.playerName)
               : readEndingStyle() === "ogv"
-                ? (ogvConfig?.title ??
+                ? (readUi()?.ogv?.title ??
                   readUi()?.title ??
                   props.playerName)
                 : (readUi()?.title ?? props.playerName),
-            cover: ogvConfig?.cover,
-            followed: ogvConfig?.followed,
+            cover: readUi()?.ogv?.cover,
+            followed: readUi()?.ogv?.followed,
             followers: readUi()?.interactive?.followers,
             backtrack: readUi()?.interactive?.backtrack,
             activeBacktrackIndex:
@@ -2663,7 +2660,7 @@ export const PlayerDocker = defineComponent<
             related: embeddedMode
               ? embeddedConfig?.related
               : readEndingStyle() === "ogv"
-                ? ogvConfig?.related
+                ? readUi()?.ogv?.related
                 : readEndingStyle() === "interactive"
                   ? (readUi()?.interactive?.related ??
                     readUi()?.related)

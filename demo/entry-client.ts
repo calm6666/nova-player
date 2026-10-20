@@ -1110,6 +1110,21 @@ const MEDIA_LIST: MediaItem[] = [
 ];
 const OBJECT_URLS: string[] = [];
 
+/** 片尾卡片模拟封面（本地 SVG Data URI，避免依赖网络） */
+const demoPic = (label: string, from: string, to: string): string =>
+  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs><rect width="320" height="180" fill="url(#g)"/><text x="50%" y="50%" fill="#fff" font-size="20" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle">${label}</text></svg>`,
+  )}`;
+
+const DEMO_COVER = demoPic("示例视频", "#00b4d8", "#1a1a2e");
+
+const DEMO_RELATED = [
+  { title: "模拟推荐 01", pic: demoPic("推荐 01", "#fb7299", "#1a1a2e"), duration: 128, url: "https://www.bilibili.com/" },
+  { title: "模拟推荐 02", pic: demoPic("推荐 02", "#00b4d8", "#22223b"), duration: "03:20", url: "https://www.bilibili.com/" },
+  { title: "模拟推荐 03", pic: demoPic("推荐 03", "#7c3aed", "#111827"), duration: 245, url: "https://www.bilibili.com/" },
+  { title: "模拟推荐 04", pic: demoPic("推荐 04", "#f59e0b", "#1f2937"), duration: "02:08", url: "https://www.bilibili.com/" },
+];
+
 // ============================================
 // 预览图模式切换按钮（雪碧图 ↔ 逐帧 bin）
 // ============================================
@@ -1461,6 +1476,7 @@ async function playHuaqiangInteractive(): Promise<void> {
 
 let demoTopStyle: "default" | "tv" | "music" = "default";
 let demoEndingStyle: "standard" | "ogv" = "standard";
+let demoScene: "station" | "embedded" = "station";
 
 function collectPlugins(source?: PlayerSource): Plugin[] {
   // 模式 B 当前激活的服务端轨 id（activateTrack 写入，fetch 读取）
@@ -1763,14 +1779,34 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
     },
     ui: {
       title: current?.title ?? "Lumina Demo",
+      scene: demoScene,
       topStyle: demoTopStyle,
       endingStyle: demoEndingStyle,
+      related: DEMO_RELATED,
+      up: {
+        name: "模拟 UP 主",
+        face: demoPic("UP", "#00b4d8", "#1a1a2e"),
+        followed: false,
+      },
+      embedded: {
+        title: current?.title ?? "Lumina Demo",
+        stats: { like: 1234, comment: 56 },
+        up: {
+          name: "模拟 UP 主",
+          face: demoPic("UP", "#00b4d8", "#1a1a2e"),
+          followed: false,
+        },
+        related: DEMO_RELATED,
+        enterUrl: "https://www.bilibili.com/",
+        downloadUrl: "https://www.bilibili.com/",
+      },
       ...(demoEndingStyle === "ogv"
         ? {
             ogv: {
               title: current?.title ?? "Lumina Demo",
-              cover: current?.poster,
-              related: [],
+              cover: DEMO_COVER,
+              followed: false,
+              related: DEMO_RELATED,
             },
           }
         : {}),
@@ -4480,7 +4516,8 @@ function applyEndingStyle(style: "standard" | "ogv"): void {
         ? {
             ogv: {
               title: player.props.ui?.title ?? "Lumina Demo",
-              related: [],
+              cover: DEMO_COVER,
+              related: DEMO_RELATED,
             },
           }
         : {}),
@@ -4490,6 +4527,13 @@ function applyEndingStyle(style: "standard" | "ogv"): void {
   setTimeout(() => {
     player.seek(Math.max(0, player.getDuration() - 0.1));
   }, 300);
+}
+
+/** 切换站内 / 外链场景（场景影响播放器整体结构，需要重建播放器） */
+function applyScene(scene: "station" | "embedded"): void {
+  demoScene = scene;
+  const index = playerInstance?.getCurrentIndex() ?? 0;
+  void rebuildPlayer(index);
 }
 
 function updateDemoTitle(title: string): void {
@@ -4510,6 +4554,8 @@ function installPluginDemoControls(): void {
     ["音乐 Top", () => applyTopStyle("music")],
     ["标准片尾", () => applyEndingStyle("standard")],
     ["OGV 片尾", () => applyEndingStyle("ogv")],
+    ["外链场景", () => applyScene("embedded")],
+    ["站内场景", () => applyScene("station")],
     ["更新标题", () => updateDemoTitle("动态更新标题 " + Date.now())],
     ["卸载 Top 插件", () => playerInstance?.uninstallPlugin("top")],
     ["重装 Top 插件", () => playerInstance?.use(TopPlugin())],
