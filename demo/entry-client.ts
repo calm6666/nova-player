@@ -1503,8 +1503,6 @@ function createTopPlugin(source?: PlayerSource): Plugin {
       title:
         (source as unknown as { title?: string } | undefined)?.title ??
         "Lumina Demo",
-      tv: demoTopStyle === "tv",
-      music: demoTopStyle === "music",
       musicTitle: "发现《雨爱》",
       followed: false,
       upName: "模拟 UP 主",
