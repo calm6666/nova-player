@@ -1160,8 +1160,8 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
             h(
               "div",
               { class: "nova-player-progress-hotspot" },
-              // 响应式文本：编译器自动检测 hotspotTextSignal.value 并包装为 _reactiveText
-              hotspotTextSignal.value,
+              // 响应式文本：必须传函数，信号变化才会重新求值
+              () => hotspotTextSignal.value,
             ),
           ),
           // 拉拽指示器
