@@ -252,6 +252,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 片尾面板外层容器 DOM 引用，通过 data-select 属性控制显示哪个子面板 */
   const endingWrapRef = { value: props.host ?? null };
+  let contentResizeObserver: ResizeObserver | null = null;
 
   /** 倒计时 lottie 实例 */
   const countdownRef = useTemplateRef<LottieIconApi>(
@@ -1468,8 +1469,45 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   // 生命周期
   // ============================================
 
+  /**
+   * 按窗口 / 面板尺寸缩放片尾内容，避免小窗口下内容被裁切。
+   * 与 B 站一致：保留 screen-mode="second-screen"，只写 transform: scale(...)
+   */
+  const applyContentScale = (): void => {
+    const root = endingWrapRef.value;
+    if (!root) return;
+    const availableWidth = root.clientWidth;
+    const availableHeight = root.clientHeight;
+    if (availableWidth <= 0 || availableHeight <= 0) return;
+
+    const contents = root.querySelectorAll<HTMLElement>(
+      ".nova-player-ending-content, .nova-ogv-ending-content",
+    );
+    contents.forEach((content) => {
+      const width = content.offsetWidth;
+      const height = content.offsetHeight;
+      if (!width || !height) return;
+      const scale = Math.min(
+        1,
+        availableWidth / width,
+        availableHeight / height,
+      );
+      if (scale < 0.999) {
+        content.style.transform = `scale(${scale})`;
+      } else {
+        content.style.removeProperty("transform");
+      }
+    });
+  };
+
   /** 组件挂载后，通过事件向外暴露面板显隐控制方法 */
   lifecycle.onMounted = (): void => {
+    applyContentScale();
+    if (typeof ResizeObserver !== "undefined" && endingWrapRef.value) {
+      contentResizeObserver = new ResizeObserver(() => applyContentScale());
+      contentResizeObserver.observe(endingWrapRef.value);
+    }
+    window.addEventListener("resize", applyContentScale);
     const api = {
       showEndWrap,
       closeEndWrap,
@@ -1489,6 +1527,9 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 组件销毁前清理倒计时定时器 */
   lifecycle.onBeforeDestroy = (): void => {
+    contentResizeObserver?.disconnect();
+    contentResizeObserver = null;
+    window.removeEventListener("resize", applyContentScale);
     stopCountdown();
   };
 
