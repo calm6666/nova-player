@@ -1125,6 +1125,20 @@ const DEMO_RELATED = [
   { title: "模拟推荐 04", pic: demoPic("推荐 04", "#f59e0b", "#1f2937"), duration: "02:08", url: "https://www.bilibili.com/" },
 ];
 
+/** 外链尾页 5×2 推荐卡片（10 条独立模拟数据） */
+const DEMO_EMBEDDED_RELATED = [
+  { title: "外链推荐 01", pic: demoPic("外链 01", "#fb7299", "#111827"), duration: "12:08", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 02", pic: demoPic("外链 02", "#00b4d8", "#1f2937"), duration: "08:42", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 03", pic: demoPic("外链 03", "#7c3aed", "#0f172a"), duration: "05:16", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 04", pic: demoPic("外链 04", "#f59e0b", "#1a1a2e"), duration: "21:30", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 05", pic: demoPic("外链 05", "#10b981", "#111827"), duration: "03:55", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 06", pic: demoPic("外链 06", "#ef4444", "#1f2937"), duration: "16:24", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 07", pic: demoPic("外链 07", "#3b82f6", "#0f172a"), duration: "09:12", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 08", pic: demoPic("外链 08", "#a855f7", "#1a1a2e"), duration: "27:06", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 09", pic: demoPic("外链 09", "#eab308", "#111827"), duration: "06:48", url: "https://www.bilibili.com/" },
+  { title: "外链推荐 10", pic: demoPic("外链 10", "#14b8a6", "#1f2937"), duration: "11:36", url: "https://www.bilibili.com/" },
+];
+
 // ============================================
 // 预览图模式切换按钮（雪碧图 ↔ 逐帧 bin）
 // ============================================
@@ -1797,7 +1811,7 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
           face: demoPic("UP", "#00b4d8", "#1a1a2e"),
           followed: false,
         },
-        related: DEMO_RELATED,
+        related: DEMO_EMBEDDED_RELATED,
         enterUrl: "https://www.bilibili.com/",
         downloadUrl: "https://www.bilibili.com/",
       },
