@@ -52,8 +52,10 @@
 
 .nova-player-top-follow {
   -webkit-box-flex: 0;
-  -ms-flex: none;
-  flex: none;
+  -ms-flex: 0 1 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .nova-player-top-left {
