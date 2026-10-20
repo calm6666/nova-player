@@ -1,384 +1,481 @@
+/**
+ * 外链 / 嵌入场景片尾
+ *
+ * 规则按 B 站真实外链播放器逐条对照：
+ * - 根容器 flex 居中
+ * - box 宽度由 JS 动态写入内联 style，CSS 只写 width: 100%
+ * - 推荐区 flex-wrap，不用 grid
+ * - 卡片 min-width 160 / max-width 200，第 6 张起换行
+ */
+
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap {
   align-items: center;
   background: rgba(33, 33, 33, 0.9);
   container-type: inline-size;
   display: flex;
+  height: 100%;
   justify-content: center;
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 55;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-ending-panel {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-  }
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 1;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-embedded-ending-wrap-box {
-    max-width: 1060px;
-    position: relative;
-    width: calc(100% - 40px);
-  }
+  align-self: center;
+  position: relative;
+  width: 100%;
+}
 
+/* ---------- 顶部：标题 / UP / 操作 ---------- */
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-embedded-ending-top-wrap {
-    align-items: flex-start;
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 16px;
-    position: relative;
-    width: 100%;
-  }
+  width: 100%;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-embedded-ending-top-left {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-left-title {
-    align-items: center;
-    display: flex;
-    height: 31px;
-    min-width: 0;
-  }
+  align-items: center;
+  display: flex;
+  margin: 0 0 8px;
+  min-width: 0;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-left-logo {
-    color: #fb7299;
-    flex-shrink: 0;
-    font-size: 26px;
-    font-style: italic;
-    font-weight: 700;
-    letter-spacing: -1px;
-    line-height: 1;
-    margin-right: 8px;
-  }
+  color: #fb7299;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 26px;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-right: 6px;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-left-title-text {
-    color: #fff;
-    cursor: pointer;
-    font-size: 16px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: 330px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 330px;
+}
 
-    &:hover {
-      color: #ff6699;
-    }
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-top-left-title-text:hover {
+  color: #ff6699;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-left-follow {
-    margin-top: 10px;
-  }
+  margin-top: 10px;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-follow {
-    align-items: center;
-    background: rgba(24, 25, 28, 0.5);
-    border-radius: 26px;
-    display: inline-flex;
-    height: 30px;
-    padding-right: 15px;
-  }
+  align-items: center;
+  background: rgba(24, 25, 28, 0.5);
+  border-radius: 26px;
+  display: inline-flex;
+  height: 30px;
+  padding-right: 15px;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-follow-face {
-    border-radius: 50%;
-    flex-shrink: 0;
-    height: 30px;
-    overflow: hidden;
-    width: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 30px;
+  overflow: hidden;
+  width: 30px;
+}
 
-    img {
-      height: 100%;
-      object-fit: cover;
-      width: 100%;
-    }
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-follow-face
+  img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-follow-name {
-    color: #fff;
-    font-size: 12px;
-    margin: 0 8px;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+  color: #c1c1c1;
+  font-size: 13px;
+  margin: 0 10px 0 6px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-follow-text {
-    color: #fff;
-    cursor: pointer;
-    font-size: 12px;
-    opacity: 0.9;
+  align-items: center;
+  color: #fff;
+  display: flex;
+  font-size: 12px;
+  line-height: 1;
+}
 
-    &:hover {
-      color: #ff6699;
-    }
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-follow-text
+  svg {
+  fill: #fff;
+  height: 12px;
+  margin-right: 2px;
+  width: 12px;
+}
 
+/* ---------- 右侧操作 ---------- */
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-buttons {
-    align-items: center;
-    display: flex;
-    flex-shrink: 0;
-    position: absolute;
-    right: 0;
-    top: 19px;
-  }
+  display: flex;
+  pointer-events: all;
+  position: absolute;
+  right: 0;
+  top: 19px;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-top-buttons
+  .nova-player-top-buttons-replay::after {
+  background: rgba(255, 255, 255, 0.1);
+  content: "";
+  height: 45px;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-button {
-    align-items: center;
-    border-radius: 6px;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    height: 45px;
-    justify-content: center;
-    padding: 10px;
-    position: relative;
-    width: 45px;
+  align-items: center;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  height: 45px;
+  padding: 10px;
+  position: relative;
+  transition: background 0.2s;
+  width: 45px;
+}
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-top-button:hover {
+  background: rgba(229, 233, 239, 0.3);
+}
 
-    & + .nova-player-top-button:before {
-      background: rgba(255, 255, 255, 0.1);
-      content: "";
-      height: 20px;
-      left: 0;
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 1px;
-    }
-  }
-
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-button-icon {
-    display: block;
-    height: 22px;
-    width: 22px;
+  height: 22px;
+  width: 22px;
+}
 
-    svg {
-      fill: currentColor;
-      height: 100%;
-      width: 100%;
-    }
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-top-button-icon
+  svg {
+  fill: #fff;
+  height: 100%;
+  width: 100%;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-button-text {
-    color: #a2a7ae;
-    font-size: 10px;
-    font-weight: 400;
-    height: 10px;
-    line-height: 10px;
-    margin-top: 5px;
-    text-align: center;
-    width: 50px;
-  }
+  color: #a2a7ae;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  height: 10px;
+  line-height: 10px;
+  margin-top: 5px;
+  text-align: center;
+  width: 50px;
+}
 
+/* ---------- 推荐卡片 ---------- */
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-embedded-ending-relation-wrap {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-    pointer-events: none;
-    width: 100%;
-    z-index: 54;
-  }
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  width: 100%;
+  z-index: 54;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-embedded-ending-relation-context {
-    align-items: center;
-    display: flex;
-    flex-flow: wrap;
-    justify-content: center;
-    margin-top: 16px;
-    width: 100%;
-    z-index: 1;
-  }
+  align-items: center;
+  display: flex;
+  flex-flow: wrap;
+  justify-content: center;
+  margin-top: 16px;
+  width: 100%;
+  z-index: 1;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-relation-context-item {
-    cursor: pointer;
-    display: block;
-    flex: 1 1 0%;
-    margin-left: 14px;
-    max-width: 200px;
-    min-width: 160px;
-    pointer-events: all;
-    position: relative;
-    user-select: none;
+  cursor: pointer;
+  display: block;
+  flex: 1 1 0%;
+  margin-left: 14px;
+  max-width: 200px;
+  min-width: 160px;
+  pointer-events: all;
+  position: relative;
+  user-select: none;
+}
 
-    &:first-child {
-      margin-left: 0;
-    }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-relation-context-item:first-child {
+  margin-left: 0;
+}
 
-    &:nth-child(6) {
-      margin-left: 0;
-    }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-relation-context-item:nth-child(6) {
+  margin-left: 0;
+}
 
-    &:nth-child(n + 6) {
-      margin-top: 20px;
-    }
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-relation-context-item:nth-child(n + 6) {
+  margin-top: 20px;
+}
 
-  .nova-player-relation-context-poster,
-  .nova-player-ending-related-item-img {
-    border-radius: 6px;
-    padding-top: 56.25%;
-    position: relative;
-    width: 100%;
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-relation-context-poster {
+  border-radius: 6px;
+  overflow: hidden;
+  padding-top: 56.25%;
+  position: relative;
+  width: 100%;
+}
 
-  .nova-player-relation-context-poster img {
-    border-radius: 6px;
-    height: 100%;
-    left: 0;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    transition: transform 0.2s;
-    width: 100%;
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-relation-context-poster
+  img {
+  border-radius: 6px;
+  height: 100%;
+  left: 0;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  transition: transform 0.2s;
+  width: 100%;
+}
 
-    &:hover {
-      transform: scale(1.05);
-    }
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-relation-context-poster
+  img:hover {
+  transform: scale(1.05);
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-relation-context-poster-duration {
-    background: #17181a;
-    border-radius: 2px;
-    bottom: 4px;
-    color: #e7e9eb;
-    font-size: 12px;
-    height: 16px;
-    line-height: 16px;
-    opacity: 0.9;
-    padding: 0 4px;
-    position: absolute;
-    right: 6px;
-  }
+  background: #17181a;
+  border-radius: 2px;
+  bottom: 4px;
+  color: #e7e9eb;
+  font-size: 12px;
+  height: 16px;
+  line-height: 16px;
+  opacity: 0.9;
+  padding: 0 4px;
+  position: absolute;
+  right: 6px;
+  text-align: center;
+  width: auto;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-relation-context-title {
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    color: #fff;
-    display: -webkit-box;
-    font-size: 13px;
-    font-weight: 400;
-    height: 38px;
-    line-height: 18px;
-    margin: 4px 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 100%;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: #fff;
+  display: -webkit-box;
+  font-size: 13px;
+  font-weight: 400;
+  height: 38px;
+  line-height: 18px;
+  margin: 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 90%;
+}
 
-    &:hover {
-      color: #ff6699;
-    }
-  }
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-relation-context-title:hover {
+  color: #ff6699;
+}
 
+/* ---------- 底部按钮 ---------- */
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-embedded-ending-button-group {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-    margin-top: 26px;
-    width: 100%;
-  }
+  align-items: center;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  fill: #fff;
+  font-size: 14px;
+  font-weight: 400;
+  height: 32px;
+  justify-content: center;
+  margin: 26px auto 0;
+  pointer-events: all;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-embedded-ending-button-group
+  svg {
+  align-self: center;
+  height: 16px;
+  width: 16px;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-downlowd,
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-enter {
-    align-items: center;
-    border-radius: 6px;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    font-size: 14px;
-    height: 32px;
-    justify-content: center;
-    padding: 0 16px;
-    transition: background 0.2s;
+  align-items: center;
+  border-radius: 6px;
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  line-height: 32px;
+  padding: 0 16px;
+}
 
-    svg {
-      height: 16px;
-      margin-right: 6px;
-      width: 16px;
-    }
-
-    &:hover {
-      background: rgba(229, 233, 239, 0.3);
-    }
-  }
-
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-downlowd {
-    margin-right: 4px;
-  }
+  margin-right: 4px;
+}
 
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-downlowd
+  svg {
+  margin-right: 4px;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-enter {
-    margin-right: 20px;
-  }
+  margin-right: 20px;
 }
 
-// 小窗口专用入口 / 重播（默认隐藏）
-.nova-player-ending-wrap.nova-player-embedded-ending-wrap {
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-downlowd:hover,
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-enter:hover {
+  background: rgba(229, 233, 239, 0.3);
+  transition: background-color 0.2s ease-in-out;
+}
+
+/* ---------- 小窗口：真实页面隐藏整块内容，只保留入口/重播 ---------- */
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-ending-enter-button,
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-replay {
-    display: none;
-  }
-
-  .nova-player-ending-enter-button {
-    align-items: center;
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 26px;
-    color: #fff;
-    cursor: pointer;
-    display: none;
-    font-size: 14px;
-    height: 32px;
-    justify-content: center;
-    padding: 0 10px;
-    position: absolute;
-    right: 14px;
-    top: 14px;
-    z-index: 56;
-
-    svg {
-      fill: currentColor;
-      height: 16px;
-      margin-left: 3px;
-      width: 16px;
-    }
-  }
-
-  .nova-player-replay {
-    align-items: center;
-    color: #fff;
-    cursor: pointer;
-    display: none;
-    flex-direction: column;
-    height: 65px;
-    justify-content: center;
-    left: 50%;
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 65px;
-    z-index: 56;
-  }
-
-  .nova-player-replay-icon {
-    display: block;
-    height: 45px;
-    width: 45px;
-
-    svg {
-      fill: currentColor;
-      height: 100%;
-      width: 100%;
-    }
-  }
-
-  .nova-player-replay-text {
-    font-size: 12px;
-    line-height: 16px;
-  }
+  display: none;
 }
 
-// 真实 B 站：窗口小于 750px 时整块片尾内容隐藏，只保留小窗入口/重播
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-ending-enter-button {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 26px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  height: 32px;
+  justify-content: center;
+  padding: 0 10px;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 56;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-ending-enter-button
+  svg {
+  fill: currentColor;
+  height: 16px;
+  margin-left: 3px;
+  width: 16px;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-replay {
+  align-items: center;
+  color: #fff;
+  cursor: pointer;
+  flex-direction: column;
+  height: 65px;
+  justify-content: center;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 65px;
+  z-index: 56;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-replay-icon {
+  display: block;
+  height: 45px;
+  width: 45px;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-replay-icon
+  svg {
+  fill: currentColor;
+  height: 100%;
+  width: 100%;
+}
+
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-replay-text {
+  font-size: 12px;
+  line-height: 16px;
+}
+
 @container (max-width: 749px) {
   .nova-player-ending-wrap.nova-player-embedded-ending-wrap
     .nova-player-embedded-ending-wrap-box {

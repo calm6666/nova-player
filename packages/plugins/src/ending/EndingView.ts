@@ -1568,6 +1568,18 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
     // 外链尾页：按播放器宽度直接决定 DOM 卡片数量（不是渲染后隐藏）
     if (isEmbedded) {
+      // 与真实页面一致：宽度由 JS 动态写到内联 style，CSS 只负责 width:100%
+      const box = root.querySelector<HTMLElement>(
+        ".nova-player-embedded-ending-wrap-box",
+      );
+      if (box) {
+        const boxWidth = Math.min(
+          Math.max(0, availableWidth - 40),
+          1060,
+        );
+        box.style.width = `${boxWidth}px`;
+      }
+
       const count =
         availableWidth < 750
           ? 0
