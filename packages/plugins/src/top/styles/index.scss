@@ -114,12 +114,13 @@
   flex: 0;
   font-size: 12px;
   font-weight: 400;
-  height: 32px;
-  line-height: 32px;
-  margin-bottom: 8px;
+  height: 40px;
+  line-height: 40px;
+  margin-bottom: 12px;
+  padding: 0 10px 0 0;
   pointer-events: all;
   text-align: center;
-  width: 89px;
+  width: 97px;
   z-index: 2;
 
   .nova-player-follow-face {
@@ -127,10 +128,10 @@
     border-radius: 50%;
     -ms-flex: none;
     flex: none;
-    height: 24px;
-    margin-left: 4px;
+    height: 30px;
+    margin-left: 0;
     vertical-align: bottom;
-    width: 24px;
+    width: 30px;
   }
 
   .nova-player-follow-icon {
@@ -220,7 +221,7 @@
   font-weight: 400;
   height: 24px;
   line-height: 24px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   padding: 0 6px;
   pointer-events: all;
   text-align: center;
@@ -282,6 +283,12 @@
   left: 24px;
   margin-top: 24px;
   min-height: 12px;
+}
+
+.nova-player-container[data-screen="normal"] .nova-player-top-left-title,
+.nova-player-container[data-screen="web"] .nova-player-top-left-title,
+.nova-player-container[data-screen="full"] .nova-player-top-left-title {
+  margin-bottom: 12px;
 }
 
 .nova-player-container[data-screen="normal"] .nova-player-top-issue,
