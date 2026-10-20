@@ -1508,6 +1508,8 @@ export const PlayerDocker = defineComponent<
         if (state === PlayerState.ENDED) {
           // 播放结束时显示片尾推荐面板（与既有实现行为一致）
           endingApi.showEndWrap?.();
+          // 片尾不是播放态：也要启动自动隐藏，让进入观看入口跟随控制栏收起
+          resetAutoHideTimer();
         }
       },
       lifecycle,
@@ -1936,7 +1938,10 @@ export const PlayerDocker = defineComponent<
       clearTimeout(autoHideTimer);
     }
     autoHideTimer = setTimeout(() => {
-      if (readIsPlaying()) {
+      if (
+        readIsPlaying() ||
+        playerContainerRef.value?.classList.contains("state-ended")
+      ) {
         hideControls();
       }
       autoHideTimer = null;

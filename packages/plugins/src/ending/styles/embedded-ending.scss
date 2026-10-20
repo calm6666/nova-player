@@ -211,14 +211,7 @@
     object-fit: cover;
     position: absolute;
     top: 0;
-    transition: opacity 0.2s;
     width: 100%;
-  }
-
-  .nova-player-relation-context-item:hover
-    .nova-player-relation-context-poster
-    img {
-    opacity: 0.85;
   }
 
   .nova-player-relation-context-poster-duration {
