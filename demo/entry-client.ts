@@ -1123,6 +1123,10 @@ const DEMO_RELATED = [
   { title: "模拟推荐 02", pic: demoPic("推荐 02", "#00b4d8", "#22223b"), duration: "03:20", url: "https://www.bilibili.com/" },
   { title: "模拟推荐 03", pic: demoPic("推荐 03", "#7c3aed", "#111827"), duration: 245, url: "https://www.bilibili.com/" },
   { title: "模拟推荐 04", pic: demoPic("推荐 04", "#f59e0b", "#1f2937"), duration: "02:08", url: "https://www.bilibili.com/" },
+  { title: "模拟推荐 05", pic: demoPic("推荐 05", "#10b981", "#111827"), duration: "06:34", url: "https://www.bilibili.com/" },
+  { title: "模拟推荐 06", pic: demoPic("推荐 06", "#ef4444", "#1f2937"), duration: "00:16", url: "https://www.bilibili.com/" },
+  { title: "模拟推荐 07", pic: demoPic("推荐 07", "#3b82f6", "#0f172a"), duration: "04:15", url: "https://www.bilibili.com/" },
+  { title: "模拟推荐 08", pic: demoPic("推荐 08", "#a855f7", "#1a1a2e"), duration: "06:08", url: "https://www.bilibili.com/" },
 ];
 
 /** 外链尾页 5×2 推荐卡片（10 条独立模拟数据） */
