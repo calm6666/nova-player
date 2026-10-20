@@ -226,8 +226,9 @@
       }
     }
 
-    // 进入观看入口跟随控制栏显隐；推荐卡片始终显示
-    &[data-ctrl-hidden="true"] .nova-player-relation-button {
+    // 进入观看入口跟随控制栏显隐；暂停时始终显示（与真实页面一致）
+    &[data-ctrl-hidden="true"]:not(.state-paused)
+      .nova-player-relation-button {
       opacity: 0;
       pointer-events: none;
       visibility: hidden;
