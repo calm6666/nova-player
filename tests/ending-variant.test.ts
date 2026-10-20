@@ -222,21 +222,24 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     });
     api.showEndWrap();
 
-    expect(container.querySelector(".nova-ogv-ending-wrap")).not.toBeNull();
+    expect(container.querySelector(".endpage_wrap__hNQ7J")).not.toBeNull();
     expect(
-      container.querySelector(".nova-ogv-ending-title")?.textContent,
+      container.querySelector(".endpageHeader_title__2Fxdi")?.textContent,
     ).toBe("西游记");
     expect(
-      container.querySelector(".nova-ogv-ending-cover img")?.getAttribute("src"),
+      container
+        .querySelector(".endpageHeader_cover__IeKFh img")
+        ?.getAttribute("src"),
     ).toBe("https://example.test/cover.jpg");
     expect(
-      container.querySelector(".nova-ogv-ending-follow")?.textContent,
+      container.querySelector(".endpageHeader_follow_btn__b6OK7")?.textContent,
     ).toContain(t("player.ui.ending.watch_series"));
     expect(
-      container.querySelectorAll(".nova-ogv-ending-btn").length,
+      container.querySelectorAll(".endpageHeader_btn_group__pmZsT > div")
+        .length,
     ).toBe(4);
     expect(
-      container.querySelectorAll(".nova-ogv-ending-recommend-item").length,
+      container.querySelectorAll(".EndPageRecommendItem_wrap__1mC5h").length,
     ).toBe(5);
   });
 
@@ -249,12 +252,13 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     });
     api.showEndWrap();
 
-    const wrap = container.querySelector<HTMLElement>(".nova-ogv-ending-wrap");
+    const wrap = container.querySelector<HTMLElement>(
+      ".endpage_wrap__hNQ7J",
+    );
     expect(wrap?.getAttribute("data-countdown")).toBeNull();
-    expect(container.querySelector(".nova-ogv-ending-cancel")).toBeNull();
-    expect(container.querySelector(".nova-ogv-ending-countdown")).toBeNull();
+    expect(container.querySelector(".state-countdown-host")).toBeNull();
     expect(
-      container.querySelector(".state-countdown-host"),
+      container.querySelector(".EndPageRecommendItem_cancel"),
     ).toBeNull();
   });
 });

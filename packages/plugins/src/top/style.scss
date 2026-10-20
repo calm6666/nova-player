@@ -2,7 +2,9 @@
 @use "./styles/embedded.scss" as *;
 
 /* 片尾打开时隐藏 Top */
-.nova-player-container.state-ended .nova-player-top-wrap {
+.nova-player-container.state-ended .nova-player-top-wrap,
+.nova-player-container:has(.nova-player-ending-wrap[data-select="1"])
+  .nova-player-top-wrap {
   display: none;
 }
 
@@ -14,11 +16,6 @@
   visibility: visible;
 }
 
-.nova-player-container[data-screen="full"] .nova-player-top-left-title,
-.nova-player-container[data-screen="web"] .nova-player-top-left-title {
-  display: block;
-}
-
 .nova-player-container[data-screen="mini"] .nova-player-top-wrap {
   display: none;
 }
@@ -28,6 +25,16 @@
   .nova-player-container[data-screen="web"] .nova-player-top-left {
     left: 24px;
     margin-top: 24px;
+  }
+
+  .nova-player-container[data-screen="full"],
+  .nova-player-container[data-screen="web"] {
+    .nova-player-follow {
+      height: 40px;
+      line-height: 40px;
+      margin-bottom: 12px;
+      min-width: 97px;
+    }
   }
 
   .nova-player-container[data-screen="full"] .nova-player-top-left-title,

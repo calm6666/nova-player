@@ -1252,83 +1252,104 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 渲染 OGV 单张推荐卡片（112×148，首张承载倒计时） */
   const renderOgvCard = (item: EndingRelatedItem): VNode => {
-    const children: VNode[] = [
+    const count = Math.max(1, ogvRelated.value.length);
+    const content = h(
+      "div",
+      { class: "EndPageRecommendItem_wrap__1mC5h" },
       h(
-        "div",
-        { class: "nova-ogv-ending-recommend-cover" },
-        item.pic ? h("img", { src: item.pic, alt: item.title }) : null,
-        h("div", { class: "nova-ogv-ending-recommend-mask" }),
-      ),
-      h("div", { class: "nova-ogv-ending-recommend-title" }, item.title),
-    ];
-
-    return item.url
-      ? h(
-          "a",
-          {
-            class: "nova-ogv-ending-recommend-item",
-            href: item.url,
-            target: "_blank",
-            rel: "noopener noreferrer",
-            onClick: (event: MouseEvent) => {
-              if (props.onRelatedClick) event.preventDefault();
-              props.onRelatedClick?.(item);
-            },
+        item.url ? "a" : "div",
+        {
+          href: item.url ?? undefined,
+          role: item.url ? undefined : "button",
+          onClick: (event: MouseEvent) => {
+            if (item.url && props.onRelatedClick) event.preventDefault();
+            props.onRelatedClick?.(item);
           },
-          ...children,
-        )
-      : h(
+        },
+        h(
+          "div",
+          { class: "EndPageRecommendItem_cover__NNRJ5" },
+          item.pic
+            ? h("img", {
+                src: item.pic,
+                alt: item.title,
+                class: "image_ogv_weslie_common_image__Rg7Xm",
+                loading: "lazy",
+              })
+            : null,
+          h("div", { class: "EndPageRecommendItem_mask__m6qrd" }),
+        ),
+        h(
           "div",
           {
-            class: "nova-ogv-ending-recommend-item",
-            role: "button",
-            onClick: () => props.onRelatedClick?.(item),
+            class:
+              "EndPageRecommendItem_title__m9X8S ogv-endpage-recommmend-title",
           },
-          ...children,
-        );
+          item.title,
+        ),
+      ),
+    );
+    return h(
+      "div",
+      {
+        class: "endpageRecommend_itemWrap__tXswP",
+        style: { flex: `0 0 ${100 / count}%` },
+      },
+      ...[content],
+    );
   };
 
-  /** 渲染 OGV 整页片尾（对应 B 站 endpage_* 结构） */
+  /** 渲染 OGV 整页片尾（真实 endpage_* 结构） */
   const renderOgvEnding = (): VNode =>
     h(
       "div",
-      { class: "nova-ogv-ending" },
+      { class: "endpage_wrap__hNQ7J" },
       h(
         "div",
-        { class: "nova-ogv-ending-content" },
-        // 头部：封面 / 标题 / 追剧 + 操作按钮
+        { class: "endpage_content__z9rdN" },
         h(
           "div",
-          { class: "nova-ogv-ending-header" },
+          { class: "endpageHeader_header__a1ZwI" },
           h(
             "div",
-            { class: "nova-ogv-ending-ep-info" },
+            { class: "endpageHeader_epInfo__fevE_" },
             h(
               "div",
-              { class: "nova-ogv-ending-cover" },
-              props.cover ? h("img", { src: props.cover, alt: props.title }) : null,
+              { class: "endpageHeader_cover__IeKFh" },
+              props.cover
+                ? h(
+                    "picture",
+                    {},
+                    h("img", {
+                      src: props.cover,
+                      alt: props.title ?? "",
+                      class: "image_ogv_weslie_common_image__Rg7Xm",
+                      loading: "lazy",
+                    }),
+                  )
+                : null,
             ),
             h(
               "div",
-              { class: "nova-ogv-ending-ep-right" },
+              { class: "endpageHeader_epInfo_right__u_bBc" },
               h(
                 "div",
-                { class: "nova-ogv-ending-title" },
+                {
+                  class: "endpageHeader_title__2Fxdi",
+                  "data-testid": "end-page-header-title",
+                },
                 props.title ?? "",
               ),
               h(
                 "div",
                 {
-                  class: [
-                    "nova-ogv-ending-follow",
-                    { "state-followed": Boolean(props.followed) },
-                  ],
-                  role: "button",
+                  class: "endpageHeader_follow_btn__b6OK7",
+                  "data-testid": "end-page-header-follow-btn",
                   onClick: props.onFollow,
                 },
                 h(
                   "span",
-                  { class: "nova-ogv-ending-follow-icon" },
+                  { class: "endpageHeader_icon__U3hSy" },
                   h(
                     "svg",
                     { viewBox: "0 -3 16 16" },
@@ -1345,80 +1366,72 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
           ),
           h(
             "div",
-            { class: "nova-ogv-ending-btn-group" },
+            {
+              class: "endpageHeader_btn_group__pmZsT",
+              "data-testid": "end-page-header-btn-group",
+            },
             h(
               "div",
-              {
-                class: "nova-ogv-ending-btn nova-ogv-ending-restart",
-                role: "button",
-                onClick: props.onRestart,
-              },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, RestartIcon()),
+              { class: "endpageHeader_restart__7eqmj", onClick: props.onRestart },
+              h("span", {}, RestartIcon()),
               h(
                 "span",
-                { class: "nova-ogv-ending-btn-text" },
+                { class: "endpageHeader_text__DmrwG", style: { marginTop: "4px" } },
                 t("player.ui.ending.replay"),
               ),
             ),
             h(
               "div",
-              {
-                class: "nova-ogv-ending-btn nova-ogv-ending-like",
-                role: "button",
-                onClick: props.onLike,
-              },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, OgvLikeIcon()),
+              { class: "endpageHeader_like__BpT1F", onClick: props.onLike },
+              h("span", {}, OgvLikeIcon()),
               h(
                 "span",
-                { class: "nova-ogv-ending-btn-text" },
+                { class: "endpageHeader_text__DmrwG" },
                 t("player.ui.ending.like"),
               ),
             ),
             h(
               "div",
-              {
-                class: "nova-ogv-ending-btn nova-ogv-ending-coin",
-                role: "button",
-                onClick: props.onCoin,
-              },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, OgvCoinIcon()),
+              { class: "endpageHeader_coin__BLrqj", onClick: props.onCoin },
+              h("span", {}, OgvCoinIcon()),
               h(
                 "span",
-                { class: "nova-ogv-ending-btn-text" },
+                { class: "endpageHeader_text__DmrwG" },
                 t("player.ui.ending.coin"),
               ),
             ),
             h(
               "div",
               {
-                class: "nova-ogv-ending-btn nova-ogv-ending-share",
-                role: "button",
+                class: "endpageHeader_share__OmhLB",
                 onClick: () => {
                   props.onShare?.();
                   showShareWrap();
                 },
               },
-              h("span", { class: "nova-ogv-ending-btn-icon" }, OgvShareIcon()),
+              h("span", {}, OgvShareIcon()),
               h(
                 "span",
-                { class: "nova-ogv-ending-btn-text" },
+                { class: "endpageHeader_text__DmrwG" },
                 t("player.ui.ending.share"),
               ),
             ),
           ),
         ),
-        // 相关推荐
         h(
           "div",
-          { class: "nova-ogv-ending-recommend" },
+          { class: "endpageRecommend_wrap__QeMEd" },
           h(
             "div",
-            { class: "nova-ogv-ending-recommend-heading" },
+            { class: "endpageRecommend_title__sksZV" },
             t("player.ui.ending.related"),
           ),
           h(
             "div",
-            { class: "nova-ogv-ending-recommend-list" },
+            {
+              class: "endpageRecommend_list__AVIfN",
+              style: { width: "calc(125% - 140px)" },
+            },
             h(For, {
               each: (): EndingRelatedItem[] => ogvRelated.value,
               key: (item: EndingRelatedItem, index: number): string =>
@@ -1431,7 +1444,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       ),
     );
 
-  // ============================================
   // 渲染：station 分享面板
   // ============================================
 
@@ -1635,8 +1647,8 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     // OGV 片尾：按容器宽度动态增删推荐卡片（最多 5 张）
     if (isOgv) {
       const count = Math.max(
-        1,
-        Math.min(5, Math.floor((availableWidth - 64) / 200)),
+        2,
+        Math.min(5, Math.floor((availableWidth - 80) / 140)),
       );
       const next = related.slice(0, count);
       if (next.length !== ogvRelated.value.length) {
