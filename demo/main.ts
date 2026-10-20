@@ -1042,7 +1042,7 @@ const PlayerSection = defineComponent(() => {
       {
         class: "player-description",
       },
-      "SSR 阶段直接渲染播放器完整 HTML（video 标签 + 控制栏 + 弹幕层），水合时自动绑定事件。点击「切换视频源」在客户端重新创建播放器实例。",
+      "SSR 输出页面外壳与播放器容器，水合后挂载播放器；播放器完整 HTML 可通过 renderPlayerToString() 在服务端生成。视频源切换走 switchTo / refresh，不重建播放器。",
     ),
   );
 });

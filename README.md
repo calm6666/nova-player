@@ -347,7 +347,7 @@ player.destroy();         // 卸载并清理全部监听、插件与订阅
 不会触碰 DOM。渲染时取其 VNode，或使用 `isServer()` / `createSSRConfig()`：
 
 ```ts
-import { isServer, createSSRConfig, VideoPlayer } from '@lumina/nova';
+import { isServer, createSSRConfig, VideoPlayer, renderPlayerToString } from '@lumina/nova';
 
 const config = {
   src: videoUrl,
@@ -357,6 +357,7 @@ const config = {
 
 const player = new VideoPlayer(config);
 const vnode = player.render();     // 交给你的 SSR 框架输出 HTML
+const html = renderPlayerToString(player); // 或直接拿到完整播放器 HTML
 
 // 客户端
 player.mount(document.getElementById('player')!);   // 或 player.hydrate(el) 复用服务端结构

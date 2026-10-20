@@ -425,6 +425,7 @@ function serializeAttrs(attrs: VNodeAttrs): string {
     for (const rKey in reactiveAttrs) {
       if (!Object.prototype.hasOwnProperty.call(reactiveAttrs, rKey)) continue;
       const val = reactiveAttrs[rKey]();
+      if (val === undefined || val === null) continue;
       if (rKey === "class" || rKey === "className") {
         if (val) parts.push(` class="${escapeHtml(val)}"`);
       } else {

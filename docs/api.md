@@ -843,6 +843,20 @@ player.use(TopPlugin());
 
 优先级：`ui.top` / `ui.ending` 插槽优先于同名插件。
 
+### 7.4.1 播放器 SSR
+
+播放器 UI 可以在服务端直接序列化为 HTML：
+
+```ts
+import { VideoPlayer, renderPlayerToString } from "@lumina/nova";
+
+const player = new VideoPlayer({ src: "/video.mp4" });
+const html = renderPlayerToString(player);
+// html 包含 video / 控制栏 / 弹幕层等完整结构
+```
+
+客户端使用同一份 VNode 树 hydration 后即可交互，无需二次挂载。
+
 ### 7.4 SlotContext
 
 ```ts
