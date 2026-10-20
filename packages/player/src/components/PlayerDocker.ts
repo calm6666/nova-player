@@ -2128,10 +2128,14 @@ export const PlayerDocker = defineComponent<
   /** 容器尺寸变化观察器，通知事件总线容器大小变化 */
   const resizeObserver = safeResizeObserver((entries) => {
     entries.forEach(() => {
-      props.events?.emit(PlayerEventEnum.RESIZE, {
-        width: playerDockerRef.value?.clientWidth ?? 0,
-        height: playerDockerRef.value?.clientHeight ?? 0,
-      });
+      const width = playerDockerRef.value?.clientWidth ?? 0;
+      const height = playerDockerRef.value?.clientHeight ?? 0;
+      // 外链暂停页：容器过小时隐藏推荐卡片，保留进入观看入口
+      playerContainerRef.value?.classList.toggle(
+        "is-embedded-compact",
+        embeddedMode && (width < 640 || height < 360),
+      );
+      props.events?.emit(PlayerEventEnum.RESIZE, { width, height });
     });
   });
 
@@ -3120,29 +3124,8 @@ export const PlayerDocker = defineComponent<
           })
         : null,
       // 外链场景：右上角「进入哔哩哔哩」胶囊按钮
-      embeddedMode
-        ? h(
-            "div",
-            {
-              class: "nova-player-enter-button",
-              role: "button",
-              "aria-label": t("player.ui.embed.enter_quality"),
-              onClick: () => openEmbeddedUrl(embeddedConfig?.enterUrl),
-            },
-            t("player.ui.embed.enter_quality"),
-            h(
-              "svg",
-              {
-                xmlns: "http://www.w3.org/2000/svg",
-                viewBox: "0 0 16 16",
-                "data-pointer": "none",
-              },
-              h("path", {
-                d: "m9.188 7.999-3.359 3.359a.75.75 0 1 0 1.061 1.061l3.889-3.889a.75.75 0 0 0 0-1.061L6.89 3.58a.75.75 0 1 0-1.061 1.061l3.359 3.358z",
-              }),
-            ),
-          )
-        : null,
+      // 外链暂停页的进入观看入口由 RelationStrip 统一渲染（卡片上方），
+      // 不再额外渲染居中的重复胶囊按钮。
       // 按钮悬停提示工具（既有实现挂载于 .nova-player-container：
       // new Tooltips(this.playerContainer!)；Controls / SendBar / Top 的
       // tooltip 事件经 handleShowTooltip / handleHideTooltip 接通至此）

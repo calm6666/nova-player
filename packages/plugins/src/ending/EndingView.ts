@@ -1515,16 +1515,9 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     const availableHeight = root.clientHeight;
     if (availableWidth <= 0 || availableHeight <= 0) return;
 
-    // 外链片尾：容器过小时隐藏卡片，只保留顶部与进入观看入口
-    if (isEmbedded) {
-      root.classList.toggle(
-        "is-compact",
-        availableWidth < 760 || availableHeight < 420,
-      );
-    }
-
+    // 外链片尾不参与整体缩放，保持原有布局
     const contents = root.querySelectorAll<HTMLElement>(
-      ".nova-player-ending-content, .nova-ogv-ending-content, .nova-player-embedded-ending-wrap-box",
+      ".nova-player-ending-content, .nova-ogv-ending-content",
     );
     contents.forEach((content) => {
       const width = content.offsetWidth;
