@@ -264,6 +264,17 @@
       }
     }
 
+    // 真实小容器行为：<720 隐藏卡片区；<440 连进入按钮一起隐藏
+    .nova-player-relation-wrap.is-relation-empty
+      .nova-player-relation-context {
+      display: none;
+    }
+
+    .nova-player-relation-wrap.is-relation-tiny
+      .nova-player-relation-button {
+      display: none !important;
+    }
+
     .nova-player-relation-wrap .nova-player-relation-context {
       align-items: center;
       box-sizing: border-box;
