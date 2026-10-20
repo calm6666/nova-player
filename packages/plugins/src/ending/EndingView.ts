@@ -407,6 +407,8 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     captureEndingFrame();
     endingWrapRef.value?.setAttribute("data-select", "1");
     startCountdown();
+    // 面板显示后再测量内容尺寸，真实 B 站进入片尾即写入 transform: scale(...)
+    requestAnimationFrame(() => applyContentScale());
   };
 
   /** 关闭片尾面板（移除 data-select） */

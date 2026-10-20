@@ -1496,12 +1496,77 @@ let demoTopStyle: "default" | "tv" | "music" = "default";
 let demoEndingStyle: "standard" | "ogv" = "standard";
 let demoScene: "station" | "embedded" = "station";
 
+/** Top 数据由插件持有，播放器 ui 不再承载 */
+function createTopPlugin(source?: PlayerSource): Plugin {
+  return TopPlugin({
+    data: {
+      title:
+        (source as unknown as { title?: string } | undefined)?.title ??
+        "Lumina Demo",
+      tv: demoTopStyle === "tv",
+      music: demoTopStyle === "music",
+      musicTitle: "发现《雨爱》",
+      followed: false,
+      upName: "模拟 UP 主",
+      avatar: demoPic("UP", "#00b4d8", "#1a1a2e"),
+    },
+  });
+}
+
+/** Ending 数据由插件持有，播放器 ui 不再承载 */
+function createEndingPlugin(source?: PlayerSource): Plugin {
+  const title =
+    (source as unknown as { title?: string } | undefined)?.title ??
+    "Lumina Demo";
+  if (demoScene === "embedded") {
+    return EndingPlugin({
+      data: {
+        title,
+        related: DEMO_EMBEDDED_RELATED,
+        upInfo: {
+          name: "小梅vlog",
+          face: demoPic("UP", "#00b4d8", "#1a1a2e"),
+          followed: true,
+        },
+        likeCount: 3537,
+        shareCount: 19,
+      },
+    });
+  }
+  if (demoEndingStyle === "ogv") {
+    return EndingPlugin({
+      data: {
+        title,
+        related: DEMO_RELATED,
+        cover: DEMO_COVER,
+        followed: false,
+        upInfo: {
+          name: "模拟 UP 主",
+          face: demoPic("UP", "#00b4d8", "#1a1a2e"),
+          followed: false,
+        },
+      },
+    });
+  }
+  return EndingPlugin({
+    data: {
+      title,
+      related: DEMO_RELATED,
+      upInfo: {
+        name: "模拟 UP 主",
+        face: demoPic("UP", "#00b4d8", "#1a1a2e"),
+        followed: false,
+      },
+    },
+  });
+}
+
 function collectPlugins(source?: PlayerSource): Plugin[] {
   // 模式 B 当前激活的服务端轨 id（activateTrack 写入，fetch 读取）
   let activeRemoteTrack = "zh-ai";
   const list: Plugin[] = [
-    TopPlugin(),
-    EndingPlugin(),
+    createTopPlugin(source),
+    createEndingPlugin(source),
     // 弹幕插件：Tip 操作回调接线 + 本地发送汇入页面弹幕列表
     // （onSendSuccess 对本地直发与服务端确认两条链路均触发）
     DanmakuPlugin({
@@ -1801,12 +1866,6 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
       scene: demoScene,
       topStyle: demoTopStyle,
       endingStyle: demoEndingStyle,
-      related: DEMO_RELATED,
-      up: {
-        name: "模拟 UP 主",
-        face: demoPic("UP", "#00b4d8", "#1a1a2e"),
-        followed: false,
-      },
       embedded: {
         title: current?.title ?? "Lumina Demo",
         stats: { like: 3537, comment: 19 },
@@ -1819,16 +1878,6 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
         enterUrl: "https://www.bilibili.com/",
         downloadUrl: "https://www.bilibili.com/",
       },
-      ...(demoEndingStyle === "ogv"
-        ? {
-            ogv: {
-              title: current?.title ?? "Lumina Demo",
-              cover: DEMO_COVER,
-              followed: false,
-              related: DEMO_RELATED,
-            },
-          }
-        : {}),
     },
     plugins: {
       list: collectPlugins(current ? current.src : undefined),
@@ -4589,9 +4638,9 @@ function installPluginDemoControls(): void {
     ["站内场景", () => applyScene("station")],
     ["更新标题", () => updateDemoTitle("动态更新标题 " + Date.now())],
     ["卸载 Top 插件", () => playerInstance?.uninstallPlugin("top")],
-    ["重装 Top 插件", () => playerInstance?.use(TopPlugin())],
+    ["重装 Top 插件", () => playerInstance?.use(createTopPlugin())],
     ["卸载 Ending 插件", () => playerInstance?.uninstallPlugin("ending")],
-    ["重装 Ending 插件", () => playerInstance?.use(EndingPlugin())],
+    ["重装 Ending 插件", () => playerInstance?.use(createEndingPlugin())],
   ];
   for (const [label, onClick] of buttons) {
     const button = document.createElement("button");
