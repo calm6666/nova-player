@@ -142,7 +142,6 @@ function isNetworkStreamError(error: unknown): boolean {
 export type QualityCapability = "none" | "static" | "adaptive";
 
 /** 清晰度切换超时（毫秒）：超过则视为切换失败 */
-const QUALITY_SWITCH_TIMEOUT_MS = 10000;
 
 /**
  * 内部事件总线的全部事件名（camelCase）
@@ -471,7 +470,6 @@ export class VideoPlayer
     label?: string;
     startedAt: number;
     kind: "stream" | "native";
-    timer: ReturnType<typeof setTimeout> | null;
   } | null = null;
 
   /** bindVideoEvents 注册的全部监听器（destroy 时统一摘除） */
@@ -2085,16 +2083,8 @@ export class VideoPlayer
     if (this.isSwitchingBackup) return;
 
     // 清晰度切换期间发生的流错误：视为本次切换失败并回调，不直接进入关播/错误面板
-    const pendingQuality = this.pendingQuality;
-    if (pendingQuality) {
-      if (pendingQuality.timer) clearTimeout(pendingQuality.timer);
-      this.pendingQuality = null;
-      this.state.set(PlayerStateKeyEnum.QUALITY_SWITCH_STATE, "failed");
-      this.events.emit(PlayerEventEnum.QUALITY_CHANGE_FAILED, {
-        from: pendingQuality.from,
-        to: pendingQuality.to,
-        reason: payload.message || "清晰度切换失败",
-      });
+    if (this.pendingQuality) {
+      this.failQualitySwitch(payload.message || "清晰度切换失败");
       return;
     }
 
@@ -3275,9 +3265,6 @@ export class VideoPlayer
     kind: "stream" | "native",
   ): void {
     // 上一个未完成的切换直接作废（不视为失败，避免噪声）
-    if (this.pendingQuality?.timer) {
-      clearTimeout(this.pendingQuality.timer);
-    }
     this.pendingQuality = null;
 
     const pending: NonNullable<VideoPlayer["pendingQuality"]> = {
@@ -3286,18 +3273,7 @@ export class VideoPlayer
       label,
       startedAt: Date.now(),
       kind,
-      timer: null,
     };
-    pending.timer = setTimeout(() => {
-      if (this.pendingQuality === pending) {
-        // 回调可能缺失，但档位已实际生效时按成功处理，避免误报失败
-        if (this.getCurrentQuality() === pending.to) {
-          this.resolveQualitySwitch(pending.to, pending.label);
-        } else {
-          this.failQualitySwitch("切换超时");
-        }
-      }
-    }, QUALITY_SWITCH_TIMEOUT_MS);
 
     this.pendingQuality = pending;
     this.state.set(PlayerStateKeyEnum.QUALITY_SWITCH_STATE, "switching");
@@ -3361,7 +3337,6 @@ export class VideoPlayer
   ): void {
     const pending = this.pendingQuality;
     if (!pending) return;
-    if (pending.timer) clearTimeout(pending.timer);
     this.pendingQuality = null;
 
     const elapsed = Date.now() - pending.startedAt;
@@ -3389,7 +3364,6 @@ export class VideoPlayer
   private failQualitySwitch(reason: string): void {
     const pending = this.pendingQuality;
     if (!pending) return;
-    if (pending.timer) clearTimeout(pending.timer);
     this.pendingQuality = null;
 
     this.state.set(PlayerStateKeyEnum.QUALITY_SWITCH_STATE, "failed");
@@ -4197,9 +4171,6 @@ export class VideoPlayer
     this.loadToken++;
     this.clearPendingLoad();
     this.pendingSeek = null;
-    if (this.pendingQuality?.timer) {
-      clearTimeout(this.pendingQuality.timer);
-    }
     this.pendingQuality = null;
 
     // 重置 Store 运行时状态
