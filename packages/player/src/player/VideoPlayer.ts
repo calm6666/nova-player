@@ -2084,6 +2084,20 @@ export class VideoPlayer
     // 备用源切换期间旧插件的 fatal（销毁竞态）不弹面板
     if (this.isSwitchingBackup) return;
 
+    // 清晰度切换期间发生的流错误：视为本次切换失败并回调，不直接进入关播/错误面板
+    const pendingQuality = this.pendingQuality;
+    if (pendingQuality) {
+      if (pendingQuality.timer) clearTimeout(pendingQuality.timer);
+      this.pendingQuality = null;
+      this.state.set(PlayerStateKeyEnum.QUALITY_SWITCH_STATE, "failed");
+      this.events.emit(PlayerEventEnum.QUALITY_CHANGE_FAILED, {
+        from: pendingQuality.from,
+        to: pendingQuality.to,
+        reason: payload.message || "清晰度切换失败",
+      });
+      return;
+    }
+
     this.clearLoadGuards();
     this.store.setLoading(false);
     this.store.setWaiting(false);
@@ -3276,7 +3290,12 @@ export class VideoPlayer
     };
     pending.timer = setTimeout(() => {
       if (this.pendingQuality === pending) {
-        this.failQualitySwitch("切换超时");
+        // 回调可能缺失，但档位已实际生效时按成功处理，避免误报失败
+        if (this.getCurrentQuality() === pending.to) {
+          this.resolveQualitySwitch(pending.to, pending.label);
+        } else {
+          this.failQualitySwitch("切换超时");
+        }
       }
     }, QUALITY_SWITCH_TIMEOUT_MS);
 

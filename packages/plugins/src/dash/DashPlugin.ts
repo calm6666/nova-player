@@ -806,16 +806,6 @@ export class DashPlugin implements StreamPlugin {
       dash.updateSettings({
         streaming: { abr: { autoSwitchBitrate: { video: true } } },
       });
-      // 切自动档不会立刻触发 qualityChangeRendered；立即上报成功，避免播放器等待超时误判失败
-      const autoRep = dash.getCurrentRepresentationForType('video');
-      this.eventBus?.emit(PlayerEventEnum.STREAM_QUALITY_CHANGE, {
-        width: autoRep?.width ?? 0,
-        height: autoRep?.height ?? 0,
-        bitrate: autoRep?.bandwidth ?? 0,
-        isAuto: true,
-        qualityId: AUTO_QUALITY_ID,
-        label: '自动',
-      });
       return;
     }
 
@@ -830,18 +820,6 @@ export class DashPlugin implements StreamPlugin {
       streaming: { abr: { autoSwitchBitrate: { video: false } } },
     });
     dash.setRepresentationForTypeByIndex('video', index);
-    // 同步上报成功，避免某些 dash.js 版本不触发 qualityChangeRendered 时被超时误判
-    const rep = dash.getCurrentRepresentationForType('video');
-    if (rep) {
-      this.eventBus?.emit(PlayerEventEnum.STREAM_QUALITY_CHANGE, {
-        width: rep.width,
-        height: rep.height,
-        bitrate: rep.bandwidth,
-        isAuto: false,
-        qualityId: String(rep.index),
-        label: `${rep.width}x${rep.height}`,
-      });
-    }
   }
 
   /**
