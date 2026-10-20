@@ -2,19 +2,28 @@
  * ============================================
  * Top 插件（结构对齐 DanmakuPlugin）
  * ============================================
- * 插件只向核心已有的 .nova-player-top-wrap 容器内挂载内容；
+ * 完整 Top 视图已迁到本包；插件只向核心已有的 .nova-player-top-wrap 容器内挂载，
  * 不创建包装 DOM、不新增类名、不替换根容器。
  */
 
-import type { Plugin } from "@/nova/core/plugin";
-import type { SlotMount } from "@/nova/types/slots";
+import {
+  h,
+  mount,
+  destroy,
+  type Plugin,
+  type SlotContext,
+  type SlotMount,
+} from "@lumina/nova";
+import { Top as TopView, type TopProps } from "./TopView";
 
+export interface TopPluginMountContext extends SlotContext {
+  props?: TopProps;
+}
 
 export interface TopPluginConfig {
-  /** 插件名 / 注册 id */
   id?: string;
-  /** 在已有 Top 根容器内渲染，返回可选清理函数 */
-  mount: SlotMount["mount"];
+  /** 自定义挂载；不传则使用内置完整 Top 视图 */
+  mount?: SlotMount["mount"];
 }
 
 interface TopPluginHost {
@@ -28,6 +37,7 @@ class TopPluginClass implements Plugin {
   readonly description: string;
   private readonly config: TopPluginConfig;
   private player: TopPluginHost | null = null;
+  private registered: SlotMount["mount"] | null = null;
 
   constructor(config: TopPluginConfig) {
     this.config = config;
@@ -37,16 +47,27 @@ class TopPluginClass implements Plugin {
 
   install(player: Parameters<Plugin["install"]>[0]): void {
     this.player = player as unknown as TopPluginHost;
-    this.player.registerTopPluginMount(this.config.mount);
+    const custom = this.config.mount;
+    const registered: SlotMount["mount"] = (container, ctx) => {
+      if (custom) return custom(container, ctx);
+      const viewProps = (ctx as TopPluginMountContext | null)?.props;
+      const vnode = h(TopView, { ...viewProps, host: container });
+      mount(vnode, container);
+      return () => destroy(vnode);
+    };
+    this.registered = registered;
+    this.player.registerTopPluginMount(registered);
   }
 
   uninstall(): void {
-    this.player?.unregisterTopPluginMount(this.config.mount);
+    if (this.registered) {
+      this.player?.unregisterTopPluginMount(this.registered);
+    }
+    this.registered = null;
     this.player = null;
   }
 }
 
-/** 创建 Top 插件 */
-export function TopPlugin(config: TopPluginConfig): Plugin {
+export function TopPlugin(config: TopPluginConfig = {}): Plugin {
   return new TopPluginClass(config);
 }

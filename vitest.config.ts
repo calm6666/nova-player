@@ -48,6 +48,7 @@ export default defineConfig({
   resolve: {
     alias: [
       // ===== 精确匹配正则（必须放在子路径和 catch-all 之前）=====
+      { find: /^@lumina\/nova$/, replacement: path.resolve(__dirname, 'packages/player/src/index.ts') },
       { find: /^@\/core$/, replacement: path.resolve(__dirname, 'core/index.ts') },
       { find: /^@\/types$/, replacement: path.resolve(__dirname, 'types/index.ts') },
       { find: /^@\/utils$/, replacement: path.resolve(__dirname, 'utils/index.ts') },

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { destroy, h, mount, t } from "../core";
-import { Ending } from "../packages/player/src/components/Ending";
-import type { EndingApi } from "../packages/player/src/components/Ending";
+import { Ending } from "../packages/plugins/src/ending/EndingView";
+import type { EndingApi } from "../packages/plugins/src/ending/EndingView";
 import type { VNode } from "../types";
-import countdownAnimation from "../packages/player/src/assets/lottie-icon/ending-countdown-animation.json";
+import countdownAnimation from "../packages/plugins/src/ending/assets/ending-countdown-animation.json";
 import zhCN from "../core/locales/zh-CN.json";
 import enUS from "../core/locales/en-US.json";
 
@@ -33,13 +33,24 @@ const mountEnding = (
   props: Record<string, unknown>,
 ): EndingApi => {
   let api: EndingApi | null = null;
+  const host = document.createElement("div");
+  host.className =
+    props.variant === "ogv"
+      ? "nova-player-ending-wrap nova-ogv-ending-wrap"
+      : props.variant === "interactive"
+        ? "nova-player-ending-wrap nova-interactive-ending-wrap"
+        : props.variant === "embedded"
+          ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
+          : "nova-player-ending-wrap";
+  container.appendChild(host);
   vnode = h(Ending, {
     ...props,
+    host,
     onEndingMounted: (next: EndingApi) => {
       api = next;
     },
   });
-  mount(vnode, container);
+  mount(vnode, host);
   expect(api).not.toBeNull();
   return api as unknown as EndingApi;
 };

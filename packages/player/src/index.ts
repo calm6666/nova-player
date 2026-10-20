@@ -80,3 +80,30 @@ export type {
 
 // 导出插槽类型（插件 / 配置共用）
 export type { SlotContent, SlotMount, SlotContext } from './types/slots';
+
+// 导出 Lumina 运行时（Top/Ending 插件视图使用，避免重复打包框架）
+export {
+  h,
+  mount,
+  destroy,
+  defineComponent,
+  useTemplateRef,
+  signal,
+  Fragment,
+  t,
+} from '@/core';
+export { Plus, Issue } from '@/nova/components/icons';
+export { rafTimeout, cancelRaf } from '@/utils/rafTimeout';
+export type { AnimationFrameID } from '@/utils/rafTimeout';
+export { LottieIcon } from '@/nova/components/LottieIcon';
+export type { LottieIconApi } from '@/nova/components/LottieIcon';
+
+// 导出插件视图公共类型
+export type {
+  VNode,
+  ComponentLifecycle,
+  EndingRelatedItem,
+  EndingUpInfo,
+  InteractiveBacktrackItem,
+  PlayerScene,
+} from '@/types';

@@ -4,11 +4,11 @@
  * ============================================
  */
 
-import { h, defineComponent, useTemplateRef, t } from "@/core";
-import type { ComponentLifecycle, VNode } from "@/types";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { Plus, Issue } from "@/nova/components/icons";
+import { h, defineComponent, useTemplateRef, t, Fragment, rafTimeout, cancelRaf, type AnimationFrameID } from "@lumina/nova";
+import type { ComponentLifecycle, VNode } from "@lumina/nova";
+
+
+import { Plus, Issue } from "@lumina/nova";
 /** 外链顶部操作图标（B 站 external 样式） */
 const TOP_LIKE_PATH =
   "M20.319 7.75h-4.543c.223-.484.457-1.093.545-1.683.064-.426.07-.948.019-1.445-.05-.485-.163-1.027-.387-1.452-.476-.901-1.13-1.534-1.917-1.688-.837-.163-1.558.263-1.99.916-.36.546-.501 1.001-.63 1.416l-.004.014c-.123.399-.244.791-.556 1.344-.513.909-.932 1.38-1.495 1.873-.29.255-.588.427-.861.538v13.642a108.372 108.372 0 0 0 8.127-.118c1.28-.067 2.504-.713 3.173-1.885.632-1.109 1.44-2.786 1.929-4.792.457-1.88.647-3.407.724-4.445.096-1.278-.943-2.235-2.134-2.235ZM7 21.184V7.75H5.302c-1.543 0-2.914 1.1-3.09 2.698A35.171 35.171 0 0 0 2 14.252c0 1.587.117 3.06.24 4.16.167 1.519 1.42 2.628 2.913 2.698.532.026 1.156.052 1.847.074Z";
@@ -77,8 +77,8 @@ export interface TopProps {
   music?: boolean;
   /** 音乐模式跑马灯文案 */
   musicTitle?: string;
-  /** 插件 / 插槽：在已有 .nova-player-top-wrap 内挂载 */
-  mount?: ((container: HTMLElement) => void | (() => void)) | null;
+  /** 插件挂载时的根容器（.nova-player-top-wrap） */
+  host?: HTMLElement | null;
   /** 问题反馈点击回调 */
   onIssueClick?: () => void;
   /** 关注按钮点击回调 */
@@ -99,8 +99,7 @@ export const Top = defineComponent<TopProps>(
     // ============================================
 
     /** 根容器元素引用 */
-    const topWrapRef = useTemplateRef<HTMLDivElement>(lifecycle, "topWrapRef");
-    let mountCleanup: (() => void) | null = null;
+    const topWrapRef = { value: props.host ?? null };
 
     /** 标题文本元素引用 */
     const titleRef = useTemplateRef<HTMLDivElement>(lifecycle, "titleRef");
@@ -212,10 +211,6 @@ export const Top = defineComponent<TopProps>(
         hide();
       }
 
-      // 插件 / 插槽：直接挂到已有 Top 根容器
-      if (props.mount && topWrapRef.value) {
-        mountCleanup = props.mount(topWrapRef.value) ?? null;
-      }
 
       // 悬停提示的目标元素（挂载后才有 DOM 引用）
       issueTooltip.element = issueIconRef.value;
@@ -228,26 +223,16 @@ export const Top = defineComponent<TopProps>(
       });
     };
 
-    lifecycle.onBeforeDestroy = (): void => {
-      mountCleanup?.();
-      mountCleanup = null;
-    };
+    lifecycle.onBeforeDestroy = (): void => {};
 
     // ============================================
     // 主渲染函数
     // ============================================
 
-    if (props.mount) {
-      return h("div", {
-        class: "nova-player-top-wrap",
-        ref: "topWrapRef",
-      });
-    }
-
     if (props.music) {
       return h(
-        "div",
-        { class: "nova-player-top-wrap", ref: "topWrapRef" },
+        Fragment,
+        {},
         h("div", { class: "nova-player-top-mask", hidden: true }),
         h("div", { class: "nova-player-top-title" }),
         h("div", { class: "nova-player-top-follow" }),
@@ -369,8 +354,8 @@ export const Top = defineComponent<TopProps>(
 
     if (props.tv) {
       return h(
-        "div",
-        { class: "nova-player-top-wrap", ref: "topWrapRef" },
+        Fragment,
+        {},
         h("div", { class: "nova-player-top-mask" }),
         h(
           "div",
@@ -432,11 +417,8 @@ export const Top = defineComponent<TopProps>(
     }
 
     return h(
-      "div",
-      {
-        class: "nova-player-top-wrap",
-        ref: "topWrapRef",
-      },
+      Fragment,
+      {},
       h("div", { class: "nova-player-top-mask", hidden: true }),
       h("div", { class: "nova-player-top-title" }),
       h("div", { class: "nova-player-top-follow" }),

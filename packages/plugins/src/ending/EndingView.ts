@@ -10,17 +10,16 @@
  * 未提供数据时只渲染容器结构，列表为空。
  */
 
-import { h, defineComponent, useTemplateRef, signal, t } from "@/core";
-import type { VNode } from "@/types";
+import { h, defineComponent, useTemplateRef, signal, t, Fragment, LottieIcon, type LottieIconApi } from "@lumina/nova";
+import type { VNode } from "@lumina/nova";
 import type {
   EndingRelatedItem,
   EndingUpInfo,
   InteractiveBacktrackItem,
   PlayerScene,
-} from "@/types";
-import { LottieIcon, type LottieIconApi } from "./LottieIcon";
-import endingCountdownAnimationData from "../assets/lottie-icon/ending-countdown-animation.json";
-import endingElectricIcon from "../assets/images/ending-electric.png";
+} from "@lumina/nova";
+import endingCountdownAnimationData from "./assets/ending-countdown-animation.json";
+import endingElectricIcon from "./assets/ending-electric.png";
 
 /**
  * Ending 组件 Props 接口
@@ -86,8 +85,16 @@ export interface EndingProps {
   onEnterSite?: () => void;
   /** embedded：下载客户端 */
   onDownloadApp?: () => void;
-  /** 插件 / 插槽：在已有 .nova-player-ending-wrap 内挂载 */
-  mount?: ((container: HTMLElement) => void | (() => void)) | null;
+  /** 插件挂载时的根容器（.nova-player-ending-wrap） */
+  host?: HTMLElement | null;
+  /** 面板 API 回调（核心据此控制显隐） */
+  onEndingMounted?: (api: {
+    showEndWrap: () => void;
+    closeEndWrap: () => void;
+    showShareWrap: () => void;
+    closeShareWrap: () => void;
+    isCountdownActive: () => boolean;
+  }) => void;
 }
 
 /**
@@ -244,11 +251,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   // ============================================
 
   /** 片尾面板外层容器 DOM 引用，通过 data-select 属性控制显示哪个子面板 */
-  let mountCleanup: (() => void) | null = null;
-  const endingWrapRef = useTemplateRef<HTMLDivElement>(
-    lifecycle,
-    "endingWrapRef",
-  );
+  const endingWrapRef = { value: props.host ?? null };
 
   /** 倒计时 lottie 实例 */
   const countdownRef = useTemplateRef<LottieIconApi>(
@@ -1467,10 +1470,14 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 组件挂载后，通过事件向外暴露面板显隐控制方法 */
   lifecycle.onMounted = (): void => {
-    if (props.mount && endingWrapRef.value) {
-      mountCleanup = props.mount(endingWrapRef.value) ?? null;
-    }
-
+    const api = {
+      showEndWrap,
+      closeEndWrap,
+      showShareWrap,
+      closeShareWrap,
+      isCountdownActive: () => countdownActive,
+    };
+    props.onEndingMounted?.(api);
     lifecycle.emit?.("endingMounted", {
       showEndWrap,
       closeEndWrap,
@@ -1482,8 +1489,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 组件销毁前清理倒计时定时器 */
   lifecycle.onBeforeDestroy = (): void => {
-    mountCleanup?.();
-    mountCleanup = null;
     stopCountdown();
   };
 
@@ -1491,21 +1496,9 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   // 组件渲染
   // ============================================
 
-  const rootClass = isEmbedded
-    ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
-    : isOgv
-      ? "nova-player-ending-wrap nova-ogv-ending-wrap"
-      : isInteractive
-        ? "nova-player-ending-wrap nova-interactive-ending-wrap"
-        : "nova-player-ending-wrap";
-
-  if (props.mount) {
-    return h("div", { class: rootClass, ref: "endingWrapRef" });
-  }
-
   return h(
-    "div",
-    { class: rootClass, ref: "endingWrapRef" },
+    Fragment,
+    {},
     // station 使用模糊封面背景；embedded 使用纯色整页背景；
     // ogv 用剧集封面做背景（无封面时保持纯色）
     isEmbedded || isOgv

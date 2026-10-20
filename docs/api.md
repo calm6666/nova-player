@@ -794,32 +794,35 @@ new VideoPlayer({
 
 ### 7.4 Top / Ending 插件
 
-插件结构与 `DanmakuPlugin` 一致，只负责在已有根容器内挂载：
+Top / Ending 的完整视图、样式依赖和 Ending 倒计时/自动连播行为都已迁到 `@lumina/plugins`。播放器核心只保留空根容器，**必须显式安装插件**：
 
 ```ts
 import { TopPlugin, EndingPlugin } from "@lumina/plugins";
 
 new VideoPlayer({
   plugins: {
-    list: [
-      TopPlugin({
-        id: "my-top",
-        mount(container, ctx) {
-          container.textContent = ctx?.player ? "自定义 Top" : "";
-        },
-      }),
-      EndingPlugin({
-        id: "my-ending",
-        mount(container) {
-          container.textContent = "自定义 Ending";
-        },
-      }),
-    ],
+    list: [TopPlugin(), EndingPlugin()],
   },
 });
 ```
 
-优先级：`ui.top` / `ui.ending` 插槽优先于同名插件；两者都没有时使用内置 Top / Ending。
+`TopPlugin()` / `EndingPlugin()` 默认使用内置完整视图；需要完全自定义时再传 `mount`：
+
+```ts
+TopPlugin({
+  id: "my-top",
+  mount(container, ctx) {
+    container.textContent = ctx?.player ? "自定义 Top" : "";
+  },
+});
+```
+
+- `TopPlugin` 挂载到核心的 `.nova-player-top-wrap`
+- `EndingPlugin` 挂载到核心的 `.nova-player-ending-wrap`
+- 插件不创建包装 DOM、不加类名、不替换根容器
+- 不安装插件时核心不渲染任何 Top / Ending 内容
+
+优先级：`ui.top` / `ui.ending` 插槽优先于同名插件。
 
 ### 7.4 SlotContext
 

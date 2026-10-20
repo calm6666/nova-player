@@ -59,10 +59,6 @@ export { Dialog } from './Dialog';
 /** 对话框组件 Props 及弹幕提示数据类型 */
 export type { DialogProps, DmTipData } from './Dialog';
 
-/** 置顶组件 */
-export { Top } from './Top';
-/** 置顶组件 Props 类型 */
-export type { TopProps } from './Top';
 
 /** 色彩调整面板组件 */
 export { ColorPanel } from './ColorPanel';
@@ -79,10 +75,6 @@ export { DmSetting } from './DmSetting';
 /** 弹幕设置组件 Props 类型 */
 export type { DmSettingProps } from './DmSetting';
 
-/** 结束画面组件 */
-export { Ending } from './Ending';
-/** 结束画面组件 Props 类型 */
-export type { EndingProps } from './Ending';
 
 /** 选集组件 */
 export { Selection } from './Selection';

@@ -57,6 +57,7 @@ import {
   resolveSlotContent,
   type SlotContent,
   type SlotContext,
+  type SlotMount,
 } from "@/nova/types/slots";
 import { PlayerState } from "@/types";
 import type {
@@ -72,7 +73,6 @@ import { State } from "@/nova/components/State";
 import { createBufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
 import type { BufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
 import { SendBar } from "@/nova/components/SendBar";
-import { Top } from "@/nova/components/Top";
 import { ColorPanel, type ColorPanelApi } from "@/nova/components/ColorPanel";
 import {
   AudioPanel,
@@ -80,7 +80,6 @@ import {
   type AudioPanelHandle,
 } from "@/nova/components/AudioPanel";
 import { VideoInfo, type VideoInfoApi } from "@/nova/components/VideoInfo";
-import { Ending, type EndingApi } from "@/nova/components/Ending";
 import { RelationStrip } from "@/nova/components/RelationStrip";
 import { Mini, type MiniApi } from "@/nova/components/Mini";
 
@@ -145,6 +144,11 @@ interface StateAPI {
 }
 
 /** 顶部栏组件挂载后回传的控制 API */
+interface EndingApi {
+  showEndWrap: () => void;
+  closeEndWrap: () => void;
+}
+
 interface TopAPI {
   /** 设置视频标题文本 */
   setTitle: (title: string) => void;
@@ -512,6 +516,15 @@ export const PlayerDocker = defineComponent<
     "playerVideoAreaRef",
   );
 
+  /** 插件根容器 */
+  const topRootRef = useTemplateRef<HTMLDivElement>(lifecycle, "topRootRef");
+  const endingRootRef = useTemplateRef<HTMLDivElement>(
+    lifecycle,
+    "endingRootRef",
+  );
+  let topMountCleanup: (() => void) | null = null;
+  let endingMountCleanup: (() => void) | null = null;
+
   /** 视频占位容器 */
   const playerVideoPerchRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
@@ -574,14 +587,16 @@ export const PlayerDocker = defineComponent<
   const topMount =
     createSlotMount(props.config?.ui?.top) ??
     (topPluginMount
-      ? (container: HTMLElement) => topPluginMount(container, slotContext)
+      ? (container: HTMLElement, ctx?: SlotContext | null) =>
+          topPluginMount(container, ctx ?? slotContext)
       : null);
 
   const endingPluginMount = slotPlayer?.getEndingPluginMount() ?? null;
   const endingMount =
     createSlotMount(props.config?.ui?.ending) ??
     (endingPluginMount
-      ? (container: HTMLElement) => endingPluginMount(container, slotContext)
+      ? (container: HTMLElement, ctx?: SlotContext | null) =>
+          endingPluginMount(container, ctx ?? slotContext)
       : null);
 
 
@@ -2324,6 +2339,24 @@ export const PlayerDocker = defineComponent<
   // ============================================
 
   lifecycle.onMounted = (): void => {
+    const topRoot = topRootRef.value;
+    if (topRoot && topMount) {
+      topMountCleanup =
+        (topMount as SlotMount["mount"])(topRoot, {
+          ...(slotContext ?? {}),
+          props: buildTopProps(),
+        } as SlotContext) ?? null;
+    }
+
+    const endingRoot = endingRootRef.value;
+    if (endingRoot && endingMount) {
+      endingMountCleanup =
+        (endingMount as SlotMount["mount"])(endingRoot, {
+          ...(slotContext ?? {}),
+          props: buildEndingProps(),
+        } as SlotContext) ?? null;
+    }
+
     // 初始化视频
     initVideo();
     // 绑定所有 DOM 事件
@@ -2380,6 +2413,11 @@ export const PlayerDocker = defineComponent<
    * 随后还会触发一次 onBeforeDestroy，两次都安全。
    */
   const teardown = (): void => {
+    topMountCleanup?.();
+    topMountCleanup = null;
+    endingMountCleanup?.();
+    endingMountCleanup = null;
+
     if (tornDown) return;
     tornDown = true;
 
@@ -2463,6 +2501,123 @@ export const PlayerDocker = defineComponent<
   /**
    * 渲染播放器主容器
    */
+
+  /** 插件视图数据（挂载时构造，避免提前引用未初始化函数） */
+  const buildTopProps = () => ({
+            title:
+              (embeddedMode
+                ? (embeddedConfig?.title ?? props.config?.ui?.title)
+                : props.config?.ui?.title) ?? props.playerName,
+            avatar:
+              embeddedConfig?.up?.face ?? props.config?.ui?.up?.face,
+            upName:
+              embeddedConfig?.up?.name ?? props.config?.ui?.up?.name,
+            embedded: embeddedMode,
+            tv: topStyle === "tv",
+            music: topStyle === "music",
+            musicTitle: props.config?.ui?.musicTitle,
+            followed: Boolean(
+              embeddedConfig?.up?.followed ?? props.config?.ui?.up?.followed,
+            ),
+            likeCount: embeddedConfig?.stats?.like,
+            commentCount: embeddedConfig?.stats?.comment,
+            onFollowClick: () => {
+              lifecycle.emit?.("follow");
+            },
+            onLikeClick: () => {
+              lifecycle.emit?.("like");
+            },
+            onCommentClick: () => {
+              lifecycle.emit?.("comment");
+            },
+            onShareClick: () => {
+              lifecycle.emit?.("share");
+            },
+            onMoreClick: () => {
+              lifecycle.emit?.("more");
+            },
+            // 问题反馈图标的悬停提示（既有实现的
+            // top.on("show-tooltip"/"hide-tooltip") 接通 Tooltips 组件）
+            onShowTooltip: handleShowTooltip,
+            onHideTooltip: handleHideTooltip,
+          });
+  const buildEndingProps = () => ({
+            variant: embeddedMode
+              ? "embedded"
+              : endingStyle === "ogv"
+                ? "ogv"
+                : endingStyle === "interactive"
+                  ? "interactive"
+                  : "station",
+            title: embeddedMode
+              ? (embeddedConfig?.title ??
+                props.config?.ui?.title ??
+                props.playerName)
+              : endingStyle === "ogv"
+                ? (ogvConfig?.title ??
+                  props.config?.ui?.title ??
+                  props.playerName)
+                : (props.config?.ui?.title ?? props.playerName),
+            cover: ogvConfig?.cover,
+            followed: ogvConfig?.followed,
+            followers: props.config?.ui?.interactive?.followers,
+            backtrack: props.config?.ui?.interactive?.backtrack,
+            activeBacktrackIndex:
+              props.config?.ui?.interactive?.activeBacktrackIndex,
+            ratingPrompt: props.config?.ui?.interactive?.ratingPrompt,
+            upInfo: embeddedMode
+              ? embeddedConfig?.up
+              : props.config?.ui?.up,
+            shareUrl: props.config?.ui?.share?.url,
+            embedCode: props.config?.ui?.share?.embedCode,
+            qrCodeUrl: props.config?.ui?.share?.qrCodeUrl,
+            related: embeddedMode
+              ? embeddedConfig?.related
+              : endingStyle === "ogv"
+                ? ogvConfig?.related
+                : endingStyle === "interactive"
+                  ? (props.config?.ui?.interactive?.related ??
+                    props.config?.ui?.related)
+                  : props.config?.ui?.related,
+            autoNext: embeddedMode
+              ? false
+              : () =>
+                  (stateMgr?.get(PlayerStateKeyEnum.PLAYLIST_LENGTH) ?? 0) >
+                    1 &&
+                  !(props.config?.playback?.pauseAfterEnd ?? false),
+            onRestart: () => {
+              seekTo(0);
+              void videoRef.value?.play();
+            },
+            onLike: () => {
+              lifecycle.emit?.("like");
+            },
+            onCoin: () => {
+              lifecycle.emit?.("coin");
+            },
+            onCollect: () => {
+              lifecycle.emit?.("favorite");
+            },
+            onFollow: () => {
+              lifecycle.emit?.("follow");
+            },
+            onAutoNext: () => {
+              lifecycle.emit?.("next");
+            },
+            onRelatedClick: (item: { url?: string }) => {
+              if (item.url) openEmbeddedUrl(item.url);
+            },
+            onEnterSite: () => {
+              openEmbeddedUrl(embeddedConfig?.enterUrl);
+            },
+            onDownloadApp: () => {
+              openEmbeddedUrl(embeddedConfig?.downloadUrl);
+            },
+            onEndingMounted: (api: EndingApi) => {
+              Object.assign(endingApi, api);
+            },
+          });
+
   return h(
     "div",
     {
@@ -2587,45 +2742,7 @@ export const PlayerDocker = defineComponent<
           ),
           // 顶部栏（标题 / 关注 / 问题反馈，既有实现挂载于视频区域；
           // ui.title 动态更新时由 configStore 订阅驱动 setTitle）
-          h(Top, {
-            title:
-              (embeddedMode
-                ? (embeddedConfig?.title ?? props.config?.ui?.title)
-                : props.config?.ui?.title) ?? props.playerName,
-            avatar:
-              embeddedConfig?.up?.face ?? props.config?.ui?.up?.face,
-            upName:
-              embeddedConfig?.up?.name ?? props.config?.ui?.up?.name,
-            embedded: embeddedMode,
-            mount: topMount,
-            tv: topStyle === "tv",
-            music: topStyle === "music",
-            musicTitle: props.config?.ui?.musicTitle,
-            followed: Boolean(
-              embeddedConfig?.up?.followed ?? props.config?.ui?.up?.followed,
-            ),
-            likeCount: embeddedConfig?.stats?.like,
-            commentCount: embeddedConfig?.stats?.comment,
-            onFollowClick: () => {
-              lifecycle.emit?.("follow");
-            },
-            onLikeClick: () => {
-              lifecycle.emit?.("like");
-            },
-            onCommentClick: () => {
-              lifecycle.emit?.("comment");
-            },
-            onShareClick: () => {
-              lifecycle.emit?.("share");
-            },
-            onMoreClick: () => {
-              lifecycle.emit?.("more");
-            },
-            // 问题反馈图标的悬停提示（既有实现的
-            // top.on("show-tooltip"/"hide-tooltip") 接通 Tooltips 组件）
-            onShowTooltip: handleShowTooltip,
-            onHideTooltip: handleHideTooltip,
-          }),
+          h("div", { class: "nova-player-top-wrap", ref: "topRootRef" }),
           // 字幕容器（按需渲染：未装 subtitle 插件时不挂载字幕层 DOM）
           // 位于 Top 容器与 Ending 容器之间；定位规则全部由
           // subtitlelayer.scss 纯 CSS 派生（档位 data-position /
@@ -2677,83 +2794,20 @@ export const PlayerDocker = defineComponent<
           // 首次通过右键菜单打开时才创建，不再常驻渲染
           // 片尾推荐面板（默认隐藏，播放结束时显示、重新播放时隐藏；
           // 推荐列表无真实数据源，仅渲染面板结构）
-          h(Ending, {
-            variant: embeddedMode
-              ? "embedded"
-              : endingStyle === "ogv"
-                ? "ogv"
-                : endingStyle === "interactive"
-                  ? "interactive"
-                  : "station",
-            title: embeddedMode
-              ? (embeddedConfig?.title ??
-                props.config?.ui?.title ??
-                props.playerName)
-              : endingStyle === "ogv"
-                ? (ogvConfig?.title ??
-                  props.config?.ui?.title ??
-                  props.playerName)
-                : (props.config?.ui?.title ?? props.playerName),
-            cover: ogvConfig?.cover,
-            followed: ogvConfig?.followed,
-            followers: props.config?.ui?.interactive?.followers,
-            backtrack: props.config?.ui?.interactive?.backtrack,
-            activeBacktrackIndex:
-              props.config?.ui?.interactive?.activeBacktrackIndex,
-            ratingPrompt: props.config?.ui?.interactive?.ratingPrompt,
-            upInfo: embeddedMode
-              ? embeddedConfig?.up
-              : props.config?.ui?.up,
-            shareUrl: props.config?.ui?.share?.url,
-            embedCode: props.config?.ui?.share?.embedCode,
-            qrCodeUrl: props.config?.ui?.share?.qrCodeUrl,
-            related: embeddedMode
-              ? embeddedConfig?.related
-              : endingStyle === "ogv"
-                ? ogvConfig?.related
-                : endingStyle === "interactive"
-                  ? (props.config?.ui?.interactive?.related ??
-                    props.config?.ui?.related)
-                  : props.config?.ui?.related,
-            autoNext: embeddedMode
-              ? false
-              : () =>
-                  (stateMgr?.get(PlayerStateKeyEnum.PLAYLIST_LENGTH) ?? 0) >
-                    1 &&
-                  !(props.config?.playback?.pauseAfterEnd ?? false),
-            onRestart: () => {
-              seekTo(0);
-              void videoRef.value?.play();
+          h(
+            "div",
+            {
+              class:
+                endingStyle === "ogv"
+                  ? "nova-player-ending-wrap nova-ogv-ending-wrap"
+                  : endingStyle === "interactive"
+                    ? "nova-player-ending-wrap nova-interactive-ending-wrap"
+                    : embeddedMode
+                      ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
+                      : "nova-player-ending-wrap",
+              ref: "endingRootRef",
             },
-            onLike: () => {
-              lifecycle.emit?.("like");
-            },
-            onCoin: () => {
-              lifecycle.emit?.("coin");
-            },
-            onCollect: () => {
-              lifecycle.emit?.("favorite");
-            },
-            onFollow: () => {
-              lifecycle.emit?.("follow");
-            },
-            onAutoNext: () => {
-              lifecycle.emit?.("next");
-            },
-            onRelatedClick: (item) => {
-              if (item.url) openEmbeddedUrl(item.url);
-            },
-            onEnterSite: () => {
-              openEmbeddedUrl(embeddedConfig?.enterUrl);
-            },
-            onDownloadApp: () => {
-              openEmbeddedUrl(embeddedConfig?.downloadUrl);
-            },
-            mount: endingMount,
-            onEndingMounted: (api: EndingApi) => {
-              Object.assign(endingApi, api);
-            },
-          }),
+          ),
           // 迷你播放器面板（默认隐藏，播放器滚出视口进入迷你模式时由
           // data-screen="mini" 的样式规则显示；关闭 / 状态切换回调向上处理）
           h(Mini, {

@@ -2,19 +2,28 @@
  * ============================================
  * Ending 插件（结构对齐 DanmakuPlugin）
  * ============================================
- * 插件只向核心已有的 .nova-player-ending-wrap 容器内挂载内容；
+ * 完整 Ending 视图已迁到本包；插件只向核心已有的 .nova-player-ending-wrap 容器内挂载，
  * 不创建包装 DOM、不新增类名、不替换根容器。
  */
 
-import type { Plugin } from "@/nova/core/plugin";
-import type { SlotMount } from "@/nova/types/slots";
+import {
+  h,
+  mount,
+  destroy,
+  type Plugin,
+  type SlotContext,
+  type SlotMount,
+} from "@lumina/nova";
+import { Ending as EndingView, type EndingProps } from "./EndingView";
 
+export interface EndingPluginMountContext extends SlotContext {
+  props?: EndingProps;
+}
 
 export interface EndingPluginConfig {
-  /** 插件名 / 注册 id */
   id?: string;
-  /** 在已有 Ending 根容器内渲染，返回可选清理函数 */
-  mount: SlotMount["mount"];
+  /** 自定义挂载；不传则使用内置完整 Ending 视图 */
+  mount?: SlotMount["mount"];
 }
 
 interface EndingPluginHost {
@@ -28,6 +37,7 @@ class EndingPluginClass implements Plugin {
   readonly description: string;
   private readonly config: EndingPluginConfig;
   private player: EndingPluginHost | null = null;
+  private registered: SlotMount["mount"] | null = null;
 
   constructor(config: EndingPluginConfig) {
     this.config = config;
@@ -37,16 +47,27 @@ class EndingPluginClass implements Plugin {
 
   install(player: Parameters<Plugin["install"]>[0]): void {
     this.player = player as unknown as EndingPluginHost;
-    this.player.registerEndingPluginMount(this.config.mount);
+    const custom = this.config.mount;
+    const registered: SlotMount["mount"] = (container, ctx) => {
+      if (custom) return custom(container, ctx);
+      const viewProps = (ctx as EndingPluginMountContext | null)?.props;
+      const vnode = h(EndingView, { ...viewProps, host: container });
+      mount(vnode, container);
+      return () => destroy(vnode);
+    };
+    this.registered = registered;
+    this.player.registerEndingPluginMount(registered);
   }
 
   uninstall(): void {
-    this.player?.unregisterEndingPluginMount(this.config.mount);
+    if (this.registered) {
+      this.player?.unregisterEndingPluginMount(this.registered);
+    }
+    this.registered = null;
     this.player = null;
   }
 }
 
-/** 创建 Ending 插件 */
-export function EndingPlugin(config: EndingPluginConfig): Plugin {
+export function EndingPlugin(config: EndingPluginConfig = {}): Plugin {
   return new EndingPluginClass(config);
 }
