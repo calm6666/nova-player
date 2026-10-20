@@ -1,160 +1,159 @@
-.nova-player-container {
-  .nova-player-top-wrap {
-    color: #fff;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    left: 0;
-    pointer-events: none;
-    position: absolute;
-    top: 0;
-    -webkit-transition: all 0.2s ease-in-out;
-    transition: all 0.2s ease-in-out;
-    width: 100%;
-    z-index: 45;
+.nova-player-top-wrap {
+  color: #fff;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  width: 100%;
+  z-index: 45;
+}
+.nova-player-top-mask {
+  background: -webkit-gradient(
+    linear,
+    left top,
+    left bottom,
+    color-stop(16.87%, transparent),
+    color-stop(94%, rgba(0, 0, 0, 0.3))
+  );
+  background: linear-gradient(
+    180deg,
+    transparent 16.87%,
+    rgba(0, 0, 0, 0.3) 94%
+  );
+  height: 240px;
+  left: 0;
+  position: absolute;
+  top: 0;
+  -webkit-transform: matrix(1, 0, 0, -1, 0, 0);
+  transform: matrix(1, 0, 0, -1, 0, 0);
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  width: 100%;
+  z-index: -1;
+}
 
-    .nova-player-top-mask {
-      background: -webkit-gradient(linear,
-          left top,
-          left bottom,
-          color-stop(16.87%, transparent),
-          color-stop(94%, rgba(0, 0, 0, 0.3)));
-      background: linear-gradient(180deg,
-          transparent 16.87%,
-          rgba(0, 0, 0, 0.3) 94%);
-      height: 240px;
-      left: 0;
-      position: absolute;
-      top: 0;
-      -webkit-transform: matrix(1, 0, 0, -1, 0, 0);
-      transform: matrix(1, 0, 0, -1, 0, 0);
-      -webkit-transition: all 0.2s ease-in-out;
-      transition: all 0.2s ease-in-out;
-      width: 100%;
-      z-index: -1;
-    }
+.nova-player-top-left-title,
+.nova-player-top-title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  margin: 18px 0 0 19px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100% !important;
+  z-index: 2;
+}
 
-    .nova-player-top-left-title,
-    .nova-player-top-title {
-      font-size: 16px;
-      font-weight: 500;
-      line-height: 24px;
-      margin: 18px 0 0 19px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      width: 100% !important;
-      z-index: 2;
-    }
+.nova-player-top-follow {
+  -webkit-box-flex: 0;
+  -ms-flex: none;
+  flex: none;
+}
 
-    .nova-player-top-follow {
-      -webkit-box-flex: 0;
-      -ms-flex: none;
-      flex: none;
-    }
+.nova-player-top-left {
+  left: 12px;
+  margin-top: 18px;
+  position: absolute;
 
-    .nova-player-top-left {
-      left: 12px;
-      margin-top: 18px;
-      position: absolute;
+  .nova-player-top-left-title {
+    display: none;
+    margin: 0 0 8px;
+  }
+}
 
-      .nova-player-top-left-title {
-        display: none;
-        margin: 0 0 8px;
-      }
+.nova-player-top-issue {
+  -webkit-box-flex: 0;
+  cursor: pointer;
+  -ms-flex: none;
+  flex: none;
+  height: 24px;
+  line-height: 24px;
+  margin: 18px 12px 0;
+  min-width: 36px;
+  pointer-events: all;
+  text-align: center;
+  z-index: 2;
 
-      .nova-player-top-left-follow {
-        .nova-player-follow {
-          -webkit-box-align: center;
-          -ms-flex-align: center;
-          -webkit-box-flex: 0;
-          align-items: center;
-          background-color: rgba(0, 0, 0, 0.4);
-          border-radius: 26px;
-          cursor: pointer;
-          display: -webkit-box;
-          display: -ms-flexbox;
-          display: flex;
-          -ms-flex: 0;
-          flex: 0;
-          font-size: 12px;
-          font-weight: 400;
-          height: 32px;
-          line-height: 32px;
-          margin-bottom: 8px;
-          pointer-events: all;
-          text-align: center;
-          width: 89px;
-          z-index: 2;
+  .nova-player-top-issue-icon {
+    -webkit-box-flex: 0;
+    display: inline-block;
+    -ms-flex: none;
+    flex: none;
+    height: 22px;
+    width: 22px;
 
-          .nova-player-follow-face {
-            -webkit-box-flex: 0;
-            border-radius: 50%;
-            -ms-flex: none;
-            flex: none;
-            height: 24px;
-            margin-left: 4px;
-            vertical-align: bottom;
-            width: 24px;
-          }
+    .common-svg-icon {
+      height: 100%;
+      vertical-align: middle;
 
-          .nova-player-follow-icon {
-            fill: #fff;
-            -webkit-box-flex: 0;
-            -ms-flex: none;
-            flex: none;
-            height: 14px;
-            line-height: 14px;
-            margin-left: 8px;
-            width: 14px;
-          }
-
-          .nova-player-follow-text {
-            -webkit-box-flex: 0;
-            -ms-flex: none;
-            flex: none;
-            margin-left: 5px;
-          }
-        }
-      }
-    }
-
-    .nova-player-top-issue {
-      -webkit-box-flex: 0;
-      cursor: pointer;
-      -ms-flex: none;
-      flex: none;
-      height: 24px;
-      line-height: 24px;
-      margin: 18px 12px 0;
-      min-width: 36px;
-      pointer-events: all;
-      text-align: center;
-      z-index: 2;
-
-      .nova-player-top-issue-icon {
-        -webkit-box-flex: 0;
-        display: inline-block;
-        -ms-flex: none;
-        flex: none;
-        height: 22px;
-        width: 22px;
-
-        .common-svg-icon {
-          height: 100%;
-          vertical-align: middle;
-
-          svg {
-            fill: hsla(0, 0%, 100%, 0.8);
-          }
-        }
+      svg {
+        fill: hsla(0, 0%, 100%, 0.8);
       }
     }
   }
 }
 
+.nova-player-follow {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -webkit-box-flex: 0;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 26px;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex: 0;
+  flex: 0;
+  font-size: 12px;
+  font-weight: 400;
+  height: 32px;
+  line-height: 32px;
+  margin-bottom: 8px;
+  pointer-events: all;
+  text-align: center;
+  width: 89px;
+  z-index: 2;
+
+  .nova-player-follow-face {
+    -webkit-box-flex: 0;
+    border-radius: 50%;
+    -ms-flex: none;
+    flex: none;
+    height: 24px;
+    margin-left: 4px;
+    vertical-align: bottom;
+    width: 24px;
+  }
+
+  .nova-player-follow-icon {
+    fill: #fff;
+    -webkit-box-flex: 0;
+    -ms-flex: none;
+    flex: none;
+    height: 14px;
+    line-height: 14px;
+    margin-left: 8px;
+    width: 14px;
+  }
+
+  .nova-player-follow-text {
+    -webkit-box-flex: 0;
+    -ms-flex: none;
+    flex: none;
+    margin-left: 5px;
+  }
+}
+
 /* TV / 番剧 Top：标题与追剧在根层 */
-.nova-player-container .nova-player-top-wrap .nova-player-top-title:has(#player-title) {
+.nova-player-top-title:has(#player-title) {
   -webkit-box-flex: 1;
   -ms-flex: 1 1 0;
   flex: 1 1 0;
@@ -162,13 +161,13 @@
   width: auto !important;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-top-title #player-title {
+.nova-player-top-title #player-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-top-follow:has(#player-follow) {
+.nova-player-top-follow:has(#player-follow) {
   -webkit-box-flex: 0;
   -ms-flex: 0 1 auto;
   flex: 0 1 auto;
@@ -176,26 +175,26 @@
   overflow: hidden;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-top-follow #player-follow {
+.nova-player-top-follow #player-follow {
   align-items: center;
   color: #fff;
   cursor: pointer;
   display: flex;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 24px;
-  margin: 18px 0 0 8px;
+  margin: 0;
   pointer-events: all;
   white-space: nowrap;
 }
 
-.nova-player-container .nova-player-top-wrap #player-follow>span:first-child {
+.nova-player-top-wrap #player-follow > span:first-child {
   display: inline-block;
   height: 16px;
   width: 16px;
 }
 
-.nova-player-container .nova-player-top-wrap #player-follow>span:first-child svg {
+.nova-player-top-wrap #player-follow > span:first-child svg {
   display: block;
   fill: currentColor;
   height: 16px;
@@ -203,7 +202,7 @@
 }
 
 /* 音乐模式 Top */
-.nova-player-container .nova-player-top-wrap .nova-player-music {
+.nova-player-top-wrap .nova-player-music {
   -webkit-box-align: center;
   -ms-flex-align: center;
   align-items: center;
@@ -231,18 +230,18 @@
   z-index: 2;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-music:hover {
+.nova-player-top-wrap .nova-player-music:hover {
   background-color: rgba(0, 0, 0, 0.5);
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-music-icon {
+.nova-player-top-wrap .nova-player-music-icon {
   fill: #fff;
   height: 14px;
   line-height: 14px;
   width: 14px;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-music-marquee {
+.nova-player-top-wrap .nova-player-music-marquee {
   margin-left: 6px;
   max-width: 144px;
   overflow: hidden;
@@ -250,18 +249,20 @@
   white-space: nowrap;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-music-marquee-root {
+.nova-player-top-wrap .nova-player-music-marquee-root {
   display: -webkit-inline-box;
   display: -ms-inline-flexbox;
   display: inline-flex;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-music-marquee-content {
+.nova-player-container
+  .nova-player-top-wrap
+  .nova-player-music-marquee-content {
   font-size: 12px;
   font-weight: 400;
 }
 
-.nova-player-container .nova-player-top-wrap .nova-player-music-arrow {
+.nova-player-top-wrap .nova-player-music-arrow {
   fill: #fff;
   height: 16px;
   line-height: 1;
@@ -272,4 +273,27 @@
 .nova-player-container[data-screen="full"] .nova-player-top-left-title,
 .nova-player-container[data-screen="web"] .nova-player-top-left-title {
   display: block;
+}
+
+/* 默认播放器尺寸按真实 web 档位处理（B 站 922×518 实测值） */
+.nova-player-container[data-screen="normal"] .nova-player-top-left,
+.nova-player-container[data-screen="web"] .nova-player-top-left,
+.nova-player-container[data-screen="full"] .nova-player-top-left {
+  left: 24px;
+  margin-top: 24px;
+  min-height: 12px;
+}
+
+.nova-player-container[data-screen="normal"] .nova-player-top-issue,
+.nova-player-container[data-screen="web"] .nova-player-top-issue,
+.nova-player-container[data-screen="full"] .nova-player-top-issue {
+  font-size: 28px;
+  width: 54px;
+}
+
+.nova-player-container[data-screen="normal"] .nova-player-top-issue-icon,
+.nova-player-container[data-screen="web"] .nova-player-top-issue-icon,
+.nova-player-container[data-screen="full"] .nova-player-top-issue-icon {
+  height: 28px;
+  width: 54px;
 }
