@@ -1,6 +1,4 @@
-.nova-player-docker
-  .nova-player-control-bottom-right
-  .nova-player-ctrl-subtitle {
+.nova-player-ctrl-subtitle {
   font-size: 14px;
   // margin: 0 5px;
   width: 50px;
@@ -32,968 +30,966 @@
     }
   }
 
-  .nova-player-ctrl-subtitle-box {
-    bottom: 41px;
-    box-sizing: border-box;
-    color: #fff;
-    cursor: default;
-    display: none;
-    font-size: 12px;
-    position: absolute;
-    right: -66px;
-    text-align: left;
-    transition: all 0.2s ease-in-out;
-
-    &:after {
-      content: "";
-      display: block;
-      left: 0;
-      position: absolute;
-      right: 0;
-      top: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-menu {
-      align-items: flex-start;
-      border-radius: 2px;
-      box-sizing: border-box;
-      color: #fff;
-      display: flex;
-      font-size: 12px;
-      overflow: visible;
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-
-    .ui-panel-wrap {
-      height: 311px;
-      overflow: hidden;
-      transition:
-        width 0.25s,
-        height 0.25s;
-      width: 168px;
-    }
-
-    .nova-player-ctrl-subtitle-panel-move {
-      align-items: flex-end;
-      display: flex;
-      height: 100%;
-      transform: translateX(0);
-      transition: transform 0.25s;
-      width: 434px;
-    }
-
-    .nova-player-ctrl-subtitle-panel-item {
-      flex-shrink: 0;
-      height: 311px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.1s;
-      width: 168px;
-
-      &:last-child {
-        height: 260px;
-        width: 266px;
-      }
-
-      &.nova-player-state-active {
-        opacity: 1;
-        pointer-events: auto;
-      }
-    }
-
-    .ui-area.state-show-right {
-      .ui-panel-wrap {
-        height: 260px;
-        width: 266px;
-      }
-
-      .nova-player-ctrl-subtitle-panel-move {
-        transform: translateX(-168px);
-      }
-    }
-
-    .nova-player-ctrl-subtitle-menu-left,
-    .nova-player-ctrl-subtitle-menu-right {
-      box-sizing: border-box;
-      display: flex;
-      height: 100%;
-      padding: 0 20px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-menu-left {
-      align-items: flex-start;
-      gap: 20px;
-    }
-
-    .nova-player-ctrl-subtitle-menu-right {
-      flex-direction: column;
-    }
-
-    .nova-player-ctrl-subtitle-menu-origin {
-      height: 100%;
-      min-width: 0;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-title-area {
-      height: auto;
-      padding-top: 4px;
-    }
-
-    .nova-player-ctrl-subtitle-item-flex {
-      align-items: center;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .nova-player-ctrl-subtitle-add-wrap {
-      height: 32px;
-      min-width: 0;
-    }
-
-    .nova-player-ctrl-subtitle-title {
-      color: #fff;
-      font-size: 14px;
-      margin-top: 10px;
-      min-width: 0;
-      opacity: 0.4;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .nova-player-ctrl-subtitle-add {
-      height: 22px;
-      margin-top: 10px;
-      max-width: 100%;
-      min-width: 0;
-      overflow: hidden;
-
-      span {
-        display: block;
-        max-width: 100%;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-    }
-
-    .nova-player-ctrl-subtitle-close-switch {
-      color: #fff;
-      cursor: pointer;
-      height: 40px;
-      line-height: 40px;
-      margin: 2px 8px 0 -12px;
-      overflow: hidden;
-      padding-left: 12px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      width: calc(100% + 12px);
-
-      &:hover {
-        background-color: hsla(0, 0%, 100%, 0.1);
-        border-radius: 4px;
-      }
-
-      &.nova-player-state-active {
-        color: var(--nova-player-primary-color, #00a1d6);
-      }
-    }
-
-    .nova-player-ctrl-subtitle-fake-switch {
-      color: #fff;
-      cursor: not-allowed;
-      display: flex;
-      flex-direction: row;
-      height: 40px;
-      margin: 2px 8px 0 -12px;
-      padding-left: 12px;
-      width: calc(100% + 12px);
-
-      &:hover {
-        background-color: hsla(0, 0%, 100%, 0.1);
-        border-radius: 4px;
-      }
-
-      .nova-player-ctrl-subtitle-fake-switch-text {
-        line-height: 40px;
-        opacity: 0.4;
-      }
-
-      .nova-player-ctrl-subtitle-fake-switch-icon {
-        display: inline-flex;
-        height: 12px;
-        margin: 13.5px 0 0 4px;
-        width: 12px;
-
-        svg {
-          height: 12px;
-          width: 12px;
-        }
-      }
-    }
-
-    .nova-player-ctrl-subtitle-separator-above,
-    .nova-player-ctrl-subtitle-separator-bottom {
-      border-bottom: 1px solid rgba(229, 233, 239, 0.1);
-      margin: 7.5px 0 7.5px -8px;
-      position: relative;
-      width: calc(100% + 16px);
-    }
-
-    .nova-player-ctrl-subtitle-language-unlogin {
-      align-items: center;
-      display: flex;
-      height: 60px;
-      justify-content: center;
-      margin-left: -20px;
-      width: calc(100% + 40px);
-    }
-
-    .nova-player-ctrl-subtitle-language-unlogin-content {
-      background-color: var(--nova-player-fn-color, #00aeec);
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      height: 20px;
-      line-height: 20px;
-      padding: 7px 21px;
-    }
-
-    .nova-player-ctrl-subtitle-bilingual-above {
-      height: 40px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-bilingual-bottom {
-      height: 36px;
-      padding-top: 4px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-switch {
-      cursor: pointer;
-      display: inline-flex;
-      position: relative;
-
-      &:hover .nova-player-ctrl-subtitle-switch-name {
-        color: var(--nova-player-primary-color, #00a1d6);
-      }
-
-      .nova-player-ctrl-subtitle-switch-area {
-        align-items: center;
-        display: flex;
-        height: 100%;
-        width: 100%;
-      }
-
-      .nova-player-ctrl-subtitle-switch-input {
-        cursor: pointer;
-        height: 100%;
-        left: 0;
-        margin: 0;
-        opacity: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
-        z-index: 1;
-      }
-
-      .nova-player-ctrl-subtitle-switch-label {
-        align-items: center;
-        display: flex;
-        justify-content: space-between;
-        vertical-align: middle;
-        width: 100%;
-      }
-
-      .nova-player-ctrl-subtitle-switch-name {
-        position: relative;
-      }
-
-      .nova-player-ctrl-subtitle-switch-body {
-        background: #757575;
-        border-radius: 10px;
-        box-sizing: border-box;
-        display: inline-block;
-        height: 20px;
-        outline: none;
-        position: relative;
-        transform: translateZ(0);
-        transition: all 0.3s;
-        vertical-align: middle;
-        width: 30px;
-      }
-
-      .nova-player-ctrl-subtitle-switch-dot {
-        align-items: center;
-        background-color: #fff;
-        border-radius: 100%;
-        box-shadow:
-          0 3px 1px 0 rgba(0, 0, 0, 0.05),
-          0 2px 2px 0 rgba(0, 0, 0, 0.1),
-          0 3px 3px 0 rgba(0, 0, 0, 0.05);
-        color: #757575;
-        display: flex;
-        fill: #757575;
-        height: 16px;
-        justify-content: center;
-        left: 2px;
-        line-height: 16px;
-        position: relative;
-        text-align: center;
-        top: 2px;
-        transform: translateZ(0);
-        transition: all 0.3s;
-        width: 16px;
-
-        > span {
-          display: inline-block;
-          font-size: 0;
-          height: 10px;
-          width: 10px;
-        }
-      }
-
-      .nova-player-ctrl-subtitle-switch-input:checked
-        + .nova-player-ctrl-subtitle-switch-label
-        .nova-player-ctrl-subtitle-switch-body {
-        background: var(--nova-player-fn-color, #00aeec);
-      }
-
-      .nova-player-ctrl-subtitle-switch-input:checked
-        + .nova-player-ctrl-subtitle-switch-label
-        .nova-player-ctrl-subtitle-switch-body
-        .nova-player-ctrl-subtitle-switch-dot {
-        color: var(--nova-player-fn-color, #00aeec);
-        fill: var(--nova-player-fn-color, #00aeec);
-        left: 100%;
-        margin-left: -18px;
-      }
-    }
-
-    .nova-player-ctrl-subtitle-language {
-      display: flex;
-      margin-left: -20px;
-      width: calc(100% + 40px);
-    }
-
-    .nova-player-ctrl-subtitle-nolan {
-      color: hsla(0, 0%, 100%, 0.4);
-      font-size: 12px;
-      line-height: 16px;
-      padding: 14px 0 10px 20px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-major-title,
-    .nova-player-ctrl-subtitle-minor-title {
-      color: #999;
-      height: 20px;
-      line-height: 20px;
-      margin-left: 20px;
-    }
-
-    .nova-player-ctrl-subtitle-major-content,
-    .nova-player-ctrl-subtitle-minor-content {
-      overflow-x: hidden;
-      overflow-y: auto;
-      position: relative;
-      touch-action: pan-x;
-      user-select: none;
-
-      &::-webkit-scrollbar {
-        width: 3px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background-color: transparent;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background-color: #e5e7ef;
-        border: none;
-        border-radius: 3px;
-        opacity: 0.3;
-      }
-    }
-
-    .nova-player-ctrl-subtitle-major-content {
-      height: 135px;
-    }
-
-    .nova-player-ctrl-subtitle-minor-content {
-      height: 99px;
-    }
-
-    .nova-player-ctrl-subtitle-language-item {
-      box-sizing: border-box;
-      color: #fff;
-      cursor: pointer;
-      display: flex;
-      flex-direction: row;
-      gap: 4px;
-      height: 40px;
-      margin: 0 8px;
-      min-width: 0;
-      overflow: hidden;
-      padding-left: 12px;
-
-      &:hover {
-        background-color: hsla(0, 0%, 100%, 0.1);
-        border-radius: 4px;
-      }
-
-      &.nova-player-state-active {
-        color: var(--nova-player-primary-color, #00a1d6);
-      }
-
-      .nova-player-ctrl-subtitle-language-item-text {
-        font-size: 12px;
-        line-height: 40px;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .nova-player-ctrl-subtitle-language-item-icon {
-        display: inline-flex;
-        flex: 0 0 auto;
-        height: 12px;
-        margin-top: 14px;
-        width: 14px;
-
-        svg {
-          height: 12px;
-          width: 14px;
-        }
-      }
-
-      // 本地实时识别轨的「实时识别」徽标（含状态点：下载中/就绪/失败）
-      .nova-player-ctrl-subtitle-live-badge {
-        align-items: center;
-        align-self: center;
-        background-color: hsla(0, 0%, 100%, 0.12);
-        border-radius: 2px;
-        box-sizing: border-box;
-        color: hsla(0, 0%, 100%, 0.85);
-        display: inline-flex;
-        flex: 0 0 auto;
-        font-size: 10px;
-        line-height: 1;
-        padding: 2px 6px;
-        white-space: nowrap;
-
-        // 状态点（::before 圆点，默认灰色，颜色按 status 类覆盖）
-        &::before {
-          background-color: hsla(0, 0%, 100%, 0.4);
-          border-radius: 50%;
-          content: "";
-          height: 4px;
-          margin-right: 4px;
-          width: 4px;
-        }
-
-        // 下载中 / 识别中：黄色
-        &.nova-player-ctrl-subtitle-live-status-downloading::before,
-        &.nova-player-ctrl-subtitle-live-status-loading::before {
-          animation: nova-player-live-pulse 1s ease-in-out infinite;
-          background-color: #ffb027;
-        }
-
-        // 已就绪：绿色
-        &.nova-player-ctrl-subtitle-live-status-ready::before {
-          background-color: #2ac864;
-        }
-
-        // 识别失败：红色
-        &.nova-player-ctrl-subtitle-live-status-error::before {
-          background-color: #fb7299;
-        }
-      }
-    }
-
-    .nova-player-ctrl-subtitle-setting {
-      align-items: center;
-      color: #fff;
-      cursor: pointer;
-      display: flex;
-      fill: #fff;
-      height: 40px;
-      justify-content: space-between;
-
-      &:hover {
-        color: var(--nova-player-primary-color, #00a1d6);
-        fill: var(--nova-player-primary-color, #00a1d6);
-      }
-
-      .nova-player-ctrl-subtitle-setting-text {
-        flex: 1 1 auto;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        transition: color 0.3s;
-        white-space: nowrap;
-      }
-
-      .nova-player-ctrl-subtitle-setting-icon {
-        align-items: center;
-        display: flex;
-        flex: 0 0 auto;
-        height: 100%;
-        justify-content: center;
-        opacity: 0.9;
-        width: 16px;
-
-        svg {
-          height: 16px;
-          width: 16px;
-        }
-      }
-    }
-
-    .nova-player-ctrl-subtitle-settings-content {
-      flex: 0 0 auto;
-      margin-right: -20px;
-      min-height: 0;
-      overflow: hidden;
-      position: relative;
-      width: calc(100% + 20px);
-    }
-
-    .nova-player-ctrl-subtitle-settings-scroller {
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      min-height: 100%;
-      padding-right: 20px;
-      overflow-y: scroll;
-    }
-
-    .nova-player-ctrl-subtitle-item {
-      margin-top: 12px;
-    }
-
-    .nova-player-ctrl-subtitle-fontsize,
-    .nova-player-ctrl-subtitle-color,
-    .nova-player-ctrl-subtitle-position,
-    .nova-player-ctrl-subtitle-shadow {
-      width: 50%;
-    }
-
-    .nova-player-ctrl-subtitle-fontsize,
-    .nova-player-ctrl-subtitle-shadow {
-      margin-right: 20px;
-    }
-
-    .nova-player-ctrl-subtitle-fontsize-title,
-    .nova-player-ctrl-subtitle-color-title,
-    .nova-player-ctrl-subtitle-position-title,
-    .nova-player-ctrl-subtitle-shadow-title {
-      height: 16px;
-      margin-bottom: 5px;
-    }
-
-    .nova-player-ctrl-subtitle-fontsize-content,
-    .nova-player-ctrl-subtitle-color-content,
-    .nova-player-ctrl-subtitle-position-content,
-    .nova-player-ctrl-subtitle-shadow-content {
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-select {
-      cursor: pointer;
-      display: inline-flex;
-      line-height: normal;
-      position: relative;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-select-area {
-      align-items: center;
-      display: flex;
-      height: 100%;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-select-wrap {
-      height: 22px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-select-border {
-      border: 1px solid hsla(0, 0%, 100%, 0.2);
-      border-radius: 2px;
-      box-sizing: border-box;
-      font-size: 12px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-select-header {
-      height: 20px;
-      line-height: 20px;
-      padding: 0 22px 0 7px;
-      position: relative;
-
-      &:hover {
-        background: #212121;
-      }
-    }
-
-    .nova-player-ctrl-subtitle-select.nova-player-state-unfold
-      .nova-player-ctrl-subtitle-select-header {
-      background: #212121;
-    }
-
-    .nova-player-ctrl-subtitle-select-result {
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .nova-player-ctrl-subtitle-select-arrow {
-      align-items: center;
-      bottom: 0;
-      display: flex;
-      justify-content: center;
-      position: absolute;
-      right: 0;
-      top: 0;
-      vertical-align: middle;
-      width: 22px;
-    }
-
-    .nova-player-ctrl-subtitle-select-arrow-down {
-      border-color: #999 transparent transparent;
-      border-style: solid;
-      border-width: 4px 3px 0;
-      height: 0;
-      width: 0;
-    }
-
-    .nova-player-ctrl-subtitle-select-list-wrap {
-      display: none;
-    }
-
-    .nova-player-ctrl-subtitle-select.nova-player-state-unfold
-      .nova-player-ctrl-subtitle-select-list-wrap {
-      display: block;
-      left: 0;
-      position: absolute;
-      right: 0;
-      top: 100%;
-      z-index: 3;
-    }
-
-    .nova-player-ctrl-subtitle-select-list {
-      background: #212121;
-      box-sizing: border-box;
-      list-style-type: none;
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      z-index: 2;
-    }
-
-    .nova-player-ctrl-subtitle-select-item {
-      height: 20px;
-      line-height: 20px;
-      padding: 0 22px 0 7px;
-
-      &:hover {
-        background: hsla(0, 0%, 100%, 0.1);
-      }
-
-      &.nova-player-state-active {
-        color: var(--nova-player-primary-color, #00a1d6);
-        cursor: default;
-      }
-
-      > * {
-        display: inline-block;
-        pointer-events: none;
-        vertical-align: middle;
-      }
-    }
-
-    .nova-player-ctrl-subtitle-color {
-      .nova-player-ctrl-subtitle-select-item > span,
-      .nova-player-ctrl-subtitle-select-result > span {
-        vertical-align: middle;
-      }
-
-      .nova-player-ctrl-subtitle-select-item > span:first-child,
-      .nova-player-ctrl-subtitle-select-result > span:first-child {
-        border-radius: 2px;
-        display: inline-block;
-        height: 12px;
-        margin-right: 8px;
-        width: 12px;
-      }
-    }
-
-    .nova-player-ctrl-subtitle-opacity-header {
-      align-items: flex-start;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      min-height: 16px;
-    }
-
-    .nova-player-ctrl-subtitle-opacity-title {
-      flex: 1 1 auto;
-      height: 16px;
-      min-width: 0;
-    }
-
-    .nova-player-ctrl-subtitle-opacity-content {
-      height: 12px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-opacity-percent {
-      color: hsla(0, 0%, 100%, 0.8);
-      flex: 0 0 auto;
-      font-size: 12px;
-      line-height: 16px;
-      margin-left: 8px;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .nova-player-ctrl-subtitle-slider {
-      cursor: pointer;
-      height: 12px;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-slider-area {
-      align-items: center;
-      display: flex;
-      height: 100%;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-slider-track {
-      align-items: center;
-      display: flex;
-      height: 2px;
-      position: relative;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-slider-bar-wrap {
-      background: #505050;
-      border-radius: 1.5px;
-      bottom: 0;
-      left: 0;
-      overflow: hidden;
-      position: absolute;
-      right: 0;
-      top: 0;
-    }
-
-    .nova-player-ctrl-subtitle-slider-bar {
-      background: var(--nova-player-fn-color, #00aeec);
-      bottom: 0;
-      left: 0;
-      position: absolute;
-      right: 0;
-      top: 0;
-      transform: scaleX(0.87);
-      transform-origin: 0 0;
-    }
-
-    .nova-player-ctrl-subtitle-slider-thumb {
-      cursor: pointer;
-      left: 0;
-      position: absolute;
-      top: -5px;
-    }
-
-    .nova-player-ctrl-subtitle-slider-thumb-dot {
-      align-items: center;
-      background-color: var(--nova-player-fn-color, #00aeec);
-      border-radius: 50%;
-      display: flex;
-      height: 12px;
-      transform: translateZ(0);
-      transition: all 0.2s;
-      vertical-align: middle;
-      width: 12px;
-    }
-
-    .nova-player-ctrl-subtitle-other {
-      margin: 10px 0;
-    }
-
-    .nova-player-ctrl-subtitle-other-title {
-      height: 16px;
-      margin-bottom: 8px;
-    }
-
-    .nova-player-ctrl-subtitle-other-content {
-      height: 16px;
-    }
-
-    .nova-player-ctrl-subtitle-fade {
-      margin-left: 14px;
-    }
-
-    .nova-player-ctrl-subtitle-checkbox {
-      cursor: pointer;
-      display: inline-flex;
-      position: relative;
-
-      &:hover .nova-player-ctrl-subtitle-checkbox-name {
-        color: var(--nova-player-primary-color, #00a1d6);
-      }
-
-      &:hover .nova-player-ctrl-subtitle-checkbox-icon svg {
-        fill: var(--nova-player-primary-color, #00a1d6);
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-area {
-        align-items: center;
-        display: flex;
-        height: 100%;
-        width: 100%;
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-input {
-        cursor: pointer;
-        height: 100%;
-        left: 0;
-        margin: 0;
-        opacity: 0;
-        position: absolute;
-        top: 0;
-        width: 100%;
-        z-index: 1;
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-label {
-        align-items: center;
-        display: flex;
-        justify-content: center;
-        vertical-align: middle;
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-icon {
-        display: inline-block;
-        font-size: 0;
-        height: 16px;
-        margin-right: 4px;
-        vertical-align: middle;
-        width: 16px;
-
-        svg {
-          fill: #fff;
-          height: 16px;
-          transform: translateZ(0);
-          transition: all 0.2s;
-          vertical-align: top;
-          width: 16px;
-        }
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-icon-selected {
-        display: none;
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-name {
-        color: #fff;
-        font-size: 12px;
-        line-height: 12px;
-        position: relative;
-        transform: translateZ(0);
-        transition: all 0.2s;
-        vertical-align: middle;
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-input:checked
-        + .nova-player-ctrl-subtitle-checkbox-label
-        .nova-player-ctrl-subtitle-checkbox-icon
-        svg {
-        fill: var(--nova-player-primary-color, #00a1d6);
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-input:checked
-        + .nova-player-ctrl-subtitle-checkbox-label
-        .nova-player-ctrl-subtitle-checkbox-icon-default {
-        display: none;
-      }
-
-      .nova-player-ctrl-subtitle-checkbox-input:checked
-        + .nova-player-ctrl-subtitle-checkbox-label
-        .nova-player-ctrl-subtitle-checkbox-icon-selected {
-        display: inline-block;
-      }
-    }
-
-    .nova-player-ctrl-subtitle-settings-footer {
-      border-top: 1px solid rgba(229, 233, 239, 0.1);
-      box-sizing: border-box;
-      flex: 0 0 auto;
-      margin: 0 -20px;
-      padding: 0 20px;
-    }
-
-    .nova-player-ctrl-subtitle-settings-footer
-      .nova-player-ctrl-subtitle-separator {
-      display: none;
-    }
-
-    .nova-player-ctrl-subtitle-reset {
-      cursor: pointer;
-      display: inline-flex;
-      height: 22px;
-      margin: 10px 0;
-      max-width: 100%;
-      min-height: 22px;
-      min-width: 116px;
-      width: 116px;
-    }
-
-    .nova-player-ctrl-subtitle-button-area {
-      align-items: center;
-      background: none;
-      border: 1px solid hsla(0, 0%, 100%, 0.2);
-      border-radius: 2px;
-      box-sizing: border-box;
-      color: #fff;
-      display: flex;
-      font-size: 12px;
-      justify-content: center;
-      max-width: 100%;
-      min-width: 68px;
-      outline: none;
-      padding: 3px;
-      text-align: center;
-      transform: translateZ(0);
-      transition: all 0.2s;
-      white-space: nowrap;
-      width: 100%;
-    }
-
-    .nova-player-ctrl-subtitle-reset:hover
-      .nova-player-ctrl-subtitle-button-area {
-      border-color: var(--nova-player-fn-color, #00aeec);
-      color: var(--nova-player-fn-color, #00aeec);
-    }
-  }
-
   &.state-show .nova-player-ctrl-subtitle-box {
     display: block;
   }
 }
+.nova-player-ctrl-subtitle-box {
+  bottom: 41px;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: default;
+  display: none;
+  font-size: 12px;
+  position: absolute;
+  right: -66px;
+  text-align: left;
+  transition: all 0.2s ease-in-out;
 
+  &:after {
+    content: "";
+    display: block;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-menu {
+    align-items: flex-start;
+    border-radius: 2px;
+    box-sizing: border-box;
+    color: #fff;
+    display: flex;
+    font-size: 12px;
+    overflow: visible;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+  }
+
+  .ui-panel-wrap {
+    height: 311px;
+    overflow: hidden;
+    transition:
+      width 0.25s,
+      height 0.25s;
+    width: 168px;
+  }
+
+  .nova-player-ctrl-subtitle-panel-move {
+    align-items: flex-end;
+    display: flex;
+    height: 100%;
+    transform: translateX(0);
+    transition: transform 0.25s;
+    width: 434px;
+  }
+
+  .nova-player-ctrl-subtitle-panel-item {
+    flex-shrink: 0;
+    height: 311px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+    width: 168px;
+
+    &:last-child {
+      height: 260px;
+      width: 266px;
+    }
+
+    &.nova-player-state-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  .ui-area.state-show-right {
+    .ui-panel-wrap {
+      height: 260px;
+      width: 266px;
+    }
+
+    .nova-player-ctrl-subtitle-panel-move {
+      transform: translateX(-168px);
+    }
+  }
+
+  .nova-player-ctrl-subtitle-menu-left,
+  .nova-player-ctrl-subtitle-menu-right {
+    box-sizing: border-box;
+    display: flex;
+    height: 100%;
+    padding: 0 20px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-menu-left {
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .nova-player-ctrl-subtitle-menu-right {
+    flex-direction: column;
+  }
+
+  .nova-player-ctrl-subtitle-menu-origin {
+    height: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-title-area {
+    height: auto;
+    padding-top: 4px;
+  }
+
+  .nova-player-ctrl-subtitle-item-flex {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .nova-player-ctrl-subtitle-add-wrap {
+    height: 32px;
+    min-width: 0;
+  }
+
+  .nova-player-ctrl-subtitle-title {
+    color: #fff;
+    font-size: 14px;
+    margin-top: 10px;
+    min-width: 0;
+    opacity: 0.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nova-player-ctrl-subtitle-add {
+    height: 22px;
+    margin-top: 10px;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+
+    span {
+      display: block;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .nova-player-ctrl-subtitle-close-switch {
+    color: #fff;
+    cursor: pointer;
+    height: 40px;
+    line-height: 40px;
+    margin: 2px 8px 0 -12px;
+    overflow: hidden;
+    padding-left: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: calc(100% + 12px);
+
+    &:hover {
+      background-color: hsla(0, 0%, 100%, 0.1);
+      border-radius: 4px;
+    }
+
+    &.nova-player-state-active {
+      color: var(--nova-player-primary-color, #00a1d6);
+    }
+  }
+
+  .nova-player-ctrl-subtitle-fake-switch {
+    color: #fff;
+    cursor: not-allowed;
+    display: flex;
+    flex-direction: row;
+    height: 40px;
+    margin: 2px 8px 0 -12px;
+    padding-left: 12px;
+    width: calc(100% + 12px);
+
+    &:hover {
+      background-color: hsla(0, 0%, 100%, 0.1);
+      border-radius: 4px;
+    }
+
+    .nova-player-ctrl-subtitle-fake-switch-text {
+      line-height: 40px;
+      opacity: 0.4;
+    }
+
+    .nova-player-ctrl-subtitle-fake-switch-icon {
+      display: inline-flex;
+      height: 12px;
+      margin: 13.5px 0 0 4px;
+      width: 12px;
+
+      svg {
+        height: 12px;
+        width: 12px;
+      }
+    }
+  }
+
+  .nova-player-ctrl-subtitle-separator-above,
+  .nova-player-ctrl-subtitle-separator-bottom {
+    border-bottom: 1px solid rgba(229, 233, 239, 0.1);
+    margin: 7.5px 0 7.5px -8px;
+    position: relative;
+    width: calc(100% + 16px);
+  }
+
+  .nova-player-ctrl-subtitle-language-unlogin {
+    align-items: center;
+    display: flex;
+    height: 60px;
+    justify-content: center;
+    margin-left: -20px;
+    width: calc(100% + 40px);
+  }
+
+  .nova-player-ctrl-subtitle-language-unlogin-content {
+    background-color: var(--nova-player-fn-color, #00aeec);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    height: 20px;
+    line-height: 20px;
+    padding: 7px 21px;
+  }
+
+  .nova-player-ctrl-subtitle-bilingual-above {
+    height: 40px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-bilingual-bottom {
+    height: 36px;
+    padding-top: 4px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-switch {
+    cursor: pointer;
+    display: inline-flex;
+    position: relative;
+
+    &:hover .nova-player-ctrl-subtitle-switch-name {
+      color: var(--nova-player-primary-color, #00a1d6);
+    }
+
+    .nova-player-ctrl-subtitle-switch-area {
+      align-items: center;
+      display: flex;
+      height: 100%;
+      width: 100%;
+    }
+
+    .nova-player-ctrl-subtitle-switch-input {
+      cursor: pointer;
+      height: 100%;
+      left: 0;
+      margin: 0;
+      opacity: 0;
+      position: absolute;
+      top: 0;
+      width: 100%;
+      z-index: 1;
+    }
+
+    .nova-player-ctrl-subtitle-switch-label {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      vertical-align: middle;
+      width: 100%;
+    }
+
+    .nova-player-ctrl-subtitle-switch-name {
+      position: relative;
+    }
+
+    .nova-player-ctrl-subtitle-switch-body {
+      background: #757575;
+      border-radius: 10px;
+      box-sizing: border-box;
+      display: inline-block;
+      height: 20px;
+      outline: none;
+      position: relative;
+      transform: translateZ(0);
+      transition: all 0.3s;
+      vertical-align: middle;
+      width: 30px;
+    }
+
+    .nova-player-ctrl-subtitle-switch-dot {
+      align-items: center;
+      background-color: #fff;
+      border-radius: 100%;
+      box-shadow:
+        0 3px 1px 0 rgba(0, 0, 0, 0.05),
+        0 2px 2px 0 rgba(0, 0, 0, 0.1),
+        0 3px 3px 0 rgba(0, 0, 0, 0.05);
+      color: #757575;
+      display: flex;
+      fill: #757575;
+      height: 16px;
+      justify-content: center;
+      left: 2px;
+      line-height: 16px;
+      position: relative;
+      text-align: center;
+      top: 2px;
+      transform: translateZ(0);
+      transition: all 0.3s;
+      width: 16px;
+
+      > span {
+        display: inline-block;
+        font-size: 0;
+        height: 10px;
+        width: 10px;
+      }
+    }
+
+    .nova-player-ctrl-subtitle-switch-input:checked
+      + .nova-player-ctrl-subtitle-switch-label
+      .nova-player-ctrl-subtitle-switch-body {
+      background: var(--nova-player-fn-color, #00aeec);
+    }
+
+    .nova-player-ctrl-subtitle-switch-input:checked
+      + .nova-player-ctrl-subtitle-switch-label
+      .nova-player-ctrl-subtitle-switch-body
+      .nova-player-ctrl-subtitle-switch-dot {
+      color: var(--nova-player-fn-color, #00aeec);
+      fill: var(--nova-player-fn-color, #00aeec);
+      left: 100%;
+      margin-left: -18px;
+    }
+  }
+
+  .nova-player-ctrl-subtitle-language {
+    display: flex;
+    margin-left: -20px;
+    width: calc(100% + 40px);
+  }
+
+  .nova-player-ctrl-subtitle-nolan {
+    color: hsla(0, 0%, 100%, 0.4);
+    font-size: 12px;
+    line-height: 16px;
+    padding: 14px 0 10px 20px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-major-title,
+  .nova-player-ctrl-subtitle-minor-title {
+    color: #999;
+    height: 20px;
+    line-height: 20px;
+    margin-left: 20px;
+  }
+
+  .nova-player-ctrl-subtitle-major-content,
+  .nova-player-ctrl-subtitle-minor-content {
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+    touch-action: pan-x;
+    user-select: none;
+
+    &::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #e5e7ef;
+      border: none;
+      border-radius: 3px;
+      opacity: 0.3;
+    }
+  }
+
+  .nova-player-ctrl-subtitle-major-content {
+    height: 135px;
+  }
+
+  .nova-player-ctrl-subtitle-minor-content {
+    height: 99px;
+  }
+
+  .nova-player-ctrl-subtitle-language-item {
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    height: 40px;
+    margin: 0 8px;
+    min-width: 0;
+    overflow: hidden;
+    padding-left: 12px;
+
+    &:hover {
+      background-color: hsla(0, 0%, 100%, 0.1);
+      border-radius: 4px;
+    }
+
+    &.nova-player-state-active {
+      color: var(--nova-player-primary-color, #00a1d6);
+    }
+
+    .nova-player-ctrl-subtitle-language-item-text {
+      font-size: 12px;
+      line-height: 40px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nova-player-ctrl-subtitle-language-item-icon {
+      display: inline-flex;
+      flex: 0 0 auto;
+      height: 12px;
+      margin-top: 14px;
+      width: 14px;
+
+      svg {
+        height: 12px;
+        width: 14px;
+      }
+    }
+
+    // 本地实时识别轨的「实时识别」徽标（含状态点：下载中/就绪/失败）
+    .nova-player-ctrl-subtitle-live-badge {
+      align-items: center;
+      align-self: center;
+      background-color: hsla(0, 0%, 100%, 0.12);
+      border-radius: 2px;
+      box-sizing: border-box;
+      color: hsla(0, 0%, 100%, 0.85);
+      display: inline-flex;
+      flex: 0 0 auto;
+      font-size: 10px;
+      line-height: 1;
+      padding: 2px 6px;
+      white-space: nowrap;
+
+      // 状态点（::before 圆点，默认灰色，颜色按 status 类覆盖）
+      &::before {
+        background-color: hsla(0, 0%, 100%, 0.4);
+        border-radius: 50%;
+        content: "";
+        height: 4px;
+        margin-right: 4px;
+        width: 4px;
+      }
+
+      // 下载中 / 识别中：黄色
+      &.nova-player-ctrl-subtitle-live-status-downloading::before,
+      &.nova-player-ctrl-subtitle-live-status-loading::before {
+        animation: nova-player-live-pulse 1s ease-in-out infinite;
+        background-color: #ffb027;
+      }
+
+      // 已就绪：绿色
+      &.nova-player-ctrl-subtitle-live-status-ready::before {
+        background-color: #2ac864;
+      }
+
+      // 识别失败：红色
+      &.nova-player-ctrl-subtitle-live-status-error::before {
+        background-color: #fb7299;
+      }
+    }
+  }
+
+  .nova-player-ctrl-subtitle-setting {
+    align-items: center;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    fill: #fff;
+    height: 40px;
+    justify-content: space-between;
+
+    &:hover {
+      color: var(--nova-player-primary-color, #00a1d6);
+      fill: var(--nova-player-primary-color, #00a1d6);
+    }
+
+    .nova-player-ctrl-subtitle-setting-text {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: color 0.3s;
+      white-space: nowrap;
+    }
+
+    .nova-player-ctrl-subtitle-setting-icon {
+      align-items: center;
+      display: flex;
+      flex: 0 0 auto;
+      height: 100%;
+      justify-content: center;
+      opacity: 0.9;
+      width: 16px;
+
+      svg {
+        height: 16px;
+        width: 16px;
+      }
+    }
+  }
+
+  .nova-player-ctrl-subtitle-settings-content {
+    flex: 0 0 auto;
+    margin-right: -20px;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    width: calc(100% + 20px);
+  }
+
+  .nova-player-ctrl-subtitle-settings-scroller {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding-right: 20px;
+    overflow-y: scroll;
+  }
+
+  .nova-player-ctrl-subtitle-item {
+    margin-top: 12px;
+  }
+
+  .nova-player-ctrl-subtitle-fontsize,
+  .nova-player-ctrl-subtitle-color,
+  .nova-player-ctrl-subtitle-position,
+  .nova-player-ctrl-subtitle-shadow {
+    width: 50%;
+  }
+
+  .nova-player-ctrl-subtitle-fontsize,
+  .nova-player-ctrl-subtitle-shadow {
+    margin-right: 20px;
+  }
+
+  .nova-player-ctrl-subtitle-fontsize-title,
+  .nova-player-ctrl-subtitle-color-title,
+  .nova-player-ctrl-subtitle-position-title,
+  .nova-player-ctrl-subtitle-shadow-title {
+    height: 16px;
+    margin-bottom: 5px;
+  }
+
+  .nova-player-ctrl-subtitle-fontsize-content,
+  .nova-player-ctrl-subtitle-color-content,
+  .nova-player-ctrl-subtitle-position-content,
+  .nova-player-ctrl-subtitle-shadow-content {
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-select {
+    cursor: pointer;
+    display: inline-flex;
+    line-height: normal;
+    position: relative;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-select-area {
+    align-items: center;
+    display: flex;
+    height: 100%;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-select-wrap {
+    height: 22px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-select-border {
+    border: 1px solid hsla(0, 0%, 100%, 0.2);
+    border-radius: 2px;
+    box-sizing: border-box;
+    font-size: 12px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-select-header {
+    height: 20px;
+    line-height: 20px;
+    padding: 0 22px 0 7px;
+    position: relative;
+
+    &:hover {
+      background: #212121;
+    }
+  }
+
+  .nova-player-ctrl-subtitle-select.nova-player-state-unfold
+    .nova-player-ctrl-subtitle-select-header {
+    background: #212121;
+  }
+
+  .nova-player-ctrl-subtitle-select-result {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nova-player-ctrl-subtitle-select-arrow {
+    align-items: center;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    position: absolute;
+    right: 0;
+    top: 0;
+    vertical-align: middle;
+    width: 22px;
+  }
+
+  .nova-player-ctrl-subtitle-select-arrow-down {
+    border-color: #999 transparent transparent;
+    border-style: solid;
+    border-width: 4px 3px 0;
+    height: 0;
+    width: 0;
+  }
+
+  .nova-player-ctrl-subtitle-select-list-wrap {
+    display: none;
+  }
+
+  .nova-player-ctrl-subtitle-select.nova-player-state-unfold
+    .nova-player-ctrl-subtitle-select-list-wrap {
+    display: block;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 3;
+  }
+
+  .nova-player-ctrl-subtitle-select-list {
+    background: #212121;
+    box-sizing: border-box;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    z-index: 2;
+  }
+
+  .nova-player-ctrl-subtitle-select-item {
+    height: 20px;
+    line-height: 20px;
+    padding: 0 22px 0 7px;
+
+    &:hover {
+      background: hsla(0, 0%, 100%, 0.1);
+    }
+
+    &.nova-player-state-active {
+      color: var(--nova-player-primary-color, #00a1d6);
+      cursor: default;
+    }
+
+    > * {
+      display: inline-block;
+      pointer-events: none;
+      vertical-align: middle;
+    }
+  }
+
+  .nova-player-ctrl-subtitle-color {
+    .nova-player-ctrl-subtitle-select-item > span,
+    .nova-player-ctrl-subtitle-select-result > span {
+      vertical-align: middle;
+    }
+
+    .nova-player-ctrl-subtitle-select-item > span:first-child,
+    .nova-player-ctrl-subtitle-select-result > span:first-child {
+      border-radius: 2px;
+      display: inline-block;
+      height: 12px;
+      margin-right: 8px;
+      width: 12px;
+    }
+  }
+
+  .nova-player-ctrl-subtitle-opacity-header {
+    align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    min-height: 16px;
+  }
+
+  .nova-player-ctrl-subtitle-opacity-title {
+    flex: 1 1 auto;
+    height: 16px;
+    min-width: 0;
+  }
+
+  .nova-player-ctrl-subtitle-opacity-content {
+    height: 12px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-opacity-percent {
+    color: hsla(0, 0%, 100%, 0.8);
+    flex: 0 0 auto;
+    font-size: 12px;
+    line-height: 16px;
+    margin-left: 8px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .nova-player-ctrl-subtitle-slider {
+    cursor: pointer;
+    height: 12px;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-slider-area {
+    align-items: center;
+    display: flex;
+    height: 100%;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-slider-track {
+    align-items: center;
+    display: flex;
+    height: 2px;
+    position: relative;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-slider-bar-wrap {
+    background: #505050;
+    border-radius: 1.5px;
+    bottom: 0;
+    left: 0;
+    overflow: hidden;
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+
+  .nova-player-ctrl-subtitle-slider-bar {
+    background: var(--nova-player-fn-color, #00aeec);
+    bottom: 0;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transform: scaleX(0.87);
+    transform-origin: 0 0;
+  }
+
+  .nova-player-ctrl-subtitle-slider-thumb {
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    top: -5px;
+  }
+
+  .nova-player-ctrl-subtitle-slider-thumb-dot {
+    align-items: center;
+    background-color: var(--nova-player-fn-color, #00aeec);
+    border-radius: 50%;
+    display: flex;
+    height: 12px;
+    transform: translateZ(0);
+    transition: all 0.2s;
+    vertical-align: middle;
+    width: 12px;
+  }
+
+  .nova-player-ctrl-subtitle-other {
+    margin: 10px 0;
+  }
+
+  .nova-player-ctrl-subtitle-other-title {
+    height: 16px;
+    margin-bottom: 8px;
+  }
+
+  .nova-player-ctrl-subtitle-other-content {
+    height: 16px;
+  }
+
+  .nova-player-ctrl-subtitle-fade {
+    margin-left: 14px;
+  }
+
+  .nova-player-ctrl-subtitle-checkbox {
+    cursor: pointer;
+    display: inline-flex;
+    position: relative;
+
+    &:hover .nova-player-ctrl-subtitle-checkbox-name {
+      color: var(--nova-player-primary-color, #00a1d6);
+    }
+
+    &:hover .nova-player-ctrl-subtitle-checkbox-icon svg {
+      fill: var(--nova-player-primary-color, #00a1d6);
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-area {
+      align-items: center;
+      display: flex;
+      height: 100%;
+      width: 100%;
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-input {
+      cursor: pointer;
+      height: 100%;
+      left: 0;
+      margin: 0;
+      opacity: 0;
+      position: absolute;
+      top: 0;
+      width: 100%;
+      z-index: 1;
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-label {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      vertical-align: middle;
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-icon {
+      display: inline-block;
+      font-size: 0;
+      height: 16px;
+      margin-right: 4px;
+      vertical-align: middle;
+      width: 16px;
+
+      svg {
+        fill: #fff;
+        height: 16px;
+        transform: translateZ(0);
+        transition: all 0.2s;
+        vertical-align: top;
+        width: 16px;
+      }
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-icon-selected {
+      display: none;
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-name {
+      color: #fff;
+      font-size: 12px;
+      line-height: 12px;
+      position: relative;
+      transform: translateZ(0);
+      transition: all 0.2s;
+      vertical-align: middle;
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-input:checked
+      + .nova-player-ctrl-subtitle-checkbox-label
+      .nova-player-ctrl-subtitle-checkbox-icon
+      svg {
+      fill: var(--nova-player-primary-color, #00a1d6);
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-input:checked
+      + .nova-player-ctrl-subtitle-checkbox-label
+      .nova-player-ctrl-subtitle-checkbox-icon-default {
+      display: none;
+    }
+
+    .nova-player-ctrl-subtitle-checkbox-input:checked
+      + .nova-player-ctrl-subtitle-checkbox-label
+      .nova-player-ctrl-subtitle-checkbox-icon-selected {
+      display: inline-block;
+    }
+  }
+
+  .nova-player-ctrl-subtitle-settings-footer {
+    border-top: 1px solid rgba(229, 233, 239, 0.1);
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    margin: 0 -20px;
+    padding: 0 20px;
+  }
+
+  .nova-player-ctrl-subtitle-settings-footer
+    .nova-player-ctrl-subtitle-separator {
+    display: none;
+  }
+
+  .nova-player-ctrl-subtitle-reset {
+    cursor: pointer;
+    display: inline-flex;
+    height: 22px;
+    margin: 10px 0;
+    max-width: 100%;
+    min-height: 22px;
+    min-width: 116px;
+    width: 116px;
+  }
+
+  .nova-player-ctrl-subtitle-button-area {
+    align-items: center;
+    background: none;
+    border: 1px solid hsla(0, 0%, 100%, 0.2);
+    border-radius: 2px;
+    box-sizing: border-box;
+    color: #fff;
+    display: flex;
+    font-size: 12px;
+    justify-content: center;
+    max-width: 100%;
+    min-width: 68px;
+    outline: none;
+    padding: 3px;
+    text-align: center;
+    transform: translateZ(0);
+    transition: all 0.2s;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-subtitle-reset:hover
+    .nova-player-ctrl-subtitle-button-area {
+    border-color: var(--nova-player-fn-color, #00aeec);
+    color: var(--nova-player-fn-color, #00aeec);
+  }
+}
 // 实时识别状态点呼吸动画（下载中 / 识别中共用）
 @keyframes nova-player-live-pulse {
   0%,

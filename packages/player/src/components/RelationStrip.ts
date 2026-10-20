@@ -85,11 +85,12 @@ export const RelationStrip = defineComponent<RelationStripProps>(
       const width =
         wrapEl?.parentElement?.clientWidth ?? wrapEl?.clientWidth ?? 0;
       if (width <= 0) return;
-      const count = Math.max(
-        2,
-        Math.min(6, Math.floor((width - 40) / 140)),
-      );
+      // 真实外链暂停页阈值：6 / 5 / 4 / 0
+      const count =
+        width >= 1140 ? 6 : width >= 930 ? 5 : width >= 720 ? 4 : 0;
       visibleItems.value = all.slice(0, count);
+      wrapEl?.classList.toggle("is-relation-empty", count === 0);
+      wrapEl?.classList.toggle("is-relation-tiny", width < 440);
     };
 
     lifecycle.onMounted = (): void => {

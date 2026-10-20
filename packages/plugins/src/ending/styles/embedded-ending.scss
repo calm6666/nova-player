@@ -52,17 +52,20 @@
 
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-embedded-ending-top-left {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  display: block;
 }
 
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-left-title {
   align-items: center;
   display: flex;
-  margin: 0 0 8px;
-  min-width: 0;
+  height: 31px;
+  margin: 10px 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  z-index: 2;
 }
 
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap
@@ -96,7 +99,7 @@
 
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-top-left-follow {
-  margin-top: 10px;
+  margin-top: 0;
 }
 
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap
@@ -264,6 +267,13 @@
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap
   .nova-player-relation-context-item:first-child {
   margin-left: 0;
+}
+
+/* 真实页面在 10 张卡片时给 context 加 fix-context，强制卡片 200px */
+.nova-player-ending-wrap.nova-player-embedded-ending-wrap
+  .nova-player-embedded-ending-relation-context.fix-context
+  .nova-player-relation-context-item {
+  min-width: 200px !important;
 }
 
 .nova-player-ending-wrap.nova-player-embedded-ending-wrap

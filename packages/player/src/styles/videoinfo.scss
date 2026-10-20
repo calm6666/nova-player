@@ -1,111 +1,109 @@
-.nova-player-container {
-  .nova-player-info-container {
-    -webkit-font-smoothing: antialiased;
-    background-color: rgba(33, 33, 33, 0.9);
-    border-radius: 4px;
-    color: #fff;
-    left: 10px;
-    line-height: 18px;
-    padding-bottom: 15px;
-    position: absolute;
+.nova-player-info-container {
+  -webkit-font-smoothing: antialiased;
+  background-color: rgba(33, 33, 33, 0.9);
+  border-radius: 4px;
+  color: #fff;
+  left: 10px;
+  line-height: 18px;
+  padding-bottom: 15px;
+  position: absolute;
+  text-align: center;
+  text-align: left;
+  top: 10px;
+  z-index: 80;
+  display: none;
+  // 面板含 9 行信息 + 3 张曲线图后高度可观：限高滚动避免小屏溢出播放器
+  // （百分比参照包含块 .nova-player-container 高度，absolute 定位可解析；
+  // top 10px + 底部余量 10px）
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+
+  span {
+    display: inline-block;
+    font-weight: 400;
+  }
+
+  .nova-player-info-title {
+    border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
+    font-size: 16px;
+    line-height: 40px;
     text-align: center;
-    text-align: left;
-    top: 10px;
-    z-index: 80;
-    display: none;
-    // 面板含 9 行信息 + 3 张曲线图后高度可观：限高滚动避免小屏溢出播放器
-    // （百分比参照包含块 .nova-player-container 高度，absolute 定位可解析；
-    // top 10px + 底部余量 10px）
-    max-height: calc(100% - 20px);
-    overflow-y: auto;
 
-    span {
-      display: inline-block;
-      font-weight: 400;
+    .nova-player-info-close {
+      fill: #fff;
+      color: #fff;
+      cursor: pointer;
+      height: 22px;
+      line-height: 22px;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 22px;
     }
+  }
 
-    .nova-player-info-title {
-      border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
-      font-size: 16px;
-      line-height: 40px;
-      text-align: center;
+  .nova-player-info-panel {
+    padding: 15px 26px 0;
+    position: relative;
 
-      .nova-player-info-close {
-        fill: #fff;
-        color: #fff;
-        cursor: pointer;
-        height: 22px;
-        line-height: 22px;
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        width: 22px;
+    .info-line {
+      min-width: 290px;
+      // max-width: 600px;
+
+      .info-title {
+        font-size: 12px;
+        font-weight: 500;
+        margin-right: 10px;
+        text-align: right;
+        text-indent: -99em;
+        width: 100px;
+      }
+
+      .info-data {
+        color: #999;
+        font-size: 12px;
+        font-weight: 400;
+        margin-right: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 470px;
+        vertical-align: middle;
       }
     }
 
-    .nova-player-info-panel {
-      padding: 15px 26px 0;
-      position: relative;
+    // ===== 曲线图区（码率 / 缓冲区 / 帧率，SVG 由 VideoInfo 采样重绘） =====
+    // 与上方信息行同一左右布局：左侧标签文字 + 右侧内容（曲线图）
+    .info-chart-section {
+      display: flex;
+      align-items: center;
+      margin-top: 12px;
 
-      .info-line {
-        min-width: 290px;
-        // max-width: 600px;
-
-        .info-title {
-          font-size: 12px;
-          font-weight: 500;
-          margin-right: 10px;
-          text-align: right;
-          text-indent: -99em;
-          width: 100px;
-        }
-
-        .info-data {
-          color: #999;
-          font-size: 12px;
-          font-weight: 400;
-          margin-right: 6px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          max-width: 470px;
-          vertical-align: middle;
-        }
+      .info-chart-title {
+        // 与 .info-line .info-title 同列规范：宽 100px 右对齐 + 右间距 10px，
+        // 曲线图标签与信息行标签垂直对齐成整齐的左列
+        width: 100px;
+        flex-shrink: 0;
+        color: #999;
+        font-size: 12px;
+        font-weight: 500;
+        text-align: right;
+        margin-right: 10px;
       }
 
-      // ===== 曲线图区（码率 / 缓冲区 / 帧率，SVG 由 VideoInfo 采样重绘） =====
-      // 与上方信息行同一左右布局：左侧标签文字 + 右侧内容（曲线图）
-      .info-chart-section {
-        display: flex;
-        align-items: center;
-        margin-top: 12px;
+      .info-chart-container {
+        // 右侧曲线图：弹性占满信息行数据列宽度，窄面板时按容器缩放
+        flex: 1;
+        min-width: 0;
+        // 半透明底板衬托白色曲线（与旧版媒体面板图表容器一致）
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        padding: 8px;
 
-        .info-chart-title {
-          // 与 .info-line .info-title 同列规范：宽 100px 右对齐 + 右间距 10px，
-          // 曲线图标签与信息行标签垂直对齐成整齐的左列
-          width: 100px;
-          flex-shrink: 0;
-          color: #999;
-          font-size: 12px;
-          font-weight: 500;
-          text-align: right;
-          margin-right: 10px;
-        }
-
-        .info-chart-container {
-          // 右侧曲线图：弹性占满信息行数据列宽度，窄面板时按容器缩放
-          flex: 1;
-          min-width: 0;
-          // 半透明底板衬托白色曲线（与旧版媒体面板图表容器一致）
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 4px;
-          padding: 8px;
-
-          svg {
-            display: block;
-            max-width: 100%;
-            height: auto;
-          }
+        svg {
+          display: block;
+          max-width: 100%;
+          height: auto;
         }
       }
     }

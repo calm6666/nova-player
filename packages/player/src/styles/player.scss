@@ -384,7 +384,7 @@ img {
   width: 100%;
 }
 
-.nova-player-ctrl-btn-icon>.common-svg-icon {
+.nova-player-ctrl-btn-icon > .common-svg-icon {
   height: 22px;
   opacity: 0.9;
   vertical-align: middle;
@@ -436,186 +436,6 @@ img {
   font-size: 12px;
   font-style: normal;
   line-height: 1;
-
-  .nova-player-container.state-disable-box-shadow {
-    -webkit-box-shadow: none;
-    box-shadow: none;
-  }
-
-  .nova-player-container {
-    -webkit-box-shadow: 0 0 8px #e5e9ef;
-    box-shadow: 0 0 8px #e5e9ef;
-    -webkit-box-shadow: 0 0 8px var(--nova-player-box-shadow, #e5e9ef);
-    box-shadow: 0 0 8px var(--nova-player-box-shadow, #e5e9ef);
-    height: 100%;
-    position: relative;
-    width: 100%;
-
-    .nova-player-primary-area {
-      -webkit-box-orient: vertical;
-      -webkit-box-direction: normal;
-      display: -webkit-box;
-      display: -ms-flexbox;
-      display: flex;
-      -ms-flex-direction: column;
-      flex-direction: column;
-      -ms-flex-wrap: nowrap;
-      flex-wrap: nowrap;
-      height: 100%;
-      width: 100%;
-
-      .nova-player-sending-area {
-        &:before {
-          background: #f4f4f4;
-          content: "";
-          display: block;
-          height: 1px;
-          margin-bottom: -1px;
-          width: 100%;
-        }
-      }
-    }
-  }
-
-  .nova-player-video-area {
-    -webkit-box-flex: 1;
-    background-color: #000;
-    background-color: var(--nova-player-video-bgcolor, #000);
-    -ms-flex: 1;
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-
-    .nova-player-video-perch {
-      -webkit-box-flex: 0;
-      -webkit-box-pack: center;
-      -ms-flex-pack: center;
-      -webkit-box-align: center;
-      -ms-flex-align: center;
-      align-items: center;
-      display: -webkit-box;
-      display: -ms-flexbox;
-      display: flex;
-      -ms-flex: none;
-      flex: none;
-      height: 100%;
-      justify-content: center;
-      position: relative;
-      width: 100%;
-      contain: layout style paint;
-      will-change: transform;
-      transform: translateZ(0);
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
-
-      .nova-player-video-wrap {
-        -webkit-box-sizing: border-box;
-        box-sizing: border-box;
-        display: block;
-        height: 100%;
-        width: 100%;
-        contain: strict;
-        will-change: transform;
-        transform: translateZ(0);
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-
-        video {
-          content-visibility: visible;
-          display: block;
-          height: 100%;
-          margin: auto;
-          width: 100%;
-          object-fit: contain;
-          will-change: transform;
-          transform: translateZ(0);
-          -webkit-backface-visibility: hidden;
-          backface-visibility: hidden;
-        }
-      }
-    }
-
-    .nova-player-video-poster {
-      bottom: 0;
-      height: 100%;
-      left: 0;
-      pointer-events: none;
-      position: absolute;
-      right: 0;
-      top: 0;
-      width: 100%;
-    }
-
-    .nova-player-video-poster[hidden] {
-      display: none;
-    }
-
-    .nova-player-state-wrap {
-      pointer-events: none;
-
-      .nova-player-state-buff-icon,
-      .nova-player-state-buff-text,
-      .nova-player-state-play {
-        display: none;
-      }
-    }
-
-    .nova-player-active {
-      display: block;
-    }
-
-    .nova-player-panel-active {
-      display: block;
-    }
-  }
-
-  .nova-player-container {
-    &.state-paused {
-      .nova-player-state-wrap {
-        bottom: 62px;
-        cursor: pointer;
-        pointer-events: none;
-        position: absolute;
-        right: 34px;
-        z-index: 48;
-
-        .nova-player-state-play {
-          background: url(@/assets/images/play.svg) 50% no-repeat;
-          display: block;
-          height: 64px;
-          width: 64px;
-        }
-
-        .nova-player-state-wrap {
-          .nova-player-state-play {
-            display: block;
-          }
-        }
-
-        .nova-player-mini-warp {
-          .nova-player-mini-state-play {
-            visibility: hidden;
-          }
-
-          .nova-player-mini-state-pause {
-            visibility: visible;
-          }
-        }
-      }
-
-      .nova-player-mini-warp {
-        .nova-player-mini-state {
-          .nova-player-mini-state-play {
-            visibility: hidden;
-          }
-
-          .nova-player-mini-state-pause {
-            visibility: visible;
-          }
-        }
-      }
-    }
-  }
 
   &.state-buff {
     .nova-player-state-wrap {
@@ -692,7 +512,6 @@ img {
       }
     }
 
-
     .nova-player-sending-bar {
       .nova-player-video-info {
         display: none;
@@ -709,21 +528,8 @@ img {
       }
     }
 
-    // .nova-player-ctrl-setting-box {
-    //   .nova-player-ctrl-setting-handoff-title,
-    //   .nova-player-ctrl-setting-aspect-title,
-    //   .nova-player-ctrl-setting-codec-title,
-    //   .nova-player-ctrl-setting-loudness-title,
-    //   .nova-player-ctrl-setting-others-title,
-    //   .nova-player-ctrl-setting-more-text,
-    //   .nova-player-ctrl-seting-menu-left .ui-switch-name {
-    //     font-size: 16px;
-    //   }
-    // }
-
     .nova-player-dm-setting-wrap {
       .nova-player-dm-setting-box {
-
         .nova-player-dm-setting-left,
         .nova-player-dm-setting-right {
           font-size: 16px;
@@ -789,7 +595,6 @@ img {
     .nova-player-control-wrap {
       .nova-player-control-bottom {
         .nova-player-control-bottom-right {
-
           .nova-player-ctrl-wide,
           .nova-player-ctrl-web {
             display: none;
@@ -800,7 +605,6 @@ img {
   }
 
   @media screen and (min-width: 750px) {
-
     .nova-player-container[data-screen="full"],
     .nova-player-container[data-screen="web"] {
       .nova-player-ctrl-time {
@@ -835,7 +639,6 @@ img {
 
   @mixin screen-style() {
     @media screen and (min-width: 750px) {
-
       .nova-player-container[data-screen="full"],
       .nova-player-container[data-screen="web"] {
         @content;
@@ -871,7 +674,7 @@ img {
         line-height: 32px;
         width: 54px;
 
-        .nova-player-ctrl-btn-icon>.common-svg-icon {
+        .nova-player-ctrl-btn-icon > .common-svg-icon {
           height: 28px;
         }
       }
@@ -956,7 +759,6 @@ img {
         }
 
         .nova-player-ctrl-btn.nova-player-ctrl-playbackrate {
-
           // width: 66px;
           .nova-player-ctrl-playbackrate-result {
             font-size: 16px;
@@ -1002,7 +804,6 @@ img {
   }
 
   @media screen and (max-width: 1200px) {
-
     .nova-player-container[data-screen="web"],
     .nova-player-container[data-screen="full"] {
       .nova-player-control-wrap {
@@ -1020,7 +821,6 @@ img {
   }
 
   @media screen and (max-width: 1366px) {
-
     .nova-player-container[data-screen="full"],
     .nova-player-container[data-screen="web"] {
       .nova-player-control-wrap {
@@ -1029,6 +829,180 @@ img {
             min-width: 316px;
           }
         }
+      }
+    }
+  }
+}
+
+.nova-player-container.state-disable-box-shadow {
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+
+.nova-player-container {
+  -webkit-box-shadow: 0 0 8px #e5e9ef;
+  box-shadow: 0 0 8px #e5e9ef;
+  -webkit-box-shadow: 0 0 8px var(--nova-player-box-shadow, #e5e9ef);
+  box-shadow: 0 0 8px var(--nova-player-box-shadow, #e5e9ef);
+  height: 100%;
+  position: relative;
+  width: 100%;
+}
+
+.nova-player-primary-area {
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  -ms-flex-wrap: nowrap;
+  flex-wrap: nowrap;
+  height: 100%;
+  width: 100%;
+}
+
+.nova-player-sending-area {
+  &:before {
+    background: #f4f4f4;
+    content: "";
+    display: block;
+    height: 1px;
+    margin-bottom: -1px;
+    width: 100%;
+  }
+}
+
+.nova-player-video-area {
+  -webkit-box-flex: 1;
+  background-color: #000;
+  background-color: var(--nova-player-video-bgcolor, #000);
+  -ms-flex: 1;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.nova-player-video-perch {
+  -webkit-box-flex: 0;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex: none;
+  flex: none;
+  height: 100%;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  contain: layout style paint;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.nova-player-video-poster {
+  bottom: 0;
+  height: 100%;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+}
+
+.nova-player-video-poster[hidden] {
+  display: none;
+}
+
+.nova-player-state-wrap {
+  pointer-events: none;
+
+  .nova-player-state-buff-icon,
+  .nova-player-state-buff-text,
+  .nova-player-state-play {
+    display: none;
+  }
+}
+
+.nova-player-active {
+  display: block;
+}
+
+.nova-player-panel-active {
+  display: block;
+}
+
+.nova-player-video-wrap {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  display: block;
+  height: 100%;
+  width: 100%;
+  contain: strict;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+
+  video {
+    content-visibility: visible;
+    display: block;
+    height: 100%;
+    margin: auto;
+    width: 100%;
+    object-fit: contain;
+    will-change: transform;
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}
+
+.nova-player-container {
+  &.state-paused {
+    .nova-player-state-wrap {
+      bottom: 62px;
+      cursor: pointer;
+      pointer-events: none;
+      position: absolute;
+      right: 34px;
+      z-index: 48;
+
+      .nova-player-state-play {
+        background: url(@/assets/images/play.svg) 50% no-repeat;
+        display: block;
+        height: 64px;
+        width: 64px;
+      }
+
+      .nova-player-state-play {
+        display: block;
+      }
+
+      .nova-player-mini-warp {
+        .nova-player-mini-state-play {
+          visibility: hidden;
+        }
+
+        .nova-player-mini-state-pause {
+          visibility: visible;
+        }
+      }
+
+      .nova-player-mini-state-play {
+        visibility: hidden;
+      }
+
+      .nova-player-mini-state-pause {
+        visibility: visible;
       }
     }
   }
@@ -1064,12 +1038,8 @@ img {
 @media screen and (max-width: 749.9px) {
   .nova-player-container {
     .nova-player-control-wrap {
-      .nova-player-control-bottom {
-        .nova-player-control-bottom-center {
-          .nova-player-sending-bar {
-            display: none;
-          }
-        }
+      .nova-player-sending-bar {
+        display: none;
       }
     }
   }
@@ -1077,7 +1047,7 @@ img {
 
 .nova-player-container[data-screen="normal"],
 .nova-player-container[data-screen="min"] {
-  .nova-player-control-bottom-center {
+  .nova-player-control-wrap {
     .nova-player-sending-bar {
       display: none;
     }

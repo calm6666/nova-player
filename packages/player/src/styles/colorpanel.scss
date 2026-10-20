@@ -1,84 +1,82 @@
-.nova-player-container {
-  .nova-player-color-panel {
-    -webkit-font-smoothing: antialiased;
-    background-color: rgba(33, 33, 33, 0.9);
-    border-radius: 4px;
-    color: #fff;
-    left: 50%;
-    pointer-events: auto;
-    position: absolute;
+.nova-player-color-panel {
+  -webkit-font-smoothing: antialiased;
+  background-color: rgba(33, 33, 33, 0.9);
+  border-radius: 4px;
+  color: #fff;
+  left: 50%;
+  pointer-events: auto;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  width: 400px;
+  z-index: 80;
+  display: none;
+
+  .nova-player-color-panel-title {
+    border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
+    font-size: 16px;
+    line-height: 40px;
+    margin-bottom: 10px;
     text-align: center;
-    top: 50%;
-    -webkit-transform: translate(-50%, -50%);
-    transform: translate(-50%, -50%);
-    width: 400px;
-    z-index: 80;
-    display: none;
 
-    .nova-player-color-panel-title {
-      border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
-      font-size: 16px;
-      line-height: 40px;
-      margin-bottom: 10px;
-      text-align: center;
-
-      .nova-player-color-panel-close {
-        fill: #fff;
-        color: #fff;
-        cursor: pointer;
-        height: 22px;
-        line-height: 22px;
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        width: 22px;
-      }
+    .nova-player-color-panel-close {
+      fill: #fff;
+      color: #fff;
+      cursor: pointer;
+      height: 22px;
+      line-height: 22px;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 22px;
     }
-    .nova-player-color-wrap {
-      -webkit-box-align: center;
-      -ms-flex-align: center;
-      align-items: center;
-      display: -webkit-box;
-      display: -ms-flexbox;
-      display: flex;
-      line-height: 20px;
-      padding: 5px 10px 5px 20px;
+  }
+  .nova-player-color-wrap {
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    line-height: 20px;
+    padding: 5px 10px 5px 20px;
 
-      .nova-player-color-panel-name {
-        -webkit-box-flex: 0;
-        -ms-flex: none;
-        flex: none;
-        height: 20px;
-        width: 50px;
-      }
-
-      .nova-player-color-panel-slider {
-        -webkit-box-flex: 1;
-        -ms-flex: 1;
-        flex: 1;
-        width: 250px;
-      }
-
-      .nova-player-color-panel-value {
-        -webkit-box-flex: 0;
-        -ms-flex: none;
-        flex: none;
-        width: 40px;
-      }
+    .nova-player-color-panel-name {
+      -webkit-box-flex: 0;
+      -ms-flex: none;
+      flex: none;
+      height: 20px;
+      width: 50px;
     }
 
-    .nova-player-color-panel-reset {
-      border-top: 1px solid hsla(0, 0%, 100%, 0.1);
-      margin-top: 10px;
-      padding: 8px 0;
+    .nova-player-color-panel-slider {
+      -webkit-box-flex: 1;
+      -ms-flex: 1;
+      flex: 1;
+      width: 250px;
+    }
 
-      .nova-player-color-panel-btn {
-        background: hsla(0, 0%, 100%, 0.3);
-        cursor: pointer;
+    .nova-player-color-panel-value {
+      -webkit-box-flex: 0;
+      -ms-flex: none;
+      flex: none;
+      width: 40px;
+    }
+  }
 
-        &:hover {
-          background: hsla(0, 0%, 100%, 0.4);
-        }
+  .nova-player-color-panel-reset {
+    border-top: 1px solid hsla(0, 0%, 100%, 0.1);
+    margin-top: 10px;
+    padding: 8px 0;
+
+    .nova-player-color-panel-btn {
+      background: hsla(0, 0%, 100%, 0.3);
+      cursor: pointer;
+
+      &:hover {
+        background: hsla(0, 0%, 100%, 0.4);
       }
     }
   }

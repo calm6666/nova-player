@@ -1,62 +1,60 @@
-.nova-player-container {
-  .nova-player-volume-hint {
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    background: hsla(0, 0%, 100%, 0.8);
-    border-radius: 4px;
-    color: #000;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    font-size: 20px;
-    height: 32px;
-    left: 50%;
-    min-width: 84px;
-    padding: 8px;
-    position: absolute;
-    top: 50%;
-    -webkit-transform: translate(-50%, -50%);
-    transform: translate(-50%, -50%);
-    z-index: 77;
-    box-sizing: content-box;
-    opacity: 0;
-    -webkit-transition: opacity 0.3s;
-    transition: opacity 0.3s;
+.nova-player-volume-hint {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  background: hsla(0, 0%, 100%, 0.8);
+  border-radius: 4px;
+  color: #000;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 20px;
+  height: 32px;
+  left: 50%;
+  min-width: 84px;
+  padding: 8px;
+  position: absolute;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  z-index: 77;
+  box-sizing: content-box;
+  opacity: 0;
+  -webkit-transition: opacity 0.3s;
+  transition: opacity 0.3s;
 
-    .nova-player-volume-hint-icon {
-      -webkit-box-flex: 0;
-      -ms-flex: none;
-      flex: none;
-      height: 34px;
-      width: 34px;
+  .nova-player-volume-hint-icon {
+    -webkit-box-flex: 0;
+    -ms-flex: none;
+    flex: none;
+    height: 34px;
+    width: 34px;
 
-      svg:nth-child(1) {
-        display: block;
-      }
-
-      svg:nth-child(2) {
-        display: none;
-      }
+    svg:nth-child(1) {
+      display: block;
     }
 
-    .nova-player-volume-muted {
-      svg:nth-child(1) {
-        display: none;
-      }
+    svg:nth-child(2) {
+      display: none;
+    }
+  }
 
-      svg:nth-child(2) {
-        display: block;
-      }
+  .nova-player-volume-muted {
+    svg:nth-child(1) {
+      display: none;
     }
 
-    .nova-player-volume-hint-text {
-      -webkit-box-flex: 1;
-      -ms-flex: 1;
-      flex: 1;
-      line-height: 34px;
-      padding: 0 2px;
-      text-align: center;
+    svg:nth-child(2) {
+      display: block;
     }
+  }
+
+  .nova-player-volume-hint-text {
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    line-height: 34px;
+    padding: 0 2px;
+    text-align: center;
   }
 }

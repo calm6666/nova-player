@@ -1,76 +1,72 @@
-.nova-player-container {
-  .nova-player-hotkey-panel {
-    -webkit-font-smoothing: antialiased;
-    background-color: rgba(33, 33, 33, 0.9);
-    border-radius: 4px;
-    color: #fff;
-    left: 50%;
-    position: absolute;
+.nova-player-hotkey-panel {
+  -webkit-font-smoothing: antialiased;
+  background-color: rgba(33, 33, 33, 0.9);
+  border-radius: 4px;
+  color: #fff;
+  left: 50%;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  width: 400px;
+  z-index: 80;
+  display: none;
+
+  .nova-player-hotkey-panel-title {
+    border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
+    font-size: 16px;
+    line-height: 40px;
     text-align: center;
-    top: 50%;
-    -webkit-transform: translate(-50%, -50%);
-    transform: translate(-50%, -50%);
-    width: 400px;
-    z-index: 80;
+
+    .nova-player-hotkey-panel-close {
+      fill: #fff;
+      color: #fff;
+      cursor: pointer;
+      height: 22px;
+      line-height: 22px;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 22px;
+    }
+  }
+}
+.nova-player-hotkey-panel-area {
+  margin: 10px 0;
+  max-height: 268px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
     display: none;
+  }
+}
+.nova-player-hotkey-panel-content {
+  padding: 0 20px;
 
-    .nova-player-hotkey-panel-title {
-      border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
-      font-size: 16px;
-      line-height: 40px;
-      text-align: center;
+  .nova-player-hotkey-panel-content-item {
+    font-size: 12px;
+    height: 24px;
+    line-height: 24px;
+    min-width: 390px;
+    text-align: center;
 
-      .nova-player-hotkey-panel-close {
-        fill: #fff;
-        color: #fff;
-        cursor: pointer;
-        height: 22px;
-        line-height: 22px;
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        width: 22px;
-      }
+    .nova-player-hotkey-panel-content-name {
+      display: inline-block;
+      width: 100px;
     }
 
-    .nova-player-hotkey-panel-area {
-      margin: 10px 0;
-      max-height: 268px;
-      overflow-y: scroll;
-      overflow-x: hidden;
-      touch-action: pan-x;
-      user-select: none;
-      -webkit-user-drag: none;
-      -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-
-      &::-webkit-scrollbar {
-        display: none;
-      }
-
-      .nova-player-hotkey-panel-content {
-        padding: 0 20px;
-
-        .nova-player-hotkey-panel-content-item {
-          font-size: 12px;
-          height: 24px;
-          line-height: 24px;
-          min-width: 390px;
-          text-align: center;
-
-          .nova-player-hotkey-panel-content-name {
-            display: inline-block;
-            width: 100px;
-          }
-
-          .nova-player-hotkey-panel-content-desc {
-            color: #999;
-            display: inline-block;
-            width: 220px;
-          }
-        }
-      }
+    .nova-player-hotkey-panel-content-desc {
+      color: #999;
+      display: inline-block;
+      width: 220px;
     }
   }
 }

@@ -96,227 +96,6 @@
     opacity: var(--right-show, 0);
   }
 
-  .nova-danmaku-x-editor {
-    width: auto;
-    height: 36px;
-    top: var(--top);
-    left: var(--left);
-    background: rgba(24, 25, 28, 0.8);
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    border-radius: 8px;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    cursor: pointer;
-    pointer-events: auto;
-    -webkit-transform: translate(-50%, -50%) scale(1);
-    transform: translate(-50%, -50%) scale(1);
-    -webkit-transform-origin: center;
-    transform-origin: center;
-    /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
-    -webkit-transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    position: absolute;
-    color: #ffffff;
-    fill: #ffffff;
-    visibility: hidden;
-    opacity: 0;
-
-    .nova-danmaku-x-guide-three {
-      border-radius: 8px;
-      -webkit-box-sizing: border-box;
-      box-sizing: border-box;
-      font-size: 0;
-      padding: 0 3px;
-      width: 142px;
-      height: 36px;
-
-      span {
-        display: inline-block;
-        height: 38px;
-        padding: 8px 12.5px;
-        width: 44px;
-      }
-
-      .is_active {
-        fill: var(--nova-player-primary-color, #00aeec);
-      }
-
-      svg {
-        height: 100%;
-        width: 100%;
-      }
-
-      // 275 45 142 36 78 36
-    }
-
-    .nova-danmaku-x-guide-follow {
-      font-size: 12px;
-      height: 24px;
-      margin: 0 6px;
-      padding: 0;
-      width: 66px;
-      border-radius: 4px;
-      background: var(--nova-player-primary-color, #00aeec);
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      .nova-danmaku-x-guide-follow-0 {
-        -webkit-box-align: center;
-        -ms-flex-align: center;
-        align-items: center;
-        display: -webkit-box;
-        display: -ms-flexbox;
-        display: flex;
-
-        span {
-          font-size: 14px;
-        }
-
-        .svg {
-          width: 16px;
-          height: 16px;
-        }
-      }
-
-      .nova-danmaku-x-guide-follow-1 {
-        -webkit-box-align: center;
-        -ms-flex-align: center;
-        align-items: center;
-        display: -webkit-box;
-        display: -ms-flexbox;
-        display: flex;
-
-        span {
-          font-size: 14px;
-        }
-      }
-    }
-
-    .nova-danmaku-x-guide-follow.no-follow {
-      .nova-danmaku-x-guide-follow-1 {
-        display: none;
-      }
-    }
-
-    .nova-danmaku-x-guide-follow.following {
-      .nova-danmaku-x-guide-follow-0 {
-        display: none;
-      }
-    }
-
-    .nova-danmaku-x-guide-three-like,
-    .nova-danmaku-x-guide-three-coin,
-    .nova-danmaku-x-guide-three-collect {
-      box-sizing: border-box;
-    }
-  }
-
-  .nova-danmaku-x-editor.nova-danmaku-x-editor-no-guide-three {
-    .nova-danmaku-x-guide-three {
-      display: none;
-    }
-  }
-
-  .nova-danmaku-x-editor.nova-danmaku-x-editor-no-follow {
-    .nova-danmaku-x-guide-follow {
-      display: none;
-    }
-  }
-
-  .nova-danmaku-x-link {
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    background-color: rgba(33, 33, 33, 0.8);
-    border-radius: 10px 8px 8px 10px;
-    color: #fff;
-    cursor: pointer;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    font-size: 12px;
-    height: 50px;
-    top: var(--top);
-    left: var(--left);
-    pointer-events: auto;
-    position: absolute;
-    -webkit-transform: translate(-50%, -50%) scale(1);
-    transform: translate(-50%, -50%) scale(1);
-    -webkit-transform-origin: center;
-    transform-origin: center;
-    /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
-    -webkit-transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    width: auto;
-    z-index: 1;
-    visibility: hidden;
-    opacity: 0;
-  }
-
-  .nova-danmaku-x-link-left {
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    align-items: center;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    height: 100%;
-    width: 232px;
-
-    .nova-danmaku-x-link-icon {
-      background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEsAAABHCAMAAAB4UkqjAAAAh1BMVEUAAADd3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0UCIZXAAAALHRSTlMAoJDx4OYL/DcGF+6+JNi4ycSIT2k6LPeWfRzTVPXPszEQrV0hpo12cEZAZFpRNIQAAAJVSURBVFjD7dbZcpswGIbhHwwSi81q8Ib33fnu//oatRIpmliDhQ/aaZ+TKInnjVgkhb4RJMhP9Fzo8PiD+vEA+JPnqS0+1dRHBJhibAzh2HNeekxP9Z8XBSMZM6SmRBYx65QeM6XsY3rKPqanLGMWqeDmOh0b/Io9+YHi3gKtdExgLznSlyjFMGnUphIMlcgY22C4DSPBxTu4IrXDe+yI6IDWbPSqGVoHoohDyip6XZVB4hFN1TgPyUaYQ5rSWQ0nZGcC6UyJukKypa4yIXX3HLLlqCdHX++HLRfS/9bbWvvHLSLNR3N6tRXdFwdxejekiYF4fDnWYa/WqSm2PqRCSy0hrbP5RxAaW8141N17tVbZ+S1fFYbWFF2+1lqg62BoBdAsqWOLroWhxTh+M8vmWuuaxp1WaWjRSn43yl35sHTLUjxiaWlqnYE4LZoJme3v13MibqepFZRL6otV5V+/Hv+xVvi+FsvZG1qh/LQ7uFXnF/HlwcEfYlDktW2r5EARUiXWc1xRWAC8tGwxsdJ9dcRnYrddMdtrjDZyAy3kXrSJ7O89u8zEZAIKxBRnFzbonWD3ZkfCrrmzP+6979nicjAnW3NZ4OS1R6GtVBa8drTek539up3NAgMvcv51WNZQitCiFBZQaqIMSrx1XrWNoWTy/w1r+hk+xjuMSVjGGC6WZ3S1xlDriqTKxzB+Ra3I4bDHne62drqmied57QR9z0D94dHnOEmvJ/pWAMm4ovL2TTcJ5cRyMlHrbkdG5c/5r82fYqt+K/iR89m2JrP9PEZyI80PsPxVT0P3FAEAAAAASUVORK5CYII=)
-        no-repeat;
-      background-position: 50%;
-      background-size: 40px;
-      border-radius: 8px 0 0 8px;
-      height: 50px;
-      overflow: hidden;
-      position: relative;
-      width: 90px;
-    }
-
-    .nova-danmaku-x-link-msg {
-      -webkit-box-orient: vertical;
-      display: -webkit-box;
-      line-height: 17px;
-      margin-left: 8px;
-      max-height: 34px;
-      overflow: hidden;
-      pointer-events: none;
-      text-overflow: ellipsis;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-      white-space: normal;
-      width: 134px;
-      word-break: break-all;
-    }
-  }
-
   .nova-danmaku-x-link-line {
     background: hsla(0, 0%, 100%, 0.5);
     height: 36px;
@@ -335,481 +114,704 @@
     font-size: 10px;
     width: 45px;
   }
+}
 
-  .nova-danmaku-x-link-watchlater {
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    -webkit-box-pack: center;
-    -ms-flex-pack: center;
-    -webkit-box-orient: vertical;
-    -webkit-box-direction: normal;
-    align-items: center;
-    display: -webkit-box;
-    display: -ms-flexbox;
+.nova-danmaku-x-link-watchlater {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  align-items: center;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  justify-content: center;
+
+  .nova-danmaku-x-link-watchlater-icon {
+    width: 24px;
+    height: 24px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+
+.nova-danmaku-x-editor {
+  width: auto;
+  height: 36px;
+  top: var(--top);
+  left: var(--left);
+  background: rgba(24, 25, 28, 0.8);
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  border-radius: 8px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
+  -webkit-transform-origin: center;
+  transform-origin: center;
+  /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
+  -webkit-transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  position: absolute;
+  color: #ffffff;
+  fill: #ffffff;
+  visibility: hidden;
+  opacity: 0;
+
+  .nova-danmaku-x-guide-three {
+    border-radius: 8px;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    font-size: 0;
+    padding: 0 3px;
+    width: 142px;
+    height: 36px;
+
+    span {
+      display: inline-block;
+      height: 38px;
+      padding: 8px 12.5px;
+      width: 44px;
+    }
+
+    .is_active {
+      fill: var(--nova-player-primary-color, #00aeec);
+    }
+
+    svg {
+      height: 100%;
+      width: 100%;
+    }
+
+    // 275 45 142 36 78 36
+  }
+
+  .nova-danmaku-x-guide-follow {
+    font-size: 12px;
+    height: 24px;
+    margin: 0 6px;
+    padding: 0;
+    width: 66px;
+    border-radius: 4px;
+    background: var(--nova-player-primary-color, #00aeec);
+    color: #ffffff;
     display: flex;
-    -ms-flex-direction: column;
-    flex-direction: column;
+    align-items: center;
     justify-content: center;
 
-    .nova-danmaku-x-link-watchlater-icon {
-      width: 24px;
-      height: 24px;
+    .nova-danmaku-x-guide-follow-0 {
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      align-items: center;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
 
-      svg {
-        width: 100%;
-        height: 100%;
+      span {
+        font-size: 14px;
+      }
+
+      .svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    .nova-danmaku-x-guide-follow-1 {
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      align-items: center;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+
+      span {
+        font-size: 14px;
       }
     }
   }
 
-  .nova-danmaku-x-vote {
-    background: rgba(24, 25, 28, 0.8);
-    border-radius: 8px;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    color: #fff;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 12px 10px 4px;
-    pointer-events: auto;
-    position: absolute;
-    -webkit-transform: translate(-50%, -50%) scale(1);
-    transform: translate(-50%, -50%) scale(1);
-    -webkit-transform-origin: center;
-    transform-origin: center;
-    width: auto;
-    height: auto;
-    top: var(--top);
-    left: var(--left);
-    /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
-    -webkit-transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    visibility: hidden;
-    opacity: 0;
+  .nova-danmaku-x-guide-follow.no-follow {
+    .nova-danmaku-x-guide-follow-1 {
+      display: none;
+    }
   }
 
-  .nova-danmaku-x-vote-question {
-    height: 14px;
-    line-height: 14px;
+  .nova-danmaku-x-guide-follow.following {
+    .nova-danmaku-x-guide-follow-0 {
+      display: none;
+    }
+  }
+
+  .nova-danmaku-x-guide-three-like,
+  .nova-danmaku-x-guide-three-coin,
+  .nova-danmaku-x-guide-three-collect {
+    box-sizing: border-box;
+  }
+}
+
+.nova-danmaku-x-editor.nova-danmaku-x-editor-no-guide-three {
+  .nova-danmaku-x-guide-three {
+    display: none;
+  }
+}
+
+.nova-danmaku-x-editor.nova-danmaku-x-editor-no-follow {
+  .nova-danmaku-x-guide-follow {
+    display: none;
+  }
+}
+
+.nova-danmaku-x-link {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  background-color: rgba(33, 33, 33, 0.8);
+  border-radius: 10px 8px 8px 10px;
+  color: #fff;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 12px;
+  height: 50px;
+  top: var(--top);
+  left: var(--left);
+  pointer-events: auto;
+  position: absolute;
+  -webkit-transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
+  -webkit-transform-origin: center;
+  transform-origin: center;
+  /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
+  -webkit-transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  width: auto;
+  z-index: 1;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.nova-danmaku-x-link-left {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  height: 100%;
+  width: 232px;
+
+  .nova-danmaku-x-link-icon {
+    background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEsAAABHCAMAAAB4UkqjAAAAh1BMVEUAAADd3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0UCIZXAAAALHRSTlMAoJDx4OYL/DcGF+6+JNi4ycSIT2k6LPeWfRzTVPXPszEQrV0hpo12cEZAZFpRNIQAAAJVSURBVFjD7dbZcpswGIbhHwwSi81q8Ib33fnu//oatRIpmliDhQ/aaZ+TKInnjVgkhb4RJMhP9Fzo8PiD+vEA+JPnqS0+1dRHBJhibAzh2HNeekxP9Z8XBSMZM6SmRBYx65QeM6XsY3rKPqanLGMWqeDmOh0b/Io9+YHi3gKtdExgLznSlyjFMGnUphIMlcgY22C4DSPBxTu4IrXDe+yI6IDWbPSqGVoHoohDyip6XZVB4hFN1TgPyUaYQ5rSWQ0nZGcC6UyJukKypa4yIXX3HLLlqCdHX++HLRfS/9bbWvvHLSLNR3N6tRXdFwdxejekiYF4fDnWYa/WqSm2PqRCSy0hrbP5RxAaW8141N17tVbZ+S1fFYbWFF2+1lqg62BoBdAsqWOLroWhxTh+M8vmWuuaxp1WaWjRSn43yl35sHTLUjxiaWlqnYE4LZoJme3v13MibqepFZRL6otV5V+/Hv+xVvi+FsvZG1qh/LQ7uFXnF/HlwcEfYlDktW2r5EARUiXWc1xRWAC8tGwxsdJ9dcRnYrddMdtrjDZyAy3kXrSJ7O89u8zEZAIKxBRnFzbonWD3ZkfCrrmzP+6979nicjAnW3NZ4OS1R6GtVBa8drTek539up3NAgMvcv51WNZQitCiFBZQaqIMSrx1XrWNoWTy/w1r+hk+xjuMSVjGGC6WZ3S1xlDriqTKxzB+Ra3I4bDHne62drqmied57QR9z0D94dHnOEmvJ/pWAMm4ovL2TTcJ5cRyMlHrbkdG5c/5r82fYqt+K/iR89m2JrP9PEZyI80PsPxVT0P3FAEAAAAASUVORK5CYII=)
+      no-repeat;
+    background-position: 50%;
+    background-size: 40px;
+    border-radius: 8px 0 0 8px;
+    height: 50px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: 157px;
-    font-size: 12px;
-  }
-
-  .nova-danmaku-x-vote-an {
-    color: #fff;
-    cursor: pointer;
     position: relative;
-    width: 157px;
-    height: 26px;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    width: 90px;
   }
 
-  .nova-danmaku-x-vote-an-bg {
-    background: hsla(0, 0%, 100%, 0.2);
-    border-radius: 4px;
-    top: 0;
-    height: 100%;
-    left: 0;
-    position: absolute;
-    width: 100%;
-
-    .nova-danmaku-x-vote-an-bg-buffer {
-      height: 100%;
-      left: 0;
-      position: absolute;
-      top: 0;
-      border-radius: 4px 0 0 4px;
-      /* border-radius 过渡时长 0s + 延迟 1s：与 width 1s 过渡同期开始，
-         宽度动画完成的同一刻圆角才瞬时切换（100% 时 4px 0 0 4px → 4px；
-         反向变化同样延迟 1s，声明式实现无 JS 计时器） */
-      -webkit-transition:
-        width 1s,
-        border-radius 0s 1s;
-      transition:
-        width 1s,
-        border-radius 0s 1s;
-      width: 0;
-    }
-  }
-
-  .nova-danmaku-x-vote.nova-danmaku-x-selected {
-    .nova-danmaku-x-vote-an {
-      -webkit-animation: voteFont 0.35s forwards;
-      animation: voteFont 0.35s forwards;
-    }
-    .nova-danmaku-x-vote-an-bg-buffer {
-      background: rgba(255, 255, 255, 0.2);
-    }
-  }
-
-  .nova-danmaku-x-vote-an.nova-danmaku-x-select {
-    .nova-danmaku-x-vote-an-bg-buffer {
-      background: rgba(0, 161, 214, 0.6) !important;
-    }
-  }
-
-  .nova-danmaku-x-vote-an-text {
+  .nova-danmaku-x-link-msg {
+    -webkit-box-orient: vertical;
     display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    height: 26px;
-    line-height: 26px;
-    margin: 6px 0;
-    padding-right: 20px;
-    position: relative;
-    width: 100%;
-    font-size: 12px;
-
-    .nova-danmaku-x-vote-an-text-index {
-      -webkit-box-flex: 0;
-      border-radius: 4px;
-      -ms-flex: none;
-      flex: none;
-      text-align: center;
-      width: 10px;
-    }
-
-    .nova-danmaku-x-vote-an-text-doc {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      width: 100px;
-    }
-  }
-
-  .nova-danmaku-x-score {
-    position: absolute;
-    left: 50%;
-    left: var(--left, 50%);
-    top: 50%;
-    top: var(--top, 50%);
-    -webkit-transform: translate(-50%, -50%) scale(1);
-    transform: translate(-50%, -50%) scale(1);
-    -webkit-transform: translate(-50%, -50%) scale(var(--scale, 1));
-    transform: translate(-50%, -50%) scale(var(--scale, 1));
-    -webkit-transform-origin: center;
-    transform-origin: center;
-    font-size: 12px;
-    width: 206px;
-    height: 62px;
-    background-color: rgba(33, 33, 33, 0.8);
-    border-radius: 8px;
-    pointer-events: auto;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    cursor: pointer;
-    color: #fff;
-    z-index: 1;
+    line-height: 17px;
+    margin-left: 8px;
+    max-height: 34px;
+    overflow: hidden;
+    pointer-events: none;
+    text-overflow: ellipsis;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
-    -webkit-transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    visibility: hidden;
-    opacity: 0;
+    white-space: normal;
+    width: 134px;
+    word-break: break-all;
   }
-  .nova-danmaku-x-score-title {
-    margin: 10px 0 4px 10px;
-    height: 12px;
-  }
+}
 
-  .nova-danmaku-x-score-area {
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-  }
+.nova-danmaku-x-vote {
+  background: rgba(24, 25, 28, 0.8);
+  border-radius: 8px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 12px 10px 4px;
+  pointer-events: auto;
+  position: absolute;
+  -webkit-transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
+  -webkit-transform-origin: center;
+  transform-origin: center;
+  width: auto;
+  height: auto;
+  top: var(--top);
+  left: var(--left);
+  /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
+  -webkit-transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  visibility: hidden;
+  opacity: 0;
+}
 
-  .nova-danmaku-x-score-area-item {
-    img {
-      width: 18px;
-      height: 18px;
-      margin: 7px 11.5px;
-      -webkit-transition: 0.2s;
-      transition: 0.2s;
-      pointer-events: none;
-    }
+.nova-danmaku-x-vote-question {
+  height: 14px;
+  line-height: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 157px;
+  font-size: 12px;
+}
 
-    span {
-      position: absolute;
-      width: 33px;
-      height: 33px;
-      line-height: 33px;
-      text-align: center;
-      font-size: 20px;
-      background: rgba(0, 0, 0, 0.6);
-      margin-left: 5px;
-      bottom: 68px;
-      border-radius: 2px;
-      display: none;
-      -webkit-transition: 0.1s;
-      transition: 0.1s;
-      pointer-events: none;
-    }
+.nova-danmaku-x-vote-an {
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  width: 157px;
+  height: 26px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
 
-    &:hover {
-      img {
-        -webkit-transform: scale(1.3);
-        transform: scale(1.3);
-      }
-    }
-  }
+.nova-danmaku-x-vote-an-bg {
+  background: hsla(0, 0%, 100%, 0.2);
+  border-radius: 4px;
+  top: 0;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  width: 100%;
 
-  .nova-danmaku-x-score-result {
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
+  .nova-danmaku-x-vote-an-bg-buffer {
+    height: 100%;
+    left: 0;
     position: absolute;
+    top: 0;
+    border-radius: 4px 0 0 4px;
+    /* border-radius 过渡时长 0s + 延迟 1s：与 width 1s 过渡同期开始，
+         宽度动画完成的同一刻圆角才瞬时切换（100% 时 4px 0 0 4px → 4px；
+         反向变化同样延迟 1s，声明式实现无 JS 计时器） */
+    -webkit-transition:
+      width 1s,
+      border-radius 0s 1s;
+    transition:
+      width 1s,
+      border-radius 0s 1s;
+    width: 0;
+  }
+}
+
+.nova-danmaku-x-vote.nova-danmaku-x-selected {
+  .nova-danmaku-x-vote-an {
+    -webkit-animation: voteFont 0.35s forwards;
+    animation: voteFont 0.35s forwards;
+  }
+  .nova-danmaku-x-vote-an-bg-buffer {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.nova-danmaku-x-vote-an.nova-danmaku-x-select {
+  .nova-danmaku-x-vote-an-bg-buffer {
+    background: rgba(0, 161, 214, 0.6) !important;
+  }
+}
+
+.nova-danmaku-x-vote-an-text {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  height: 26px;
+  line-height: 26px;
+  margin: 6px 0;
+  padding-right: 20px;
+  position: relative;
+  width: 100%;
+  font-size: 12px;
+
+  .nova-danmaku-x-vote-an-text-index {
+    -webkit-box-flex: 0;
+    border-radius: 4px;
+    -ms-flex: none;
+    flex: none;
+    text-align: center;
+    width: 10px;
+  }
+
+  .nova-danmaku-x-vote-an-text-doc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100px;
+  }
+}
+
+.nova-danmaku-x-score {
+  position: absolute;
+  left: 50%;
+  left: var(--left, 50%);
+  top: 50%;
+  top: var(--top, 50%);
+  -webkit-transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
+  -webkit-transform: translate(-50%, -50%) scale(var(--scale, 1));
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+  -webkit-transform-origin: center;
+  transform-origin: center;
+  font-size: 12px;
+  width: 206px;
+  height: 62px;
+  background-color: rgba(33, 33, 33, 0.8);
+  border-radius: 8px;
+  pointer-events: auto;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  cursor: pointer;
+  color: #fff;
+  z-index: 1;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
+  -webkit-transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  visibility: hidden;
+  opacity: 0;
+}
+.nova-danmaku-x-score-title {
+  margin: 10px 0 4px 10px;
+  height: 12px;
+}
+
+.nova-danmaku-x-score-area {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+.nova-danmaku-x-score-area-item {
+  img {
+    width: 18px;
+    height: 18px;
+    margin: 7px 11.5px;
+    -webkit-transition: 0.2s;
+    transition: 0.2s;
     pointer-events: none;
-    opacity: 0;
-    top: 34px;
-    right: 10px;
-    line-height: 20px;
-    color: rgba(255, 255, 255, 0.7);
-    -webkit-transition-property: margin, opacity;
-    transition-property: margin, opacity;
+  }
+
+  span {
+    position: absolute;
+    width: 33px;
+    height: 33px;
+    line-height: 33px;
+    text-align: center;
+    font-size: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    margin-left: 5px;
+    bottom: 68px;
+    border-radius: 2px;
+    display: none;
+    -webkit-transition: 0.1s;
+    transition: 0.1s;
+    pointer-events: none;
+  }
+
+  &:hover {
+    img {
+      -webkit-transform: scale(1.3);
+      transform: scale(1.3);
+    }
+  }
+}
+
+.nova-danmaku-x-score-result {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  top: 34px;
+  right: 10px;
+  line-height: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  -webkit-transition-property: margin, opacity;
+  transition-property: margin, opacity;
+  -webkit-transition-duration: 0.17s;
+  transition-duration: 0.17s;
+  -webkit-transition-delay: 0.6s;
+  transition-delay: 0.6s;
+
+  span {
+    font-size: 20px;
+    margin-left: 5px;
+    -webkit-transition-property:
+      margin,
+      opactiy,
+      -webkit-animation;
+    transition-property:
+      margin,
+      opactiy,
+      -webkit-animation;
+    transition-property: margin, opactiy, animation;
+    transition-property:
+      margin,
+      opactiy,
+      animation,
+      -webkit-animation;
     -webkit-transition-duration: 0.17s;
     transition-duration: 0.17s;
     -webkit-transition-delay: 0.6s;
     transition-delay: 0.6s;
-
-    span {
-      font-size: 20px;
-      margin-left: 5px;
-      -webkit-transition-property:
-        margin,
-        opactiy,
-        -webkit-animation;
-      transition-property:
-        margin,
-        opactiy,
-        -webkit-animation;
-      transition-property: margin, opactiy, animation;
-      transition-property:
-        margin,
-        opactiy,
-        animation,
-        -webkit-animation;
-      -webkit-transition-duration: 0.17s;
-      transition-duration: 0.17s;
-      -webkit-transition-delay: 0.6s;
-      transition-delay: 0.6s;
-    }
   }
+}
 
-  .nova-danmaku-x-score-count {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    opacity: 0.7;
-  }
+.nova-danmaku-x-score-count {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  opacity: 0.7;
+}
 
-  // ============================================
-  // 投票结果补充样式（选项被选中高亮 + 百分比角标）
-  // ============================================
+// ============================================
+// 投票结果补充样式（选项被选中高亮 + 百分比角标）
+// ============================================
+.nova-danmaku-x-vote-an-percent {
+  font-size: 12px;
+  line-height: 26px;
+  opacity: 0;
+  position: absolute;
+  right: 4px;
+  top: 0;
+  transition: opacity 0.35s;
+}
+
+.nova-danmaku-x-vote-an-selected {
   .nova-danmaku-x-vote-an-percent {
-    font-size: 12px;
-    line-height: 26px;
-    opacity: 0;
-    position: absolute;
-    right: 4px;
-    top: 0;
-    transition: opacity 0.35s;
+    opacity: 0.9;
   }
+}
 
-  .nova-danmaku-x-vote-an-selected {
-    .nova-danmaku-x-vote-an-percent {
-      opacity: 0.9;
-    }
+.nova-danmaku-x-vote-an-voted {
+  .nova-danmaku-x-vote-an-percent {
+    opacity: 0.9;
   }
+}
 
-  .nova-danmaku-x-vote-an-voted {
-    .nova-danmaku-x-vote-an-percent {
-      opacity: 0.9;
-    }
-  }
-
-  // ============================================
-  // 评分结果补充样式（已评分收拢动画 + 悬停数值气泡）
-  // ============================================
-  // 已评分（-has-result 类）：评分项依次左移收拢（0/-20/-40/-60/-80px，
-  // 延迟 0.2-0.6s 错峰），结果区延迟淡入，评分区禁用指针（悬停联动失效）
-  .nova-danmaku-x-score.nova-danmaku-x-has-result {
-    .nova-danmaku-x-score-area {
-      pointer-events: none;
-    }
-
-    .nova-danmaku-x-score-area-item {
-      -webkit-transition: -webkit-transform 0.1s;
-      transition: -webkit-transform 0.1s;
-      transition: transform 0.1s;
-      transition: transform 0.1s, -webkit-transform 0.1s;
-    }
-
-    .nova-danmaku-x-score-area-item:nth-child(1) {
-      -webkit-transform: translateX(0);
-      transform: translateX(0);
-      -webkit-transition-delay: 0.2s;
-      transition-delay: 0.2s;
-    }
-
-    .nova-danmaku-x-score-area-item:nth-child(2) {
-      -webkit-transform: translateX(-20px);
-      transform: translateX(-20px);
-      -webkit-transition-delay: 0.3s;
-      transition-delay: 0.3s;
-    }
-
-    .nova-danmaku-x-score-area-item:nth-child(3) {
-      -webkit-transform: translateX(-40px);
-      transform: translateX(-40px);
-      -webkit-transition-delay: 0.4s;
-      transition-delay: 0.4s;
-    }
-
-    .nova-danmaku-x-score-area-item:nth-child(4) {
-      -webkit-transform: translateX(-60px);
-      transform: translateX(-60px);
-      -webkit-transition-delay: 0.5s;
-      transition-delay: 0.5s;
-    }
-
-    .nova-danmaku-x-score-area-item:nth-child(5) {
-      -webkit-transform: translateX(-80px);
-      transform: translateX(-80px);
-      -webkit-transition-delay: 0.6s;
-      transition-delay: 0.6s;
-    }
-
-    .nova-danmaku-x-score-result {
-      opacity: 1;
-    }
-  }
-
-  // 数值气泡的显隐由渲染层内联 style 响应式驱动（悬停联动显示前 n 项，
-  // 点击评分后清零全消失），这里只保留基础规则（默认 display:none）——
-  // 无 -voted 常显态（对齐参考 DOM：评分类组合只有 has-result）
-
-  // ============================================
-  // 评分总结卡片（scoreSum）：汇总全部评分卡（题目 + 平均分 + 总人数）
-  // 缩放经 --scale CSS 变量（新卡片统一缩放协议）
-  // ============================================
-  .nova-danmaku-x-scoreSum {
-    position: absolute;
-    left: 50%;
-    left: var(--left, 50%);
-    top: 50%;
-    top: var(--top, 50%);
-    -webkit-transform: translate(-50%, -50%) scale(1);
-    transform: translate(-50%, -50%) scale(1);
-    -webkit-transform: translate(-50%, -50%) scale(var(--scale, 1));
-    transform: translate(-50%, -50%) scale(var(--scale, 1));
-    -webkit-transform-origin: center;
-    transform-origin: center;
-    font-size: 12px;
-    width: 203px;
-    color: #fff;
-    background-color: rgba(33, 33, 33, 0.8);
-    border-radius: 8px;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: auto;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    cursor: pointer;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
-    -webkit-transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    transition:
-      opacity 0.35s ease,
-      visibility 0.35s ease;
-    z-index: 1;
-  }
-
-  .nova-danmaku-x-scoreSum-title {
-    margin: 14px 0 0 14px;
-    height: 14px;
-  }
-
-  .nova-danmaku-x-scoreSum-count {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    opacity: 0.7;
-  }
-
-  .nova-danmaku-x-scoreSum-area {
+// ============================================
+// 评分结果补充样式（已评分收拢动画 + 悬停数值气泡）
+// ============================================
+// 已评分（-has-result 类）：评分项依次左移收拢（0/-20/-40/-60/-80px，
+// 延迟 0.2-0.6s 错峰），结果区延迟淡入，评分区禁用指针（悬停联动失效）
+.nova-danmaku-x-score.nova-danmaku-x-has-result {
+  .nova-danmaku-x-score-area {
     pointer-events: none;
-    font-size: 14px;
-    width: 100%;
-    padding: 8px 14px;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
   }
 
-  // 汇总行：默认上浮隐藏态，挂载后按序加 show 类逐行上浮淡入（130ms）
-  .nova-danmaku-x-scoreSum-item {
-    position: relative;
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    margin-bottom: 3px;
-    height: 24px;
-    line-height: 24px;
-    opacity: 0;
-    -webkit-transform: translateY(-10px);
-    transform: translateY(-10px);
-    -webkit-transition: all 130ms;
-    transition: all 130ms;
+  .nova-danmaku-x-score-area-item {
+    -webkit-transition: -webkit-transform 0.1s;
+    transition: -webkit-transform 0.1s;
+    transition: transform 0.1s;
+    transition:
+      transform 0.1s,
+      -webkit-transform 0.1s;
   }
 
-  .nova-danmaku-x-scoreSum-item.nova-danmaku-x-show {
-    opacity: 1;
-    -webkit-transform: translateY(0);
-    transform: translateY(0);
+  .nova-danmaku-x-score-area-item:nth-child(1) {
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+    -webkit-transition-delay: 0.2s;
+    transition-delay: 0.2s;
   }
 
-  .nova-danmaku-x-scoreSum-item-name {
-    width: 150px;
+  .nova-danmaku-x-score-area-item:nth-child(2) {
+    -webkit-transform: translateX(-20px);
+    transform: translateX(-20px);
+    -webkit-transition-delay: 0.3s;
+    transition-delay: 0.3s;
   }
 
-  .nova-danmaku-x-scoreSum-item-count {
-    position: absolute;
-    right: 0;
-    top: 0;
-    color: #ffb027;
-    -webkit-transition: opacity 130ms;
-    transition: opacity 130ms;
+  .nova-danmaku-x-score-area-item:nth-child(3) {
+    -webkit-transform: translateX(-40px);
+    transform: translateX(-40px);
+    -webkit-transition-delay: 0.4s;
+    transition-delay: 0.4s;
   }
 
-  // ============================================
-  // 显隐过渡协议（替代原 hl-fade-in/hl-fade-out 关键帧动画）：
-  // 四种卡片根类默认 visibility:hidden + opacity:0，
-  // 到显示时间点由 JS 添加 .nova-danmaku-x-show 触发 CSS transition 过渡，
-  // 播放结束/手动关闭时移除该类淡出，淡出后由 JS 删除 DOM
-  // ============================================
-  .nova-danmaku-x-show {
-    visibility: visible;
+  .nova-danmaku-x-score-area-item:nth-child(4) {
+    -webkit-transform: translateX(-60px);
+    transform: translateX(-60px);
+    -webkit-transition-delay: 0.5s;
+    transition-delay: 0.5s;
+  }
+
+  .nova-danmaku-x-score-area-item:nth-child(5) {
+    -webkit-transform: translateX(-80px);
+    transform: translateX(-80px);
+    -webkit-transition-delay: 0.6s;
+    transition-delay: 0.6s;
+  }
+
+  .nova-danmaku-x-score-result {
     opacity: 1;
   }
+}
+
+// 数值气泡的显隐由渲染层内联 style 响应式驱动（悬停联动显示前 n 项，
+// 点击评分后清零全消失），这里只保留基础规则（默认 display:none）——
+// 无 -voted 常显态（对齐参考 DOM：评分类组合只有 has-result）
+
+// ============================================
+// 评分总结卡片（scoreSum）：汇总全部评分卡（题目 + 平均分 + 总人数）
+// 缩放经 --scale CSS 变量（新卡片统一缩放协议）
+// ============================================
+.nova-danmaku-x-scoreSum {
+  position: absolute;
+  left: 50%;
+  left: var(--left, 50%);
+  top: 50%;
+  top: var(--top, 50%);
+  -webkit-transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
+  -webkit-transform: translate(-50%, -50%) scale(var(--scale, 1));
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+  -webkit-transform-origin: center;
+  transform-origin: center;
+  font-size: 12px;
+  width: 203px;
+  color: #fff;
+  background-color: rgba(33, 33, 33, 0.8);
+  border-radius: 8px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: auto;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* 显隐过渡协议：默认隐藏，到显示时间点由 JS 加 .nova-danmaku-x-show */
+  -webkit-transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+  z-index: 1;
+}
+
+.nova-danmaku-x-scoreSum-title {
+  margin: 14px 0 0 14px;
+  height: 14px;
+}
+
+.nova-danmaku-x-scoreSum-count {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  opacity: 0.7;
+}
+
+.nova-danmaku-x-scoreSum-area {
+  pointer-events: none;
+  font-size: 14px;
+  width: 100%;
+  padding: 8px 14px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+// 汇总行：默认上浮隐藏态，挂载后按序加 show 类逐行上浮淡入（130ms）
+.nova-danmaku-x-scoreSum-item {
+  position: relative;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  margin-bottom: 3px;
+  height: 24px;
+  line-height: 24px;
+  opacity: 0;
+  -webkit-transform: translateY(-10px);
+  transform: translateY(-10px);
+  -webkit-transition: all 130ms;
+  transition: all 130ms;
+}
+
+.nova-danmaku-x-scoreSum-item.nova-danmaku-x-show {
+  opacity: 1;
+  -webkit-transform: translateY(0);
+  transform: translateY(0);
+}
+
+.nova-danmaku-x-scoreSum-item-name {
+  width: 150px;
+}
+
+.nova-danmaku-x-scoreSum-item-count {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: #ffb027;
+  -webkit-transition: opacity 130ms;
+  transition: opacity 130ms;
+}
+
+// ============================================
+// 显隐过渡协议（替代原 hl-fade-in/hl-fade-out 关键帧动画）：
+// 四种卡片根类默认 visibility:hidden + opacity:0，
+// 到显示时间点由 JS 添加 .nova-danmaku-x-show 触发 CSS transition 过渡，
+// 播放结束/手动关闭时移除该类淡出，淡出后由 JS 删除 DOM
+// ============================================
+.nova-danmaku-x-show {
+  visibility: visible;
+  opacity: 1;
 }
 
 .nova-danmaku-x-circle {
@@ -968,8 +970,8 @@
 // 普通模式 bottom:71px 会被全屏控制栏（73px 高）整个盖住 ——
 // 抬到 96px（= 全屏控制栏 73px + 23px 间距，间距与普通档保持一致）
 @media screen and (min-width: 750px) {
-  .nova-player-container[data-screen='full'],
-  .nova-player-container[data-screen='web'] {
+  .nova-player-container[data-screen="full"],
+  .nova-player-container[data-screen="web"] {
     .nova-danmaku-x-cmd-shrink {
       bottom: 96px;
     }

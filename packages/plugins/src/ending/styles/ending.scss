@@ -1,891 +1,875 @@
-.nova-player-container {
-  .nova-player-ending-wrap {
-    height: 100%;
-    left: 0;
-    overflow: hidden;
+.nova-player-ending-wrap {
+  height: 100%;
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 55;
+
+  .nova-player-ending-backdrop {
+    background-position: 50%;
+    background-size: cover;
+    -webkit-filter: blur(20px);
+    filter: blur(20px);
+    height: 120%;
+    left: -10%;
     position: absolute;
-    top: 0;
-    width: 100%;
-    z-index: 55;
+    top: -10%;
+    width: 120%;
+    z-index: -1;
 
-    .nova-player-ending-backdrop {
-      background-position: 50%;
-      background-size: cover;
-      -webkit-filter: blur(20px);
-      filter: blur(20px);
-      height: 120%;
-      left: -10%;
-      position: absolute;
-      top: -10%;
-      width: 120%;
-      z-index: -1;
-
-      &:before {
-        background-color: rgba(0, 0, 0, 0.6);
-        content: "";
-      }
+    &:before {
+      background-color: rgba(0, 0, 0, 0.6);
+      content: "";
     }
+  }
+}
 
-    .nova-player-ending-panel {
-      .nova-player-ending {
-        cursor: pointer;
+.nova-player-ending {
+  cursor: pointer;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.nova-player-ending-content {
+  color: #fff;
+  cursor: default;
+  height: 390px;
+  left: 50%;
+  margin-left: -355px;
+  margin-top: -195px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  width: 710px;
+  z-index: 2;
+
+  .nova-player-ending-functions {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    width: 100%;
+
+    .nova-player-ending-functions-avatar {
+      -ms-flex-negative: 0;
+      border: 2px solid hsla(0, 0%, 100%, 0.6);
+      border-radius: 100%;
+      flex-shrink: 0;
+      height: 56px;
+      margin: -2px;
+      pointer-events: auto;
+      width: 56px;
+
+      a {
+        border-radius: 100%;
+        display: block;
         height: 100%;
         overflow: hidden;
         width: 100%;
 
-        .nova-player-ending-content {
-          color: #fff;
-          cursor: default;
-          height: 390px;
-          left: 50%;
-          margin-left: -355px;
-          margin-top: -195px;
-          pointer-events: none;
-          position: absolute;
-          top: 50%;
-          width: 710px;
-          z-index: 2;
-
-          .nova-player-ending-functions {
-            display: -webkit-box;
-            display: -ms-flexbox;
-            display: flex;
-            width: 100%;
-
-            .nova-player-ending-functions-avatar {
-              -ms-flex-negative: 0;
-              border: 2px solid hsla(0, 0%, 100%, 0.6);
-              border-radius: 100%;
-              flex-shrink: 0;
-              height: 56px;
-              margin: -2px;
-              pointer-events: auto;
-              width: 56px;
-
-              a {
-                border-radius: 100%;
-                display: block;
-                height: 100%;
-                overflow: hidden;
-                width: 100%;
-
-                img {
-                  border-radius: 50%;
-                  height: 100%;
-                  width: 100%;
-                }
-              }
-            }
-
-            .nova-player-ending-functions-upinfo {
-              -webkit-box-pack: justify;
-              -ms-flex-pack: justify;
-              -webkit-box-orient: vertical;
-              -webkit-box-direction: normal;
-              display: -webkit-box;
-              display: -ms-flexbox;
-              display: flex;
-              -ms-flex-direction: column;
-              flex-direction: column;
-              height: 56px;
-              justify-content: space-between;
-              margin-left: 20px;
-              max-width: 300px;
-              min-width: 130px;
-              position: relative;
-
-              .nova-player-ending-functions-name {
-                color: #fff;
-                font-size: 16px;
-                height: 20px;
-                line-height: 16px;
-                overflow: hidden;
-                pointer-events: auto;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                width: 100%;
-
-                a {
-                  color: #fff;
-                  -webkit-transition: text-shadow 0.3s linear;
-                  transition: text-shadow 0.3s linear;
-                }
-              }
-
-              .nova-player-ending-functions-buttons {
-                .nova-player-ending-functions-electric {
-                  bottom: 0;
-                  left: 0;
-                  position: absolute;
-                }
-
-                .nova-player-ending-functions-follow {
-                  -webkit-box-align: center;
-                  -ms-flex-align: center;
-                  -webkit-box-pack: center;
-                  -ms-flex-pack: center;
-                  align-items: center;
-                  background-color: #00a1d6;
-                  background-color: var(--nova-player-primary-color, #00a1d6);
-                  border-radius: 2px;
-                  cursor: pointer;
-                  display: -webkit-inline-box;
-                  display: -ms-inline-flexbox;
-                  display: inline-flex;
-                  font-size: 14px;
-                  height: 32px;
-                  justify-content: center;
-                  line-height: 32px;
-                  min-width: 68px;
-                  pointer-events: auto;
-                  -webkit-transition: background-color 0.2s linear;
-                  transition: background-color 0.2s linear;
-                  width: 130px;
-
-                  .common-svg-icon {
-                    fill: #fff;
-                    height: 16px;
-                    margin-right: 5px;
-                    pointer-events: none;
-                    width: 16px;
-                  }
-                }
-              }
-            }
-
-            .nova-player-ending-functions-common {
-              -webkit-box-pack: end;
-              -ms-flex-pack: end;
-              -webkit-box-align: end;
-              -ms-flex-align: end;
-              -webkit-box-flex: 1;
-              -ms-flex-positive: 1;
-              align-items: flex-end;
-              display: -webkit-box;
-              display: -ms-flexbox;
-              display: flex;
-              flex-grow: 1;
-              height: 56px;
-              justify-content: flex-end;
-
-              .nova-player-ending-functions-btn {
-                -webkit-box-orient: vertical;
-                -webkit-box-direction: normal;
-                -webkit-box-pack: justify;
-                -ms-flex-pack: justify;
-                fill: hsla(0, 0%, 100%, 0.9);
-                color: hsla(0, 0%, 100%, 0.9);
-                cursor: pointer;
-                display: -webkit-box;
-                display: -ms-flexbox;
-                display: flex;
-                -ms-flex-direction: column;
-                flex-direction: column;
-                height: 46px;
-                justify-content: space-between;
-                pointer-events: auto;
-                text-align: center;
-                -webkit-transition: all 0.3s linear;
-                transition: all 0.3s linear;
-
-                .common-svg-icon {
-                  height: 28px;
-                  width: 28px;
-                }
-              }
-
-              .nova-player-ending-functions-btn.state-active {
-                .common-svg-icon {
-                  fill: #00a1d6;
-                  fill: var(--nova-player-primary-color, #00a1d6);
-                  color: #00a1d6;
-                  color: var(--nova-player-primary-color, #00a1d6);
-                }
-              }
-
-              .nova-player-ending-functions-btn[data-action="restart"] {
-                border-right: 1px solid hsla(0, 0%, 100%, 0.1);
-                padding-right: 30px;
-              }
-
-              .nova-player-ending-functions-pagecallback {
-                -webkit-box-pack: justify;
-                -ms-flex-pack: justify;
-                display: -webkit-box;
-                display: -ms-flexbox;
-                display: flex;
-                justify-content: space-between;
-                margin-left: 30px;
-
-                .nova-player-ending-functions-btn {
-                  -webkit-box-orient: vertical;
-                  -webkit-box-direction: normal;
-                  -webkit-box-pack: justify;
-                  -ms-flex-pack: justify;
-                  fill: hsla(0, 0%, 100%, 0.9);
-                  color: hsla(0, 0%, 100%, 0.9);
-                  cursor: pointer;
-                  display: -webkit-box;
-                  display: -ms-flexbox;
-                  display: flex;
-                  -ms-flex-direction: column;
-                  flex-direction: column;
-                  height: 46px;
-                  justify-content: space-between;
-                  pointer-events: auto;
-                  text-align: center;
-                  -webkit-transition: all 0.3s linear;
-                  transition: all 0.3s linear;
-
-                  .common-svg-icon {
-                    pointer-events: none;
-                  }
-
-                  .common-svg-icon {
-                    height: 28px;
-                    width: 28px;
-                  }
-                }
-
-                .nova-player-ending-functions-btn[data-action="coin"]:empty,
-                .nova-player-ending-functions-btn[data-action="collect"]:empty,
-                .nova-player-ending-functions-btn[data-action="grade"]:empty,
-                .nova-player-ending-functions-btn[data-action="like"]:empty {
-                  display: none;
-                  pointer-events: none;
-                }
-              }
-
-              .nova-player-ending-functions-pagecallback > div {
-                margin-left: 30px;
-              }
-            }
-          }
-          .nova-player-ending-related {
-            height: 306px;
-            margin-right: -28px;
-            margin-top: 20px;
-            overflow: hidden;
-            padding-top: 30px;
-            position: relative;
-            &:not(:empty):before {
-              content: "相关推荐";
-              font-size: 16px;
-              left: 0;
-              line-height: 20px;
-              position: absolute;
-              top: 0;
-            }
-
-            .nova-player-ending-related-item {
-              border: 1px solid transparent;
-              border-radius: 4px;
-              float: left;
-              height: 140px;
-              margin: 0 16px 16px 0;
-              overflow: hidden;
-              pointer-events: auto;
-              position: relative;
-              -webkit-transition:
-                border-color 0.3s ease-in-out,
-                -webkit-box-shadow 0.3s ease-in-out;
-              transition:
-                border-color 0.3s ease-in-out,
-                -webkit-box-shadow 0.3s ease-in-out;
-              transition:
-                border-color 0.3s ease-in-out,
-                box-shadow 0.3s ease-in-out;
-              transition:
-                border-color 0.3s ease-in-out,
-                box-shadow 0.3s ease-in-out,
-                -webkit-box-shadow 0.3s ease-in-out;
-              width: 223px;
-
-              &:before {
-                background: -webkit-gradient(
-                  linear,
-                  left top,
-                  left bottom,
-                  from(transparent),
-                  color-stop(20%, rgba(0, 0, 0, 0.1)),
-                  color-stop(35%, rgba(0, 0, 0, 0.2)),
-                  color-stop(65%, rgba(0, 0, 0, 0.5)),
-                  to(rgba(0, 0, 0, 0.66))
-                );
-                background: linear-gradient(
-                  transparent,
-                  rgba(0, 0, 0, 0.1) 20%,
-                  rgba(0, 0, 0, 0.2) 35%,
-                  rgba(0, 0, 0, 0.5) 65%,
-                  rgba(0, 0, 0, 0.66)
-                );
-                border-radius: 4px;
-                bottom: 0;
-                content: "";
-                left: 0;
-                position: absolute;
-                right: 0;
-                top: 30%;
-                z-index: 1;
-              }
-
-              &:hover {
-                border-color: #fff;
-                -webkit-box-shadow: 0 0 6px hsla(0, 0%, 100%, 0.5);
-                box-shadow: 0 0 6px hsla(0, 0%, 100%, 0.5);
-
-                .nova-player-ending-related-item-cover {
-                  .nova-player-ending-related-item-title {
-                    -webkit-line-clamp: 2;
-                    line-clamp: 2;
-                    -webkit-box-orient: vertical;
-                    display: -webkit-box;
-                    height: auto;
-                    padding-right: 24px;
-                    -webkit-transform: translateY(-18px);
-                    transform: translateY(-18px);
-                    white-space: normal;
-                  }
-                }
-
-                .nova-player-ending-related-item-watchlater {
-                  opacity: 1;
-                  visibility: visible;
-                }
-              }
-
-              .nova-player-ending-related-item-img {
-                background-color: #000;
-                background-position: 50%;
-                background-repeat: no-repeat;
-                background-size: auto 100%;
-                border-radius: 4px;
-                height: 100%;
-                overflow: hidden;
-                position: relative;
-                -webkit-transition: all 0.3s ease-in-out;
-                transition: all 0.3s ease-in-out;
-                width: 100%;
-              }
-
-              .nova-player-ending-related-item-cover {
-                border-radius: 4px;
-                bottom: 0;
-                color: #fff;
-                cursor: pointer;
-                left: 0;
-                overflow: hidden;
-                position: absolute;
-                right: 0;
-                top: 0;
-                -webkit-transition: all 0.3s ease-in-out;
-                transition: all 0.3s ease-in-out;
-                z-index: 2;
-
-                .nova-player-ending-related-item-title {
-                  -webkit-box-sizing: border-box;
-                  box-sizing: border-box;
-                  font-size: 13px;
-                  height: 18px;
-                  line-height: 18px;
-                  overflow: hidden;
-                  padding: 0 10px;
-                  position: absolute;
-                  text-overflow: ellipsis;
-                  top: 118px;
-                  -webkit-transition: transform 0.3s ease-in-out;
-                  -webkit-transition: -webkit-transform 0.3s ease-in-out;
-                  transition: -webkit-transform 0.3s ease-in-out;
-                  transition: transform 0.3s ease-in-out;
-                  transition:
-                    transform 0.3s ease-in-out,
-                    -webkit-transform 0.3s ease-in-out;
-                  white-space: nowrap;
-                  width: 100%;
-                  word-break: break-all;
-                  z-index: 1;
-                }
-
-                .nova-player-ending-related-item-watchlater {
-                  border-radius: 4px;
-                  margin-bottom: -6px;
-                  margin-right: -4px;
-                  opacity: 0;
-                  position: absolute;
-                  -webkit-transition: opacity 0.2s ease-in;
-                  transition: opacity 0.2s ease-in;
-                  visibility: hidden;
-                  z-index: 2;
-                  background-color: rgba(0, 0, 0, 0.8);
-                  bottom: calc(100% - 30px);
-                  height: 28px;
-                  right: 14px;
-
-                  i {
-                    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAAwFBMVEUAAAAGBgavr69EREQUFBQ1NTUODg7t7e3FxcV0dHRbW1sAAAAAAAAAAAD+/v77+/v4+Pj09PTj4+P8/PzV1dWpqamSkpIhISH19fXX19fLy8ulpaWdnZ1kZGRVVVUsLCz6+vrm5uba2tq9vb20tLSsrKyXl5eMjIx+fn54eHhsbGxpaWk+Pj4AAAAAAADv7+/e3t7AwMC3t7ehoaFLS0vo6OjR0dHOzs7CwsKCgoKCgoJiYmLp6enMzMywsLD////DVMIGAAAAP3RSTlOZmtOrnqec8927sopkEf38+ffu/eXPxqH45+DOyrWwpPvv6NnV0cjEv724t6qPAPTr2tbNru/j4tvAv7Tw4dTgAD9iAAABpElEQVRIx+ST13KCUBiEDyCCBRBQsaHGHrvp/Xv/twpDTBgRonjr3u0w38zu8h+xNsolkVGlsrEWxkpcoJUhyuISBVjpIi7Arli9bmE6mb0rUhZI6tZu2KuxK+TO5RYOB2pM8udgShWASlOXa8MnDYDN7DRX6AOVkf/bTemEqe9OdW0DluwdNH7VgKZ3knNUEVN+CGz/K3oLtJJGrJugp3MPFrSSy7wBnVRwAE7aTxuDq6YNCpaaehRN2KV8eoRaNMh8GesBKIlgEewoaAtTPoytw0gIXz4KJYMcORfQ5n/Wy4kuaMKHzzioQTFyhNJ7P27ZMNuSDb4Noxingi3FQSpTab8bWx0+YOMdV6yKIxAGSuCkZ6Dv9sEsJlzNSxKIex/ejgUkXkEdxokgLMJn4gBUpcygyH+BHYyVMWo4w/eMwXFIfOCgAVKiAxMQTgCYAH+S44MkOXRAOJGbYyRyHXU24rIVWgjqCNgbkZWRRYA+JrfoYKaksKK8eKS8QCZcBVBe6VBezRGuWGlalSMaD2KQxsMooCMgu6FLdtOa7MY82d0HAP3jZ1lFdjimAAAAAElFTkSuQmCC);
-                    background-size: auto 100%;
-                    border-radius: 6px;
-                    color: inherit;
-                    display: inline-block;
-                    height: 28px;
-                    width: 28px;
-                    cursor: pointer;
-                    font-size: 22px;
-
-                    &:before {
-                      content: "";
-                    }
-                  }
-                }
-
-                .nova-player-ending-related-item-cancel {
-                  background: hsla(0, 0%, 100%, 0.4);
-                  border-radius: 4px;
-                  color: #fff;
-                  cursor: pointer;
-                  font-size: 14px;
-                  height: 24px;
-                  line-height: 24px;
-                  position: absolute;
-                  text-align: center;
-                  width: 68px;
-                  z-index: 11;
-                  right: calc(100% - 75px);
-                  top: 8px;
-                }
-
-                .nova-player-ending-related-item-countdown {
-                  margin-left: 50%;
-                  margin-top: 40px;
-                  -webkit-transform: translateX(-50%);
-                  transform: translateX(-50%);
-                  width: 64px;
-                  z-index: 2;
-                }
-              }
-            }
-          }
-        }
-
-        .nova-player-ending-content[screen-mode="second-screen"]
-          .nova-player-ending-related {
-          padding-top: 0;
-
-          &:before {
-            content: "";
-          }
+        img {
+          border-radius: 50%;
+          height: 100%;
+          width: 100%;
         }
       }
     }
 
-    .nova-player-video-share-box {
+    .nova-player-ending-functions-upinfo {
+      -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
       -webkit-box-orient: vertical;
       -webkit-box-direction: normal;
-      -webkit-box-pack: center;
-      -ms-flex-pack: center;
-      color: #fff;
-      cursor: default;
       display: -webkit-box;
       display: -ms-flexbox;
       display: flex;
       -ms-flex-direction: column;
       flex-direction: column;
-      font-size: 12px;
-      height: 100%;
-      justify-content: center;
-      left: 0;
-      overflow: hidden;
-      pointer-events: auto;
-      position: absolute;
-      top: 0;
-      width: 100%;
+      height: 56px;
+      justify-content: space-between;
+      margin-left: 20px;
+      max-width: 300px;
+      min-width: 130px;
+      position: relative;
 
-      .nova-player-video-share-header {
-        height: 58px;
-        position: relative;
-        text-align: right;
+      .nova-player-ending-functions-name {
+        color: #fff;
+        font-size: 16px;
+        height: 20px;
+        line-height: 16px;
+        overflow: hidden;
+        pointer-events: auto;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
 
-        .nova-player-video-share-close {
-          fill: #fff;
-          cursor: pointer;
-          display: inline-block;
-          height: 43px;
-          line-height: 1;
-          margin: -9.5px -9.5px 0 0;
-          width: 43px;
+        a {
+          color: #fff;
+          -webkit-transition: text-shadow 0.3s linear;
+          transition: text-shadow 0.3s linear;
         }
       }
 
-      .nova-player-video-share-content,
-      .nova-player-video-share-header {
-        margin: 0 auto;
-        width: 568px;
-      }
+      .nova-player-ending-functions-buttons {
+        .nova-player-ending-functions-electric {
+          bottom: 0;
+          left: 0;
+          position: absolute;
+        }
 
-      .nova-player-video-share-content {
-        margin-bottom: 40px;
-        width: 560px;
-      }
+        .nova-player-ending-functions-follow {
+          -webkit-box-align: center;
+          -ms-flex-align: center;
+          -webkit-box-pack: center;
+          -ms-flex-pack: center;
+          align-items: center;
+          background-color: #00a1d6;
+          background-color: var(--nova-player-primary-color, #00a1d6);
+          border-radius: 2px;
+          cursor: pointer;
+          display: -webkit-inline-box;
+          display: -ms-inline-flexbox;
+          display: inline-flex;
+          font-size: 14px;
+          height: 32px;
+          justify-content: center;
+          line-height: 32px;
+          min-width: 68px;
+          pointer-events: auto;
+          -webkit-transition: background-color 0.2s linear;
+          transition: background-color 0.2s linear;
+          width: 130px;
 
-      .nova-player-video-share-left {
+          .common-svg-icon {
+            fill: #fff;
+            height: 16px;
+            margin-right: 5px;
+            pointer-events: none;
+            width: 16px;
+          }
+        }
+      }
+    }
+
+    .nova-player-ending-functions-common {
+      -webkit-box-pack: end;
+      -ms-flex-pack: end;
+      -webkit-box-align: end;
+      -ms-flex-align: end;
+      -webkit-box-flex: 1;
+      -ms-flex-positive: 1;
+      align-items: flex-end;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      flex-grow: 1;
+      height: 56px;
+      justify-content: flex-end;
+
+      .nova-player-ending-functions-btn {
         -webkit-box-orient: vertical;
         -webkit-box-direction: normal;
+        -webkit-box-pack: justify;
+        -ms-flex-pack: justify;
+        fill: hsla(0, 0%, 100%, 0.9);
+        color: hsla(0, 0%, 100%, 0.9);
+        cursor: pointer;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
         -ms-flex-direction: column;
         flex-direction: column;
-        width: 350px;
+        height: 46px;
+        justify-content: space-between;
+        pointer-events: auto;
+        text-align: center;
+        -webkit-transition: all 0.3s linear;
+        transition: all 0.3s linear;
 
-        .nova-player-video-share-source {
-          -webkit-box-pack: justify;
-          -ms-flex-pack: justify;
-          display: -webkit-box;
-          display: -ms-flexbox;
-          display: flex;
-          height: 62px;
-          justify-content: flex-start;
-
-          .nova-player-video-share-btn {
-            border: 1px solid transparent;
-            border-radius: 100%;
-            cursor: pointer;
-            height: 60px;
-            overflow: hidden;
-            text-align: center;
-            -webkit-transition: all 0.3s ease-in-out;
-            transition: all 0.3s ease-in-out;
-            width: 60px;
-          }
-
-          .nova-player-video-share-btn.weibo {
-            background-color: #e15656;
-          }
-
-          .nova-player-video-share-btn.qq {
-            background-color: #39b8e2;
-          }
-        }
-
-        .nova-player-video-share-link-label {
-          font-size: 14px;
-          margin-bottom: 15px;
-        }
-
-        .nova-player-video-share-link-content {
-          width: 352px;
-
-          .nova-player-video-share-link-input {
-            background: hsla(0, 0%, 8%, 0.9);
-            border: none;
-            border-radius: 4px;
-            color: #ccc;
-            display: inline-block;
-            font-size: 14px;
-            height: 26px;
-            margin-right: 15px;
-            padding: 5px 12px;
-            -webkit-user-select: initial;
-            -moz-user-select: initial;
-            -ms-user-select: initial;
-            user-select: auto;
-            width: 240px;
-          }
-
-          .nova-player-video-share-link-copy {
-            height: 32px;
-            line-height: 32px;
-            position: relative;
-            top: -2px;
-            width: 68px;
-          }
-
-          .nova-player-video-share-link-copy .ui-area {
-            font-size: 14px !important;
-            pointer-events: none;
-          }
+        .common-svg-icon {
+          height: 28px;
+          width: 28px;
         }
       }
 
-      .nova-player-video-share-right {
-        width: 190px;
-
-        .nova-player-video-share-qrcode {
-          background: #fff;
-          border-radius: 4px;
-          -webkit-box-shadow: 0 0 5px hsla(0, 0%, 9%, 0.6);
-          box-shadow: 0 0 5px hsla(0, 0%, 9%, 0.6);
-          color: #444;
-          font-size: 16px;
-          padding: 20px;
-          position: relative;
-          text-align: center;
-
-          span {
-            display: block;
-          }
-
-          .nova-player-video-share-qrcode-img {
-            height: 150px;
-            margin: 20px auto 0;
-            width: 150px;
-          }
+      .nova-player-ending-functions-btn.state-active {
+        .common-svg-icon {
+          fill: #00a1d6;
+          fill: var(--nova-player-primary-color, #00a1d6);
+          color: #00a1d6;
+          color: var(--nova-player-primary-color, #00a1d6);
         }
       }
 
-      .nova-player-video-share-content,
-      .nova-player-video-share-left {
+      .nova-player-ending-functions-btn[data-action="restart"] {
+        border-right: 1px solid hsla(0, 0%, 100%, 0.1);
+        padding-right: 30px;
+      }
+
+      .nova-player-ending-functions-pagecallback {
         -webkit-box-pack: justify;
         -ms-flex-pack: justify;
         display: -webkit-box;
         display: -ms-flexbox;
         display: flex;
         justify-content: space-between;
+        margin-left: 30px;
+
+        .nova-player-ending-functions-btn {
+          -webkit-box-orient: vertical;
+          -webkit-box-direction: normal;
+          -webkit-box-pack: justify;
+          -ms-flex-pack: justify;
+          fill: hsla(0, 0%, 100%, 0.9);
+          color: hsla(0, 0%, 100%, 0.9);
+          cursor: pointer;
+          display: -webkit-box;
+          display: -ms-flexbox;
+          display: flex;
+          -ms-flex-direction: column;
+          flex-direction: column;
+          height: 46px;
+          justify-content: space-between;
+          pointer-events: auto;
+          text-align: center;
+          -webkit-transition: all 0.3s linear;
+          transition: all 0.3s linear;
+
+          .common-svg-icon {
+            pointer-events: none;
+          }
+
+          .common-svg-icon {
+            height: 28px;
+            width: 28px;
+          }
+        }
+
+        .nova-player-ending-functions-btn[data-action="coin"]:empty,
+        .nova-player-ending-functions-btn[data-action="collect"]:empty,
+        .nova-player-ending-functions-btn[data-action="grade"]:empty,
+        .nova-player-ending-functions-btn[data-action="like"]:empty {
+          display: none;
+          pointer-events: none;
+        }
+      }
+
+      .nova-player-ending-functions-pagecallback > div {
+        margin-left: 30px;
+      }
+    }
+  }
+}
+
+.nova-player-ending-related {
+  height: 306px;
+  margin-right: -28px;
+  margin-top: 20px;
+  overflow: hidden;
+  padding-top: 30px;
+  position: relative;
+  &:not(:empty):before {
+    content: "相关推荐";
+    font-size: 16px;
+    left: 0;
+    line-height: 20px;
+    position: absolute;
+    top: 0;
+  }
+
+  .nova-player-ending-related-item {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    float: left;
+    height: 140px;
+    margin: 0 16px 16px 0;
+    overflow: hidden;
+    pointer-events: auto;
+    position: relative;
+    -webkit-transition:
+      border-color 0.3s ease-in-out,
+      -webkit-box-shadow 0.3s ease-in-out;
+    transition:
+      border-color 0.3s ease-in-out,
+      -webkit-box-shadow 0.3s ease-in-out;
+    transition:
+      border-color 0.3s ease-in-out,
+      box-shadow 0.3s ease-in-out;
+    transition:
+      border-color 0.3s ease-in-out,
+      box-shadow 0.3s ease-in-out,
+      -webkit-box-shadow 0.3s ease-in-out;
+    width: 223px;
+
+    &:before {
+      background: -webkit-gradient(
+        linear,
+        left top,
+        left bottom,
+        from(transparent),
+        color-stop(20%, rgba(0, 0, 0, 0.1)),
+        color-stop(35%, rgba(0, 0, 0, 0.2)),
+        color-stop(65%, rgba(0, 0, 0, 0.5)),
+        to(rgba(0, 0, 0, 0.66))
+      );
+      background: linear-gradient(
+        transparent,
+        rgba(0, 0, 0, 0.1) 20%,
+        rgba(0, 0, 0, 0.2) 35%,
+        rgba(0, 0, 0, 0.5) 65%,
+        rgba(0, 0, 0, 0.66)
+      );
+      border-radius: 4px;
+      bottom: 0;
+      content: "";
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 30%;
+      z-index: 1;
+    }
+
+    &:hover {
+      border-color: #fff;
+      -webkit-box-shadow: 0 0 6px hsla(0, 0%, 100%, 0.5);
+      box-shadow: 0 0 6px hsla(0, 0%, 100%, 0.5);
+
+      .nova-player-ending-related-item-title {
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        display: -webkit-box;
+        height: auto;
+        padding-right: 24px;
+        -webkit-transform: translateY(-18px);
+        transform: translateY(-18px);
+        white-space: normal;
+      }
+
+      .nova-player-ending-related-item-watchlater {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+
+    .nova-player-ending-related-item-img {
+      background-color: #000;
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: auto 100%;
+      border-radius: 4px;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      -webkit-transition: all 0.3s ease-in-out;
+      transition: all 0.3s ease-in-out;
+      width: 100%;
+    }
+
+    .nova-player-ending-related-item-cover {
+      border-radius: 4px;
+      bottom: 0;
+      color: #fff;
+      cursor: pointer;
+      left: 0;
+      overflow: hidden;
+      position: absolute;
+      right: 0;
+      top: 0;
+      -webkit-transition: all 0.3s ease-in-out;
+      transition: all 0.3s ease-in-out;
+      z-index: 2;
+
+      .nova-player-ending-related-item-title {
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        font-size: 13px;
+        height: 18px;
+        line-height: 18px;
+        overflow: hidden;
+        padding: 0 10px;
+        position: absolute;
+        text-overflow: ellipsis;
+        top: 118px;
+        -webkit-transition: transform 0.3s ease-in-out;
+        -webkit-transition: -webkit-transform 0.3s ease-in-out;
+        transition: -webkit-transform 0.3s ease-in-out;
+        transition: transform 0.3s ease-in-out;
+        transition:
+          transform 0.3s ease-in-out,
+          -webkit-transform 0.3s ease-in-out;
+        white-space: nowrap;
+        width: 100%;
+        word-break: break-all;
+        z-index: 1;
+      }
+
+      .nova-player-ending-related-item-watchlater {
+        border-radius: 4px;
+        margin-bottom: -6px;
+        margin-right: -4px;
+        opacity: 0;
+        position: absolute;
+        -webkit-transition: opacity 0.2s ease-in;
+        transition: opacity 0.2s ease-in;
+        visibility: hidden;
+        z-index: 2;
+        background-color: rgba(0, 0, 0, 0.8);
+        bottom: calc(100% - 30px);
+        height: 28px;
+        right: 14px;
+
+        i {
+          background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAAwFBMVEUAAAAGBgavr69EREQUFBQ1NTUODg7t7e3FxcV0dHRbW1sAAAAAAAAAAAD+/v77+/v4+Pj09PTj4+P8/PzV1dWpqamSkpIhISH19fXX19fLy8ulpaWdnZ1kZGRVVVUsLCz6+vrm5uba2tq9vb20tLSsrKyXl5eMjIx+fn54eHhsbGxpaWk+Pj4AAAAAAADv7+/e3t7AwMC3t7ehoaFLS0vo6OjR0dHOzs7CwsKCgoKCgoJiYmLp6enMzMywsLD////DVMIGAAAAP3RSTlOZmtOrnqec8927sopkEf38+ffu/eXPxqH45+DOyrWwpPvv6NnV0cjEv724t6qPAPTr2tbNru/j4tvAv7Tw4dTgAD9iAAABpElEQVRIx+ST13KCUBiEDyCCBRBQsaHGHrvp/Xv/twpDTBgRonjr3u0w38zu8h+xNsolkVGlsrEWxkpcoJUhyuISBVjpIi7Arli9bmE6mb0rUhZI6tZu2KuxK+TO5RYOB2pM8udgShWASlOXa8MnDYDN7DRX6AOVkf/bTemEqe9OdW0DluwdNH7VgKZ3knNUEVN+CGz/K3oLtJJGrJugp3MPFrSSy7wBnVRwAE7aTxuDq6YNCpaaehRN2KV8eoRaNMh8GesBKIlgEewoaAtTPoytw0gIXz4KJYMcORfQ5n/Wy4kuaMKHzzioQTFyhNJ7P27ZMNuSDb4Noxingi3FQSpTab8bWx0+YOMdV6yKIxAGSuCkZ6Dv9sEsJlzNSxKIex/ejgUkXkEdxokgLMJn4gBUpcygyH+BHYyVMWo4w/eMwXFIfOCgAVKiAxMQTgCYAH+S44MkOXRAOJGbYyRyHXU24rIVWgjqCNgbkZWRRYA+JrfoYKaksKK8eKS8QCZcBVBe6VBezRGuWGlalSMaD2KQxsMooCMgu6FLdtOa7MY82d0HAP3jZ1lFdjimAAAAAElFTkSuQmCC);
+          background-size: auto 100%;
+          border-radius: 6px;
+          color: inherit;
+          display: inline-block;
+          height: 28px;
+          width: 28px;
+          cursor: pointer;
+          font-size: 22px;
+
+          &:before {
+            content: "";
+          }
+        }
+      }
+
+      .nova-player-ending-related-item-cancel {
+        background: hsla(0, 0%, 100%, 0.4);
+        border-radius: 4px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 14px;
+        height: 24px;
+        line-height: 24px;
+        position: absolute;
+        text-align: center;
+        width: 68px;
+        z-index: 11;
+        right: calc(100% - 75px);
+        top: 8px;
+      }
+
+      .nova-player-ending-related-item-countdown {
+        margin-left: 50%;
+        margin-top: 40px;
+        -webkit-transform: translateX(-50%);
+        transform: translateX(-50%);
+        width: 64px;
+        z-index: 2;
+      }
+    }
+  }
+}
+
+.nova-player-ending-content[screen-mode="second-screen"]
+  .nova-player-ending-related {
+  padding-top: 0;
+
+  &:before {
+    content: "";
+  }
+}
+.nova-player-video-share-box {
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  color: #fff;
+  cursor: default;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  font-size: 12px;
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  overflow: hidden;
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  width: 100%;
+
+  .nova-player-video-share-header {
+    height: 58px;
+    position: relative;
+    text-align: right;
+
+    .nova-player-video-share-close {
+      fill: #fff;
+      cursor: pointer;
+      display: inline-block;
+      height: 43px;
+      line-height: 1;
+      margin: -9.5px -9.5px 0 0;
+      width: 43px;
+    }
+  }
+
+  .nova-player-video-share-content,
+  .nova-player-video-share-header {
+    margin: 0 auto;
+    width: 568px;
+  }
+
+  .nova-player-video-share-content {
+    margin-bottom: 40px;
+    width: 560px;
+  }
+
+  .nova-player-video-share-left {
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    width: 350px;
+
+    .nova-player-video-share-source {
+      -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      height: 62px;
+      justify-content: flex-start;
+
+      .nova-player-video-share-btn {
+        border: 1px solid transparent;
+        border-radius: 100%;
+        cursor: pointer;
+        height: 60px;
+        overflow: hidden;
+        text-align: center;
+        -webkit-transition: all 0.3s ease-in-out;
+        transition: all 0.3s ease-in-out;
+        width: 60px;
+      }
+
+      .nova-player-video-share-btn.weibo {
+        background-color: #e15656;
+      }
+
+      .nova-player-video-share-btn.qq {
+        background-color: #39b8e2;
+      }
+    }
+
+    .nova-player-video-share-link-label {
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    .nova-player-video-share-link-content {
+      width: 352px;
+
+      .nova-player-video-share-link-input {
+        background: hsla(0, 0%, 8%, 0.9);
+        border: none;
+        border-radius: 4px;
+        color: #ccc;
+        display: inline-block;
+        font-size: 14px;
+        height: 26px;
+        margin-right: 15px;
+        padding: 5px 12px;
+        -webkit-user-select: initial;
+        -moz-user-select: initial;
+        -ms-user-select: initial;
+        user-select: auto;
+        width: 240px;
+      }
+
+      .nova-player-video-share-link-copy {
+        height: 32px;
+        line-height: 32px;
+        position: relative;
+        top: -2px;
+        width: 68px;
+      }
+
+      .nova-player-video-share-link-copy .ui-area {
+        font-size: 14px !important;
+        pointer-events: none;
       }
     }
   }
 
-  .nova-player-ending-wrap[data-select="1"] {
-    opacity: 1;
-    -webkit-transition: none;
-    transition: none;
-    visibility: visible;
-    .nova-player-ending-backdrop,
-    .nova-player-ending-panel {
-      opacity: 1;
-      -webkit-transition: opacity 0.2s linear;
-      transition: opacity 0.2s linear;
-      visibility: visible;
+  .nova-player-video-share-right {
+    width: 190px;
+
+    .nova-player-video-share-qrcode {
+      background: #fff;
+      border-radius: 4px;
+      -webkit-box-shadow: 0 0 5px hsla(0, 0%, 9%, 0.6);
+      box-shadow: 0 0 5px hsla(0, 0%, 9%, 0.6);
+      color: #444;
+      font-size: 16px;
+      padding: 20px;
+      position: relative;
+      text-align: center;
+
+      span {
+        display: block;
+      }
+
+      .nova-player-video-share-qrcode-img {
+        height: 150px;
+        margin: 20px auto 0;
+        width: 150px;
+      }
     }
   }
 
-  .nova-player-ending-wrap[data-select="2"] {
-    opacity: 1;
-    -webkit-transition: none;
-    transition: none;
-    visibility: visible;
-    .nova-player-ending-backdrop,
-    .nova-player-share-panel {
-      opacity: 1;
-      -webkit-transition: opacity 0.2s linear;
-      transition: opacity 0.2s linear;
-      visibility: visible;
-    }
+  .nova-player-video-share-content,
+  .nova-player-video-share-left {
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    justify-content: space-between;
   }
+}
 
-  .nova-player-ending-backdrop:before,
-  .nova-player-ending-panel,
-  .nova-player-share-panel {
-    height: 100%;
-    left: 0;
-    position: absolute;
-    top: 0;
-    width: 100%;
-  }
-
-  .nova-player-share-panel {
-    z-index: 2;
-  }
-
+.nova-player-ending-wrap[data-select="1"] {
+  opacity: 1;
+  -webkit-transition: none;
+  transition: none;
+  visibility: visible;
   .nova-player-ending-backdrop,
-  .nova-player-ending-panel,
-  .nova-player-ending-wrap,
-  .nova-player-share-panel {
-    opacity: 0;
-    -webkit-transition:
-      opacity 0.2s linear,
-      visibility 0ms 0.2s;
-    transition:
-      opacity 0.2s linear,
-      visibility 0ms 0.2s;
-    visibility: hidden;
+  .nova-player-ending-panel {
+    opacity: 1;
+    -webkit-transition: opacity 0.2s linear;
+    transition: opacity 0.2s linear;
+    visibility: visible;
   }
+}
+
+.nova-player-ending-wrap[data-select="2"] {
+  opacity: 1;
+  -webkit-transition: none;
+  transition: none;
+  visibility: visible;
+  .nova-player-ending-backdrop,
+  .nova-player-share-panel {
+    opacity: 1;
+    -webkit-transition: opacity 0.2s linear;
+    transition: opacity 0.2s linear;
+    visibility: visible;
+  }
+}
+
+.nova-player-ending-backdrop:before,
+.nova-player-ending-panel,
+.nova-player-share-panel {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.nova-player-share-panel {
+  z-index: 2;
+}
+
+.nova-player-ending-backdrop,
+.nova-player-ending-panel,
+.nova-player-ending-wrap,
+.nova-player-share-panel {
+  opacity: 0;
+  -webkit-transition:
+    opacity 0.2s linear,
+    visibility 0ms 0.2s;
+  transition:
+    opacity 0.2s linear,
+    visibility 0ms 0.2s;
+  visibility: hidden;
 }
 
 /* ============================================
  * station 片尾补充：推荐标题 / 倒计时显隐 / 时长角标 / 大屏宽度
  * ============================================ */
-.nova-player-container {
-  .nova-player-ending-related:not(:empty):before {
-    content: none;
-  }
+.nova-player-ending-related:not(:empty):before {
+  content: none;
+}
 
-  .nova-player-ending-related-title {
-    color: #fff;
-    font-size: 16px;
-    line-height: 20px;
-    margin-bottom: 10px;
-  }
+.nova-player-ending-related-title {
+  color: #fff;
+  font-size: 16px;
+  line-height: 20px;
+  margin-bottom: 10px;
+}
 
-  .nova-player-ending-related-item-duration {
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 2px;
-    bottom: 6px;
-    color: #e7e9eb;
-    font-size: 12px;
-    height: 16px;
-    line-height: 16px;
-    padding: 0 4px;
-    position: absolute;
-    right: 6px;
-    z-index: 3;
-  }
+.nova-player-ending-related-item-duration {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 2px;
+  bottom: 6px;
+  color: #e7e9eb;
+  font-size: 12px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 4px;
+  position: absolute;
+  right: 6px;
+  z-index: 3;
+}
 
-  .nova-player-ending-related-item-cancel,
-  .nova-player-ending-related-item-countdown {
-    display: none;
-  }
+.nova-player-ending-related-item-cancel,
+.nova-player-ending-related-item-countdown {
+  display: none;
+}
 
-  .nova-player-ending-wrap[data-countdown="true"] {
-    .nova-player-ending-related-item.state-countdown-host {
-      .nova-player-ending-related-item-cancel,
-      .nova-player-ending-related-item-countdown {
-        display: block;
-      }
-
-      .nova-player-ending-related-item-cover {
-        background: rgba(0, 0, 0, 0.62);
-      }
-    }
-  }
-
-  .nova-player-ending-related-item-countdown {
-    margin-left: 50%;
-    margin-top: 40px;
-    transform: translateX(-50%);
-    width: 64px;
-
-    .common-svg-icon {
+.nova-player-ending-wrap[data-countdown="true"] {
+  .nova-player-ending-related-item.state-countdown-host {
+    .nova-player-ending-related-item-cancel,
+    .nova-player-ending-related-item-countdown {
       display: block;
-      height: 64px;
-      width: 64px;
+    }
+
+    .nova-player-ending-related-item-cover {
+      background: rgba(0, 0, 0, 0.62);
     }
   }
+}
 
-  &[data-screen="full"] .nova-player-ending-content,
-  &[data-screen="web"] .nova-player-ending-content {
-    margin-left: -476px;
-    width: 952px;
+.nova-player-ending-related-item-countdown {
+  margin-left: 50%;
+  margin-top: 40px;
+  transform: translateX(-50%);
+  width: 64px;
+
+  .common-svg-icon {
+    display: block;
+    height: 64px;
+    width: 64px;
   }
+}
+
+&[data-screen="full"] .nova-player-ending-content,
+&[data-screen="web"] .nova-player-ending-content {
+  margin-left: -476px;
+  width: 952px;
 }
 
 /* ============================================
  * station 片尾：图标尺寸 / 按钮排版修正 / 取消连播位置
  * ============================================ */
-.nova-player-container {
-  .nova-player-ending {
-    // SVG 尺寸由 .common-svg-icon 容器决定（标准片尾 28px / 关注 16px），
-    // 这里只负责让 svg 铺满容器，避免默认 300×150 撑坏布局
-    .common-svg-icon svg {
-      fill: currentColor;
-      height: 100%;
-      width: 100%;
-    }
-
-    // UP 信息底部按钮行：充电 + 关注（标准片尾）
-    .nova-player-ending-functions-buttons {
-      align-items: center;
-      bottom: 0;
-      display: flex;
-      gap: 8px;
-      left: 0;
-      position: absolute;
-    }
-
-    .nova-player-ending-functions-buttons .nova-player-ending-functions-electric {
-      align-items: center;
-      display: flex;
-      gap: 2px;
-      height: 32px;
-      position: static !important;
-    }
-
-    .nova-player-ending-functions-buttons .nova-player-ending-functions-follow {
-      min-width: 68px;
-      padding: 0 !important;
-      width: 130px !important;
-    }
-
-    .nova-player-ending-functions-electric .common-svg-icon,
-    .nova-player-ending-functions-follow .common-svg-icon {
-      height: 16px;
-      width: 16px;
-    }
+.nova-player-ending {
+  // SVG 尺寸由 .common-svg-icon 容器决定（标准片尾 28px / 关注 16px），
+  // 这里只负责让 svg 铺满容器，避免默认 300×150 撑坏布局
+  .common-svg-icon svg {
+    fill: currentColor;
+    height: 100%;
+    width: 100%;
   }
 
-  .nova-player-ending-related-item-cancel {
-    right: 8px !important;
-    top: 8px !important;
-  }
-}
-
-/* 标准片尾图标颜色 / 充电图标 */
-.nova-player-container {
-  .nova-player-ending-functions-btn:hover {
-    color: #fff;
+  // UP 信息底部按钮行：充电 + 关注（标准片尾）
+  .nova-player-ending-functions-buttons {
+    align-items: center;
+    bottom: 0;
+    display: flex;
+    gap: 8px;
+    left: 0;
+    position: absolute;
   }
 
-  .nova-player-ending-functions-electric {
-    white-space: nowrap;
+  .nova-player-ending-functions-buttons .nova-player-ending-functions-electric {
+    align-items: center;
+    display: flex;
+    gap: 2px;
+    height: 32px;
+    position: static !important;
   }
 
-  .nova-player-ending-functions-electric-icon {
+  .nova-player-ending-functions-buttons .nova-player-ending-functions-follow {
+    min-width: 68px;
+    padding: 0 !important;
+    width: 130px !important;
+  }
+
+  .nova-player-ending-functions-electric .common-svg-icon,
+  .nova-player-ending-functions-follow .common-svg-icon {
     height: 16px;
-    margin-right: 4px;
-    vertical-align: middle;
     width: 16px;
   }
 }
 
+.nova-player-ending-related-item-cancel {
+  right: 8px !important;
+  top: 8px !important;
+}
+
+/* 标准片尾图标颜色 / 充电图标 */
+.nova-player-ending-functions-btn:hover {
+  color: #fff;
+}
+
+.nova-player-ending-functions-electric {
+  white-space: nowrap;
+}
+
+.nova-player-ending-functions-electric-icon {
+  height: 16px;
+  margin-right: 4px;
+  vertical-align: middle;
+  width: 16px;
+}
+
 /* 分享面板：渠道文字 / 二维码占位 */
-.nova-player-container {
-  .nova-player-video-share-btn-text {
-    color: #fff;
-    font-size: 12px;
-    line-height: 62px;
-    text-align: center;
-    width: 100%;
-  }
+.nova-player-video-share-btn-text {
+  color: #fff;
+  font-size: 12px;
+  line-height: 62px;
+  text-align: center;
+  width: 100%;
+}
 
-  .nova-player-video-share-qrcode-img img {
-    height: 100%;
-    object-fit: cover;
-    width: 100%;
-  }
+.nova-player-video-share-qrcode-img img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
 
-  .nova-player-video-share-qrcode-placeholder {
-    align-items: center;
-    background: #f5f5f5;
-    border-radius: 4px;
-    color: #999;
-    display: flex;
-    font-size: 12px;
-    justify-content: center;
-    line-height: 1.4;
-    padding: 10px;
-    text-align: center;
-  }
+.nova-player-video-share-qrcode-placeholder {
+  align-items: center;
+  background: #f5f5f5;
+  border-radius: 4px;
+  color: #999;
+  display: flex;
+  font-size: 12px;
+  justify-content: center;
+  line-height: 1.4;
+  padding: 10px;
+  text-align: center;
 }
 
 /* 分享面板：整体收窄，二维码向内容区靠拢（避免偏右） */
-.nova-player-container {
-  .nova-player-video-share-content {
-    width: 520px !important;
-  }
+.nova-player-video-share-content {
+  width: 520px !important;
+}
 
-  .nova-player-video-share-left {
-    width: 310px !important;
-  }
+.nova-player-video-share-left {
+  width: 310px !important;
+}
 
-  .nova-player-video-share-link-content {
-    width: 304px !important;
-  }
+.nova-player-video-share-link-content {
+  width: 304px !important;
+}
 
-  .nova-player-video-share-link-input {
-    margin-right: 12px;
-    width: 200px !important;
-  }
+.nova-player-video-share-link-input {
+  margin-right: 12px;
+  width: 200px !important;
+}
 
-  .nova-player-video-share-link-copy {
-    width: 64px !important;
-  }
+.nova-player-video-share-link-copy {
+  width: 64px !important;
 }
 
 /* 片尾期间隐藏中央暂停/播放覆盖层（外链整页片尾不能出现播放三角） */

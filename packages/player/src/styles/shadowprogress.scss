@@ -1,237 +1,233 @@
-.nova-player-docker {
-  .nova-player-shadow-progress-area {
+.nova-player-shadow-progress-area {
+  bottom: 0;
+  height: 2px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  -webkit-transition: opacity 0.4s ease-in;
+  transition: opacity 0.4s ease-in;
+}
+
+.nova-player-progress-schedule-text {
+  display: none;
+}
+
+.nova-player-shadow-progress-schedule-wrap {
+  height: 100%;
+  position: relative;
+  width: 100%;
+
+  .nova-player-progress-schedule {
+    background-color: hsla(0, 0%, 100%, 0.2);
+    border-radius: 1.5px;
     bottom: 0;
-    height: 2px;
     left: 0;
+    overflow: hidden;
     position: absolute;
     right: 0;
-    -webkit-transition: opacity 0.4s ease-in;
-    transition: opacity 0.4s ease-in;
+    top: 0;
 
-    .nova-player-progress-schedule-text {
+    .nova-player-progress-schedule-buffer,
+    .nova-player-progress-schedule-current {
+      bottom: 0;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      -webkit-transform: scaleX(0);
+      transform: scaleX(0);
+      -webkit-transform-origin: 0 0;
+      transform-origin: 0 0;
+    }
+
+    .nova-player-progress-schedule-buffer {
+      background-color: hsla(0, 0%, 100%, 0.3);
+    }
+
+    .nova-player-progress-schedule-current {
+      background-color: #00a1d6;
+      background-color: var(--nova-player-primary-color, #00a1d6);
+    }
+  }
+
+  .nova-player-progress-schedule.nova-player-progress-schedule-segment {
+    border-radius: 0;
+    -webkit-transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+    transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+    transition: transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+    transition:
+      transform 0.1s cubic-bezier(0, 0, 0.2, 1),
+      -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.nova-player-shadow-progress-area.permanent {
+  height: 30px;
+
+  .nova-player-shadow-progress-schedule-wrap {
+    background: rgba(35, 167, 255, 0.35);
+  }
+
+  .nova-player-progress-schedule-text {
+    background: none;
+    color: #fff;
+    display: block;
+    line-height: 30px;
+    overflow: hidden;
+    padding: 0 5px;
+    text-align: center;
+    text-overflow: ellipsis;
+    -webkit-transform: scaleX(1);
+    transform: scaleX(1);
+    white-space: nowrap;
+  }
+}
+
+.nova-player-pbp {
+  bottom: 3px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  cursor: pointer;
+  height: 28px;
+  left: -12px;
+  line-height: 28px;
+  opacity: 0;
+  padding: 0 12px;
+  position: absolute;
+  width: calc(100% + 24px);
+  z-index: -1;
+
+  .nova-player-pbp-curve {
+    fill: hsla(0, 0%, 100%, 0.2);
+    stroke: none;
+  }
+
+  .nova-player-pbp-played {
+    fill: #00a1d6;
+    fill: var(--nova-player-primary-color, #00a1d6);
+    fill-opacity: 0.2;
+    stroke: none;
+  }
+
+  .nova-player-pbp-cursor-line {
+    stroke: hsla(0, 0%, 100%, 0.2);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .nova-player-pbp-pin-icon-on {
+    display: none;
+  }
+
+  &.nova-player-pbp-permanent {
+    opacity: 1;
+
+    .nova-player-pbp-pin-icon-off {
       display: none;
-    }
-
-    .nova-player-shadow-progress-schedule-wrap {
-      height: 100%;
-      position: relative;
-      width: 100%;
-
-      .nova-player-progress-schedule {
-        background-color: hsla(0, 0%, 100%, 0.2);
-        border-radius: 1.5px;
-        bottom: 0;
-        left: 0;
-        overflow: hidden;
-        position: absolute;
-        right: 0;
-        top: 0;
-
-        .nova-player-progress-schedule-buffer,
-        .nova-player-progress-schedule-current {
-          bottom: 0;
-          left: 0;
-          position: absolute;
-          right: 0;
-          top: 0;
-          -webkit-transform: scaleX(0);
-          transform: scaleX(0);
-          -webkit-transform-origin: 0 0;
-          transform-origin: 0 0;
-        }
-
-        .nova-player-progress-schedule-buffer {
-          background-color: hsla(0, 0%, 100%, 0.3);
-        }
-
-        .nova-player-progress-schedule-current {
-          background-color: #00a1d6;
-          background-color: var(--nova-player-primary-color, #00a1d6);
-        }
-      }
-
-      .nova-player-progress-schedule.nova-player-progress-schedule-segment {
-        border-radius: 0;
-        -webkit-transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
-        transition: -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
-        transition: transform 0.1s cubic-bezier(0, 0, 0.2, 1);
-        transition:
-          transform 0.1s cubic-bezier(0, 0, 0.2, 1),
-          -webkit-transform 0.1s cubic-bezier(0, 0, 0.2, 1);
-      }
-    }
-  }
-
-  .nova-player-shadow-progress-area.permanent {
-    height: 30px;
-
-    .nova-player-shadow-progress-schedule-wrap {
-      background: rgba(35, 167, 255, 0.35);
-    }
-
-    .nova-player-progress-schedule-text {
-      background: none;
-      color: #fff;
-      display: block;
-      line-height: 30px;
-      overflow: hidden;
-      padding: 0 5px;
-      text-align: center;
-      text-overflow: ellipsis;
-      -webkit-transform: scaleX(1);
-      transform: scaleX(1);
-      white-space: nowrap;
-    }
-  }
-
-  .nova-player-pbp {
-    bottom: 3px;
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-    cursor: pointer;
-    height: 28px;
-    left: -12px;
-    line-height: 28px;
-    opacity: 0;
-    padding: 0 12px;
-    position: absolute;
-    width: calc(100% + 24px);
-    z-index: -1;
-
-    .nova-player-pbp-curve {
-      fill: hsla(0, 0%, 100%, 0.2);
-      stroke: none;
-    }
-
-    .nova-player-pbp-played {
-      fill: #00a1d6;
-      fill: var(--nova-player-primary-color, #00a1d6);
-      fill-opacity: 0.2;
-      stroke: none;
-    }
-
-    .nova-player-pbp-cursor-line {
-      stroke: hsla(0, 0%, 100%, 0.2);
-      stroke-width: 1;
-      vector-effect: non-scaling-stroke;
     }
 
     .nova-player-pbp-pin-icon-on {
+      display: block;
+    }
+  }
+
+  &.show {
+    bottom: 100%;
+    left: 0;
+    opacity: 1;
+    width: 100%;
+    .nova-player-pbp-pin {
+      opacity: 1;
+    }
+  }
+
+  .nova-player-pbp-pin {
+    bottom: 8%;
+    line-height: 16px;
+    opacity: 0;
+    position: absolute;
+    right: 4px;
+    -webkit-transition: opacity 0.1s;
+    transition: opacity 0.1s;
+
+    .nova-player-pbp-pin-icon {
+      cursor: pointer;
+      height: 16px;
+      -webkit-transform: rotate(45deg);
+      transform: rotate(45deg);
+      -webkit-transition: all 0.1s ease-in-out;
+      transition: all 0.1s ease-in-out;
+      width: 16px;
+
+      svg {
+        height: 100%;
+        width: 100%;
+      }
+    }
+
+    .nova-player-pbp-pin-tip {
+      background-color: #000;
+      background-color: var(--nova-player-tooltip-bgcolor, #000);
+      border-radius: 2px;
+      color: #fff;
+      color: var(--nova-player-tooltip-color, #fff);
+      display: none;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 4px 8px;
+      position: absolute;
+      right: 0;
+      top: 0;
+      -webkit-transition: all 0.3s ease-in-out;
+      transition: all 0.3s ease-in-out;
+      white-space: nowrap;
+    }
+
+    .nova-player-pbp-pin-tip-on {
       display: none;
     }
 
-    &.nova-player-pbp-permanent {
-      opacity: 1;
-
-      .nova-player-pbp-pin-icon-off {
-        display: none;
-      }
-
-      .nova-player-pbp-pin-icon-on {
-        display: block;
-      }
-    }
-
-    &.show {
-      bottom: 100%;
-      left: 0;
-      opacity: 1;
-      width: 100%;
-      .nova-player-pbp-pin {
-        opacity: 1;
-      }
-    }
-
-    .nova-player-pbp-pin {
-      bottom: 8%;
-      line-height: 16px;
-      opacity: 0;
-      position: absolute;
-      right: 4px;
-      -webkit-transition: opacity 0.1s;
-      transition: opacity 0.1s;
-
+    &:hover {
       .nova-player-pbp-pin-icon {
-        cursor: pointer;
-        height: 16px;
-        -webkit-transform: rotate(45deg);
-        transform: rotate(45deg);
-        -webkit-transition: all 0.1s ease-in-out;
-        transition: all 0.1s ease-in-out;
-        width: 16px;
-
-        svg {
-          height: 100%;
-          width: 100%;
-        }
+        -webkit-transform: rotate(60deg) scale(1.2);
+        transform: rotate(60deg) scale(1.2);
       }
 
-      .nova-player-pbp-pin-tip {
-        background-color: #000;
-        background-color: var(--nova-player-tooltip-bgcolor, #000);
-        border-radius: 2px;
-        color: #fff;
-        color: var(--nova-player-tooltip-color, #fff);
+      .nova-player-pbp-pin-tip-off {
+        display: block;
+        top: -30px;
+      }
+    }
+  }
+
+  &.nova-player-pbp-permanent {
+    .nova-player-pbp-pin:hover {
+      .nova-player-pbp-pin-tip-off {
         display: none;
-        font-size: 12px;
-        line-height: 1.5;
-        padding: 4px 8px;
-        position: absolute;
-        right: 0;
-        top: 0;
-        -webkit-transition: all 0.3s ease-in-out;
-        transition: all 0.3s ease-in-out;
-        white-space: nowrap;
       }
 
       .nova-player-pbp-pin-tip-on {
-        display: none;
-      }
-
-      &:hover {
-        .nova-player-pbp-pin-icon {
-          -webkit-transform: rotate(60deg) scale(1.2);
-          transform: rotate(60deg) scale(1.2);
-        }
-
-        .nova-player-pbp-pin-tip-off {
-          display: block;
-          top: -30px;
-        }
-      }
-    }
-
-    &.nova-player-pbp-permanent {
-      .nova-player-pbp-pin:hover {
-        .nova-player-pbp-pin-tip-off {
-          display: none;
-        }
-
-        .nova-player-pbp-pin-tip-on {
-          display: block;
-          top: -30px;
-        }
+        display: block;
+        top: -30px;
       }
     }
   }
+}
 
-  .nova-player-control-entity[data-shadow-show="false"]
-    .nova-player-shadow-progress-area,
-  .nova-player-control-entity[data-shadow-show="true"]
-    .nova-player-control-top {
-    opacity: 0;
-    visibility: hidden;
-  }
+.nova-player-control-entity[data-shadow-show="false"]
+  .nova-player-shadow-progress-area,
+.nova-player-control-entity[data-shadow-show="true"] .nova-player-control-top {
+  opacity: 0;
+  visibility: hidden;
+}
 
-  .nova-player-control-entity[data-shadow-show="false"]
-    .nova-player-control-top {
-    opacity: 1;
-    visibility: visible;
-  }
+.nova-player-control-entity[data-shadow-show="false"] .nova-player-control-top {
+  opacity: 1;
+  visibility: visible;
+}
 
-  .nova-player-control-entity[data-shadow-show="true"]
-    .nova-player-pbp.nova-player-pbp-permanent {
-    bottom: 30px;
-    opacity: 1;
-  }
+.nova-player-control-entity[data-shadow-show="true"]
+  .nova-player-pbp.nova-player-pbp-permanent {
+  bottom: 30px;
+  opacity: 1;
 }

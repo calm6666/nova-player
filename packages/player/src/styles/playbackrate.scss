@@ -1,47 +1,43 @@
-.nova-player-docker {
-  .nova-player-container {
-    .nova-player-ctrl-playbackrate {
-      font-size: 14px;
-      width: 50px;
+.nova-player-ctrl-playbackrate {
+  font-size: 14px;
+  width: 50px;
 
-      .nova-player-ctrl-playbackrate-result {
-        cursor: pointer;
-        font-weight: 600;
-        width: 100%;
+  .nova-player-ctrl-playbackrate-result {
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+  }
+
+  .nova-player-ctrl-playbackrate-menu {
+    background-color: hsla(0, 0%, 8%, 0.9);
+    border-radius: 2px;
+    bottom: 41px;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: none;
+    left: 50%;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    text-align: center;
+    -webkit-transform: translateX(-50%);
+    transform: translateX(-50%);
+    width: 70px;
+
+    .nova-player-ctrl-playbackrate-menu-item {
+      cursor: pointer;
+      height: 36px;
+      line-height: 36px;
+      position: relative;
+
+      &:hover {
+        background-color: hsla(0, 0%, 100%, 0.1);
       }
+    }
 
-      .nova-player-ctrl-playbackrate-menu {
-        background-color: hsla(0, 0%, 8%, 0.9);
-        border-radius: 2px;
-        bottom: 41px;
-        -webkit-box-sizing: border-box;
-        box-sizing: border-box;
-        display: none;
-        left: 50%;
-        margin: 0;
-        padding: 0;
-        position: absolute;
-        text-align: center;
-        -webkit-transform: translateX(-50%);
-        transform: translateX(-50%);
-        width: 70px;
-
-        .nova-player-ctrl-playbackrate-menu-item {
-          cursor: pointer;
-          height: 36px;
-          line-height: 36px;
-          position: relative;
-
-          &:hover {
-            background-color: hsla(0, 0%, 100%, 0.1);
-          }
-        }
-
-        .nova-player-ctrl-playbackrate-menu-item.nova-player-state-active {
-          color: #00a1d6;
-          color: var(--nova-player-primary-color, #00a1d6);
-        }
-      }
+    .nova-player-ctrl-playbackrate-menu-item.nova-player-state-active {
+      color: #00a1d6;
+      color: var(--nova-player-primary-color, #00a1d6);
     }
   }
 }

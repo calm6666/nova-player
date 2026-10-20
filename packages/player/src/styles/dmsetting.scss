@@ -1,159 +1,223 @@
-.nova-player-container {
-  .nova-player-dm-setting-wrap {
-    .nova-player-dm-setting-box {
-      bottom: 0;
-      position: absolute;
-      right: 0;
+.nova-player-dm-setting-box {
+  bottom: 0;
+  position: absolute;
+  right: 0;
 
-      .ui-area {
+  .ui-area {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    justify-content: flex-start;
+    overflow: hidden;
+    width: 320px;
+    height: 322px;
+    -webkit-transition:
+      width 0.25s,
+      height 0.25s;
+    transition:
+      width 0.25s,
+      height 0.25s;
+  }
+
+  .ui-panel-wrap {
+    position: relative;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-transition: all 0.25s;
+    transition: all 0.25s;
+    width: 320px;
+    height: 322px;
+  }
+
+  .ui-panel-move {
+    -webkit-box-align: end;
+    -ms-flex-align: end;
+    align-items: flex-end;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    height: 100%;
+    -webkit-transform: translateX(0);
+    transform: translateX(0);
+    -webkit-transition: -webkit-transform 0.25s;
+    transition: -webkit-transform 0.25s;
+    transition: transform 0.25s;
+    transition:
+      transform 0.25s,
+      -webkit-transform 0.25s;
+  }
+
+  .ui-panel-item {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    opacity: 0;
+    pointer-events: none;
+    -webkit-transition: opacity 0.1s;
+    transition: opacity 0.1s;
+  }
+
+  .ui-panel-item.ui-panel-item-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .nova-player-dm-setting-left {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 12px 20px;
+    width: 100%;
+
+    .nova-player-dm-setting-left-radio {
+      -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+
+      .nova-player-dm-setting-left-fs,
+      .nova-player-dm-setting-left-ps,
+      .nova-player-dm-setting-left-mask {
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        align-items: center;
+        display: -webkit-inline-box;
+        display: -ms-inline-flexbox;
+        display: inline-flex;
+      }
+
+      .ui-checkbox {
+        font-size: 12px;
+      }
+
+      .ui-checkbox-name {
+        font-size: 12px;
+      }
+    }
+
+    .nova-player-dm-setting-left-block {
+      margin-bottom: 12px;
+      overflow: hidden;
+      width: 100%;
+
+      .nova-player-dm-setting-left-block-title {
+        color: #fff;
+        font-size: 12px;
+        height: 16px;
+        line-height: 16px;
+        margin-bottom: 5px;
+        text-align: left;
+        text-wrap: nowrap;
+        width: 61px;
+      }
+
+      .nova-player-dm-setting-left-block-content {
         -webkit-box-sizing: border-box;
         box-sizing: border-box;
-        justify-content: flex-start;
-        overflow: hidden;
-        width: 320px;
-        height: 322px;
-        -webkit-transition:
-          width 0.25s,
-          height 0.25s;
-        transition:
-          width 0.25s,
-          height 0.25s;
-      }
-
-      .ui-panel-wrap {
-        position: relative;
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        -webkit-transition: all 0.25s;
-        transition: all 0.25s;
-        width: 320px;
-        height: 322px;
-      }
-
-      .ui-panel-move {
-        -webkit-box-align: end;
-        -ms-flex-align: end;
-        align-items: flex-end;
+        cursor: pointer;
         display: -webkit-box;
         display: -ms-flexbox;
         display: flex;
-        height: 100%;
-        -webkit-transform: translateX(0);
-        transform: translateX(0);
-        -webkit-transition: -webkit-transform 0.25s;
-        transition: -webkit-transform 0.25s;
-        transition: transform 0.25s;
-        transition:
-          transform 0.25s,
-          -webkit-transform 0.25s;
-      }
+        height: 42px;
+        overflow: hidden;
+        position: relative;
 
-      .ui-panel-item {
-        -webkit-box-sizing: border-box;
-        box-sizing: border-box;
-        flex-shrink: 0;
-        opacity: 0;
-        pointer-events: none;
-        -webkit-transition: opacity 0.1s;
-        transition: opacity 0.1s;
-      }
+        .nova-player-block-filter-type {
+          -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+          color: hsla(0, 0%, 100%, 0.8);
+          height: 100%;
+          margin: 0 22px 16px 0;
+          position: relative;
+          -webkit-transition: all 0.2s ease-in-out;
+          transition: all 0.2s ease-in-out;
+          width: 28px;
 
-      .ui-panel-item.ui-panel-item-active {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      .nova-player-dm-setting-left {
-        -webkit-box-sizing: border-box;
-        box-sizing: border-box;
-        height: 100%;
-        padding: 12px 20px;
-        width: 100%;
-
-        .nova-player-dm-setting-left-radio {
-          -webkit-box-pack: justify;
-          -ms-flex-pack: justify;
-          display: -webkit-box;
-          display: -ms-flexbox;
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 12px;
-
-          .nova-player-dm-setting-left-fs,
-          .nova-player-dm-setting-left-ps,
-          .nova-player-dm-setting-left-mask {
-            -webkit-box-align: center;
-            -ms-flex-align: center;
-            align-items: center;
-            display: -webkit-inline-box;
-            display: -ms-inline-flexbox;
-            display: inline-flex;
+          > span {
+            pointer-events: none;
           }
 
-          .ui-checkbox {
-            font-size: 12px;
+          .nova-player-block-filter-image {
+            color: hsla(0, 0%, 100%, 0.8);
+            fill: hsla(0, 0%, 100%, 0.8);
+            display: inline-block;
+            font-size: 0;
+            height: 28px;
+            line-height: 28px;
+            position: relative;
+            width: 28px;
+
+            .common-svg-icon {
+              height: 100%;
+              pointer-events: none;
+            }
+
+            svg {
+              height: 100%;
+              width: 100%;
+            }
           }
 
-          .ui-checkbox-name {
-            font-size: 12px;
-          }
-        }
-
-        .nova-player-dm-setting-left-block {
-          margin-bottom: 12px;
-          overflow: hidden;
-          width: 100%;
-
-          .nova-player-dm-setting-left-block-title {
-            color: #fff;
-            font-size: 12px;
-            height: 16px;
-            line-height: 16px;
-            margin-bottom: 5px;
-            text-align: left;
-            text-wrap: nowrap;
-            width: 61px;
-          }
-
-          .nova-player-dm-setting-left-block-content {
+          .nova-player-block-filter-label {
+            bottom: -2px;
             -webkit-box-sizing: border-box;
             box-sizing: border-box;
-            cursor: pointer;
-            display: -webkit-box;
-            display: -ms-flexbox;
-            display: flex;
-            height: 42px;
-            overflow: hidden;
-            position: relative;
+            color: hsla(0, 0%, 100%, 0.8);
+            font-size: 12px;
+            height: 16px;
+            left: 0;
+            line-height: 16px;
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            text-align: center;
+            -webkit-transition: none;
+            transition: none;
+            width: 100%;
+          }
 
-            .nova-player-block-filter-type {
-              -webkit-box-sizing: border-box;
-              box-sizing: border-box;
-              color: hsla(0, 0%, 100%, 0.8);
-              height: 100%;
-              margin: 0 22px 16px 0;
-              position: relative;
-              -webkit-transition: all 0.2s ease-in-out;
-              transition: all 0.2s ease-in-out;
-              width: 28px;
+          &:hover {
+            .nova-player-block-filter-image {
+              color: #fff;
+              fill: #fff;
+            }
 
-              > span {
-                pointer-events: none;
-              }
+            .nova-player-block-filter-label {
+              color: #fff;
+            }
+          }
 
-              .nova-player-block-filter-image {
-                color: hsla(0, 0%, 100%, 0.8);
-                fill: hsla(0, 0%, 100%, 0.8);
+          &.nova-player-block-filter-type-selected {
+            .nova-player-block-filter-image {
+              color: #00a1d6;
+              color: var(--nova-player-fn-color, #00a1d6);
+              fill: #00a1d6;
+              fill: var(--nova-player-fn-color, #00a1d6);
+            }
+
+            .nova-player-block-filter-label {
+              color: #00a1d6;
+              color: var(--nova-player-fn-color, #00a1d6);
+            }
+          }
+
+          &[data-type="typeSpecial"] {
+            .nova-player-block-filter-label {
+              left: -6px;
+
+              .nova-player-block-advanced-more {
                 display: inline-block;
-                font-size: 0;
-                height: 28px;
-                line-height: 28px;
-                position: relative;
-                width: 28px;
+                height: 14px;
+                left: 28px;
+                pointer-events: all;
+                position: absolute;
+                top: 1px;
+                width: 14px;
 
-                .common-svg-icon {
-                  height: 100%;
-                  pointer-events: none;
+                &:hover {
+                  cursor: pointer;
                 }
 
                 svg {
@@ -161,583 +225,515 @@
                   width: 100%;
                 }
               }
-
-              .nova-player-block-filter-label {
-                bottom: -2px;
-                -webkit-box-sizing: border-box;
-                box-sizing: border-box;
-                color: hsla(0, 0%, 100%, 0.8);
-                font-size: 12px;
-                height: 16px;
-                left: 0;
-                line-height: 16px;
-                margin: 0;
-                padding: 0;
-                position: absolute;
-                text-align: center;
-                -webkit-transition: none;
-                transition: none;
-                width: 100%;
-              }
-
-              &:hover {
-                .nova-player-block-filter-image {
-                  color: #fff;
-                  fill: #fff;
-                }
-
-                .nova-player-block-filter-label {
-                  color: #fff;
-                }
-              }
-
-              &.nova-player-block-filter-type-selected {
-                .nova-player-block-filter-image {
-                  color: #00a1d6;
-                  color: var(--nova-player-fn-color, #00a1d6);
-                  fill: #00a1d6;
-                  fill: var(--nova-player-fn-color, #00a1d6);
-                }
-
-                .nova-player-block-filter-label {
-                  color: #00a1d6;
-                  color: var(--nova-player-fn-color, #00a1d6);
-                }
-              }
-
-              &[data-type="typeSpecial"] {
-                .nova-player-block-filter-label {
-                  left: -6px;
-
-                  .nova-player-block-advanced-more {
-                    display: inline-block;
-                    height: 14px;
-                    left: 28px;
-                    pointer-events: all;
-                    position: absolute;
-                    top: 1px;
-                    width: 14px;
-
-                    &:hover {
-                      cursor: pointer;
-                    }
-
-                    svg {
-                      height: 100%;
-                      width: 100%;
-                    }
-                  }
-                }
-              }
             }
           }
         }
+      }
+    }
 
-        .nova-player-dm-setting-left-block-word {
-          -webkit-box-pack: justify;
-          -ms-flex-pack: justify;
-          display: -webkit-box;
-          display: -ms-flexbox;
-          display: flex;
-          justify-content: space-between;
-          line-height: 24px;
-          margin-bottom: 14px;
-          text-align: center;
-          width: 100%;
+    .nova-player-dm-setting-left-block-word {
+      -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      justify-content: space-between;
+      line-height: 24px;
+      margin-bottom: 14px;
+      text-align: center;
+      width: 100%;
 
-          .nova-player-dm-setting-left-block-add,
-          .nova-player-dm-setting-left-block-sync {
-            background: hsla(0, 0%, 100%, 0.3);
-            border-radius: 2px;
-            cursor: pointer;
-            width: 134px;
-            color: #fff;
-            font-size: 12px;
+      .nova-player-dm-setting-left-block-add,
+      .nova-player-dm-setting-left-block-sync {
+        background: hsla(0, 0%, 100%, 0.3);
+        border-radius: 2px;
+        cursor: pointer;
+        width: 134px;
+        color: #fff;
+        font-size: 12px;
 
-            &:hover {
-              background: hsla(0, 0%, 100%, 0.4);
-            }
-          }
+        &:hover {
+          background: hsla(0, 0%, 100%, 0.4);
         }
+      }
+    }
 
-        .nova-player-dm-setting-left-dmDensity {
+    .nova-player-dm-setting-left-dmDensity {
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      -webkit-box-pack: justify;
+      -ms-flex-pack: justify;
+      align-items: center;
+      background-color: hsla(0, 0%, 100%, 0.3);
+      border-radius: 2px;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+      color: #fff;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      font-size: 12px;
+      font-weight: 400;
+      height: 26px;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      width: 100%;
+
+      .nova-player-dm-setting-left-dmDensity-left-area {
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        -webkit-box-pack: center;
+        -ms-flex-pack: center;
+        align-items: center;
+        cursor: pointer;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        padding-left: 12px;
+        user-select: none;
+      }
+
+      .nova-player-dm-setting-left-dmDensity-right-area {
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        align-items: center;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        height: 100%;
+
+        .nova-player-dm-setting-density {
           -webkit-box-align: center;
           -ms-flex-align: center;
-          -webkit-box-pack: justify;
-          -ms-flex-pack: justify;
+          -webkit-box-pack: center;
+          -ms-flex-pack: center;
           align-items: center;
-          background-color: hsla(0, 0%, 100%, 0.3);
-          border-radius: 2px;
-          -webkit-box-sizing: border-box;
-          box-sizing: border-box;
           color: #fff;
+          cursor: pointer;
           display: -webkit-box;
           display: -ms-flexbox;
           display: flex;
-          font-size: 12px;
-          font-weight: 400;
-          height: 26px;
-          justify-content: space-between;
-          margin-bottom: 16px;
-          width: 100%;
+          height: 100%;
+          justify-content: center;
+          user-select: none;
+          width: 56px;
 
-          .nova-player-dm-setting-left-dmDensity-left-area {
+          &[data-density="more"]:after,
+          &[data-density="normal"]:after {
+            background-color: hsla(0, 0%, 100%, 0.2);
+            content: "";
+            display: inline-block;
+            height: 13px;
+            margin-left: 15px;
+            width: 1px;
+          }
+
+          &[data-density="most"] {
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+            margin-left: -7px;
+            padding-right: 4px;
+          }
+
+          &.active {
+            color: #00a1d6;
+            color: var(--nova-player-primary-color, #00a1d6);
+          }
+        }
+      }
+    }
+
+    .nova-player-dm-setting-left-area,
+    .nova-player-dm-setting-left-fontsize,
+    .nova-player-dm-setting-left-opacity,
+    .nova-player-dm-setting-left-speedplus {
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      align-items: center;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      height: 16px;
+      line-height: 16px;
+      margin-bottom: 12px;
+      width: 100%;
+
+      .nova-player-dm-setting-left-area-title,
+      .nova-player-dm-setting-left-fontsize-title,
+      .nova-player-dm-setting-left-opacity-title,
+      .nova-player-dm-setting-left-speedplus-title {
+        color: #fff;
+        font-size: 12px;
+        height: 16px;
+        line-height: 16px;
+        text-align: left;
+        text-wrap: nowrap;
+        width: 61px;
+      }
+
+      .nova-player-dm-setting-left-area-content,
+      .nova-player-dm-setting-left-fontsize-content,
+      .nova-player-dm-setting-left-opacity-content,
+      .nova-player-dm-setting-left-speedplus-content {
+        -webkit-box-flex: 1;
+        -ms-flex: 1;
+        flex: 1;
+        height: 12px;
+        margin-left: 10px;
+        width: 200px;
+      }
+    }
+
+    .nova-player-dm-setting-left-more {
+      border-top: 1px solid hsla(0, 0%, 100%, 0.1);
+      clear: left;
+      color: #fff;
+      cursor: pointer;
+      fill: #fff;
+      height: 16px;
+      line-height: 16px;
+      padding-top: 10px;
+      position: relative;
+      text-align: left;
+      font-size: 12px;
+
+      .nova-player-dm-setting-left-more-text {
+        display: inline-block;
+        -webkit-transition: color 0.3s;
+        transition: color 0.3s;
+        vertical-align: middle;
+      }
+
+      .nova-player-dm-setting-left-more-senior-text {
+        color: hsla(0, 0%, 100%, 0.6);
+        display: none;
+        float: right;
+        margin-right: 10px;
+      }
+
+      .common-svg-icon {
+        height: 16px;
+        margin-right: -3px;
+        position: absolute;
+        right: 0;
+        vertical-align: middle;
+        width: 16px;
+
+        svg {
+          height: 100%;
+          width: 100%;
+        }
+      }
+
+      &:hover {
+        color: #00a1d6;
+        color: var(--nova-player-fn-color, #00a1d6);
+        fill: #00a1d6;
+        fill: var(--nova-player-fn-color, #00a1d6);
+      }
+    }
+  }
+
+  .nova-player-dm-setting-right {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 0 20px;
+    width: 100%;
+
+    .ui-select,
+    .nova-player-dm-setting-right-more {
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+    }
+
+    .nova-player-dm-setting-right-more {
+      color: #fff;
+      cursor: pointer;
+      fill: #fff;
+      height: 32px;
+      line-height: 32px;
+      text-align: left;
+      font-size: 12px;
+
+      .nova-player-dm-setting-right-more-text {
+        display: inline-block;
+        -webkit-transition: color 0.3s;
+        transition: color 0.3s;
+        vertical-align: middle;
+      }
+
+      .common-svg-icon {
+        cursor: pointer;
+        display: inline-block;
+        height: 30px;
+        margin-left: -3px;
+        vertical-align: middle;
+        width: 20px;
+
+        svg {
+          height: 100%;
+          width: 100%;
+        }
+      }
+
+      &:hover {
+        color: #00a1d6;
+        color: var(--nova-player-fn-color, #00a1d6);
+        fill: #00a1d6;
+        fill: var(--nova-player-fn-color, #00a1d6);
+      }
+    }
+
+    .nova-player-dm-setting-right-separator {
+      border-bottom: 1px solid rgba(229, 233, 239, 0.1);
+      position: relative;
+      right: 20px;
+      width: 305px;
+    }
+
+    .nova-player-dm-setting-right-speedsync {
+      height: 16px;
+      line-height: 16px;
+      margin-bottom: 12px;
+      margin-top: 12px;
+      right: 2px;
+
+      .ui-checkbox {
+        font-size: 12px;
+      }
+
+      .ui-checkbox-name {
+        font-size: 12px;
+      }
+    }
+
+    .nova-player-dm-setting-right-font {
+      margin-bottom: 12px;
+
+      .nova-player-dm-setting-right-font-content {
+        float: left;
+        margin-bottom: 12px;
+
+        .nova-player-dm-setting-right-font-content-fontfamily {
+          width: 164px;
+
+          .ui-select-wrap {
+            position: relative;
+            width: 100%;
+          }
+
+          .ui-select-border {
+            background-color: hsla(0, 0%, 100%, 0.1);
+            border-radius: 2px;
+          }
+
+          .ui-select-header {
             -webkit-box-align: center;
             -ms-flex-align: center;
-            -webkit-box-pack: center;
-            -ms-flex-pack: center;
+            -webkit-box-pack: justify;
+            -ms-flex-pack: justify;
             align-items: center;
             cursor: pointer;
             display: -webkit-box;
             display: -ms-flexbox;
             display: flex;
-            height: 100%;
-            justify-content: center;
-            padding-left: 12px;
-            user-select: none;
-          }
+            height: 22px;
+            justify-content: space-between;
+            padding: 0 8px;
 
-          .nova-player-dm-setting-left-dmDensity-right-area {
-            -webkit-box-align: center;
-            -ms-flex-align: center;
-            align-items: center;
-            display: -webkit-box;
-            display: -ms-flexbox;
-            display: flex;
-            height: 100%;
+            .ui-select-result {
+              color: #fff;
+              font-size: 12px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
 
-            .nova-player-dm-setting-density {
+            .ui-select-arrow {
               -webkit-box-align: center;
               -ms-flex-align: center;
+              align-items: center;
+              display: -webkit-inline-box;
+              display: -ms-inline-flexbox;
+              display: inline-flex;
+              height: 14px;
               -webkit-box-pack: center;
               -ms-flex-pack: center;
-              align-items: center;
-              color: #fff;
-              cursor: pointer;
-              display: -webkit-box;
-              display: -ms-flexbox;
-              display: flex;
-              height: 100%;
               justify-content: center;
-              user-select: none;
-              width: 56px;
+              width: 14px;
 
-              &[data-density="more"]:after,
-              &[data-density="normal"]:after {
-                background-color: hsla(0, 0%, 100%, 0.2);
-                content: "";
-                display: inline-block;
-                height: 13px;
-                margin-left: 15px;
-                width: 1px;
+              .ui-select-arrow-down {
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid hsla(0, 0%, 100%, 0.8);
+                display: block;
+                height: 0;
+                width: 0;
+              }
+            }
+          }
+
+          .ui-select-list-wrap {
+            background-color: #1c1c1c;
+            border-radius: 2px;
+            left: 0;
+            max-height: 100px;
+            overflow-y: auto;
+            position: absolute;
+            top: 24px;
+            width: 100%;
+            z-index: 3;
+          }
+
+          .ui-select-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+
+            .ui-select-item {
+              -webkit-box-sizing: border-box;
+              box-sizing: border-box;
+              color: hsla(0, 0%, 100%, 0.8);
+              cursor: pointer;
+              font-size: 12px;
+              height: 22px;
+              line-height: 22px;
+              overflow: hidden;
+              padding: 0 8px;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              width: 100%;
+
+              &:hover {
+                background: #e7e7e7;
               }
 
-              &[data-density="most"] {
-                -webkit-box-sizing: border-box;
-                box-sizing: border-box;
-                margin-left: -7px;
-                padding-right: 4px;
-              }
-
-              &.active {
+              &.ui-select-item-active {
                 color: #00a1d6;
                 color: var(--nova-player-primary-color, #00a1d6);
               }
             }
-          }
-        }
-
-        .nova-player-dm-setting-left-area,
-        .nova-player-dm-setting-left-fontsize,
-        .nova-player-dm-setting-left-opacity,
-        .nova-player-dm-setting-left-speedplus {
-          -webkit-box-align: center;
-          -ms-flex-align: center;
-          align-items: center;
-          display: -webkit-box;
-          display: -ms-flexbox;
-          display: flex;
-          height: 16px;
-          line-height: 16px;
-          margin-bottom: 12px;
-          width: 100%;
-
-          .nova-player-dm-setting-left-area-title,
-          .nova-player-dm-setting-left-fontsize-title,
-          .nova-player-dm-setting-left-opacity-title,
-          .nova-player-dm-setting-left-speedplus-title {
-            color: #fff;
-            font-size: 12px;
-            height: 16px;
-            line-height: 16px;
-            text-align: left;
-            text-wrap: nowrap;
-            width: 61px;
-          }
-
-          .nova-player-dm-setting-left-area-content,
-          .nova-player-dm-setting-left-fontsize-content,
-          .nova-player-dm-setting-left-opacity-content,
-          .nova-player-dm-setting-left-speedplus-content {
-            -webkit-box-flex: 1;
-            -ms-flex: 1;
-            flex: 1;
-            height: 12px;
-            margin-left: 10px;
-            width: 200px;
-          }
-        }
-
-        .nova-player-dm-setting-left-more {
-          border-top: 1px solid hsla(0, 0%, 100%, 0.1);
-          clear: left;
-          color: #fff;
-          cursor: pointer;
-          fill: #fff;
-          height: 16px;
-          line-height: 16px;
-          padding-top: 10px;
-          position: relative;
-          text-align: left;
-          font-size: 12px;
-
-          .nova-player-dm-setting-left-more-text {
-            display: inline-block;
-            -webkit-transition: color 0.3s;
-            transition: color 0.3s;
-            vertical-align: middle;
-          }
-
-          .nova-player-dm-setting-left-more-senior-text {
-            color: hsla(0, 0%, 100%, 0.6);
-            display: none;
-            float: right;
-            margin-right: 10px;
-          }
-
-          .common-svg-icon {
-            height: 16px;
-            margin-right: -3px;
-            position: absolute;
-            right: 0;
-            vertical-align: middle;
-            width: 16px;
-
-            svg {
-              height: 100%;
-              width: 100%;
-            }
-          }
-
-          &:hover {
-            color: #00a1d6;
-            color: var(--nova-player-fn-color, #00a1d6);
-            fill: #00a1d6;
-            fill: var(--nova-player-fn-color, #00a1d6);
           }
         }
       }
 
-      .nova-player-dm-setting-right {
-        -webkit-box-sizing: border-box;
-        box-sizing: border-box;
-        height: 100%;
-        padding: 0 20px;
+      .nova-player-dm-setting-right-font-bold {
+        color: #212121;
+        float: left;
+        height: 16px;
+        left: 14px;
+        line-height: 16px;
+        position: relative;
+        top: 4px;
+
+        .ui-checkbox {
+          font-size: 12px;
+        }
+
+        .ui-checkbox-name {
+          font-size: 12px;
+        }
+
+        &:hover {
+          .ui-checkbox-name {
+            color: #00a1d6;
+            color: var(--nova-player-primary-color, #00a1d6);
+          }
+        }
+      }
+    }
+
+    .nova-player-dm-setting-right-fontborder {
+      clear: left;
+      line-height: 14px;
+      margin-bottom: 12px;
+
+      .nova-player-dm-setting-right-fontborder-content {
         width: 100%;
 
-        .ui-select,
-        .nova-player-dm-setting-right-more {
+        .nova-player-radio-wrap-button {
+          -webkit-box-pack: justify;
+          -ms-flex-pack: justify;
           display: -webkit-box;
           display: -ms-flexbox;
           display: flex;
-        }
+          justify-content: space-between;
+          width: 100%;
 
-        .nova-player-dm-setting-right-more {
-          color: #fff;
-          cursor: pointer;
-          fill: #fff;
-          height: 32px;
-          line-height: 32px;
-          text-align: left;
-          font-size: 12px;
-
-          .nova-player-dm-setting-right-more-text {
-            display: inline-block;
-            -webkit-transition: color 0.3s;
-            transition: color 0.3s;
-            vertical-align: middle;
-          }
-
-          .common-svg-icon {
+          .radio-button {
+            background: #999;
+            border-radius: 2px;
+            color: #fff;
             cursor: pointer;
-            display: inline-block;
-            height: 30px;
-            margin-left: -3px;
-            vertical-align: middle;
-            width: 20px;
-
-            svg {
-              height: 100%;
-              width: 100%;
-            }
-          }
-
-          &:hover {
-            color: #00a1d6;
-            color: var(--nova-player-fn-color, #00a1d6);
-            fill: #00a1d6;
-            fill: var(--nova-player-fn-color, #00a1d6);
-          }
-        }
-
-        .nova-player-dm-setting-right-separator {
-          border-bottom: 1px solid rgba(229, 233, 239, 0.1);
-          position: relative;
-          right: 20px;
-          width: 305px;
-        }
-
-        .nova-player-dm-setting-right-speedsync {
-          height: 16px;
-          line-height: 16px;
-          margin-bottom: 12px;
-          margin-top: 12px;
-          right: 2px;
-
-          .ui-checkbox {
-            font-size: 12px;
-          }
-
-          .ui-checkbox-name {
-            font-size: 12px;
-          }
-        }
-
-        .nova-player-dm-setting-right-font {
-          margin-bottom: 12px;
-
-          .nova-player-dm-setting-right-font-content {
-            float: left;
-            margin-bottom: 12px;
-
-            .nova-player-dm-setting-right-font-content-fontfamily {
-              width: 164px;
-
-              .ui-select-wrap {
-                position: relative;
-                width: 100%;
-              }
-
-              .ui-select-border {
-                background-color: hsla(0, 0%, 100%, 0.1);
-                border-radius: 2px;
-              }
-
-              .ui-select-header {
-                -webkit-box-align: center;
-                -ms-flex-align: center;
-                -webkit-box-pack: justify;
-                -ms-flex-pack: justify;
-                align-items: center;
-                cursor: pointer;
-                display: -webkit-box;
-                display: -ms-flexbox;
-                display: flex;
-                height: 22px;
-                justify-content: space-between;
-                padding: 0 8px;
-
-                .ui-select-result {
-                  color: #fff;
-                  font-size: 12px;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                }
-
-                .ui-select-arrow {
-                  -webkit-box-align: center;
-                  -ms-flex-align: center;
-                  align-items: center;
-                  display: -webkit-inline-box;
-                  display: -ms-inline-flexbox;
-                  display: inline-flex;
-                  height: 14px;
-                  -webkit-box-pack: center;
-                  -ms-flex-pack: center;
-                  justify-content: center;
-                  width: 14px;
-
-                  .ui-select-arrow-down {
-                    border-left: 4px solid transparent;
-                    border-right: 4px solid transparent;
-                    border-top: 5px solid hsla(0, 0%, 100%, 0.8);
-                    display: block;
-                    height: 0;
-                    width: 0;
-                  }
-                }
-              }
-
-              .ui-select-list-wrap {
-                background-color: #1c1c1c;
-                border-radius: 2px;
-                left: 0;
-                max-height: 100px;
-                overflow-y: auto;
-                position: absolute;
-                top: 24px;
-                width: 100%;
-                z-index: 3;
-              }
-
-              .ui-select-list {
-                list-style: none;
-                margin: 0;
-                padding: 0;
-
-                .ui-select-item {
-                  -webkit-box-sizing: border-box;
-                  box-sizing: border-box;
-                  color: hsla(0, 0%, 100%, 0.8);
-                  cursor: pointer;
-                  font-size: 12px;
-                  height: 22px;
-                  line-height: 22px;
-                  overflow: hidden;
-                  padding: 0 8px;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                  width: 100%;
-
-                  &:hover {
-                    background: #e7e7e7;
-                  }
-
-                  &.ui-select-item-active {
-                    color: #00a1d6;
-                    color: var(--nova-player-primary-color, #00a1d6);
-                  }
-                }
-              }
-            }
-          }
-
-          .nova-player-dm-setting-right-font-bold {
-            color: #212121;
-            float: left;
-            height: 16px;
-            left: 14px;
-            line-height: 16px;
-            position: relative;
-            top: 4px;
-
-            .ui-checkbox {
-              font-size: 12px;
-            }
-
-            .ui-checkbox-name {
-              font-size: 12px;
-            }
-
-            &:hover {
-              .ui-checkbox-name {
-                color: #00a1d6;
-                color: var(--nova-player-primary-color, #00a1d6);
-              }
-            }
-          }
-        }
-
-        .nova-player-dm-setting-right-fontborder {
-          clear: left;
-          line-height: 14px;
-          margin-bottom: 12px;
-
-          .nova-player-dm-setting-right-fontborder-content {
-            width: 100%;
-
-            .nova-player-radio-wrap-button {
-              -webkit-box-pack: justify;
-              -ms-flex-pack: justify;
-              display: -webkit-box;
-              display: -ms-flexbox;
-              display: flex;
-              justify-content: space-between;
-              width: 100%;
-
-              .radio-button {
-                background: #999;
-                border-radius: 2px;
-                color: #fff;
-                cursor: pointer;
-                height: 24px;
-                line-height: 24px;
-                margin: 0;
-                padding: 0;
-                text-align: center;
-                width: 70px;
-
-                span {
-                  color: #fff;
-                  font-size: 12px;
-                  white-space: nowrap;
-                }
-
-                &:hover {
-                  background: #757575;
-                  color: #fff;
-                }
-
-                &.active {
-                  background: #00a1d6;
-                  background: var(--nova-player-primary-color, #00a1d6);
-                  color: #fff;
-                }
-              }
-            }
-          }
-        }
-
-        .nova-player-dm-setting-right-font-title,
-        .nova-player-dm-setting-right-fontborder-title {
-          clear: left;
-          color: #fff;
-          height: 16px;
-          line-height: 16px;
-          margin-bottom: 4px;
-          text-align: left;
-          font-size: 12px;
-        }
-
-        .nova-player-dm-setting-right-reset {
-          height: 30px;
-          line-height: 30px;
-
-          &.ui-button {
-            height: 22px;
-            line-height: 22px;
-            margin-top: 9px;
-            width: 116px;
-          }
-
-          .ui-area {
-            -webkit-box-align: center;
-            -ms-flex-align: center;
-            -webkit-box-pack: center;
-            -ms-flex-pack: center;
-            align-items: center;
-            display: -webkit-box;
-            display: -ms-flexbox;
-            display: flex;
-            height: 100%;
-            justify-content: center;
+            height: 24px;
+            line-height: 24px;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            width: 70px;
 
             span {
               color: #fff;
               font-size: 12px;
+              white-space: nowrap;
+            }
+
+            &:hover {
+              background: #757575;
+              color: #fff;
+            }
+
+            &.active {
+              background: #00a1d6;
+              background: var(--nova-player-primary-color, #00a1d6);
+              color: #fff;
             }
           }
+        }
+      }
+    }
+
+    .nova-player-dm-setting-right-font-title,
+    .nova-player-dm-setting-right-fontborder-title {
+      clear: left;
+      color: #fff;
+      height: 16px;
+      line-height: 16px;
+      margin-bottom: 4px;
+      text-align: left;
+      font-size: 12px;
+    }
+
+    .nova-player-dm-setting-right-reset {
+      height: 30px;
+      line-height: 30px;
+
+      &.ui-button {
+        height: 22px;
+        line-height: 22px;
+        margin-top: 9px;
+        width: 116px;
+      }
+
+      .ui-area {
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        -webkit-box-pack: center;
+        -ms-flex-pack: center;
+        align-items: center;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+
+        span {
+          color: #fff;
+          font-size: 12px;
         }
       }
     }
