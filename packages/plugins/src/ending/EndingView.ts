@@ -1487,10 +1487,13 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       const width = content.offsetWidth;
       const height = content.offsetHeight;
       if (!width || !height) return;
+      // 四周留出安全边距，不贴播放器边缘
+      const horizontalPadding = 64;
+      const verticalPadding = 48;
       const scale = Math.min(
         1,
-        availableWidth / width,
-        availableHeight / height,
+        (availableWidth - horizontalPadding) / width,
+        (availableHeight - verticalPadding) / height,
       );
       if (scale < 0.999) {
         content.style.transform = `scale(${scale})`;

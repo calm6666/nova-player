@@ -799,6 +799,7 @@ new VideoPlayer({
 Top / Ending 的完整视图、样式依赖和 Ending 倒计时/自动连播行为都已迁到 `@lumina/plugins`。播放器核心只保留空根容器，**必须显式安装插件**：
 
 ```ts
+import "@lumina/plugins/style.css";
 import { TopPlugin, EndingPlugin } from "@lumina/plugins";
 
 new VideoPlayer({

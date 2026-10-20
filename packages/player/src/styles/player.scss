@@ -661,12 +661,6 @@ img {
     }
   }
 
-  .nova-player-container[data-ctrl-hidden="true"][data-angle="d3d11"] .nova-player-top-wrap {
-    clip-path: polygon(0 0, 0 0, 0 0, 0 0);
-    opacity: 1;
-    visibility: visible;
-  }
-
   .nova-player-container[data-ctrl-hidden="true"] .nova-player-control-bottom,
   .nova-player-container[data-ctrl-hidden="true"] .nova-player-control-mask {
     opacity: 0;
@@ -690,14 +684,6 @@ img {
   .nova-player-container[data-screen="web"] {
     .nova-player-state-wrap {
       bottom: 100px;
-    }
-
-    .nova-player-top-wrap {
-      .nova-player-top-left {
-        .nova-player-top-left-title {
-          display: block;
-        }
-      }
     }
 
     .nova-player-control-bottom {
@@ -757,19 +743,11 @@ img {
     z-index: 100000 !important;
 
     .nova-player-primary-area {
-      .nova-player-top-wrap {
-        display: none;
-      }
-
       .nova-player-state-wrap {
         display: none;
       }
 
       .nova-player-cmd-dm-wrap {
-        display: none;
-      }
-
-      .nova-player-ending-wrap {
         display: none;
       }
 
@@ -825,16 +803,6 @@ img {
 
     .nova-player-container[data-screen="full"],
     .nova-player-container[data-screen="web"] {
-      .nova-player-top-left {
-        left: 24px;
-        margin-top: 24px;
-
-        .nova-player-top-left-title {
-          margin-bottom: 12px;
-          display: block;
-        }
-      }
-
       .nova-player-ctrl-time {
         .nova-player-ctrl-time-seek {
           font-size: 14px;
@@ -851,16 +819,6 @@ img {
       .nova-player-control-wrap {
         height: 73px;
         line-height: 73px;
-      }
-
-      .nova-player-top-issue {
-        font-size: 28px;
-        width: 54px;
-
-        .nova-player-top-issue-icon {
-          height: 28px;
-          width: 54px;
-        }
       }
 
       .nova-player-sending-bar {

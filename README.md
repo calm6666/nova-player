@@ -137,6 +137,8 @@ pnpm build:plugins
 ```ts
 import { VideoPlayer } from '@lumina/nova';
 import '@lumina/nova/style.css';
+// Top / Ending 插件样式（使用 TopPlugin / EndingPlugin 时引入）
+import '@lumina/plugins/style.css';
 
 const player = new VideoPlayer({
   src: 'https://example.com/video.mp4',

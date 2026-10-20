@@ -1,0 +1,142 @@
+.nova-player-container.is-embedded {
+  .nova-player-state-wrap {
+    display: none;
+  }
+
+  .nova-player-top-left {
+    left: 20px;
+    position: absolute;
+    top: 16px;
+  }
+
+  .nova-player-top-left-title {
+    align-items: center;
+    display: flex !important;
+    height: 30px;
+    margin: 0 !important;
+    min-width: 0;
+    width: auto !important;
+  }
+
+  .nova-player-top-left-logo {
+    color: #fb7299;
+    flex-shrink: 0;
+    font-size: 26px;
+    font-style: italic;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-right: 8px;
+  }
+
+  .nova-player-top-left-title-text {
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    max-width: 640px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      color: #ff6699;
+    }
+  }
+
+  .nova-player-top-left-follow {
+    margin-top: 8px;
+  }
+
+  .nova-player-follow {
+    align-items: center;
+    background: rgba(24, 25, 28, 0.5);
+    border-radius: 26px;
+    display: inline-flex;
+    height: 30px;
+    padding-right: 12px;
+  }
+
+  .nova-player-follow-face {
+    border-radius: 50%;
+    flex-shrink: 0;
+    height: 30px;
+    overflow: hidden;
+    width: 30px;
+
+    img {
+      height: 100%;
+      object-fit: cover;
+      width: 100%;
+    }
+  }
+
+  .nova-player-follow-name {
+    color: #fff;
+    font-size: 13px;
+    margin-left: 8px;
+    max-width: none;
+    white-space: nowrap;
+  }
+
+  .nova-player-follow-text {
+    color: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 8px;
+
+    &:hover {
+      color: #ff6699;
+    }
+  }
+
+  .nova-player-relation-button {
+    display: none !important;
+  }
+
+  .nova-player-top-actions {
+    align-items: flex-start;
+    display: flex;
+    position: absolute;
+    right: 16px;
+    top: 18px;
+  }
+
+  .nova-player-top-action {
+    align-items: center;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 45px;
+    justify-content: center;
+    margin-left: 8px;
+    padding: 4px 8px;
+    width: 48px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  .nova-player-top-action-icon {
+    display: block;
+    height: 26px;
+    width: 26px;
+
+    svg {
+      fill: currentColor;
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  .nova-player-top-action-text {
+    color: #fff;
+    font-size: 12px;
+    line-height: 14px;
+    margin-top: 4px;
+    text-align: center;
+    white-space: nowrap;
+  }
+}
