@@ -1106,7 +1106,7 @@ for (const [buttonId, locale] of LOCALE_BUTTONS) {
 }
 
 const MEDIA_LIST: MediaItem[] = [
-  { src: "/sample.mp4", title: "示例视频" },
+  { src: "/sample.mp4", title: "赶集买了几只牛蛙，好久没吃了，立马安排..." },
 ];
 const OBJECT_URLS: string[] = [];
 
@@ -1805,11 +1805,11 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
       },
       embedded: {
         title: current?.title ?? "Lumina Demo",
-        stats: { like: 1234, comment: 56 },
+        stats: { like: 3537, comment: 19 },
         up: {
-          name: "模拟 UP 主",
+          name: "小梅vlog",
           face: demoPic("UP", "#00b4d8", "#1a1a2e"),
-          followed: false,
+          followed: true,
         },
         related: DEMO_EMBEDDED_RELATED,
         enterUrl: "https://www.bilibili.com/",

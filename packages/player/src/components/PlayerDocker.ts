@@ -2663,6 +2663,10 @@ export const PlayerDocker = defineComponent<
             upInfo: embeddedMode
               ? embeddedConfig?.up
               : readUi()?.up,
+            likeCount: embeddedMode ? embeddedConfig?.stats?.like : undefined,
+            shareCount: embeddedMode
+              ? embeddedConfig?.stats?.comment
+              : undefined,
             shareUrl: readUi()?.share?.url,
             embedCode: readUi()?.share?.embedCode,
             qrCodeUrl: readUi()?.share?.qrCodeUrl,

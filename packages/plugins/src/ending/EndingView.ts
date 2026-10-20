@@ -43,6 +43,10 @@ export interface EndingProps {
   title?: string;
   /** UP 主信息（无数据时不渲染详情内容） */
   upInfo?: EndingUpInfo;
+  /** 外链片尾：点赞数（顶部操作区展示） */
+  likeCount?: number;
+  /** 外链片尾：分享/评论数（顶部操作区展示） */
+  shareCount?: number;
   /** 分享面板：视频地址 */
   shareUrl?: string;
   /** 分享面板：嵌入代码 */
@@ -220,6 +224,15 @@ const INTERACTIVE_PLUS = "M7.25 7.25v-4.5a.75.75 0 0 1 1.5 0v4.5h4.5a.75.75 0 0 
 /** 追剧爱心（OGV 片尾头部） */
 const HEART_ICON =
   "M8 14c-.1 0-.25-.05-.35-.1-.45-.35-4.3-3.35-5.1-4.5-.9-1.2-1.05-1.85-1.05-3C1.5 4 3.25 2 5.45 2 6.4 2 7.3 2.35 8 3c.7-.65 1.6-1 2.55-1 2.2 0 3.95 2 3.95 4.4 0 1.1-.15 1.75-1.05 3-.8 1.1-4.7 4.15-5.1 4.5-.1.05-.25.1-.35.1z";
+
+/**
+ * 顶部统计数字格式化（万以上保留 1 位小数）
+ */
+const formatStat = (value?: number): string => {
+  if (value === undefined || !Number.isFinite(value)) return "";
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
+  return String(Math.floor(value));
+};
 
 /**
  * 秒数格式化为 mm:ss / hh:mm:ss
@@ -833,7 +846,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             h(
               "span",
               { class: "nova-player-top-button-text" },
-              t("player.ui.ending.like"),
+              formatStat(props.likeCount) || t("player.ui.ending.like"),
             ),
           ),
           h(
@@ -854,19 +867,19 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             h(
               "span",
               { class: "nova-player-top-button-text" },
-              t("player.ui.ending.share"),
+              formatStat(props.shareCount) || t("player.ui.ending.share"),
             ),
           ),
         ),
       ),
-      // 相关推荐：5 列 × 2 行
+      // 相关推荐：与参考图一致，单行 5 张
       h(
         "div",
         { class: "nova-player-embedded-ending-relation-wrap" },
         h(
           "div",
           { class: "nova-player-embedded-ending-relation-context" },
-          ...related.slice(0, 10).map(renderRelatedCard),
+          ...related.slice(0, 5).map(renderRelatedCard),
         ),
       ),
       // 底部：下载客户端 / 进入站内
