@@ -197,7 +197,7 @@
 }
 
 /* Nova 真实电视剧追剧按钮规则（来自 bbf2b6d733563728.css） */
-.videoHeader_follow__DxAhd {
+.video-header-follow {
   align-items: center;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 12px;
@@ -213,11 +213,11 @@
   text-align: center;
 }
 
-.videoHeader_follow__DxAhd:hover {
+.video-header-follow:hover {
   background: rgba(0, 0, 0, 0.6);
 }
 
-.videoHeader_icon___1LSb {
+.video-header-icon {
   color: var(--text_white, #fff);
   display: inline-block;
   fill: #fff;
@@ -227,12 +227,12 @@
   width: 14px;
 }
 
-.videoHeader_icon___1LSb svg {
+.video-header-icon svg {
   height: 100%;
   width: 100%;
 }
 
-.videoHeader_follow_text__SxdT6 {
+.video-header-follow-text {
   margin: 0 12px 0 4px;
 }
 

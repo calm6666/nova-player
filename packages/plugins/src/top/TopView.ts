@@ -369,13 +369,13 @@ export const Top = defineComponent<TopProps>(
             "div",
             {
               id: "player-follow",
-              class: "videoHeader_follow__DxAhd",
+              class: "video-header-follow",
               style: { display: "flex" },
               onClick: handleFollowClick,
             },
             h(
               "span",
-              { class: "videoHeader_icon___1LSb" },
+              { class: "video-header-icon" },
               h(
                 "svg",
                 { viewBox: "0 -3 16 16" },
@@ -385,7 +385,7 @@ export const Top = defineComponent<TopProps>(
             h(
               "span",
               {
-                class: "videoHeader_follow_text__SxdT6",
+                class: "video-header-follow-text",
                 style: { marginLeft: "2px" },
               },
               props.followed
