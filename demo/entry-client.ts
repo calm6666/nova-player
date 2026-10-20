@@ -1833,6 +1833,8 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
     playlist: MEDIA_LIST,
     playlistIndex: targetIndex,
     progress: {
+      // 跳片头/片尾点：与真实播放器一致，在进度条上渲染 6px 白色断点
+      skipPoints: { introEnd: 2, outroStart: 4 },
       // 分段进度条常驻展开：仅 segments 多段且显式开启时生效
       shadowPermanent: true,
       // 拷贝数据三字段构造纯净对象：控件会给分段挂 element 等内部 DOM 引用，
