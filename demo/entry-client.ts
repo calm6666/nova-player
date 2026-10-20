@@ -32,6 +32,7 @@
  *     - 自动创建 StreamMiddleware、bindVideoEvents、触发 ready 事件
  */
 
+import "@/styles/style.scss";
 import { hydrate } from "@/core";
 import { PlayerEventEnum } from "@/core/events";
 // 内置语言包：随 i18n 配置注入播放器（core/index.ts 已自动注册，这里显式传入保证配置完整）
