@@ -1366,9 +1366,8 @@ export const PlayerDocker = defineComponent<
       loadingApi.hide?.();
       clearQualityToast();
       toastApi.showToast?.({
-        text: `切换至 ${requestedQualityLabel || requestedQualityTo || "目标清晰度"} 失败`,
+        text: "清晰度切换失败",
         duration: 3000,
-        customClassName: "quality-error",
       });
       requestedQualityLabel = "";
       requestedQualityTo = "";
