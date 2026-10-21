@@ -1606,7 +1606,6 @@ function createEndingPlugin(source?: PlayerSource): Plugin {
         followers: "6.3万",
         backtrack: DEMO_BACKTRACK,
         activeBacktrackIndex: 2,
-        ratingPrompt: "你觉得这个结局怎么样？",
         upInfo: {
           name: "模拟 UP 主",
           face: demoPic("UP", "#00b4d8", "#1a1a2e"),
@@ -4701,7 +4700,6 @@ function applyEndingStyle(style: "standard" | "ogv" | "interactive"): void {
               followers: "6.3万",
               backtrack: DEMO_BACKTRACK,
               activeBacktrackIndex: 2,
-              ratingPrompt: "你觉得这个结局怎么样？",
             },
           }
         : {}),

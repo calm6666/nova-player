@@ -80,7 +80,7 @@
   "player.ui.ending.cancel_auto_next": "Cancel autoplay",
   "player.ui.ending.backtrack": "Progress backtrack",
   "player.ui.ending.rating_prompt": "Rate this interactive video",
-  "player.ui.ending.rated": "Rated {rating} stars",
+  "player.ui.ending.rated": "Thanks for rating. You can change it anytime.",
   "player.ui.ending.related": "Related videos",
   "player.ui.ending.watch_series": "Follow series",
   "player.ui.ending.watching_series": "Following",

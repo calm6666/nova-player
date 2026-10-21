@@ -286,6 +286,8 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const countdownSeconds = Math.max(1, props.countdownSeconds ?? 5);
   /** 互动视频评分（0 未评分） */
   const interactiveRating = signal(0);
+  /** 评分星星悬停预览（0 未悬停） */
+  const interactiveHover = signal(0);
   /** 互动视频进度回溯横向滚动距离（像素） */
   const backtrackScrollLeft = signal(0);
   /** 回溯卡片实际步长（卡片宽 + 间距，运行时测量） */
@@ -1035,15 +1037,53 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   // 渲染：互动视频片尾
   // ============================================
 
+  /** 按评分值直接更新当前组星星的填充（静态 VNode 不依赖重绘） */
+  const paintInteractiveStars = (
+    star: HTMLElement,
+    activeCount: number,
+  ): void => {
+    const container = star.parentElement;
+    if (!container) return;
+    container
+      .querySelectorAll<HTMLElement>(".nova-interactive-star")
+      .forEach((item, index) => {
+        const active = index < activeCount;
+        item.classList.toggle("state-active", active);
+        const path = item.querySelector("path");
+        path?.setAttribute("fill", active ? "#ffb800" : "none");
+        path?.setAttribute("stroke", active ? "#ffb800" : "#6D757A");
+      });
+  };
+
   /** 渲染互动视频评分星星 */
-  const renderInteractiveStar = (index: number): VNode =>
-    h(
+  const renderInteractiveStar = (index: number): VNode => {
+    const active =
+      (interactiveHover.value || interactiveRating.value) > index;
+    return h(
       "span",
       {
-        class: "nova-interactive-star",
+        class: active
+          ? "nova-interactive-star state-active"
+          : "nova-interactive-star",
         role: "button",
-        onClick: () => {
+        "data-index": index,
+        onMouseEnter: (event: MouseEvent) => {
+          paintInteractiveStars(
+            event.currentTarget as HTMLElement,
+            index + 1,
+          );
+        },
+        onMouseLeave: (event: MouseEvent) => {
+          paintInteractiveStars(
+            event.currentTarget as HTMLElement,
+            interactiveRating.value,
+          );
+        },
+        onClick: (event: MouseEvent) => {
+          const star = event.currentTarget as HTMLElement;
           interactiveRating.value = index + 1;
+          interactiveHover.value = 0;
+          paintInteractiveStars(star, index + 1);
         },
       },
       h(
@@ -1051,15 +1091,15 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         { viewBox: "0 0 28 28" },
         h("path", {
           d: INTERACTIVE_STAR_PATH,
-          fill:
-            interactiveRating.value > index ? "#ffb800" : "none",
-          stroke:
-            interactiveRating.value > index ? "#ffb800" : "#6D757A",
+          fill: active ? "#ffb800" : "none",
+          stroke: active ? "#ffb800" : "#6D757A",
           "stroke-width": 2,
           "fill-rule": "evenodd",
         }),
       ),
     );
+  };
+
 
   /** 渲染互动视频片尾 */
   const renderInteractiveEnding = (): VNode => {
@@ -1716,8 +1756,24 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       }
     }
 
-    // 互动视频片尾：按真实卡片步长和内容宽度计算滚动范围，不做整体缩放
+    // 互动视频片尾：小容器整体等比缩小；回溯滚动按未缩放布局测量
     if (isInteractive) {
+      const content = root.querySelector<HTMLElement>(
+        ".nova-interactive-ending",
+      );
+      if (content) {
+        const naturalWidth = content.offsetWidth;
+        const naturalHeight = content.offsetHeight;
+        if (naturalWidth > 0 && naturalHeight > 0) {
+          const scale = Math.min(
+            1,
+            (availableWidth - 32) / naturalWidth,
+            (availableHeight - 32) / naturalHeight,
+          );
+          content.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+      }
+
       const viewport = root.querySelector<HTMLElement>(
         ".nova-interactive-swiper-viewport",
       );
