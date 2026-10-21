@@ -1707,13 +1707,19 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         ".nova-player-ending-content",
       );
       if (content) {
-        const fitScale = Math.min(
+        // 1477.5×755 设计基准：正常尺寸下由此得到约 0.8
+        const designFit = Math.min(
           availableWidth / 1477.5,
           availableHeight / 755,
         );
-        // 正常尺寸（约 922×518 及以上）保底 0.8；更小窗口允许继续缩小，避免裁切
-        const isNormalSize = availableWidth >= 922 && availableHeight >= 518;
-        const scale = isNormalSize ? Math.max(0.8, fitScale) : fitScale;
+        // 小屏以内容实际宽高（710×390）留 24px 边距为准，避免按设计稿缩得过小
+        const widthBound = (availableWidth - 24) / 710;
+        const heightBound = (availableHeight - 24) / 390;
+        const comfortScale = Math.min(0.8, widthBound);
+        const scale = Math.min(
+          heightBound,
+          Math.max(designFit, comfortScale),
+        );
         content.style.transform = `scale(${scale})`;
       }
       return;
