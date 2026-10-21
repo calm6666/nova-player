@@ -31,9 +31,25 @@
       "import": "./dist/flv.js",
       "types": "./dist/flv.d.ts"
     },
+    "./top": {
+      "import": "./dist/top.js",
+      "types": "./dist/top.d.ts"
+    },
+    "./ending": {
+      "import": "./dist/ending.js",
+      "types": "./dist/ending.d.ts"
+    },
+    "./audioeffect": {
+      "import": "./dist/audioeffect.js",
+      "types": "./dist/audioeffect.d.ts"
+    },
     "./interaction": {
-      "import": "./dist/interaction/index.js",
-      "types": "./dist/interaction/index.d.ts"
+      "import": "./dist/interaction.js",
+      "types": "./dist/interaction.d.ts"
+    },
+    "./interactive-video": {
+      "import": "./dist/interactive-video.js",
+      "types": "./dist/interactive-video.d.ts"
     }
   },
   "files": [
