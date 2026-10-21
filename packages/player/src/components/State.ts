@@ -40,7 +40,6 @@ export const State = defineComponent<StateProps>(
      * 信号在 Show when 中被读取，mount 时注册 effect，信号变化时自动 mount/destroy 子节点
      */
     const bufferingSignal = signal<boolean>(props.buffering ?? false);
-
     // ============================================
     // 工具函数
     // ============================================

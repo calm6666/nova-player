@@ -4,32 +4,6 @@
  * ============================================
  * 此文件在浏览器环境中运行
  *
- * 职责：
- * 1. 创建与服务端相同的 VNode 虚拟节点树
- * 2. 调用 hydrate() — 自动绑定事件、ref、生命周期
- *    - VideoPlayer 的 PlayerDocker onMounted 在此时执行
- *    - 自动绑定 video 元素事件、控制栏交互
- * 3. 设置全局事件总线监听（事件日志）
- * 4. 更新 SSR 徽章状态（SSR → Hydrated）
- * 5. 绑定「切换视频源」「销毁播放器」按钮事件
- *
- * ============================================
- * 核心变化（vs 旧版客户端挂载方案）
- * ============================================
- *
- * 【旧方案】SSR 渲染占位容器 → 客户端 new VideoPlayer() → player.mount(container)
- *   问题：播放器 HTML 不在 SSR 输出中，首屏为空，需要二次挂载
- *
- * 【新方案】SSR 直接渲染播放器完整 HTML → 客户端 hydrate() 绑定事件
- *   优势：首屏即包含播放器 UI，水合后立即可交互，与 Vue/React SSR 一致
- *
- * 【hydrate 自动处理的事情】
- *   1. 事件绑定：onClick/onInput/onKeyDown 等 → addEventListener
- *   2. ref 引用：ref.current = DOM 元素（包括 videoRef、playerDockerRef 等）
- *   3. 生命周期钩子：onBeforeMount → onMounted
- *     - PlayerDocker.onMounted 调用 initVideo() + initEvent()
- *     - VideoPlayer 通过 onMounted 回调获取 video/container DOM 引用
- *     - 自动创建 StreamMiddleware、bindVideoEvents、触发 ready 事件
  */
 
 import "@/styles/style.scss";
@@ -78,10 +52,7 @@ import type {
   InteractionScoreSum,
   CardType,
 } from "@/lumina/plugins/interaction";
-import type {
-  AiSubtitleEntry,
-  RemoteSubtitleTrack,
-} from "@/types/subtitle";
+import type { AiSubtitleEntry, RemoteSubtitleTrack } from "@/types/subtitle";
 import type { DanmakuItem, DanmakuFilter } from "@/types/danmaku";
 import {
   DanmakuType,
@@ -434,9 +405,7 @@ function renderSegmentList(): void {
       }
       if (Number.isNaN(next) || next <= segment.startTime) {
         end.value = String(segment.endTime);
-        logAction(
-          `结束时间非法（需 > 起 ${segment.startTime}s），已保留原值`,
-        );
+        logAction(`结束时间非法（需 > 起 ${segment.startTime}s），已保留原值`);
         return;
       }
       segment.endTime = next;
@@ -866,9 +835,8 @@ if (root) {
     updateBadgeToHydrated();
 
     // PlayerSection 在 SSR / hydration 阶段创建的播放器实例
-    const ssrPlayer = (
-      window as unknown as { __ssrPlayer?: VideoPlayer }
-    ).__ssrPlayer;
+    const ssrPlayer = (window as unknown as { __ssrPlayer?: VideoPlayer })
+      .__ssrPlayer;
     if (ssrPlayer && !playerInstance) setPlayerInstance(ssrPlayer);
 
     // playerInstance 由 PlayerSection 组件创建，水合后应已就绪
@@ -1119,28 +1087,118 @@ const demoPic = (label: string, from: string, to: string): string =>
 const DEMO_COVER = demoPic("示例视频", "#00b4d8", "#1a1a2e");
 
 const DEMO_RELATED = [
-  { title: "模拟推荐 01", pic: demoPic("推荐 01", "#fb7299", "#1a1a2e"), duration: 128, url: "https://www.bilibili.com/" },
-  { title: "模拟推荐 02", pic: demoPic("推荐 02", "#00b4d8", "#22223b"), duration: "03:20", url: "https://www.bilibili.com/" },
-  { title: "模拟推荐 03", pic: demoPic("推荐 03", "#7c3aed", "#111827"), duration: 245, url: "https://www.bilibili.com/" },
-  { title: "模拟推荐 04", pic: demoPic("推荐 04", "#f59e0b", "#1f2937"), duration: "02:08", url: "https://www.bilibili.com/" },
-  { title: "模拟推荐 05", pic: demoPic("推荐 05", "#10b981", "#111827"), duration: "06:34", url: "https://www.bilibili.com/" },
-  { title: "模拟推荐 06", pic: demoPic("推荐 06", "#ef4444", "#1f2937"), duration: "00:16", url: "https://www.bilibili.com/" },
-  { title: "模拟推荐 07", pic: demoPic("推荐 07", "#3b82f6", "#0f172a"), duration: "04:15", url: "https://www.bilibili.com/" },
-  { title: "模拟推荐 08", pic: demoPic("推荐 08", "#a855f7", "#1a1a2e"), duration: "06:08", url: "https://www.bilibili.com/" },
+  {
+    title: "模拟推荐 01",
+    pic: demoPic("推荐 01", "#fb7299", "#1a1a2e"),
+    duration: 128,
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "模拟推荐 02",
+    pic: demoPic("推荐 02", "#00b4d8", "#22223b"),
+    duration: "03:20",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "模拟推荐 03",
+    pic: demoPic("推荐 03", "#7c3aed", "#111827"),
+    duration: 245,
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "模拟推荐 04",
+    pic: demoPic("推荐 04", "#f59e0b", "#1f2937"),
+    duration: "02:08",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "模拟推荐 05",
+    pic: demoPic("推荐 05", "#10b981", "#111827"),
+    duration: "06:34",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "模拟推荐 06",
+    pic: demoPic("推荐 06", "#ef4444", "#1f2937"),
+    duration: "00:16",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "模拟推荐 07",
+    pic: demoPic("推荐 07", "#3b82f6", "#0f172a"),
+    duration: "04:15",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "模拟推荐 08",
+    pic: demoPic("推荐 08", "#a855f7", "#1a1a2e"),
+    duration: "06:08",
+    url: "https://www.bilibili.com/",
+  },
 ];
 
 /** 外链尾页 5×2 推荐卡片（10 条独立模拟数据） */
 const DEMO_EMBEDDED_RELATED = [
-  { title: "外链推荐 01", pic: demoPic("外链 01", "#fb7299", "#111827"), duration: "12:08", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 02", pic: demoPic("外链 02", "#00b4d8", "#1f2937"), duration: "08:42", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 03", pic: demoPic("外链 03", "#7c3aed", "#0f172a"), duration: "05:16", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 04", pic: demoPic("外链 04", "#f59e0b", "#1a1a2e"), duration: "21:30", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 05", pic: demoPic("外链 05", "#10b981", "#111827"), duration: "03:55", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 06", pic: demoPic("外链 06", "#ef4444", "#1f2937"), duration: "16:24", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 07", pic: demoPic("外链 07", "#3b82f6", "#0f172a"), duration: "09:12", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 08", pic: demoPic("外链 08", "#a855f7", "#1a1a2e"), duration: "27:06", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 09", pic: demoPic("外链 09", "#eab308", "#111827"), duration: "06:48", url: "https://www.bilibili.com/" },
-  { title: "外链推荐 10", pic: demoPic("外链 10", "#14b8a6", "#1f2937"), duration: "11:36", url: "https://www.bilibili.com/" },
+  {
+    title: "外链推荐 01",
+    pic: demoPic("外链 01", "#fb7299", "#111827"),
+    duration: "12:08",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 02",
+    pic: demoPic("外链 02", "#00b4d8", "#1f2937"),
+    duration: "08:42",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 03",
+    pic: demoPic("外链 03", "#7c3aed", "#0f172a"),
+    duration: "05:16",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 04",
+    pic: demoPic("外链 04", "#f59e0b", "#1a1a2e"),
+    duration: "21:30",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 05",
+    pic: demoPic("外链 05", "#10b981", "#111827"),
+    duration: "03:55",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 06",
+    pic: demoPic("外链 06", "#ef4444", "#1f2937"),
+    duration: "16:24",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 07",
+    pic: demoPic("外链 07", "#3b82f6", "#0f172a"),
+    duration: "09:12",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 08",
+    pic: demoPic("外链 08", "#a855f7", "#1a1a2e"),
+    duration: "27:06",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 09",
+    pic: demoPic("外链 09", "#eab308", "#111827"),
+    duration: "06:48",
+    url: "https://www.bilibili.com/",
+  },
+  {
+    title: "外链推荐 10",
+    pic: demoPic("外链 10", "#14b8a6", "#1f2937"),
+    duration: "11:36",
+    url: "https://www.bilibili.com/",
+  },
 ];
 
 // ============================================
@@ -1581,7 +1639,9 @@ function collectPlugins(source?: PlayerSource): Plugin[] {
           logAction(`弹幕发送成功: ${danmaku.text}`);
         },
         onDanmakuLike: (danmaku, liked) => {
-          logAction(`弹幕回调 (onDanmakuLike): ${liked ? "点赞" : "取消点赞"} - ${danmaku.text}`);
+          logAction(
+            `弹幕回调 (onDanmakuLike): ${liked ? "点赞" : "取消点赞"} - ${danmaku.text}`,
+          );
         },
         onDanmakuCopy: (danmaku) => {
           logAction(`弹幕回调 (onDanmakuCopy): ${danmaku.text}`);
@@ -1781,13 +1841,18 @@ function attachAllPlayerEvents(player: VideoPlayer): void {
   const events = Object.values(PlayerEventEnum) as string[];
   for (const event of events) {
     try {
-      player.on(event as never, ((...args: unknown[]) => {
-        const payload = args.length ? JSON.stringify(args[0])?.slice(0, 120) : "";
-        appEventBus.emit("ACTION_LOG", {
-          action: "Player.on(" + event + ")" + (payload ? " " + payload : ""),
-          timestamp: Date.now(),
-        });
-      }) as never);
+      player.on(
+        event as never,
+        ((...args: unknown[]) => {
+          const payload = args.length
+            ? JSON.stringify(args[0])?.slice(0, 120)
+            : "";
+          appEventBus.emit("ACTION_LOG", {
+            action: "Player.on(" + event + ")" + (payload ? " " + payload : ""),
+            timestamp: Date.now(),
+          });
+        }) as never,
+      );
     } catch {
       // 事件不存在时忽略
     }
@@ -1836,7 +1901,7 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
       // 跳片头/片尾点：与真实播放器一致，在进度条上渲染 6px 白色断点
       skipPoints: { introEnd: 2, outroStart: 4 },
       // 分段进度条常驻展开：仅 segments 多段且显式开启时生效
-      shadowPermanent: true,
+      shadowPermanent: false,
       // 拷贝数据三字段构造纯净对象：控件会给分段挂 element 等内部 DOM 引用，
       // 直接透传原数组会把上一实例的 DOM 引用带进新播放器
       segments: demoSegments.map((segment) => ({
@@ -1887,11 +1952,11 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
     },
     i18n: {
       enabled: true,
-      locale: 'zh-CN',
-      fallbackLocale: 'en-US',
+      locale: "zh-CN",
+      fallbackLocale: "en-US",
       messages: {
-        'zh-CN': zhCN,
-        'en-US': enUS,
+        "zh-CN": zhCN,
+        "en-US": enUS,
       },
     },
   };
@@ -2417,14 +2482,10 @@ wireDemoButton("btn-dm-area", () => {
   dmAreaIdx = (dmAreaIdx + 1) % dmAreaValues.length;
   if (dmAreaUseGear) {
     api.setArea(dmAreaGears[dmAreaIdx]);
-    logAction(
-      `danmaku.setArea(DanmakuArea) → 区域 ${dmAreaValues[dmAreaIdx]}`,
-    );
+    logAction(`danmaku.setArea(DanmakuArea) → 区域 ${dmAreaValues[dmAreaIdx]}`);
   } else {
     api.setAreaRatio(dmAreaValues[dmAreaIdx]);
-    logAction(
-      `danmaku.setAreaRatio(${dmAreaValues[dmAreaIdx]})`,
-    );
+    logAction(`danmaku.setAreaRatio(${dmAreaValues[dmAreaIdx]})`);
   }
   dmAreaUseGear = !dmAreaUseGear;
 });
@@ -2535,9 +2596,7 @@ wireDemoButton("btn-sub-localai-lang", () => {
   subAiLang = subAiLang === "zh" ? "en" : "zh";
   void api
     .switchLocalAiLanguage(subAiLang)
-    .then(() =>
-      logAction(`subtitle.switchLocalAiLanguage("${subAiLang}")`),
-    );
+    .then(() => logAction(`subtitle.switchLocalAiLanguage("${subAiLang}")`));
 });
 
 // 刷新 AI 字幕 + 重拉 0-60 秒区间（模式 B 增量拉取演示）
@@ -2850,8 +2909,7 @@ wireDemoButton("btn-seg-add-form", () => {
       ? demoSegments.length
       : Math.min(Math.max(Number(posValue) || 0, 0), demoSegments.length);
 
-  const label =
-    labelInput.value.trim() || `分段 ${demoSegments.length + 1}`;
+  const label = labelInput.value.trim() || `分段 ${demoSegments.length + 1}`;
   demoSegments.splice(insertIndex, 0, { startTime, endTime, label });
   logAction(
     `插入分段 "${label}": ${startTime}s - ${endTime}s（位置 #${insertIndex + 1}，共 ${demoSegments.length} 段）`,
@@ -2933,7 +2991,9 @@ wireDemoButton("btn-api-autoplay", () => {
   if (!player) return;
   void player
     .attemptAutoplay()
-    .then(() => logAction("attemptAutoplay(): 自动播放尝试完成（被拦截时静音重试）"));
+    .then(() =>
+      logAction("attemptAutoplay(): 自动播放尝试完成（被拦截时静音重试）"),
+    );
 });
 
 // ── 音量 ──
@@ -3063,7 +3123,9 @@ wireDemoButton("btn-api-enterpip", () => {
   void player
     .enterPip()
     .then(() => logAction("enterPip(): 已进入画中画"))
-    .catch(() => logAction("enterPip(): 进入画中画失败（浏览器不支持或被拒绝）"));
+    .catch(() =>
+      logAction("enterPip(): 进入画中画失败（浏览器不支持或被拒绝）"),
+    );
 });
 
 wireDemoButton("btn-api-exitpip", () => {
@@ -3813,7 +3875,9 @@ function buildScheduleFields(
       item.timeEnd !== undefined &&
       api.wouldOverlap(type, index, next, item.timeEnd)
     ) {
-      showToast(`时间窗 ${next}s-${item.timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+      showToast(
+        `时间窗 ${next}s-${item.timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+      );
       startInput.value =
         item.timeStart !== undefined ? String(item.timeStart) : "";
       return;
@@ -3861,7 +3925,9 @@ function buildScheduleFields(
       item.timeStart !== undefined &&
       api.wouldOverlap(type, index, item.timeStart, next)
     ) {
-      showToast(`时间窗 ${item.timeStart}s-${next}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+      showToast(
+        `时间窗 ${item.timeStart}s-${next}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+      );
       endInput.value = item.timeEnd !== undefined ? String(item.timeEnd) : "";
       return;
     }
@@ -3970,7 +4036,9 @@ function buildGuideGroup(
     const next = Number(select.value);
     if (next === 1 || next === 2 || next === 3) {
       api.updateCardContent("guideThree", index, { guideType: next });
-      logAction(`updateCardContent("guideThree", ${index}, { guideType: ${next} })`);
+      logAction(
+        `updateCardContent("guideThree", ${index}, { guideType: ${next} })`,
+      );
     }
   });
   group.appendChild(buildIceField("类型", select));
@@ -4299,9 +4367,7 @@ renderIceKindFields();
 wireDemoButton("btn-ice-start-now", () =>
   fillCurrentTime("ice-add-start", "起始"),
 );
-wireDemoButton("btn-ice-end-now", () =>
-  fillCurrentTime("ice-add-end", "结束"),
-);
+wireDemoButton("btn-ice-end-now", () => fillCurrentTime("ice-add-end", "结束"));
 
 // 添加卡片：读取表单（类型 / 时间窗 / 定位 / 类型专属字段）组装并调 addXxx
 wireDemoButton("btn-ice-add", () => {
@@ -4356,11 +4422,14 @@ wireDemoButton("btn-ice-add", () => {
   switch (typeSelect.value) {
     case "guide": {
       const select = document.getElementById("ice-add-guide-type");
-      const raw = select instanceof HTMLSelectElement ? Number(select.value) : 1;
+      const raw =
+        select instanceof HTMLSelectElement ? Number(select.value) : 1;
       const guideType = raw === 2 || raw === 3 ? raw : 1;
       // 时间窗互斥校验在插件内完成：重叠返回 false → toast 提示不添加
       if (!api.addGuide({ top, left, timeStart, timeEnd, type: guideType })) {
-        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        showToast(
+          `时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+        );
         return;
       }
       logAction(
@@ -4374,8 +4443,12 @@ wireDemoButton("btn-ice-add", () => {
         input instanceof HTMLInputElement && input.value.trim() !== ""
           ? input.value.trim()
           : `外部链接卡片 #${api.getStatus().linkList.length + 1}`;
-      if (!api.addLink({ top, left, timeStart, timeEnd, linkContent: content })) {
-        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+      if (
+        !api.addLink({ top, left, timeStart, timeEnd, linkContent: content })
+      ) {
+        showToast(
+          `时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+        );
         return;
       }
       logAction(
@@ -4387,7 +4460,8 @@ wireDemoButton("btn-ice-add", () => {
       const questionInput = document.getElementById("ice-add-vote-question");
       const optionsArea = document.getElementById("ice-add-vote-options");
       const question =
-        questionInput instanceof HTMLInputElement && questionInput.value.trim() !== ""
+        questionInput instanceof HTMLInputElement &&
+        questionInput.value.trim() !== ""
           ? questionInput.value.trim()
           : "运行期新增投票？";
       const optionTexts =
@@ -4402,7 +4476,9 @@ wireDemoButton("btn-ice-add", () => {
           ? optionTexts.map((text) => ({ optionText: text }))
           : [{ optionText: "支持" }, { optionText: "反对" }];
       if (!api.addVote({ top, left, timeStart, timeEnd, question, options })) {
-        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        showToast(
+          `时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+        );
         return;
       }
       logAction(
@@ -4417,10 +4493,13 @@ wireDemoButton("btn-ice-add", () => {
         titleInput instanceof HTMLInputElement && titleInput.value.trim() !== ""
           ? titleInput.value.trim()
           : "运行期新增评分";
-      const raw = select instanceof HTMLSelectElement ? Number(select.value) : 1;
+      const raw =
+        select instanceof HTMLSelectElement ? Number(select.value) : 1;
       const scoreType = raw === 2 || raw === 3 ? raw : 1;
       if (!api.addScore({ top, left, timeStart, timeEnd, title, scoreType })) {
-        showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+        showToast(
+          `时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+        );
         return;
       }
       logAction(
@@ -4439,7 +4518,9 @@ wireDemoButton("btn-ice-add", () => {
         if (api.getStatus().scoreList.length === 0) {
           showToast("评分总结卡片需要先添加至少一张评分卡片");
         } else {
-          showToast(`时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`);
+          showToast(
+            `时间窗 ${timeStart}s-${timeEnd}s 与其他卡片重叠，一次只能存在一张交互卡片`,
+          );
         }
         return;
       }
@@ -4560,7 +4641,6 @@ function updateBadgeToFailed(errorMsg: string): void {
   }
 }
 
-
 // ============================================
 // Top / Ending 插件演示（并入唯一 demo 入口）
 // ============================================
@@ -4660,7 +4740,6 @@ if (!playerInstance && MEDIA_LIST.length > 0) {
   void rebuildPlayer(0);
 }
 
-
 // ============================================
 // 深浅色主题：真实切换页面 CSS 变量（不依赖组件内部状态）
 // ============================================
@@ -4690,9 +4769,7 @@ function wireThemeToggle(): void {
     button.textContent = isDark ? "切换到亮色" : "切换到暗色";
     button.dataset.theme = theme;
   };
-  apply(
-    (document.documentElement.dataset.theme as "dark" | "light") ?? "dark",
-  );
+  apply((document.documentElement.dataset.theme as "dark" | "light") ?? "dark");
   button.addEventListener("click", () => {
     const next =
       document.documentElement.dataset.theme === "dark" ? "light" : "dark";

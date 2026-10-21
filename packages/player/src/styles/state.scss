@@ -7,3 +7,95 @@
     display: none;
   }
 }
+
+.nova-player-container {
+  &.state-buff {
+    .nova-player-state-wrap {
+      -webkit-box-pack: center;
+      -ms-flex-pack: center;
+      -webkit-box-align: center;
+      -ms-flex-align: center;
+      -webkit-box-orient: vertical;
+      -webkit-box-direction: normal;
+      align-items: center;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-direction: column;
+      flex-direction: column;
+      height: 100%;
+      justify-content: center;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 100%;
+      z-index: 48;
+
+      .nova-player-state-buff-icon {
+        display: block;
+        height: 24px;
+        width: 24px;
+        background-size: 100% 100%;
+        background-position: 50%;
+        background-repeat: no-repeat;
+        background-image: url(@/assets/images/buffer.webp);
+        margin: 0 auto;
+      }
+
+      .nova-player-state-buff-text {
+        color: #fff;
+        display: block;
+        font-size: 14px;
+        line-height: 1;
+        margin-top: 8px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+      }
+    }
+  }
+  &.state-paused {
+    .nova-player-state-wrap {
+      bottom: 62px;
+      cursor: pointer;
+      pointer-events: none;
+      position: absolute;
+      right: 34px;
+      z-index: 48;
+
+      .nova-player-state-play {
+        background: url(@/assets/images/play.svg) 50% no-repeat;
+        display: block;
+        height: 64px;
+        width: 64px;
+      }
+
+      .nova-player-state-play {
+        display: block;
+      }
+
+      .nova-player-mini-warp {
+        .nova-player-mini-state-play {
+          visibility: hidden;
+        }
+
+        .nova-player-mini-state-pause {
+          visibility: visible;
+        }
+      }
+
+      .nova-player-mini-state-play {
+        visibility: hidden;
+      }
+
+      .nova-player-mini-state-pause {
+        visibility: visible;
+      }
+    }
+    &.state-buff {
+      .nova-player-state-wrap {
+        .nova-player-state-play {
+          display: none;
+        }
+      }
+    }
+  }
+}
