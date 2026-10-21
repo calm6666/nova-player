@@ -288,6 +288,25 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const interactiveRating = signal(0);
   /** 互动视频进度回溯横向偏移 */
   const backtrackOffset = signal(0);
+  /** 互动视频进度回溯可视区域宽度（决定箭头显隐和最大偏移） */
+  const backtrackViewportWidth = signal(0);
+  /** 回溯卡片单步宽度（117 卡片 + 25 间距） */
+  const BACKTRACK_STEP = 142;
+
+  /** 当前可视区域最多容纳的回溯卡片数 */
+  const backtrackVisibleCount = (): number =>
+    Math.max(
+      1,
+      Math.floor((backtrackViewportWidth.value + 20) / BACKTRACK_STEP),
+    );
+
+  /** 当前数据下允许的最大横向偏移 */
+  const backtrackMaxOffset = (): number =>
+    Math.max(0, (props.backtrack?.length ?? 0) - backtrackVisibleCount());
+
+  /** 回溯内容是否超出一屏（未超出则隐藏左右箭头） */
+  const canScrollBacktrack = (): boolean =>
+    (props.backtrack?.length ?? 0) > backtrackVisibleCount();
 
   /** 解析自动连播开关（支持 getter，展示时求值） */
   const resolveAutoNext = (): boolean =>
@@ -1168,10 +1187,14 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             {
               class: "nova-interactive-swiper-arrow pre",
               role: "button",
+              style: { display: canScrollBacktrack() ? "flex" : "none" },
               onClick: () => {
                 backtrackOffset.value = Math.max(
                   0,
-                  backtrackOffset.value - 2,
+                  Math.min(
+                    backtrackMaxOffset(),
+                    backtrackOffset.value - 2,
+                  ),
                 );
               },
             },
@@ -1191,7 +1214,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               {
                 class: "nova-interactive-swiper-list",
                 style: {
-                  transform: `translateX(-${backtrackOffset.value * 142}px)`,
+                  transform: `translateX(-${backtrackOffset.value * BACKTRACK_STEP}px)`,
                 },
               },
               ...backtrack.map((item, index) =>
@@ -1229,9 +1252,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             {
               class: "nova-interactive-swiper-arrow next",
               role: "button",
+              style: { display: canScrollBacktrack() ? "flex" : "none" },
               onClick: () => {
                 backtrackOffset.value = Math.min(
-                  Math.max(0, backtrack.length - 6),
+                  backtrackMaxOffset(),
                   backtrackOffset.value + 2,
                 );
               },
@@ -1697,6 +1721,21 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       if (next.length !== ogvRelated.value.length) {
         ogvRelated.value = next;
       }
+    }
+
+    // 互动视频片尾：测量回溯可视宽度，决定箭头显隐与最大偏移，不做整体缩放
+    if (isInteractive) {
+      const viewport = root.querySelector<HTMLElement>(
+        ".nova-interactive-swiper-viewport",
+      );
+      if (viewport && viewport.clientWidth > 0) {
+        backtrackViewportWidth.value = viewport.clientWidth;
+        backtrackOffset.value = Math.min(
+          backtrackOffset.value,
+          backtrackMaxOffset(),
+        );
+      }
+      return;
     }
 
     // 站内标准片尾按真实设计基准（1477.5×755）随容器等比缩放
