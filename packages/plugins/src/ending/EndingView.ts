@@ -286,27 +286,23 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const countdownSeconds = Math.max(1, props.countdownSeconds ?? 5);
   /** 互动视频评分（0 未评分） */
   const interactiveRating = signal(0);
-  /** 互动视频进度回溯横向偏移 */
-  const backtrackOffset = signal(0);
-  /** 互动视频进度回溯可视区域宽度（决定箭头显隐和最大偏移） */
-  const backtrackViewportWidth = signal(0);
-  /** 回溯卡片单步宽度（117 卡片 + 25 间距） */
-  const BACKTRACK_STEP = 142;
+  /** 互动视频进度回溯横向滚动距离（像素） */
+  const backtrackScrollLeft = signal(0);
+  /** 回溯卡片实际步长（卡片宽 + 间距，运行时测量） */
+  const backtrackStepWidth = signal(142);
+  /** 回溯箭头单次翻页距离（一屏可见卡片数 × 步长） */
+  const backtrackPageWidth = signal(142);
+  /** 回溯内容最大可滚动距离（scrollWidth - clientWidth） */
+  const backtrackMaxScroll = signal(0);
 
-  /** 当前可视区域最多容纳的回溯卡片数 */
-  const backtrackVisibleCount = (): number =>
-    Math.max(
-      1,
-      Math.floor((backtrackViewportWidth.value + 20) / BACKTRACK_STEP),
-    );
+  /** 左箭头：内容溢出且未滚动到最左 */
+  const canScrollBacktrackPrev = (): boolean =>
+    backtrackMaxScroll.value > 0 && backtrackScrollLeft.value > 0.5;
 
-  /** 当前数据下允许的最大横向偏移 */
-  const backtrackMaxOffset = (): number =>
-    Math.max(0, (props.backtrack?.length ?? 0) - backtrackVisibleCount());
-
-  /** 回溯内容是否超出一屏（未超出则隐藏左右箭头） */
-  const canScrollBacktrack = (): boolean =>
-    (props.backtrack?.length ?? 0) > backtrackVisibleCount();
+  /** 右箭头：内容溢出且未滚动到最右 */
+  const canScrollBacktrackNext = (): boolean =>
+    backtrackMaxScroll.value > 0 &&
+    backtrackScrollLeft.value < backtrackMaxScroll.value - 0.5;
 
   /** 解析自动连播开关（支持 getter，展示时求值） */
   const resolveAutoNext = (): boolean =>
@@ -1187,14 +1183,11 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             {
               class: "nova-interactive-swiper-arrow pre",
               role: "button",
-              style: { display: canScrollBacktrack() ? "flex" : "none" },
+              style: { display: canScrollBacktrackPrev() ? "flex" : "none" },
               onClick: () => {
-                backtrackOffset.value = Math.max(
+                backtrackScrollLeft.value = Math.max(
                   0,
-                  Math.min(
-                    backtrackMaxOffset(),
-                    backtrackOffset.value - 2,
-                  ),
+                  backtrackScrollLeft.value - backtrackPageWidth.value,
                 );
               },
             },
@@ -1214,7 +1207,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               {
                 class: "nova-interactive-swiper-list",
                 style: {
-                  transform: `translateX(-${backtrackOffset.value * BACKTRACK_STEP}px)`,
+                  transform: `translateX(-${backtrackScrollLeft.value}px)`,
                 },
               },
               ...backtrack.map((item, index) =>
@@ -1252,11 +1245,11 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             {
               class: "nova-interactive-swiper-arrow next",
               role: "button",
-              style: { display: canScrollBacktrack() ? "flex" : "none" },
+              style: { display: canScrollBacktrackNext() ? "flex" : "none" },
               onClick: () => {
-                backtrackOffset.value = Math.min(
-                  backtrackMaxOffset(),
-                  backtrackOffset.value + 2,
+                backtrackScrollLeft.value = Math.min(
+                  backtrackMaxScroll.value,
+                  backtrackScrollLeft.value + backtrackPageWidth.value,
                 );
               },
             },
@@ -1723,16 +1716,38 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       }
     }
 
-    // 互动视频片尾：测量回溯可视宽度，决定箭头显隐与最大偏移，不做整体缩放
+    // 互动视频片尾：按真实卡片步长和内容宽度计算滚动范围，不做整体缩放
     if (isInteractive) {
       const viewport = root.querySelector<HTMLElement>(
         ".nova-interactive-swiper-viewport",
       );
-      if (viewport && viewport.clientWidth > 0) {
-        backtrackViewportWidth.value = viewport.clientWidth;
-        backtrackOffset.value = Math.min(
-          backtrackOffset.value,
-          backtrackMaxOffset(),
+      const list = root.querySelector<HTMLElement>(
+        ".nova-interactive-swiper-list",
+      );
+      const items = list?.querySelectorAll<HTMLElement>(
+        ".nova-interactive-backtrack-item",
+      );
+      if (viewport && list && items && items.length > 0) {
+        // 相邻两张卡的实际布局步长（卡片宽 + 间距），不同数量时自然变化
+        const step =
+          items.length > 1
+            ? items[1].offsetLeft - items[0].offsetLeft
+            : items[0].offsetWidth;
+        // 内容真实右边界 - 可视宽度，即最大滚动距离；保证最后一张贴右
+        const first = items[0];
+        const last = items[items.length - 1];
+        const contentWidth =
+          last.offsetLeft + last.offsetWidth - first.offsetLeft;
+        const maxScroll = Math.max(0, contentWidth - viewport.clientWidth);
+
+        backtrackStepWidth.value = Math.max(1, step);
+        // 一屏能完整显示的卡片数 × 步长，作为箭头翻页距离
+        backtrackPageWidth.value =
+          Math.max(1, Math.floor(viewport.clientWidth / step)) * step;
+        backtrackMaxScroll.value = maxScroll;
+        backtrackScrollLeft.value = Math.min(
+          backtrackScrollLeft.value,
+          maxScroll,
         );
       }
       return;
