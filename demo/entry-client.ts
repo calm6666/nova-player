@@ -1086,6 +1086,16 @@ const demoPic = (label: string, from: string, to: string): string =>
 
 const DEMO_COVER = demoPic("示例视频", "#00b4d8", "#1a1a2e");
 
+/** 互动视频片尾：回溯节点模拟数据 */
+const DEMO_BACKTRACK = [
+  { title: "开场", pic: demoPic("回溯 01", "#00b4d8", "#0f172a") },
+  { title: "第一次选择", pic: demoPic("回溯 02", "#7c3aed", "#1a1a2e") },
+  { title: "关键分支", pic: demoPic("回溯 03", "#fb7299", "#111827") },
+  { title: "隐藏剧情", pic: demoPic("回溯 04", "#f59e0b", "#1f2937") },
+  { title: "真结局", pic: demoPic("回溯 05", "#10b981", "#0f172a") },
+  { title: "彩蛋", pic: demoPic("回溯 06", "#ef4444", "#1a1a2e") },
+];
+
 const DEMO_RELATED = [
   {
     title: "模拟推荐 01",
@@ -1551,7 +1561,7 @@ async function playHuaqiangInteractive(): Promise<void> {
 }
 
 let demoTopStyle: "default" | "tv" | "music" = "default";
-let demoEndingStyle: "standard" | "ogv" = "standard";
+let demoEndingStyle: "standard" | "ogv" | "interactive" = "standard";
 let demoScene: "station" | "embedded" = "station";
 
 /** Top 数据由插件持有，播放器 ui 不再承载 */
@@ -1586,6 +1596,22 @@ function createEndingPlugin(source?: PlayerSource): Plugin {
         },
         likeCount: 3537,
         shareCount: 19,
+      },
+    });
+  }
+  if (demoEndingStyle === "interactive") {
+    return EndingPlugin({
+      data: {
+        title,
+        followers: "6.3万",
+        backtrack: DEMO_BACKTRACK,
+        activeBacktrackIndex: 2,
+        ratingPrompt: "你觉得这个结局怎么样？",
+        upInfo: {
+          name: "模拟 UP 主",
+          face: demoPic("UP", "#00b4d8", "#1a1a2e"),
+          followed: false,
+        },
       },
     });
   }
@@ -4653,7 +4679,7 @@ function applyTopStyle(style: "default" | "tv" | "music"): void {
   player.refreshTop();
 }
 
-function applyEndingStyle(style: "standard" | "ogv"): void {
+function applyEndingStyle(style: "standard" | "ogv" | "interactive"): void {
   const player = playerInstance;
   if (!player) return;
   demoEndingStyle = style;
@@ -4666,6 +4692,16 @@ function applyEndingStyle(style: "standard" | "ogv"): void {
               title: player.props.ui?.title ?? "Lumina Demo",
               cover: DEMO_COVER,
               related: DEMO_RELATED,
+            },
+          }
+        : {}),
+      ...(style === "interactive"
+        ? {
+            interactive: {
+              followers: "6.3万",
+              backtrack: DEMO_BACKTRACK,
+              activeBacktrackIndex: 2,
+              ratingPrompt: "你觉得这个结局怎么样？",
             },
           }
         : {}),
@@ -4713,6 +4749,7 @@ function installPluginDemoControls(): void {
     ["音乐 Top", () => applyTopStyle("music")],
     ["标准片尾", () => applyEndingStyle("standard")],
     ["OGV 片尾", () => applyEndingStyle("ogv")],
+    ["互动尾页", () => applyEndingStyle("interactive")],
     ["外链暂停页", () => applyScene("embedded")],
     ["外链尾页", () => applyScene("embedded", true)],
     ["站内场景", () => applyScene("station")],
