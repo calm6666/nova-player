@@ -168,7 +168,7 @@
 
     .endpage-recommend-item-wrap {
       display: flex;
-      flex: 0 0 var(--nova-ogv-item-basis, 20%);
+      flex: 0 0 auto;
       justify-content: space-between;
     }
   }

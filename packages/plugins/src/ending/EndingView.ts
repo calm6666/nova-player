@@ -1471,7 +1471,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
             "div",
             {
               class: "endpage-recommend-list",
-              style: { width: "calc(125% - 140px)" },
             },
             h(For, {
               each: (): EndingRelatedItem[] => ogvRelated.value,
@@ -1685,20 +1684,19 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         ?.classList.toggle("fix-context", count > 5);
     }
 
-    // OGV 片尾：按容器宽度动态增删推荐卡片（最多 5 张）
+    // OGV 片尾：按实际内容宽度动态增删推荐卡片（最多 5 张）
     if (isOgv) {
+      const contentWidth =
+        root.querySelector<HTMLElement>(".endpage-content")?.clientWidth ??
+        availableWidth;
       const count = Math.max(
         2,
-        Math.min(5, Math.floor((availableWidth - 80) / 140)),
+        Math.min(5, Math.floor(contentWidth / 112)),
       );
       const next = related.slice(0, count);
       if (next.length !== ogvRelated.value.length) {
         ogvRelated.value = next;
       }
-      // 通过 CSS 变量同步所有卡槽宽度，避免旧卡片保留上一轮 flex 百分比
-      root
-        .querySelector<HTMLElement>(".endpage-recommend-list")
-        ?.style.setProperty("--nova-ogv-item-basis", `${100 / count}%`);
     }
 
     // 站内标准片尾按真实设计基准（1477.5×755）随容器等比缩放
