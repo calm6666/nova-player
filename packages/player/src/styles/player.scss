@@ -783,6 +783,13 @@ img {
   height: 100%;
   position: relative;
   width: 100%;
+
+  .nova-player-panel-active {
+    display: block;
+  }
+  .nova-player-active {
+    display: block;
+  }
 }
 
 .nova-player-primary-area {
@@ -856,14 +863,6 @@ img {
 
 .nova-player-video-poster[hidden] {
   display: none;
-}
-
-.nova-player-active {
-  display: block;
-}
-
-.nova-player-panel-active {
-  display: block;
 }
 
 .nova-player-video-wrap {
