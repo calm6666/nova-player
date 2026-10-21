@@ -324,6 +324,7 @@
     aspect-ratio: 336 / 190;
     border: 1px solid transparent;
     border-radius: 4px;
+    box-sizing: border-box;
     cursor: pointer;
     flex: 0 0 calc((100% - 48px) / 4);
     overflow: hidden;
