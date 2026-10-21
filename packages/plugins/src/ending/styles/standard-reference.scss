@@ -1,293 +1,1335 @@
-.nova-player-ending-wrap{height:100%;left:0;overflow:hidden;position:absolute;top:0;width:100%;z-index:55}
-
-.nova-player-ending-wrap[hidden]{display:none}
-
-.nova-player-ending-wrap[data-select="1"],.nova-player-ending-wrap[data-select="2"]{opacity:1;-webkit-transition:none;transition:none;visibility:visible}
-
-.nova-player-ending-wrap[data-select="1"] .nova-player-ending-backdrop,.nova-player-ending-wrap[data-select="1"] .nova-player-ending-panel,.nova-player-ending-wrap[data-select="2"] .nova-player-ending-backdrop,.nova-player-ending-wrap[data-select="2"] .nova-player-share-panel{opacity:1;-webkit-transition:opacity .2s linear;transition:opacity .2s linear;visibility:visible}
-
-.nova-player-ending-backdrop{background-position:50%;background-size:cover;-webkit-filter:blur(20px);filter:blur(20px);height:120%;left:-10%;position:absolute;top:-10%;width:120%;z-index:-1}
-
-.nova-player-ending-backdrop:before{background-color:rgba(0,0,0,.6);content:""}
-
-.nova-player-ending-backdrop:before,.nova-player-ending-panel,.nova-player-share-panel{height:100%;left:0;position:absolute;top:0;width:100%}
-
-.nova-player-ending-panel{z-index:1}
-
-.nova-player-share-panel{z-index:2}
-
-.nova-player-ending-backdrop,.nova-player-ending-panel,.nova-player-ending-wrap,.nova-player-share-panel{opacity:0;-webkit-transition:opacity .2s linear,visibility 0ms .2s;transition:opacity .2s linear,visibility 0ms .2s;visibility:hidden}
-
-.bpx-player-container[data-screen=mini] .bpx-player-cmd-dm-wrap,.bpx-player-container[data-screen=mini] .nova-player-ending-panel,.bpx-player-container[data-screen=mini] .bpx-player-interaction-hidden,.bpx-player-container[data-screen=mini] .bpx-player-interaction-rookie-guide,.bpx-player-container[data-screen=mini] .bpx-player-interaction-story,.bpx-player-container[data-screen=mini] .bpx-player-music-wrap,.bpx-player-container[data-screen=mini] .bpx-player-panorama,.bpx-player-container[data-screen=mini] .nova-player-share-panel{display:none!important}
-
-.bpx-player-mini-site .nova-player-ending-backdrop{opacity:0!important}
-
-.nova-player-ending-enter-button{fill:#fff;-webkit-box-align:center;-ms-flex-align:center;-webkit-box-pack:center;-ms-flex-pack:center;align-items:center;background:rgba(0,0,0,.4);border-radius:26px;color:#fff;cursor:pointer;display:-webkit-box;display:-ms-flexbox;display:flex;font-size:14px;font-weight:400;height:32px;justify-content:center;pointer-events:all;position:absolute;right:14px;top:14px;width:160px}
-
-.nova-player-ending-enter-button svg{height:16px;margin-right:3px;transition:none;-webkit-transition:none;width:16px}
-
-.nova-player-ending-enter-button:hover{fill:#f69;color:#f69}
-
-.nova-player-ending{cursor:pointer;height:100%;overflow:hidden;width:100%}
-
-.nova-player-ending-content{color:#fff;cursor:default;height:390px;left:50%;margin-left:-355px;margin-top:-195px;pointer-events:none;position:absolute;top:50%;width:710px;z-index:2}
-
-.nova-player-ending-content .nova-player-ending-functions{display:-webkit-box;display:-ms-flexbox;display:flex;width:100%}
-
-.nova-player-ending-content .nova-player-ending-functions-avatar{-ms-flex-negative:0;border:2px solid hsla(0,0%,100%,.6);border-radius:100%;flex-shrink:0;height:56px;margin:-2px;pointer-events:auto;width:56px}
-
-.nova-player-ending-content .nova-player-ending-functions-avatar:hover{border-color:#00a1d6;border-color:var(--bpx-primary-color,#00a1d6)}
-
-.nova-player-ending-content .nova-player-ending-functions-avatar a{border-radius:100%;display:block;height:100%;overflow:hidden;width:100%}
-
-.nova-player-ending-content .nova-player-ending-functions-avatar a img{border-radius:50%;height:100%;width:100%}
-
-.nova-player-ending-content .nova-player-ending-functions-upinfo{-webkit-box-pack:justify;-ms-flex-pack:justify;-webkit-box-orient:vertical;-webkit-box-direction:normal;display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-direction:column;flex-direction:column;height:56px;justify-content:space-between;margin-left:20px;max-width:300px;min-width:130px;position:relative}
-
-.nova-player-ending-content .nova-player-ending-functions-name{color:#fff;font-size:16px;height:20px;line-height:16px;overflow:hidden;pointer-events:auto;text-overflow:ellipsis;white-space:nowrap;width:100%}
-
-.nova-player-ending-content .nova-player-ending-functions-name a{color:#fff;-webkit-transition:text-shadow .3s linear;transition:text-shadow .3s linear}
-
-.nova-player-ending-content .nova-player-ending-functions-name a:hover{text-shadow:0 0 4px #fff}
-
-.nova-player-ending-content .nova-player-ending-functions-follow{-webkit-box-align:center;-ms-flex-align:center;-webkit-box-pack:center;-ms-flex-pack:center;align-items:center;background-color:#00a1d6;background-color:var(--bpx-primary-color,#00a1d6);border-radius:2px;cursor:pointer;display:-webkit-inline-box;display:-ms-inline-flexbox;display:inline-flex;font-size:14px;height:32px;justify-content:center;line-height:32px;min-width:68px;pointer-events:auto;-webkit-transition:background-color .2s linear;transition:background-color .2s linear;width:130px}
-
-.nova-player-ending-content .nova-player-ending-functions-follow:hover{background-color:#00b5e5;background-color:var(--bpx-fn-hover-color,#00b5e5)}
-
-.nova-player-ending-content .nova-player-ending-functions-follow .bpx-common-svg-icon{fill:#fff;height:16px;margin-right:5px;pointer-events:none;width:16px}
-
-.nova-player-ending-content .nova-player-ending-functions-follow-fans{margin-left:4px}
-
-.nova-player-ending-content .nova-player-ending-functions-follow.nova-state-disabled{background-color:hsla(0,0%,100%,.4);color:silver;cursor:not-allowed;width:72px}
-
-.nova-player-ending-content .nova-player-ending-functions-electric{bottom:0;left:0;position:absolute}
-
-.nova-player-ending-content .nova-player-ending-functions-electric-inner{background-color:#fb7299;border:1px solid #fb7299;border-radius:2px;color:#fff;cursor:pointer;font-size:14px;height:30px;line-height:30px;margin-left:82px;pointer-events:auto;text-align:center;-webkit-transition:all .2s linear;transition:all .2s linear;width:130px}
-
-.nova-player-ending-content .nova-player-ending-functions-electric-inner>*{pointer-events:none}
-
-.nova-player-ending-content .nova-player-ending-functions-electric-customize-image{height:18px;-o-object-fit:contain;object-fit:contain;vertical-align:middle}
-
-.nova-player-ending-content .nova-player-ending-functions-electric-customize-text{vertical-align:middle}
-
-.nova-player-ending-content .nova-player-ending-functions-electric.nova-state-little .nova-player-ending-functions-electric-inner{background-color:transparent;border-color:#fb7299;color:#fb7299;margin-left:140px;width:72px}
-
-.nova-player-ending-content .nova-player-ending-functions-electric.nova-state-little .nova-player-ending-functions-electric-inner:hover{background-color:#fb7299;color:#fff}
-
-.nova-player-ending-content .nova-player-ending-functions-electric.nova-state-little .nova-player-ending-functions-electric-inner .more-word{display:none}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-buttons{display:-webkit-box;display:-ms-flexbox;display:flex}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-follow{border-radius:4px;height:30px;margin-left:12px;padding:0 21px;width:auto}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-follow.nova-state-disabled{background:hsla(0,0%,100%,.2);color:#fff;padding:0;width:88px}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-electric{height:30px;position:relative}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-electric-inner,.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-electric.nova-state-little .nova-player-ending-functions-electric-inner{background:transparent;border-radius:4px;color:#fb7299;font-size:0;height:28px;line-height:28px;margin-left:0;padding:0 11px;white-space:nowrap;width:auto}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-electric-inner:hover,.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-electric.nova-state-little .nova-player-ending-functions-electric-inner:hover{background-color:rgba(251,114,153,.2);color:#fb7299}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-electric-icon{height:20px;margin-right:2px;-o-object-fit:contain;object-fit:contain;vertical-align:middle}
-
-.nova-player-ending-content .nova-player-ending-functions-customize .nova-player-ending-functions-electric-text{font-size:14px;vertical-align:middle}
-
-.nova-player-ending-content .nova-player-ending-functions-common{-webkit-box-pack:end;-ms-flex-pack:end;-webkit-box-align:end;-ms-flex-align:end;-webkit-box-flex:1;-ms-flex-positive:1;align-items:flex-end;display:-webkit-box;display:-ms-flexbox;display:flex;flex-grow:1;height:56px;justify-content:flex-end}
-
-.nova-player-ending-content .nova-player-ending-functions-common .bpx-common-svg-icon{height:28px;width:28px}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn{-webkit-box-orient:vertical;-webkit-box-direction:normal;-webkit-box-pack:justify;-ms-flex-pack:justify;fill:hsla(0,0%,100%,.9);color:hsla(0,0%,100%,.9);cursor:pointer;display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-direction:column;flex-direction:column;height:46px;justify-content:space-between;pointer-events:auto;text-align:center;-webkit-transition:all .3s linear;transition:all .3s linear}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn:hover{fill:#fff;color:#fff}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn.nova-state-active{fill:#00a1d6;fill:var(--bpx-primary-color,#00a1d6);color:#00a1d6;color:var(--bpx-primary-color,#00a1d6)}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn[data-action=restart]{border-right:1px solid hsla(0,0%,100%,.1);padding-right:30px}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn .bpx-common-svg-icon{pointer-events:none}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn[data-action=coin]:empty,.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn[data-action=collect]:empty,.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn[data-action=grade]:empty,.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-btn[data-action=like]:empty{display:none;pointer-events:none}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-pagecallback{-webkit-box-pack:justify;-ms-flex-pack:justify;display:-webkit-box;display:-ms-flexbox;display:flex;justify-content:space-between;margin-left:30px}
-
-.nova-player-ending-content .nova-player-ending-functions-common .nova-player-ending-functions-pagecallback>div{margin-left:30px}
-
-.nova-player-ending-content .nova-player-ending-related{height:306px;margin-right:-28px;margin-top:20px;overflow:hidden;padding-top:30px;position:relative}
-
-.nova-player-ending-content .nova-player-ending-related:not(:empty):before{content:attr(data-i18n-label);font-size:16px;left:0;line-height:20px;position:absolute;top:0}
-
-.nova-player-ending-content .nova-player-ending-related-item{border:1px solid transparent;border-radius:4px;float:left;height:140px;margin:0 16px 16px 0;overflow:hidden;pointer-events:auto;position:relative;-webkit-transition:border-color .3s ease-in-out,-webkit-box-shadow .3s ease-in-out;transition:border-color .3s ease-in-out,-webkit-box-shadow .3s ease-in-out;transition:border-color .3s ease-in-out,box-shadow .3s ease-in-out;transition:border-color .3s ease-in-out,box-shadow .3s ease-in-out,-webkit-box-shadow .3s ease-in-out;width:223px}
-
-.nova-player-ending-content .nova-player-ending-related-item:before{background:-webkit-gradient(linear,left top,left bottom,from(transparent),color-stop(20%,rgba(0,0,0,.1)),color-stop(35%,rgba(0,0,0,.2)),color-stop(65%,rgba(0,0,0,.5)),to(rgba(0,0,0,.66)));background:linear-gradient(transparent,rgba(0,0,0,.1) 20%,rgba(0,0,0,.2) 35%,rgba(0,0,0,.5) 65%,rgba(0,0,0,.66));border-radius:4px;bottom:0;content:"";left:0;position:absolute;right:0;top:30%;z-index:1}
-
-.nova-player-ending-content .nova-player-ending-related-item:hover{border-color:#fff;-webkit-box-shadow:0 0 6px hsla(0,0%,100%,.5);box-shadow:0 0 6px hsla(0,0%,100%,.5)}
-
-.nova-player-ending-content .nova-player-ending-related-item:hover .nova-player-ending-related-item-cover{overflow:visible}
-
-.nova-player-ending-content .nova-player-ending-related-item:hover .nova-player-ending-related-item-cover .nova-player-ending-related-item-title{-webkit-line-clamp:2;-webkit-box-orient:vertical;display:-webkit-box;height:auto;padding-right:24px;-webkit-transform:translateY(-18px);transform:translateY(-18px);white-space:normal}
-
-.nova-player-ending-content .nova-player-ending-related-item:hover .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater{opacity:1;visibility:visible}
-
-.nova-player-ending-content .nova-player-ending-related-item-img{background-color:#000;background-position:50%;background-repeat:no-repeat;background-size:auto 100%;border-radius:4px;height:100%;overflow:hidden;position:relative;-webkit-transition:all .3s ease-in-out;transition:all .3s ease-in-out;width:100%}
-
-.nova-player-ending-content .nova-player-ending-related-item-cover{border-radius:4px;bottom:0;color:#fff;cursor:pointer;left:0;overflow:hidden;position:absolute;right:0;top:0;-webkit-transition:all .3s ease-in-out;transition:all .3s ease-in-out;z-index:2}
-
-.nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-title{-webkit-box-sizing:border-box;box-sizing:border-box;font-size:13px;height:18px;line-height:18px;overflow:hidden;padding:0 10px;position:absolute;text-overflow:ellipsis;top:118px;-webkit-transition:transform .3s ease-in-out;-webkit-transition:-webkit-transform .3s ease-in-out;transition:-webkit-transform .3s ease-in-out;transition:transform .3s ease-in-out;transition:transform .3s ease-in-out,-webkit-transform .3s ease-in-out;white-space:nowrap;width:100%;word-break:break-all;z-index:1}
-
-.nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater{background-color:#fff;border-radius:4px;bottom:10px;margin-bottom:-6px;margin-right:-4px;opacity:0;position:absolute;right:10px;-webkit-transition:opacity .2s ease-in;transition:opacity .2s ease-in;visibility:hidden;z-index:2}
-
-.nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater i{color:#a0a0a0;cursor:pointer;font-size:22px}
-
-.nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater.nova-state-active i{color:#00a1d6;color:var(--bpx-primary-color,#00a1d6)}
-
-.nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-cancel{background:hsla(0,0%,100%,.4);border-radius:4px;color:#fff;cursor:pointer;font-size:14px;height:24px;line-height:24px;position:absolute;right:6px;text-align:center;top:6px;width:68px;z-index:11}
-
-.nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-countdown{margin-left:50%;margin-top:40px;-webkit-transform:translateX(-50%);transform:translateX(-50%);width:64px;z-index:2}
-
-.nova-player-ending-content[screen-mode=little-screen]{height:312px;margin:-156px 0 0 -268px;width:536px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-upinfo{height:48px;margin-left:14px;margin-top:8px;min-width:120px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-upinfo-electric-inner{font-size:12px;height:22px;line-height:22px;margin-left:70px;white-space:nowrap;width:80px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-upinfo-electric.nova-state-little .nova-player-ending-functions-electric-inner{margin-left:130px;width:60px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-follow{font-size:12px;height:30px;line-height:24px;min-width:88px;padding:0 12px;white-space:nowrap;width:auto}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-follow.nova-state-disabled{min-width:72px;padding:0 12px;width:auto}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-common{height:48px;margin-top:8px;padding-left:16px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-common .nova-player-ending-functions-btn{height:38px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-common .nova-player-ending-functions-btn[data-action=restart]{padding-right:16px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-common .nova-player-ending-functions-pagecallback{margin-left:0}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-related{height:226px;margin-top:14px;padding-top:0}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-related:before{content:""}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-related-item{height:102px;margin-bottom:10px;margin-right:16px;width:166px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-related-item-title{font-size:12px;height:16px;line-height:16px;top:80px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-interaction-swiper{margin-top:14px;padding:0 0 8px}
-
-.nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-interaction-swiper:before{content:""}
-
-.nova-player-ending-content[screen-mode=second-screen] .nova-player-ending-related{padding-top:0}
-
-.nova-player-ending-content[screen-mode=second-screen] .nova-player-ending-related:before{content:""}
-
-.nova-player-ending-content[screen-mode=second-screen] .nova-player-ending-interaction-swiper{padding:0 0 8px}
-
-.nova-player-ending-content[screen-mode=second-screen] .nova-player-ending-interaction-swiper:before{content:""}
-
-.nova-player-ending-content.nova-state-plus{height:434px;margin-left:-385px;margin-top:-217px;width:770px}
-
-.nova-player-ending-content.nova-state-plus .nova-player-ending-related{height:330px;margin-top:40px}
-
-.nova-player-ending-content.nova-state-plus .nova-player-ending-related-item{height:146px;margin:0 28px 28px 0;width:235px}
-
-.nova-player-ending-content.nova-state-plus .nova-player-ending-related-item-title{top:120px}
-
-.nova-player-ending-content.nova-state-plus .nova-player-ending-interaction-swiper{margin-top:40px}
-
-.nova-player-ending-interaction-mark{-webkit-box-pack:justify;-ms-flex-pack:justify;-webkit-box-align:start;-ms-flex-align:start;-webkit-box-orient:vertical;-webkit-box-direction:normal;align-items:flex-start;cursor:pointer;-ms-flex-direction:column;flex-direction:column;height:46px;justify-content:space-between;margin-left:38px;pointer-events:auto}
-
-.nova-player-ending-interaction-mark,.nova-player-ending-interaction-mark .nova-player-ending-interaction-grade{display:-webkit-box;display:-ms-flexbox;display:flex}
-
-.nova-player-ending-interaction-mark .nova-player-ending-interaction-grade-item{margin-left:8px;pointer-events:auto}
-
-.nova-player-ending-interaction-mark .nova-player-ending-interaction-grade-item.animate{-webkit-animation:star-animate .4s;animation:star-animate .4s}
-
-.nova-player-ending-interaction-mark .nova-player-ending-interaction-grade-item .bpx-common-svg-icon{height:22px;pointer-events:none;width:21px}
-
-.nova-player-ending-interaction-mark .nova-player-ending-interaction-grade-item:first-child{margin-left:0}
-
-.nova-player-ending-interaction-mark .nova-player-ending-interaction-tip{font-size:12px;margin-left:2px}
-
-.nova-player-ending-interaction-swiper{color:#343434;margin:30px -14px 0;overflow:hidden;padding-top:30px;pointer-events:auto;position:relative}
-
-.nova-player-ending-interaction-swiper .bpx-common-svg-icon{display:block}
-
-.nova-player-ending-interaction-swiper:empty{margin:0!important;padding:0!important;pointer-events:none}
-
-.nova-player-ending-interaction-swiper:not(:empty):before{color:#fff;content:attr(data-i18n-label);font-size:16px;left:12px;line-height:20px;position:absolute;top:0}
-
-.nova-player-ending-interaction-hiddenvars-content{color:#fff;display:-webkit-box;display:-ms-flexbox;display:flex;margin:0;padding:0}
-
-.nova-player-ending-interaction-hiddenvars-content .bpx-common-svg-icon{height:15px;width:14px}
-
-.nova-player-ending-interaction-hiddenvars-item{-webkit-box-sizing:border-box;box-sizing:border-box;font-size:14px;line-height:16px;padding:0 12px}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-cancel{-webkit-box-sizing:border-box;box-sizing:border-box;max-width:calc(100% - 12px);min-width:68px;overflow:hidden;padding:0 8px;text-overflow:ellipsis;-webkit-transition:max-width .3s ease-in-out;transition:max-width .3s ease-in-out;white-space:nowrap;width:auto}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-related-item:hover .nova-player-ending-related-item-cover .nova-player-ending-related-item-cancel{max-width:calc(100% - 46px)}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-buttons,.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-electric,.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-follow{max-width:100%;min-width:0}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-follow{-webkit-box-sizing:border-box;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-follow .bpx-common-svg-icon,.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-follow-fans{-ms-flex-negative:0;flex-shrink:0}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-follow>span[data-i18n]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-electric-inner{-webkit-box-sizing:border-box;box-sizing:border-box;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions:not(.nova-player-ending-functions-customize) .nova-player-ending-functions-buttons{display:-webkit-box;display:-ms-flexbox;display:flex;max-width:100%;min-width:0;white-space:nowrap}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions:not(.nova-player-ending-functions-customize) .nova-player-ending-functions-follow{-webkit-box-ordinal-group:2;-ms-flex-order:1;order:1;padding:0 2px;width:auto}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions:not(.nova-player-ending-functions-customize) .nova-player-ending-functions-electric{-webkit-box-ordinal-group:3;-ms-flex-order:2;margin-left:12px;order:2;position:relative}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions:not(.nova-player-ending-functions-customize) .nova-player-ending-functions-electric:empty{display:none}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions:not(.nova-player-ending-functions-customize) .nova-player-ending-functions-electric .nova-player-ending-functions-electric-inner{margin-left:0;padding:0 2px;width:auto}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-common .nova-player-ending-functions-btn{-webkit-box-align:center;-ms-flex-align:center;align-items:center}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-common .nova-player-ending-functions-btn .bpx-common-svg-icon{-webkit-box-flex:0;-ms-flex:0 0 auto;flex:0 0 auto}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-functions-common .nova-player-ending-functions-btn>span[data-i18n]{-webkit-box-flex:0;word-wrap:break-word;-ms-flex:0 0 auto;flex:0 0 auto;line-height:16px;margin:2px -14px 0;text-align:center;white-space:normal;width:56px}
-
-.nova-player-ending.nova-player-ending-i18n .nova-player-ending-content[screen-mode=little-screen] .nova-player-ending-functions-btn>span[data-i18n]{line-height:14px;margin-top:0}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-video-title{color:#fff;font-size:20px;font-weight:500;height:24px;left:0;line-height:24px;margin:24px 0 0 24px;opacity:0;overflow:hidden;pointer-events:none;position:absolute;text-overflow:ellipsis;top:0;white-space:nowrap;width:100%;z-index:1}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content .nova-player-ending-premiere-title,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview .nova-player-ending-premiere-title{color:#fff;font-size:22px;height:39px;line-height:39px;margin-bottom:7px;text-align:center}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content .nova-player-ending-premiere-info,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview .nova-player-ending-premiere-info{border-bottom:1px solid hsla(0,0%,100%,.1);color:hsla(0,0%,100%,.6);font-size:18px;height:25px;line-height:25px;margin-bottom:30px;padding-bottom:30px;text-align:center}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content .nova-player-ending-related,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview .nova-player-ending-related{height:150px}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview.nova-state-plus,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content.nova-state-plus{top:40%}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview.nova-state-plus .nova-player-ending-related,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content.nova-state-plus .nova-player-ending-related{height:335px}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview.nova-state-plus .nova-player-ending-premiere-title,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content.nova-state-plus .nova-player-ending-premiere-title{font-size:28px}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview.nova-player-ending-premiere-content-upview,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content.nova-player-ending-premiere-content-upview{top:55%}
-
-.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content-upview.nova-player-ending-premiere-content-upview.nova-state-plus,.nova-player-ending.nova-player-ending-premiere .nova-player-ending-premiere-content.nova-player-ending-premiere-content-upview.nova-state-plus{top:45%}
-
-.bpx-player-container[data-screen=full] .nova-player-ending-content,.bpx-player-container[data-screen=web] .nova-player-ending-content,.bpx-player-container[data-screen=wide] .nova-player-ending-content{margin-left:-476px;width:952px}
-
-.bpx-player-container[data-screen=full] .nova-player-ending-content.nova-state-plus,.bpx-player-container[data-screen=web] .nova-player-ending-content.nova-state-plus,.bpx-player-container[data-screen=wide] .nova-player-ending-content.nova-state-plus{margin-left:-518px;width:1036px}
-
-.bpx-player-container[data-revision="1"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater,.bpx-player-container[data-revision="2"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater{background-color:rgba(0,0,0,.8);bottom:calc(100% - 30px);height:28px;right:14px}
-
-.bpx-player-container[data-revision="1"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater i,.bpx-player-container[data-revision="2"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater i{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAAwFBMVEUAAAAGBgavr69EREQUFBQ1NTUODg7t7e3FxcV0dHRbW1sAAAAAAAAAAAD+/v77+/v4+Pj09PTj4+P8/PzV1dWpqamSkpIhISH19fXX19fLy8ulpaWdnZ1kZGRVVVUsLCz6+vrm5uba2tq9vb20tLSsrKyXl5eMjIx+fn54eHhsbGxpaWk+Pj4AAAAAAADv7+/e3t7AwMC3t7ehoaFLS0vo6OjR0dHOzs7CwsKCgoKCgoJiYmLp6enMzMywsLD////DVMIGAAAAP3RSTlOZmtOrnqec8927sopkEf38+ffu/eXPxqH45+DOyrWwpPvv6NnV0cjEv724t6qPAPTr2tbNru/j4tvAv7Tw4dTgAD9iAAABpElEQVRIx+ST13KCUBiEDyCCBRBQsaHGHrvp/Xv/twpDTBgRonjr3u0w38zu8h+xNsolkVGlsrEWxkpcoJUhyuISBVjpIi7Arli9bmE6mb0rUhZI6tZu2KuxK+TO5RYOB2pM8udgShWASlOXa8MnDYDN7DRX6AOVkf/bTemEqe9OdW0DluwdNH7VgKZ3knNUEVN+CGz/K3oLtJJGrJugp3MPFrSSy7wBnVRwAE7aTxuDq6YNCpaaehRN2KV8eoRaNMh8GesBKIlgEewoaAtTPoytw0gIXz4KJYMcORfQ5n/Wy4kuaMKHzzioQTFyhNJ7P27ZMNuSDb4Noxingi3FQSpTab8bWx0+YOMdV6yKIxAGSuCkZ6Dv9sEsJlzNSxKIex/ejgUkXkEdxokgLMJn4gBUpcygyH+BHYyVMWo4w/eMwXFIfOCgAVKiAxMQTgCYAH+S44MkOXRAOJGbYyRyHXU24rIVWgjqCNgbkZWRRYA+JrfoYKaksKK8eKS8QCZcBVBe6VBezRGuWGlalSMaD2KQxsMooCMgu6FLdtOa7MY82d0HAP3jZ1lFdjimAAAAAElFTkSuQmCC);background-size:auto 100%;border-radius:6px;color:inherit;display:inline-block;height:28px;width:28px}
-
-.bpx-player-container[data-revision="1"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater i:before,.bpx-player-container[data-revision="2"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater i:before{content:""}
-
-.bpx-player-container[data-revision="1"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater.nova-state-active i,.bpx-player-container[data-revision="2"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-watchlater.nova-state-active i{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAANlBMVEUAAAD8/PxpaWlfX1/9/f1ycnIAAAAAAAAAAAAAAAAAAAD09PTr6+vv7+/h4eFjY2NZWVn///+5pCBCAAAAEXRSTlOZ/Lez/bqKZBGPAPfy9ey1sk5dq9MAAACBSURBVEjH7dc7FsQgDENRQSZAAvl4/5udUrVU5vj1t3El4xy9Qaz1cWIcMDoGOqw6mgcbsux7Peuqjqsl4jJdLNOVx3Q1neH2OavjMCN+u+GwglJxeAuldpeNUnGUqqOUHSWdKOlESSdKOknSqZJO673vDVn2jZrJ7Gltj3n7ffgDLGYI2l1NOaQAAAAASUVORK5CYII=)}
-
-.bpx-player-container[data-revision="1"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-cancel,.bpx-player-container[data-revision="2"] .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-cancel{right:calc(100% - 75px);top:8px}
-
-.bpx-player-container[data-revision="1"] .nova-player-ending-i18n .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-cancel,.bpx-player-container[data-revision="2"] .nova-player-ending-i18n .nova-player-ending-content .nova-player-ending-related-item-cover .nova-player-ending-related-item-cancel{left:6px;right:auto}
-
-.bpx-player-container[data-revision="2"][data-screen=full] .nova-player-ending-premiere-video-title{opacity:1}
-
-.bpx-common-edge .nova-player-ending-backdrop{-webkit-filter:none;filter:none}
+.nova-player-ending-wrap[hidden] {
+  display: none;
+}
+
+.nova-player-ending-backdrop {
+  background-position: 50%;
+  background-size: cover;
+  -webkit-filter: blur(20px);
+  filter: blur(20px);
+  height: 120%;
+  left: -10%;
+  position: absolute;
+  top: -10%;
+  width: 120%;
+  z-index: -1;
+}
+
+.nova-player-ending-backdrop:before {
+  background-color: rgba(0, 0, 0, 0.6);
+  content: "";
+}
+
+.nova-player-ending-backdrop:before,
+.nova-player-ending-panel,
+.nova-player-share-panel {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.nova-player-ending-panel {
+  z-index: 1;
+}
+
+.nova-player-ending-enter-button {
+  fill: #fff;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 26px;
+  color: #fff;
+  cursor: pointer;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  font-size: 14px;
+  font-weight: 400;
+  height: 32px;
+  justify-content: center;
+  pointer-events: all;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 160px;
+}
+
+.nova-player-ending-enter-button svg {
+  height: 16px;
+  margin-right: 3px;
+  transition: none;
+  -webkit-transition: none;
+  width: 16px;
+}
+
+.nova-player-ending-enter-button:hover {
+  fill: #f69;
+  color: #f69;
+}
+
+.nova-player-ending {
+  cursor: pointer;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.nova-player-ending-content {
+  color: #fff;
+  cursor: default;
+  height: 390px;
+  left: 50%;
+  margin-left: -355px;
+  margin-top: -195px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  width: 710px;
+  z-index: 2;
+}
+
+.nova-player-ending-content .nova-player-ending-functions {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  width: 100%;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-avatar {
+  -ms-flex-negative: 0;
+  border: 2px solid hsla(0, 0%, 100%, 0.6);
+  border-radius: 100%;
+  flex-shrink: 0;
+  height: 56px;
+  margin: -2px;
+  pointer-events: auto;
+  width: 56px;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-avatar:hover {
+  border-color: #00a1d6;
+  border-color: #00a1d6;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-avatar a {
+  border-radius: 100%;
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-avatar a img {
+  border-radius: 50%;
+  height: 100%;
+  width: 100%;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-upinfo {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  height: 56px;
+  justify-content: space-between;
+  margin-left: 20px;
+  max-width: 300px;
+  min-width: 130px;
+  position: relative;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-name {
+  color: #fff;
+  font-size: 16px;
+  height: 20px;
+  line-height: 16px;
+  overflow: hidden;
+  pointer-events: auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-name a {
+  color: #fff;
+  -webkit-transition: text-shadow 0.3s linear;
+  transition: text-shadow 0.3s linear;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-name a:hover {
+  text-shadow: 0 0 4px #fff;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-follow {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  align-items: center;
+  background-color: #00a1d6;
+  background-color: #00a1d6;
+  border-radius: 2px;
+  cursor: pointer;
+  display: -webkit-inline-box;
+  display: -ms-inline-flexbox;
+  display: inline-flex;
+  font-size: 14px;
+  height: 32px;
+  justify-content: center;
+  line-height: 32px;
+  min-width: 68px;
+  pointer-events: auto;
+  -webkit-transition: background-color 0.2s linear;
+  transition: background-color 0.2s linear;
+  width: 130px;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-follow:hover {
+  background-color: #00b5e5;
+  background-color: #00b5e5;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-follow
+  .nova-common-svg-icon {
+  fill: #fff;
+  height: 16px;
+  margin-right: 5px;
+  pointer-events: none;
+  width: 16px;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-follow-fans {
+  margin-left: 4px;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-follow.nova-state-disabled {
+  background-color: hsla(0, 0%, 100%, 0.4);
+  color: silver;
+  cursor: not-allowed;
+  width: 72px;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-electric {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-electric-inner {
+  background-color: #fb7299;
+  border: 1px solid #fb7299;
+  border-radius: 2px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  height: 30px;
+  line-height: 30px;
+  margin-left: 82px;
+  pointer-events: auto;
+  text-align: center;
+  -webkit-transition: all 0.2s linear;
+  transition: all 0.2s linear;
+  width: 130px;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-electric-inner > * {
+  pointer-events: none;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-electric-customize-image {
+  height: 18px;
+  -o-object-fit: contain;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-electric-customize-text {
+  vertical-align: middle;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-electric.nova-state-little
+  .nova-player-ending-functions-electric-inner {
+  background-color: transparent;
+  border-color: #fb7299;
+  color: #fb7299;
+  margin-left: 140px;
+  width: 72px;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-electric.nova-state-little
+  .nova-player-ending-functions-electric-inner:hover {
+  background-color: #fb7299;
+  color: #fff;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-electric.nova-state-little
+  .nova-player-ending-functions-electric-inner
+  .more-word {
+  display: none;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-buttons {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-follow {
+  border-radius: 4px;
+  height: 30px;
+  margin-left: 12px;
+  padding: 0 21px;
+  width: auto;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-follow.nova-state-disabled {
+  background: hsla(0, 0%, 100%, 0.2);
+  color: #fff;
+  padding: 0;
+  width: 88px;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-electric {
+  height: 30px;
+  position: relative;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-electric-inner,
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-electric.nova-state-little
+  .nova-player-ending-functions-electric-inner {
+  background: transparent;
+  border-radius: 4px;
+  color: #fb7299;
+  font-size: 0;
+  height: 28px;
+  line-height: 28px;
+  margin-left: 0;
+  padding: 0 11px;
+  white-space: nowrap;
+  width: auto;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-electric-inner:hover,
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-electric.nova-state-little
+  .nova-player-ending-functions-electric-inner:hover {
+  background-color: rgba(251, 114, 153, 0.2);
+  color: #fb7299;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-electric-icon {
+  height: 20px;
+  margin-right: 2px;
+  -o-object-fit: contain;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-customize
+  .nova-player-ending-functions-electric-text {
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.nova-player-ending-content .nova-player-ending-functions-common {
+  -webkit-box-pack: end;
+  -ms-flex-pack: end;
+  -webkit-box-align: end;
+  -ms-flex-align: end;
+  -webkit-box-flex: 1;
+  -ms-flex-positive: 1;
+  align-items: flex-end;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  flex-grow: 1;
+  height: 56px;
+  justify-content: flex-end;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-common-svg-icon {
+  height: 28px;
+  width: 28px;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn {
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  fill: hsla(0, 0%, 100%, 0.9);
+  color: hsla(0, 0%, 100%, 0.9);
+  cursor: pointer;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  height: 46px;
+  justify-content: space-between;
+  pointer-events: auto;
+  text-align: center;
+  -webkit-transition: all 0.3s linear;
+  transition: all 0.3s linear;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn:hover {
+  fill: #fff;
+  color: #fff;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn.nova-state-active {
+  fill: #00a1d6;
+  fill: #00a1d6;
+  color: #00a1d6;
+  color: #00a1d6;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn[data-action="restart"] {
+  border-right: 1px solid hsla(0, 0%, 100%, 0.1);
+  padding-right: 30px;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn
+  .nova-common-svg-icon {
+  pointer-events: none;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn[data-action="coin"]:empty,
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn[data-action="collect"]:empty,
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn[data-action="grade"]:empty,
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn[data-action="like"]:empty {
+  display: none;
+  pointer-events: none;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-pagecallback {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  justify-content: space-between;
+  margin-left: 30px;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-pagecallback
+  > div {
+  margin-left: 30px;
+}
+
+.nova-player-ending-content .nova-player-ending-related {
+  height: 306px;
+  margin-right: -28px;
+  margin-top: 20px;
+  overflow: hidden;
+  padding-top: 30px;
+  position: relative;
+}
+
+.nova-player-ending-content .nova-player-ending-related:not(:empty):before {
+  content: attr(data-i18n-label);
+  font-size: 16px;
+  left: 0;
+  line-height: 20px;
+  position: absolute;
+  top: 0;
+}
+
+.nova-player-ending-content .nova-player-ending-related-item {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  float: left;
+  height: 140px;
+  margin: 0 16px 16px 0;
+  overflow: hidden;
+  pointer-events: auto;
+  position: relative;
+  -webkit-transition:
+    border-color 0.3s ease-in-out,
+    -webkit-box-shadow 0.3s ease-in-out;
+  transition:
+    border-color 0.3s ease-in-out,
+    -webkit-box-shadow 0.3s ease-in-out;
+  transition:
+    border-color 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out;
+  transition:
+    border-color 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out,
+    -webkit-box-shadow 0.3s ease-in-out;
+  width: 223px;
+}
+
+.nova-player-ending-content .nova-player-ending-related-item:before {
+  background: -webkit-gradient(
+    linear,
+    left top,
+    left bottom,
+    from(transparent),
+    color-stop(20%, rgba(0, 0, 0, 0.1)),
+    color-stop(35%, rgba(0, 0, 0, 0.2)),
+    color-stop(65%, rgba(0, 0, 0, 0.5)),
+    to(rgba(0, 0, 0, 0.66))
+  );
+  background: linear-gradient(
+    transparent,
+    rgba(0, 0, 0, 0.1) 20%,
+    rgba(0, 0, 0, 0.2) 35%,
+    rgba(0, 0, 0, 0.5) 65%,
+    rgba(0, 0, 0, 0.66)
+  );
+  border-radius: 4px;
+  bottom: 0;
+  content: "";
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 30%;
+  z-index: 1;
+}
+
+.nova-player-ending-content .nova-player-ending-related-item:hover {
+  border-color: #fff;
+  -webkit-box-shadow: 0 0 6px hsla(0, 0%, 100%, 0.5);
+  box-shadow: 0 0 6px hsla(0, 0%, 100%, 0.5);
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item:hover
+  .nova-player-ending-related-item-cover {
+  overflow: visible;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item:hover
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-title {
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  height: auto;
+  padding-right: 24px;
+  -webkit-transform: translateY(-18px);
+  transform: translateY(-18px);
+  white-space: normal;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item:hover
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater {
+  opacity: 1;
+  visibility: visible;
+}
+
+.nova-player-ending-content .nova-player-ending-related-item-img {
+  background-color: #000;
+  background-position: 50%;
+  background-repeat: no-repeat;
+  background-size: auto 100%;
+  border-radius: 4px;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  -webkit-transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+  width: 100%;
+}
+
+.nova-player-ending-content .nova-player-ending-related-item-cover {
+  border-radius: 4px;
+  bottom: 0;
+  color: #fff;
+  cursor: pointer;
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: 0;
+  -webkit-transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+  z-index: 2;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-title {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  font-size: 13px;
+  height: 18px;
+  line-height: 18px;
+  overflow: hidden;
+  padding: 0 10px;
+  position: absolute;
+  text-overflow: ellipsis;
+  top: 118px;
+  -webkit-transition: transform 0.3s ease-in-out;
+  -webkit-transition: -webkit-transform 0.3s ease-in-out;
+  transition: -webkit-transform 0.3s ease-in-out;
+  transition: transform 0.3s ease-in-out;
+  transition:
+    transform 0.3s ease-in-out,
+    -webkit-transform 0.3s ease-in-out;
+  white-space: nowrap;
+  width: 100%;
+  word-break: break-all;
+  z-index: 1;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater {
+  background-color: #fff;
+  border-radius: 4px;
+  bottom: 10px;
+  margin-bottom: -6px;
+  margin-right: -4px;
+  opacity: 0;
+  position: absolute;
+  right: 10px;
+  -webkit-transition: opacity 0.2s ease-in;
+  transition: opacity 0.2s ease-in;
+  visibility: hidden;
+  z-index: 2;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater
+  i {
+  color: #a0a0a0;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater.nova-state-active
+  i {
+  color: #00a1d6;
+  color: #00a1d6;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-cancel {
+  background: hsla(0, 0%, 100%, 0.4);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  height: 24px;
+  line-height: 24px;
+  position: absolute;
+  right: 6px;
+  text-align: center;
+  top: 6px;
+  width: 68px;
+  z-index: 11;
+}
+
+.nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-countdown {
+  margin-left: 50%;
+  margin-top: 40px;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+  width: 64px;
+  z-index: 2;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"] {
+  height: 312px;
+  margin: -156px 0 0 -268px;
+  width: 536px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-upinfo {
+  height: 48px;
+  margin-left: 14px;
+  margin-top: 8px;
+  min-width: 120px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-upinfo-electric-inner {
+  font-size: 12px;
+  height: 22px;
+  line-height: 22px;
+  margin-left: 70px;
+  white-space: nowrap;
+  width: 80px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-upinfo-electric.nova-state-little
+  .nova-player-ending-functions-electric-inner {
+  margin-left: 130px;
+  width: 60px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-follow {
+  font-size: 12px;
+  height: 30px;
+  line-height: 24px;
+  min-width: 88px;
+  padding: 0 12px;
+  white-space: nowrap;
+  width: auto;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-follow.nova-state-disabled {
+  min-width: 72px;
+  padding: 0 12px;
+  width: auto;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-common {
+  height: 48px;
+  margin-top: 8px;
+  padding-left: 16px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn {
+  height: 38px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn[data-action="restart"] {
+  padding-right: 16px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-pagecallback {
+  margin-left: 0;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-related {
+  height: 226px;
+  margin-top: 14px;
+  padding-top: 0;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-related:before {
+  content: "";
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-related-item {
+  height: 102px;
+  margin-bottom: 10px;
+  margin-right: 16px;
+  width: 166px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-related-item-title {
+  font-size: 12px;
+  height: 16px;
+  line-height: 16px;
+  top: 80px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-interaction-swiper {
+  margin-top: 14px;
+  padding: 0 0 8px;
+}
+
+.nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-interaction-swiper:before {
+  content: "";
+}
+
+.nova-player-ending-content[screen-mode="second-screen"]
+  .nova-player-ending-related {
+  padding-top: 0;
+}
+
+.nova-player-ending-content[screen-mode="second-screen"]
+  .nova-player-ending-related:before {
+  content: "";
+}
+
+.nova-player-ending-content[screen-mode="second-screen"]
+  .nova-player-ending-interaction-swiper {
+  padding: 0 0 8px;
+}
+
+.nova-player-ending-content[screen-mode="second-screen"]
+  .nova-player-ending-interaction-swiper:before {
+  content: "";
+}
+
+.nova-player-ending-content.nova-state-plus {
+  height: 434px;
+  margin-left: -385px;
+  margin-top: -217px;
+  width: 770px;
+}
+
+.nova-player-ending-content.nova-state-plus .nova-player-ending-related {
+  height: 330px;
+  margin-top: 40px;
+}
+
+.nova-player-ending-content.nova-state-plus .nova-player-ending-related-item {
+  height: 146px;
+  margin: 0 28px 28px 0;
+  width: 235px;
+}
+
+.nova-player-ending-content.nova-state-plus
+  .nova-player-ending-related-item-title {
+  top: 120px;
+}
+
+.nova-player-ending-content.nova-state-plus
+  .nova-player-ending-interaction-swiper {
+  margin-top: 40px;
+}
+
+.nova-player-ending-interaction-mark {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  -webkit-box-align: start;
+  -ms-flex-align: start;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  align-items: flex-start;
+  cursor: pointer;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  height: 46px;
+  justify-content: space-between;
+  margin-left: 38px;
+  pointer-events: auto;
+}
+
+.nova-player-ending-interaction-mark,
+.nova-player-ending-interaction-mark .nova-player-ending-interaction-grade {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+.nova-player-ending-interaction-mark
+  .nova-player-ending-interaction-grade-item {
+  margin-left: 8px;
+  pointer-events: auto;
+}
+
+.nova-player-ending-interaction-mark
+  .nova-player-ending-interaction-grade-item.animate {
+  -webkit-animation: star-animate 0.4s;
+  animation: star-animate 0.4s;
+}
+
+.nova-player-ending-interaction-mark
+  .nova-player-ending-interaction-grade-item
+  .nova-common-svg-icon {
+  height: 22px;
+  pointer-events: none;
+  width: 21px;
+}
+
+.nova-player-ending-interaction-mark
+  .nova-player-ending-interaction-grade-item:first-child {
+  margin-left: 0;
+}
+
+.nova-player-ending-interaction-mark .nova-player-ending-interaction-tip {
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.nova-player-ending-interaction-swiper {
+  color: #343434;
+  margin: 30px -14px 0;
+  overflow: hidden;
+  padding-top: 30px;
+  pointer-events: auto;
+  position: relative;
+}
+
+.nova-player-ending-interaction-swiper .nova-common-svg-icon {
+  display: block;
+}
+
+.nova-player-ending-interaction-swiper:empty {
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none;
+}
+
+.nova-player-ending-interaction-swiper:not(:empty):before {
+  color: #fff;
+  content: attr(data-i18n-label);
+  font-size: 16px;
+  left: 12px;
+  line-height: 20px;
+  position: absolute;
+  top: 0;
+}
+
+.nova-player-ending-interaction-hiddenvars-content {
+  color: #fff;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+
+.nova-player-ending-interaction-hiddenvars-content .nova-common-svg-icon {
+  height: 15px;
+  width: 14px;
+}
+
+.nova-player-ending-interaction-hiddenvars-item {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  font-size: 14px;
+  line-height: 16px;
+  padding: 0 12px;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-cancel {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  max-width: calc(100% - 12px);
+  min-width: 68px;
+  overflow: hidden;
+  padding: 0 8px;
+  text-overflow: ellipsis;
+  -webkit-transition: max-width 0.3s ease-in-out;
+  transition: max-width 0.3s ease-in-out;
+  white-space: nowrap;
+  width: auto;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-related-item:hover
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-cancel {
+  max-width: calc(100% - 46px);
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-buttons,
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-electric,
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-follow {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-follow {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-follow
+  .nova-common-svg-icon,
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-follow-fans {
+  -ms-flex-negative: 0;
+  flex-shrink: 0;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-follow
+  > span[data-i18n] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-electric-inner {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions:not(.nova-player-ending-functions-customize)
+  .nova-player-ending-functions-buttons {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions:not(.nova-player-ending-functions-customize)
+  .nova-player-ending-functions-follow {
+  -webkit-box-ordinal-group: 2;
+  -ms-flex-order: 1;
+  order: 1;
+  padding: 0 2px;
+  width: auto;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions:not(.nova-player-ending-functions-customize)
+  .nova-player-ending-functions-electric {
+  -webkit-box-ordinal-group: 3;
+  -ms-flex-order: 2;
+  margin-left: 12px;
+  order: 2;
+  position: relative;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions:not(.nova-player-ending-functions-customize)
+  .nova-player-ending-functions-electric:empty {
+  display: none;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions:not(.nova-player-ending-functions-customize)
+  .nova-player-ending-functions-electric
+  .nova-player-ending-functions-electric-inner {
+  margin-left: 0;
+  padding: 0 2px;
+  width: auto;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn
+  .nova-common-svg-icon {
+  -webkit-box-flex: 0;
+  -ms-flex: 0 0 auto;
+  flex: 0 0 auto;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-functions-common
+  .nova-player-ending-functions-btn
+  > span[data-i18n] {
+  -webkit-box-flex: 0;
+  word-wrap: break-word;
+  -ms-flex: 0 0 auto;
+  flex: 0 0 auto;
+  line-height: 16px;
+  margin: 2px -14px 0;
+  text-align: center;
+  white-space: normal;
+  width: 56px;
+}
+
+.nova-player-ending.nova-player-ending-i18n
+  .nova-player-ending-content[screen-mode="little-screen"]
+  .nova-player-ending-functions-btn
+  > span[data-i18n] {
+  line-height: 14px;
+  margin-top: 0;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-video-title {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 500;
+  height: 24px;
+  left: 0;
+  line-height: 24px;
+  margin: 24px 0 0 24px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  text-overflow: ellipsis;
+  top: 0;
+  white-space: nowrap;
+  width: 100%;
+  z-index: 1;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content
+  .nova-player-ending-premiere-title,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview
+  .nova-player-ending-premiere-title {
+  color: #fff;
+  font-size: 22px;
+  height: 39px;
+  line-height: 39px;
+  margin-bottom: 7px;
+  text-align: center;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content
+  .nova-player-ending-premiere-info,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview
+  .nova-player-ending-premiere-info {
+  border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
+  color: hsla(0, 0%, 100%, 0.6);
+  font-size: 18px;
+  height: 25px;
+  line-height: 25px;
+  margin-bottom: 30px;
+  padding-bottom: 30px;
+  text-align: center;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content
+  .nova-player-ending-related,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview
+  .nova-player-ending-related {
+  height: 150px;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview.nova-state-plus,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content.nova-state-plus {
+  top: 40%;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview.nova-state-plus
+  .nova-player-ending-related,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content.nova-state-plus
+  .nova-player-ending-related {
+  height: 335px;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview.nova-state-plus
+  .nova-player-ending-premiere-title,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content.nova-state-plus
+  .nova-player-ending-premiere-title {
+  font-size: 28px;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview.nova-player-ending-premiere-content-upview,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content.nova-player-ending-premiere-content-upview {
+  top: 55%;
+}
+
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content-upview.nova-player-ending-premiere-content-upview.nova-state-plus,
+.nova-player-ending.nova-player-ending-premiere
+  .nova-player-ending-premiere-content.nova-player-ending-premiere-content-upview.nova-state-plus {
+  top: 45%;
+}
+
+.nova-player-container[data-screen="full"] .nova-player-ending-content,
+.nova-player-container[data-screen="web"] .nova-player-ending-content,
+.nova-player-container[data-screen="wide"] .nova-player-ending-content {
+  margin-left: -476px;
+  width: 952px;
+}
+
+.nova-player-container[data-screen="full"]
+  .nova-player-ending-content.nova-state-plus,
+.nova-player-container[data-screen="web"]
+  .nova-player-ending-content.nova-state-plus,
+.nova-player-container[data-screen="wide"]
+  .nova-player-ending-content.nova-state-plus {
+  margin-left: -518px;
+  width: 1036px;
+}
+
+.nova-player-container[data-revision="1"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater,
+.nova-player-container[data-revision="2"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater {
+  background-color: rgba(0, 0, 0, 0.8);
+  bottom: calc(100% - 30px);
+  height: 28px;
+  right: 14px;
+}
+
+.nova-player-container[data-revision="1"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater
+  i,
+.nova-player-container[data-revision="2"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater
+  i {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAAwFBMVEUAAAAGBgavr69EREQUFBQ1NTUODg7t7e3FxcV0dHRbW1sAAAAAAAAAAAD+/v77+/v4+Pj09PTj4+P8/PzV1dWpqamSkpIhISH19fXX19fLy8ulpaWdnZ1kZGRVVVUsLCz6+vrm5uba2tq9vb20tLSsrKyXl5eMjIx+fn54eHhsbGxpaWk+Pj4AAAAAAADv7+/e3t7AwMC3t7ehoaFLS0vo6OjR0dHOzs7CwsKCgoKCgoJiYmLp6enMzMywsLD////DVMIGAAAAP3RSTlOZmtOrnqec8927sopkEf38+ffu/eXPxqH45+DOyrWwpPvv6NnV0cjEv724t6qPAPTr2tbNru/j4tvAv7Tw4dTgAD9iAAABpElEQVRIx+ST13KCUBiEDyCCBRBQsaHGHrvp/Xv/twpDTBgRonjr3u0w38zu8h+xNsolkVGlsrEWxkpcoJUhyuISBVjpIi7Arli9bmE6mb0rUhZI6tZu2KuxK+TO5RYOB2pM8udgShWASlOXa8MnDYDN7DRX6AOVkf/bTemEqe9OdW0DluwdNH7VgKZ3knNUEVN+CGz/K3oLtJJGrJugp3MPFrSSy7wBnVRwAE7aTxuDq6YNCpaaehRN2KV8eoRaNMh8GesBKIlgEewoaAtTPoytw0gIXz4KJYMcORfQ5n/Wy4kuaMKHzzioQTFyhNJ7P27ZMNuSDb4Noxingi3FQSpTab8bWx0+YOMdV6yKIxAGSuCkZ6Dv9sEsJlzNSxKIex/ejgUkXkEdxokgLMJn4gBUpcygyH+BHYyVMWo4w/eMwXFIfOCgAVKiAxMQTgCYAH+S44MkOXRAOJGbYyRyHXU24rIVWgjqCNgbkZWRRYA+JrfoYKaksKK8eKS8QCZcBVBe6VBezRGuWGlalSMaD2KQxsMooCMgu6FLdtOa7MY82d0HAP3jZ1lFdjimAAAAAElFTkSuQmCC);
+  background-size: auto 100%;
+  border-radius: 6px;
+  color: inherit;
+  display: inline-block;
+  height: 28px;
+  width: 28px;
+}
+
+.nova-player-container[data-revision="1"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater
+  i:before,
+.nova-player-container[data-revision="2"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater
+  i:before {
+  content: "";
+}
+
+.nova-player-container[data-revision="1"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater.nova-state-active
+  i,
+.nova-player-container[data-revision="2"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-watchlater.nova-state-active
+  i {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAMAAACfWMssAAAANlBMVEUAAAD8/PxpaWlfX1/9/f1ycnIAAAAAAAAAAAAAAAAAAAD09PTr6+vv7+/h4eFjY2NZWVn///+5pCBCAAAAEXRSTlOZ/Lez/bqKZBGPAPfy9ey1sk5dq9MAAACBSURBVEjH7dc7FsQgDENRQSZAAvl4/5udUrVU5vj1t3El4xy9Qaz1cWIcMDoGOqw6mgcbsux7Peuqjqsl4jJdLNOVx3Q1neH2OavjMCN+u+GwglJxeAuldpeNUnGUqqOUHSWdKOlESSdKOknSqZJO673vDVn2jZrJ7Gltj3n7ffgDLGYI2l1NOaQAAAAASUVORK5CYII=);
+}
+
+.nova-player-container[data-revision="1"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-cancel,
+.nova-player-container[data-revision="2"]
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-cancel {
+  right: calc(100% - 75px);
+  top: 8px;
+}
+
+.nova-player-container[data-revision="1"]
+  .nova-player-ending-i18n
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-cancel,
+.nova-player-container[data-revision="2"]
+  .nova-player-ending-i18n
+  .nova-player-ending-content
+  .nova-player-ending-related-item-cover
+  .nova-player-ending-related-item-cancel {
+  left: 6px;
+  right: auto;
+}
+
+.nova-player-container[data-revision="2"][data-screen="full"]
+  .nova-player-ending-premiere-video-title {
+  opacity: 1;
+}
+
+.nova-common-edge .nova-player-ending-backdrop {
+  -webkit-filter: none;
+  filter: none;
+}

@@ -222,24 +222,24 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     });
     api.showEndWrap();
 
-    expect(container.querySelector(".endpage_wrap")).not.toBeNull();
+    expect(container.querySelector(".endpage-wrap")).not.toBeNull();
     expect(
-      container.querySelector(".endpageHeader_title")?.textContent,
+      container.querySelector(".endpage-header-title")?.textContent,
     ).toBe("西游记");
     expect(
       container
-        .querySelector(".endpageHeader_cover img")
+        .querySelector(".endpage-header-cover img")
         ?.getAttribute("src"),
     ).toBe("https://example.test/cover.jpg");
     expect(
-      container.querySelector(".endpageHeader_follow_btn")?.textContent,
+      container.querySelector(".endpage-header-follow-btn")?.textContent,
     ).toContain(t("player.ui.ending.watch_series"));
     expect(
-      container.querySelectorAll(".endpageHeader_btn_group > div")
+      container.querySelectorAll(".endpage-header-btn-group > div")
         .length,
     ).toBe(4);
     expect(
-      container.querySelectorAll(".EndPageRecommendItem_wrap").length,
+      container.querySelectorAll(".endpage-recommend-item").length,
     ).toBe(5);
   });
 
@@ -253,7 +253,7 @@ describe("Ending ogv 场景（电视剧 / 番剧）", () => {
     api.showEndWrap();
 
     const wrap = container.querySelector<HTMLElement>(
-      ".endpage_wrap",
+      ".endpage-wrap",
     );
     expect(wrap?.getAttribute("data-countdown")).toBeNull();
     expect(container.querySelector(".state-countdown-host")).toBeNull();
