@@ -1707,10 +1707,13 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         ".nova-player-ending-content",
       );
       if (content) {
-        const scale = Math.max(
-          0.8,
-          Math.min(availableWidth / 1477.5, availableHeight / 755),
+        const fitScale = Math.min(
+          availableWidth / 1477.5,
+          availableHeight / 755,
         );
+        // 正常尺寸（约 922×518 及以上）保底 0.8；更小窗口允许继续缩小，避免裁切
+        const isNormalSize = availableWidth >= 922 && availableHeight >= 518;
+        const scale = isNormalSize ? Math.max(0.8, fitScale) : fitScale;
         content.style.transform = `scale(${scale})`;
       }
       return;
