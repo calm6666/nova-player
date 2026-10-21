@@ -123,6 +123,8 @@
   "player.ui.pbp.open_permanent": "打开《高能进度条》常驻",
   "player.ui.pbp.close_permanent": "关闭《高能进度条》常驻",
   "player.ui.state.buffering": "正在缓冲...",
+  "player.ui.loading.text": "正在加载...",
+  "player.ui.toast.network_stall": "网络卡顿，正在缓冲…",
   "player.ui.error.networkErrorRefreshAndRetry": "网络状况异常，请刷新后重试",
   "player.ui.error.code": "错误码",
   "player.ui.error.refresh": "刷新",

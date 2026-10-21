@@ -6,6 +6,21 @@ import { luminaCompile } from '../../plugins/vite-plugin-lumina-compile';
 const repoRoot = path.resolve(__dirname, '../..');
 const at = (p: string): string => path.resolve(repoRoot, p);
 
+/** 生产构建统一压缩/混淆策略 */
+const terserOptions = {
+  ecma: 2020,
+  compress: {
+    passes: 2,
+    drop_debugger: true,
+  },
+  mangle: {
+    toplevel: true,
+  },
+  format: {
+    comments: false,
+  },
+};
+
 export default defineConfig({
   root: __dirname,
   publicDir: false,
@@ -60,6 +75,10 @@ export default defineConfig({
     },
     cssCodeSplit: false,
     emptyOutDir: true,
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions,
+    cssMinify: true,
   },
 });
 

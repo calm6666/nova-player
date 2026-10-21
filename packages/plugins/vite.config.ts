@@ -1,6 +1,22 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import { resolve } from 'path';
+
+/** 生产构建统一压缩/混淆策略 */
+const terserOptions = {
+  ecma: 2020,
+  compress: {
+    passes: 2,
+    drop_debugger: true,
+  },
+  mangle: {
+    toplevel: true,
+  },
+  format: {
+    comments: false,
+  },
+};
+
 export default defineConfig({
   plugins: [
     dts({
@@ -36,9 +52,10 @@ export default defineConfig({
       },
     },
     outDir: resolve(__dirname, 'dist'),
-    sourcemap: true,
-    minify: false,
-    cssMinify: false,
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions,
+    cssMinify: true,
   },
   resolve: {
     alias: [

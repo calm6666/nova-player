@@ -1597,6 +1597,10 @@ export class VideoPlayer
           this.streamMiddleware.getMode() !== PlayerMode.NATIVE &&
           this.props.src
         ) {
+          // MSE 模式 video 元素不触发原生 loadstart（src 为 blob: 由插件供给），
+          // 手动广播 LOAD_START 标记加载开始——LoadingPanel 初始加载遮罩
+          // 由此显示（与 switchSource 的手动广播语义对齐）
+          this.events.emit(PlayerEventEnum.LOAD_START);
           const target = this.resolveLoadTarget(this.props.src);
           if (target.url) {
             this.streamMiddleware.load({

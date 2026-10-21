@@ -828,6 +828,30 @@ export const PlayerDocker = defineComponent<
     }
   };
 
+  /**
+   * 统一开启缓冲指示（唯一入口）：
+   * 容器 state-buff 类（CSS 显示 State 组件转圈/文案）+
+   * IS_LOADING 键（经订阅联动 State 组件 mount 与速度采样启动）
+   * 网络缓冲与 seek 等待共用同一语义：state-buff + 「正在缓冲...」+ 当前速度
+   */
+  const showBuffIndicator = (): void => {
+    playerContainerRef.value?.classList.add("state-buff");
+    stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, true);
+  };
+
+  /**
+   * 统一关闭缓冲指示（唯一入口）：
+   * 撤容器类 + 撤键（订阅联动 State 组件 destroy 与速度采样停止）+
+   * 取消尚未到期的延迟句柄；幂等，可被多事件安全重复调用
+   */
+  const hideBuffIndicator = (): void => {
+    cancelBuffIndicator();
+    playerContainerRef.value?.classList.remove("state-buff");
+    if (stateMgr?.get(PlayerStateKeyEnum.IS_LOADING) ?? false) {
+      stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
+    }
+  };
+
   /** 播放头是否还能继续播（有后续数据）：判断"是否真的在缓冲"的准确依据 */
   const canContinuePlayback = (): boolean => {
     const video = videoRef.value;
@@ -853,53 +877,77 @@ export const PlayerDocker = defineComponent<
    * 订阅事件总线上由本组件消费的时序类媒体事件：
    * - WAITING：真正卡住（300ms 内未恢复）才亮缓冲指示，短暂换档被过滤
    * - CAN_PLAY：缓冲恢复撤下缓冲指示
-   * - SEEKING / SEEKED：跳转起止的缓冲态亮灭（清晰度切换除外）
+   * - SEEKING / SEEKED：跳转起止的缓冲态亮灭（清晰度切换除外），
+   *   seek 等待与网络缓冲同语义（含速度采样与「正在缓冲...」显示）
+   * - LOAD_START / LOADED_METADATA / CAN_PLAY / ABORT：LoadingPanel
+   *   初始加载遮罩显隐（网络缓冲不显示 LoadingPanel，由 state-buff 承担）
    * 订阅返回的解绑函数统一交给 cleanupFns（teardown 释放）
    */
   const setupVideoEventSubscriptions = (): void => {
-    if (!props.events) return;
+    const bus = props.events;
+    if (!bus) return;
 
     cleanupFns.push(
-      props.events.on(PlayerEventEnum.WAITING, () => {
+      bus.on(PlayerEventEnum.WAITING, () => {
         if (canContinuePlayback()) return;
         if (buffDelayTimer !== null) return;
         buffDelayTimer = setTimeout(() => {
           buffDelayTimer = null;
-          playerContainerRef.value?.classList.add("state-buff");
-          stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, true);
+          showBuffIndicator();
           // 真正卡住后提示网络异常（同一次缓冲只提示一次）
           if (!stallToastShown) {
             stallToastShown = true;
-            toastApi.showAutoToast?.("网络卡顿，正在缓冲…", 3000);
+            toastApi.showAutoToast?.(t("player.ui.toast.network_stall"), 3000);
           }
         }, 300);
       }),
     );
 
     cleanupFns.push(
-      props.events.on(PlayerEventEnum.CAN_PLAY, () => {
-        cancelBuffIndicator();
+      bus.on(PlayerEventEnum.CAN_PLAY, () => {
+        hideBuffIndicator();
         stallToastShown = false;
-        playerContainerRef.value?.classList.remove("state-buff");
-        stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
       }),
     );
 
     cleanupFns.push(
-      props.events.on(PlayerEventEnum.SEEKING, () => {
+      bus.on(PlayerEventEnum.SEEKING, () => {
         playerContainerRef.value?.classList.add("state-buff");
         if (!isQualitySwitching()) {
-          stateApi.showBuffering?.();
+          // 与网络缓冲同语义：写键统一驱动 State 显示与速度采样
+          // （seek 等待网络慢时同样展示「正在缓冲...」与当前速度）
+          stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, true);
         }
       }),
     );
 
     cleanupFns.push(
-      props.events.on(PlayerEventEnum.SEEKED, () => {
-        playerContainerRef.value?.classList.remove("state-buff");
-        stateApi.hideBuffering?.();
+      bus.on(PlayerEventEnum.SEEKED, () => {
+        hideBuffIndicator();
       }),
     );
+
+    // ===== LoadingPanel 初始加载遮罩（仅初始/换源加载显示） =====
+    // 网络缓冲与 seek 等待不经过此处——那由 state-buff（State 组件）承担
+    cleanupFns.push(
+      bus.on(PlayerEventEnum.LOAD_START, () => {
+        loadingApi.setText?.(t("player.ui.loading.text"));
+        loadingApi.show?.();
+      }),
+    );
+
+    const hideLoadingPanel = (): void => {
+      loadingApi.hide?.();
+    };
+    (
+      [
+        PlayerEventEnum.LOADED_METADATA,
+        PlayerEventEnum.CAN_PLAY,
+        PlayerEventEnum.ABORT,
+      ] as const
+    ).forEach((event) => {
+      cleanupFns.push(bus.on(event, hideLoadingPanel));
+    });
   };
 
   /**
@@ -918,9 +966,9 @@ export const PlayerDocker = defineComponent<
         PlayerEventEnum.ERROR,
         (payload: { error: unknown; code?: number | string; message?: string }) => {
           /** 撤下缓冲指示（转圈/蒙层/延迟句柄），错误面板与转圈不并存 */
-          cancelBuffIndicator();
-          playerContainerRef.value?.classList.remove("state-buff");
-          stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
+          hideBuffIndicator();
+          /** 撤下初始加载遮罩：错误面板与 LoadingPanel 不并存 */
+          loadingApi.hide?.();
 
           /** 从当前视频源 URL 提取出错主机名（解析失败返回 undefined） */
           const host = (() => {
@@ -1524,11 +1572,10 @@ export const PlayerDocker = defineComponent<
         }
         if (state === PlayerState.PLAYING) {
           // playing 语义：缓冲恢复后的实际播放，同时撤下暂停与缓冲样式
-          cancelBuffIndicator();
-          playerContainerRef.value?.classList.remove(
-            "state-buff",
-            "state-paused",
-          );
+          // （hideBuffIndicator 含 IS_LOADING 撤销：兜底 canplay 缺失场景，
+          //   避免 State 缓冲 DOM 残留与速度采样定时器空转）
+          hideBuffIndicator();
+          playerContainerRef.value?.classList.remove("state-paused");
           rowDmApi.playPause?.("playing");
           // 重新播放时隐藏片尾推荐面板（与既有实现行为一致）
           endingApi.closeEndWrap?.();
@@ -1583,12 +1630,8 @@ export const PlayerDocker = defineComponent<
         const video = videoRef.value;
         // 画面在推进就说明没卡住：DASH 换档取新分片会触发 seek/waiting，但画面仍在播
         if (video && !video.paused) {
-          cancelBuffIndicator();
-          stateApi.hideBuffering?.();
-          if (stateMgr?.get(PlayerStateKeyEnum.IS_LOADING) ?? false) {
-            playerContainerRef.value?.classList.remove("state-buff");
-            stateMgr?.set(PlayerStateKeyEnum.IS_LOADING, false);
-          }
+          // 撤缓冲指示（类 + 键 + State 显示 + 采样统一入口，幂等）
+          hideBuffIndicator();
         }
         controlsApi.updateCurrent?.(currentTime);
         // 将播放进度转发给顶部进度条（更新已播放条与滑块）

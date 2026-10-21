@@ -123,6 +123,8 @@
   "player.ui.pbp.open_permanent": "Enable High Energy Progress Bar",
   "player.ui.pbp.close_permanent": "Disable High Energy Progress Bar",
   "player.ui.state.buffering": "Buffering...",
+  "player.ui.loading.text": "Loading...",
+  "player.ui.toast.network_stall": "Network slowdown, buffering...",
   "player.ui.error.networkErrorRefreshAndRetry": "Network error. Please refresh and try again",
   "player.ui.error.code": "Error code",
   "player.ui.error.refresh": "Refresh",
