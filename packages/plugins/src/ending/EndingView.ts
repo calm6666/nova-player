@@ -292,8 +292,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const backtrackScrollLeft = signal(0);
   /** 回溯卡片实际步长（卡片宽 + 间距，运行时测量） */
   const backtrackStepWidth = signal(142);
-  /** 回溯箭头单次翻页距离（一屏可见卡片数 × 步长） */
-  const backtrackPageWidth = signal(142);
   /** 回溯内容最大可滚动距离（scrollWidth - clientWidth） */
   const backtrackMaxScroll = signal(0);
 
@@ -1227,7 +1225,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               onClick: () => {
                 backtrackScrollLeft.value = Math.max(
                   0,
-                  backtrackScrollLeft.value - backtrackPageWidth.value,
+                  backtrackScrollLeft.value - backtrackStepWidth.value,
                 );
               },
             },
@@ -1289,7 +1287,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
               onClick: () => {
                 backtrackScrollLeft.value = Math.min(
                   backtrackMaxScroll.value,
-                  backtrackScrollLeft.value + backtrackPageWidth.value,
+                  backtrackScrollLeft.value + backtrackStepWidth.value,
                 );
               },
             },
@@ -1797,9 +1795,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
         const maxScroll = Math.max(0, contentWidth - viewport.clientWidth);
 
         backtrackStepWidth.value = Math.max(1, step);
-        // 一屏能完整显示的卡片数 × 步长，作为箭头翻页距离
-        backtrackPageWidth.value =
-          Math.max(1, Math.floor(viewport.clientWidth / step)) * step;
         backtrackMaxScroll.value = maxScroll;
         backtrackScrollLeft.value = Math.min(
           backtrackScrollLeft.value,
