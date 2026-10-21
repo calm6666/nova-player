@@ -53,3 +53,6 @@ demo/public/mediapipe/
 npm-debug.log*
 pnpm-debug.log*
 
+
+# 本地逆向分析资料，不入库
+analysis/
