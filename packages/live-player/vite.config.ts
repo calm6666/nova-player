@@ -8,7 +8,7 @@ const at = (p: string): string => path.resolve(repoRoot, p);
 
 /** 生产构建统一压缩/混淆策略 */
 const terserOptions = {
-  ecma: 2020,
+  ecma: 2020 as const,
   compress: {
     passes: 2,
     drop_debugger: true,
