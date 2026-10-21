@@ -8,6 +8,7 @@
   justify-content: center;
   padding: 30px;
   width: 100%;
+  box-sizing: border-box;
 
   .endpage-content {
     display: flex;
@@ -240,7 +241,9 @@
     position: absolute;
     text-overflow: ellipsis;
     top: 120px;
-    transition: height 0.5s ease-in-out, transform 0.5s;
+    transition:
+      height 0.5s ease-in-out,
+      transform 0.5s;
     white-space: nowrap;
     width: 100%;
     z-index: 10;

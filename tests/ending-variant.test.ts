@@ -40,7 +40,7 @@ const mountEnding = (
       : props.variant === "interactive"
         ? "nova-player-ending-wrap nova-interactive-ending-wrap"
         : props.variant === "embedded"
-          ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
+          ? "nova-player-ending-wrap nova-player-embeded-ending-wrap"
           : "nova-player-ending-wrap";
   container.appendChild(host);
   vnode = h(Ending, {
@@ -176,10 +176,10 @@ describe("Ending embedded 场景", () => {
     api.showEndWrap();
 
     expect(
-      container.querySelector(".nova-player-embedded-ending-wrap"),
+      container.querySelector(".nova-player-embeded-ending-wrap"),
     ).not.toBeNull();
     expect(
-      container.querySelector(".nova-player-embedded-ending-wrap-box"),
+      container.querySelector(".nova-player-embeded-ending-wrap-box"),
     ).not.toBeNull();
     expect(
       container.querySelector(".nova-player-top-left-title-text")

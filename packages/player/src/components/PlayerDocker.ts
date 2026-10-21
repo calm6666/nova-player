@@ -642,7 +642,7 @@ export const PlayerDocker = defineComponent<
         : style === "interactive"
           ? "nova-player-ending-wrap nova-interactive-ending-wrap"
           : embeddedMode
-            ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
+            ? "nova-player-ending-wrap nova-player-embeded-ending-wrap"
             : "nova-player-ending-wrap";
   };
 
@@ -2947,7 +2947,7 @@ export const PlayerDocker = defineComponent<
                   : endingStyle === "interactive"
                     ? "nova-player-ending-wrap nova-interactive-ending-wrap"
                     : embeddedMode
-                      ? "nova-player-ending-wrap nova-player-embedded-ending-wrap"
+                      ? "nova-player-ending-wrap nova-player-embeded-ending-wrap"
                       : "nova-player-ending-wrap",
               ref: "endingRootRef",
             },

@@ -854,14 +854,14 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       ),
       h(
       "div",
-      { class: "nova-player-embedded-ending-wrap-box" },
+      { class: "nova-player-embeded-ending-wrap-box" },
       // 顶部：标题 / UP / 操作
       h(
         "div",
-        { class: "nova-player-embedded-ending-top-wrap" },
+        { class: "nova-player-embeded-ending-top-wrap" },
         h(
           "div",
-          { class: "nova-player-embedded-ending-top-left" },
+          { class: "nova-player-embeded-ending-top-left" },
           h(
             "div",
             { class: "nova-player-top-left-title" },
@@ -975,10 +975,10 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       // 相关推荐：真实 B 站外链尾页为 flex-wrap，DOM 数量随宽度变化
       h(
         "div",
-        { class: "nova-player-embedded-ending-relation-wrap" },
+        { class: "nova-player-embeded-ending-relation-wrap" },
         h(
           "div",
-          { class: "nova-player-embedded-ending-relation-context" },
+          { class: "nova-player-embeded-ending-relation-context" },
           h(For, {
             each: (): EndingRelatedItem[] => embeddedRelated.value,
             key: (item: EndingRelatedItem, index: number): string =>
@@ -991,7 +991,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       // 底部：下载客户端 / 进入站内
       h(
         "div",
-        { class: "nova-player-embedded-ending-button-group" },
+        { class: "nova-player-embeded-ending-button-group" },
         h(
           "div",
           {
@@ -1655,7 +1655,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     if (isEmbedded) {
       // 与真实页面一致：宽度由 JS 动态写到内联 style，CSS 只负责 width:100%
       const box = root.querySelector<HTMLElement>(
-        ".nova-player-embedded-ending-wrap-box",
+        ".nova-player-embeded-ending-wrap-box",
       );
       if (box) {
         const boxWidth = Math.min(
@@ -1680,7 +1680,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       // 真实页面 10 张卡片时给推荐容器加 fix-context（卡片固定 200px）
       root
         .querySelector<HTMLElement>(
-          ".nova-player-embedded-ending-relation-context",
+          ".nova-player-embeded-ending-relation-context",
         )
         ?.classList.toggle("fix-context", count > 5);
     }
