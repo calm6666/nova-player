@@ -1295,7 +1295,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   /** 渲染 OGV 单张推荐卡片（112×148，首张承载倒计时） */
   const renderOgvCard = (item: EndingRelatedItem): VNode => {
-    const count = Math.max(1, ogvRelated.value.length);
     const content = h(
       "div",
       { class: "EndPageRecommendItem_wrap" },
@@ -1336,7 +1335,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       "div",
       {
         class: "endpageRecommend_itemWrap",
-        style: { flex: `0 0 ${100 / count}%` },
       },
       ...[content],
     );
@@ -1697,11 +1695,30 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       if (next.length !== ogvRelated.value.length) {
         ogvRelated.value = next;
       }
+      // 通过 CSS 变量同步所有卡槽宽度，避免旧卡片保留上一轮 flex 百分比
+      root
+        .querySelector<HTMLElement>(".endpageRecommend_list")
+        ?.style.setProperty("--nova-ogv-item-basis", `${100 / count}%`);
     }
 
-    // 外链片尾不参与整体缩放，保持原有布局
+    // 站内标准片尾按真实设计基准（1477.5×755）随容器等比缩放
+    if (variant === "station") {
+      const content = root.querySelector<HTMLElement>(
+        ".nova-player-ending-content",
+      );
+      if (content) {
+        const scale = Math.min(
+          availableWidth / 1477.5,
+          availableHeight / 755,
+        );
+        content.style.transform = `scale(${scale})`;
+      }
+      return;
+    }
+
+    // 其他场景（互动等）按可用空间缩放，外链片尾不缩放
     const contents = root.querySelectorAll<HTMLElement>(
-      ".nova-player-ending-content, .nova-ogv-ending-content",
+      ".nova-player-ending-content",
     );
     contents.forEach((content) => {
       const width = content.offsetWidth;
@@ -1710,10 +1727,9 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       // 四周留出安全边距，不贴播放器边缘
       const horizontalPadding = 64;
       const verticalPadding = 48;
-      // 真实站内片尾 second-screen 固定 0.8 缩放；其余场景按可用空间缩放
-      const maxScale = variant === "station" ? 0.8 : 1;
+      // 互动等场景按可用空间缩放
       const scale = Math.min(
-        maxScale,
+        1,
         (availableWidth - horizontalPadding) / width,
         (availableHeight - verticalPadding) / height,
       );

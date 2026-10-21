@@ -84,7 +84,7 @@
 
 .endpageRecommend_wrap .endpageRecommend_list{display:flex;flex-wrap:wrap;flex-direction:row;justify-content:space-between;align-items:center}
 
-.endpageRecommend_wrap .endpageRecommend_list .endpageRecommend_itemWrap{display:flex;justify-content:space-between}
+.endpageRecommend_wrap .endpageRecommend_list .endpageRecommend_itemWrap{display:flex;justify-content:space-between;flex:0 0 var(--nova-ogv-item-basis,20%)}
 
 .endpageBacktrack_wrap{display:flex;flex-direction:column;width:100%}
 
