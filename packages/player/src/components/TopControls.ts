@@ -38,8 +38,6 @@ export type TopControlsEvents = {
 
 export const TopControls = defineComponent<TopControlsProps, TopControlsEvents>(
   (props, lifecycle) => {
-    const { duration = 0, progressSegments, previewProvider, skipPoints } =
-      props;
     /**
      * 组件挂载后，通知上层组件
      */
@@ -53,10 +51,10 @@ export const TopControls = defineComponent<TopControlsProps, TopControlsEvents>(
       "div",
       { class: "nova-player-control-top" },
       h(ProgressBar, {
-        duration,
-        progressSegments,
-        previewProvider,
-        skipPoints,
+        duration: props.duration ?? 0,
+        progressSegments: props.progressSegments,
+        previewProvider: props.previewProvider,
+        skipPoints: props.skipPoints,
         onSeek: (time) => lifecycle.emit?.("seek", time),
         onSeekStart: () => lifecycle.emit?.("seekStart"),
         onSeekEnd: () => lifecycle.emit?.("seekEnd"),

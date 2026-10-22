@@ -8,13 +8,13 @@
  * 声明式响应式版本：
  * - 章节列表由 pointsSignal 驱动 For 控制流（key-based 精准更新），
  *   rebuildPoints 仅写信号，替代旧的 menu.replaceChildren + materialize 重建
- * - 章节文案由 currentTitleSignal 驱动（_reactiveText 自动更新 Text 节点），
+ * - 章节文案由 currentTitle 驱动（_reactiveText 自动更新 Text 节点），
  *   替代旧的三处 viewpointTextRef.innerText 命令式写入
  * - 面板展开态由 shownSignal 驱动根节点 state-show 类（__reactiveAttrs），
  *   hover 定时器（rafTimeout）仅负责延迟时序并写信号，不直接操作 DOM
  */
 
-import { h, defineComponent, signal, For, t } from "@/core";
+import { h, defineComponent, signal, computed, For, t } from "@/core";
 import { useComponentUnmount } from "@/nova/core/componentUnmount";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
@@ -73,9 +73,8 @@ export const ViewpointMenu = defineComponent<
   ViewpointMenuProps,
   ViewpointMenuEvents
 >((props, lifecycle) => {
-  // 初值快照仅用于信号初始化（挂载后列表只经 rebuildPoints 写入信号更新）
+  // 初值仅用于列表信号初始化（挂载后列表只经 rebuildPoints 写入信号更新）
   const initialPoints = props.points ?? [];
-  const { currentTime = 0 } = props;
 
   // ============================================
   // 响应式信号（渲染层唯一数据源）
@@ -85,13 +84,16 @@ export const ViewpointMenu = defineComponent<
   const pointsSignal = signal<ViewpointItem[]>(initialPoints);
 
   /**
-   * 章节文案信号（按钮上显示的当前章节）
-   * 初值与原实现的首次渲染文案一致（首个章节 / 无章节时仅「章节」），
-   * 之后由挂载回调 / 点击 / rebuildPoints 写入
+   * 章节文案：由章节列表 + 当前播放时间派生
+   * 不再维护可写 signal，播放时间变化时自动刷新
    */
-  const currentTitleSignal = signal<string>(
-    initialPoints.length > 0 ? `章节 · ${initialPoints[0].title}` : "章节",
-  );
+  const currentTitle = computed<string>(() => {
+    const list = pointsSignal.value;
+    if (list.length === 0) return t("player.ui.controls.chapters");
+    const now = props.currentTime ?? 0;
+    const current = list.find((point, index) => isCurrentPoint(point.time, index, now));
+    return `${t("player.ui.controls.chapters")} · ${current?.title ?? list[0].title}`;
+  });
 
   /** 展开定时器 */
   let showTimer: AnimationFrameID | null = null;
@@ -133,13 +135,13 @@ export const ViewpointMenu = defineComponent<
    * @param index - 章节在列表中的索引
    * @returns 是否为当前正在播放的章节
    */
-  const isCurrentPoint = (time: number, index: number): boolean => {
+  const isCurrentPoint = (time: number, index: number, now = props.currentTime ?? 0): boolean => {
     // 当前时间 >= 该章节时间，且 < 下一章节时间
-    if (currentTime < time) return false;
+    if (now < time) return false;
     /** 下一个章节的数据 */
     const nextPoint = pointsSignal.value[index + 1];
     if (!nextPoint) return true;
-    return currentTime < nextPoint.time;
+    return now < nextPoint.time;
   };
 
   /**
@@ -147,25 +149,13 @@ export const ViewpointMenu = defineComponent<
    * 调用方需保证列表非空
    * @returns 按钮显示文案
    */
-  const resolveCurrentTitle = (): string => {
-    const list = pointsSignal.value;
-    const current = list.find((point, index) =>
-      isCurrentPoint(point.time, index),
-    );
-    return `章节 · ${current?.title ?? list[0].title}`;
-  };
-
-  /**
+    /**
    * 用新的章节数据重建列表（时长到手后重建，使章节时间与进度条同轴）
    * 写入信号即可：For 按新列表 diff 更新 DOM，文案随信号自动刷新
    * @param next - 归一后的章节数据
    */
   const rebuildPoints = (next: ViewpointItem[]): void => {
     pointsSignal.value = next ?? [];
-    // 与原实现一致：仅非空列表时刷新章节文案
-    if (pointsSignal.value.length > 0) {
-      currentTitleSignal.value = resolveCurrentTitle();
-    }
   };
 
   // ============================================
@@ -210,21 +200,17 @@ export const ViewpointMenu = defineComponent<
    * @returns 菜单项 VNode
    */
   const renderViewpointItem = (point: ViewpointItem, index: number): VNode => {
-    /** 是否为当前正在播放的章节 */
-    const isActive = isCurrentPoint(point.time, index);
     return h(
       "li",
       {
         // 选中态类名用对象形式（normalizeClass 展开），替代旧的 filter().join() 字符串拼接
         class: [
           "nova-player-ctrl-viewpoint-menu-item",
-          { active: isActive },
+          { active: isCurrentPoint(point.time, index) },
         ],
         "data-time": point.time,
         onClick: () => {
           lifecycle.emit?.("seek", point.time);
-          // 点击后章节文案立即跟随（signal 驱动 _reactiveText 自动更新）
-          currentTitleSignal.value = `章节 · ${point.title}`;
         },
       },
       h("span", {
@@ -251,10 +237,6 @@ export const ViewpointMenu = defineComponent<
    * 组件挂载后的回调，设置初始章节文案并通知外部组件已就绪
    */
   lifecycle.onMounted = (): void => {
-    // 初始章节文案：找到当前章节（无匹配时回退首个章节），与原实现一致
-    if (pointsSignal.value.length > 0) {
-      currentTitleSignal.value = resolveCurrentTitle();
-    }
     lifecycle.emit?.("viewpointMenuMounted", { rebuildPoints });
   };
 
@@ -284,11 +266,11 @@ export const ViewpointMenu = defineComponent<
         "div",
         { class: "nova-player-ctrl-viewpoint-content" },
         // 章节文本（子节点位置零参箭头函数 → _reactiveText：
-        // currentTitleSignal 变化时自动更新 Text 节点）
+        // currentTitle 变化时自动更新 Text 节点）
         h(
           "span",
           { class: "nova-player-ctrl-viewpoint-text" },
-          () => currentTitleSignal.value,
+          () => currentTitle.value,
         ),
         // 章节图标
         h(

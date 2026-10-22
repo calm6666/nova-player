@@ -15,7 +15,7 @@ import {
   useContext,
   t,
   signal,
-  onEffect,
+  computed,
   For,
 } from "@/core";
 import type { VNode } from "@/types";
@@ -37,8 +37,8 @@ export interface PlaybackRateMenuProps {
 
 export type PlaybackRateMenuEvents = {
   rateChange: number;
-  /** 挂载完成回传控制方法（供父层在倍速被外部改变时同步 UI） */
-  playbackRateMenuMounted: { setRate: (rate: number) => void };
+  /** 挂载完成事件（保留兼容；UI 已由运行时状态自动同步） */
+  playbackRateMenuMounted: undefined;
 };
 
 /**
@@ -49,8 +49,8 @@ export const PlaybackRateMenu = defineComponent<
   PlaybackRateMenuProps,
   PlaybackRateMenuEvents
 >((props, lifecycle) => {
-  /** 初始倍速与可选档位 */
-  const { rate = 1, rates = [2, 1.5, 1.25, 1, 0.75, 0.5] } = props;
+  /** 默认可选档位（父层未传 rates 时使用） */
+  const DEFAULT_RATES = [2, 1.5, 1.25, 1, 0.75, 0.5];
 
   /** 运行时状态管理器（用于订阅当前倍速） */
   const state = useContext(StateContext);
@@ -94,29 +94,20 @@ export const PlaybackRateMenu = defineComponent<
   // ============================================
 
   /**
-   * 响应式信号：当前倍速
-   * 替代旧的 let currentRate = rate 可变变量
-   * signal 变化时自动驱动 _reactiveText 更新结果文案 + onEffect 更新高亮
-   */
-  const currentRateSignal = signal<number>(rate);
-
-  /**
    * 响应式信号：运行时倍速状态（外部改变时同步）
    * useReactiveState 返回 Signal，读取 .value 自动建立依赖
-   * 替代旧的 useState(state, PLAYBACK_RATE, (next) => setRate(next), lifecycle)
    */
   const playbackRateStateSignal = state
     ? useReactiveState(state, PlayerStateKeyEnum.PLAYBACK_RATE, lifecycle)
     : signal<unknown>(undefined);
 
   /**
-   * 响应式同步：运行时倍速变化 → 更新本地倍速信号
-   * onEffect 内读取 playbackRateStateSignal.value 自动追踪
-   * 替代旧的 useState updater 回调
+   * 当前倍速：运行时状态优先，未就绪时回落到 props.rate
+   * 不再维护本地镜像 signal，读取时直接追踪状态信号
    */
-  onEffect(lifecycle, () => {
+  const currentRate = computed<number>(() => {
     const next = playbackRateStateSignal.value;
-    if (typeof next === "number") currentRateSignal.value = next;
+    return typeof next === "number" ? next : (props.rate ?? 1);
   });
 
   // ============================================
@@ -132,12 +123,9 @@ export const PlaybackRateMenu = defineComponent<
     return rateValue === 1 ? "1.0X" : `${rateValue}X`;
   };
 
-  /**
-   * 统一的倍速更新入口：更新信号（响应式系统自动刷新文本与高亮）
-   * @param next - 新的倍速值
-   */
-  const setRate = (next: number): void => {
-    currentRateSignal.value = next;
+  /** 点击倍速项：只发事件，显示值由运行时状态回流驱动 */
+  const selectRate = (next: number): void => {
+    lifecycle.emit?.("rateChange", next);
   };
 
   // ============================================
@@ -182,14 +170,10 @@ export const PlaybackRateMenu = defineComponent<
       {
         class: [
           "nova-player-ctrl-playbackrate-menu-item",
-          { "nova-player-state-active": currentRateSignal.value === rateValue },
+          { "nova-player-state-active": currentRate.value === rateValue },
         ],
         "data-value": rateValue.toString(),
-        onClick: () => {
-          // 先本地反馈，随后由运行时状态订阅统一校正
-          setRate(rateValue);
-          lifecycle.emit?.("rateChange", rateValue);
-        },
+        onClick: () => selectRate(rateValue),
       },
       formatRateLabel(rateValue),
     );
@@ -202,11 +186,7 @@ export const PlaybackRateMenu = defineComponent<
    * 组件挂载后：回传控制方法，供父层主动同步
    * 文本与高亮已由 _reactiveText / onEffect 响应式管理，无需手动初始化
    */
-  lifecycle.onMounted = (): void => {
-    lifecycle.emit?.("playbackRateMenuMounted", { setRate });
-  };
-
-  useComponentUnmount(lifecycle, clearTimers);
+    useComponentUnmount(lifecycle, clearTimers);
 
   // ============================================
   // 主渲染函数
@@ -234,7 +214,7 @@ export const PlaybackRateMenu = defineComponent<
       "div",
       { class: "nova-player-ctrl-playbackrate-result" },
       () => {
-        const rateValue = currentRateSignal.value;
+        const rateValue = currentRate.value;
         return rateValue === 1
           ? t("player.ui.controls.playbackRate")
           : formatRateLabel(rateValue);
@@ -248,7 +228,7 @@ export const PlaybackRateMenu = defineComponent<
         "ul",
         { class: "nova-player-ctrl-playbackrate-menu" },
         h(For, {
-          each: rates,
+          each: () => props.rates ?? DEFAULT_RATES,
           key: (_item: unknown, _index: number) => String(_item),
           // For 回调入参为 unknown：typeof 收窄（替代 as 断言）
           render: (item: unknown, _index: number): VNode =>

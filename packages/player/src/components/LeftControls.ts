@@ -128,9 +128,8 @@ export const LeftControls = defineComponent<
    */
   const timeEditingSignal = signal<boolean>(false);
 
-  /** 从状态管理器读取当前时长与当前时间，用于章节按钮等非响应式路径的初始值 */
+  /** 从状态管理器读取当前时长，用于章节按钮等非响应式路径的初始值 */
   const duration = state?.get(PlayerStateKeyEnum.DURATION) ?? 0;
-  const currentTime = state?.get(PlayerStateKeyEnum.CURRENT_TIME) ?? 0;
 
   /** 章节面板的重建 API（时长到手后用它把章节点换到与进度条同轴的时间） */
   let viewpointApi: { rebuildPoints: (next: ViewpointItem[]) => void } | null =
@@ -535,7 +534,7 @@ export const LeftControls = defineComponent<
         { when: () => segmentsSignal.value },
         h(ViewpointMenu, {
           points: computeViewpointPoints(),
-          currentTime,
+          currentTime: currentTimeSignal,
           onSeek: (time: number) => lifecycle.emit?.("seek", time),
           onViewpointMenuMounted: (api: {
             rebuildPoints: (next: ViewpointItem[]) => void;

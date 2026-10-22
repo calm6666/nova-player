@@ -16,7 +16,6 @@ import {
   t,
   signal,
   computed,
-  onEffect,
   For,
   Show,
 } from "@/core";
@@ -155,29 +154,20 @@ export const EpisodesMenu = defineComponent<
   // ============================================
 
   /**
-   * 响应式信号：当前集下标
-   * 替代旧的 let activeIndex 可变变量
-   * signal 变化时自动驱动 onEffect 互斥高亮 + Show 切换播放中图标
-   */
-  const activeIndexSignal = signal<number>(props.currentIndex ?? 0);
-
-  /**
    * 响应式信号：运行时播放列表下标（外部切集时同步）
    * useReactiveState 返回 Signal，读取 .value 自动建立依赖
-   * 替代旧的 useState(state, PLAYLIST_INDEX, (index) => { activeIndex = index; ... }, lifecycle)
    */
   const playlistIndexStateSignal = state
     ? useReactiveState(state, PlayerStateKeyEnum.PLAYLIST_INDEX, lifecycle)
     : signal<unknown>(undefined);
 
   /**
-   * 响应式同步：运行时播放列表下标变化 → 更新本地 activeIndex 信号
-   * onEffect 内读取 playlistIndexStateSignal.value 自动追踪
-   * 替代旧的 useState updater 回调（不再需要重建整个列表）
+   * 当前集下标：运行时状态优先，未就绪时回落到 props.currentIndex
+   * 不再维护本地镜像 signal 与同步 effect
    */
-  onEffect(lifecycle, () => {
+  const activeIndex = computed<number>(() => {
     const index = playlistIndexStateSignal.value;
-    if (typeof index === "number") activeIndexSignal.value = index;
+    return typeof index === "number" ? index : (props.currentIndex ?? 0);
   });
 
   // ============================================
@@ -226,20 +216,7 @@ export const EpisodesMenu = defineComponent<
   // 生命周期钩子
   // ============================================
 
-  /**
-   * 组件挂载后：从运行时状态同步一次当前集下标
-   * 列表渲染与高亮已由 For / onEffect 响应式管理，无需手动重建
-   */
-  lifecycle.onMounted = (): void => {
-    const stateIndex = state?.get(PlayerStateKeyEnum.PLAYLIST_INDEX);
-    if (typeof stateIndex === "number") {
-      activeIndexSignal.value = stateIndex;
-    } else if (typeof props.currentIndex === "number") {
-      activeIndexSignal.value = props.currentIndex;
-    }
-  };
-
-  useComponentUnmount(lifecycle, clearTimers);
+    useComponentUnmount(lifecycle, clearTimers);
 
   // ============================================
   // 主渲染函数
@@ -296,7 +273,7 @@ export const EpisodesMenu = defineComponent<
             "ul",
             { class: "nova-player-ctrl-eplist-section-content" },
             // For 组件：key-based 精准更新，每个选集项只渲染一次
-            // 选中态由响应式 class（activeIndexSignal.value 自动驱动）自动同步，无需 onEffect + classList.toggle
+            // 选中态由响应式 class（activeIndex.value 自动驱动）自动同步，无需 onEffect + classList.toggle
             h(For, {
               each: props.episodes ?? [],
               key: (item: unknown, _index: number): string =>
@@ -312,14 +289,13 @@ export const EpisodesMenu = defineComponent<
                       "nova-player-ctrl-eplist-multi-menu-item",
                       {
                         "nova-player-state-active":
-                          activeIndexSignal.value === ep.index,
+                          activeIndex.value === ep.index,
                       },
                     ],
                     "data-index": String(ep.index),
                     onClick: () => {
-                      // 当前项点击不做任何事
-                      if (ep.index === activeIndexSignal.value) return;
-                      activeIndexSignal.value = ep.index;
+                      // 当前项点击不做任何事；选中态由父层播放列表状态回流
+                      if (ep.index === activeIndex.value) return;
                       lifecycle.emit?.("episodeChange", ep.index);
                     },
                   },
@@ -327,7 +303,7 @@ export const EpisodesMenu = defineComponent<
                   // 替代旧的 ...(isActive ? [renderPlayingIcon()] : []) 条件数组
                   h(
                     Show,
-                    { when: () => activeIndexSignal.value === ep.index },
+                    { when: () => activeIndex.value === ep.index },
                     h(
                       "span",
                       { class: "nova-player-ctrl-eplist-multi-menu-item-icon" },
