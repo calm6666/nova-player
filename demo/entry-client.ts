@@ -2036,8 +2036,14 @@ async function rebuildPlayer(
       for (const plugin of config.plugins?.list ?? []) {
         existing.registerPlugin(plugin);
       }
-      existing.progress.setSegments(config.progress?.segments ?? []);
-      existing.progress.setEnergy(energy);
+      const applyProgressData = (): void => {
+        existing.progress.setSegments(config.progress?.segments ?? []);
+        existing.progress.setEnergy(energy);
+      };
+      requestAnimationFrame(() => {
+        applyProgressData();
+        setTimeout(applyProgressData, 500);
+      });
       attachAllPlayerEvents(existing);
       (window as unknown as { player: VideoPlayer }).player = existing;
       if (targetIndex > 0) {
