@@ -115,28 +115,31 @@ async function createServer() {
      * 或使用反引号/单引号
      */
     function extractCss(jsCode) {
-      // 匹配 const/var __vite__css = "..." 或 `...`
-      const patterns = [
-        /__vite__css\s*=\s*"`([\s\S]*?)"`/,
-        /__vite__css\s*=\s*"([\s\S]*?)"/,
-        /__vite__css\s*=\s*'([\s\S]*?)'/,
-        /__vite__css\s*=\s*`([\s\S]*?)`/,
-      ];
-      for (const pattern of patterns) {
-        const match = jsCode.match(pattern);
-        if (match) {
-          // 反转义 JS 字符串中的特殊字符
-          return match[1]
-            .replace(/\\n/g, '\n')
-            .replace(/\\"/g, '"')
-            .replace(/\\'/g, "'")
-            .replace(/\\\\/g, '\\')
-            .replace(/\\t/g, '\t');
-        }
+      const marker = jsCode.match(/__vite__css\s*=\s*/);
+      if (!marker) return null;
+      const start = marker.index + marker[0].length;
+      const quote = jsCode[start];
+      if (quote !== '"' && quote !== "'" && quote !== "`") return null;
+      let escaped = false;
+      let i = start + 1;
+      for (; i < jsCode.length; i++) {
+        const ch = jsCode[i];
+        if (escaped) { escaped = false; continue; }
+        if (ch === "\\") { escaped = true; continue; }
+        if (ch === quote) { i += 1; break; }
       }
-      return null;
+      const literal = jsCode.slice(start, i);
+      if (quote === '"') {
+        try { return JSON.parse(literal); } catch {}
+      }
+      return literal
+        .slice(1, -1)
+        .replace(/\\n/g, "\n")
+        .replace(/\\t/g, "\t")
+        .replace(/\\"/g, '"')
+        .replace(/\\'/g, "'")
+        .replace(/\\\\/g, "\\");
     }
-
     /**
      * 递归遍历模块依赖图
      * Vite 5 中 SSR 模块通过 ssrModuleGraph 管理
