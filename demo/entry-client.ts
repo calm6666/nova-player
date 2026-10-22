@@ -1326,6 +1326,17 @@ function syncPreviewModeButtons(effective: PreviewMode | "none"): void {
 // 拉取完成 / 播放器重建后由 effective 再纠正回退场景）
 syncPreviewModeButtons(previewMode);
 
+// 暴露给按钮 inline onclick：不依赖监听器挂载时机
+(window as unknown as { __setPreviewMode?: (mode: PreviewMode) => void }).__setPreviewMode = (mode) => {
+  previewMode = mode;
+  previewRequestedMode = mode;
+  void fetchProgressPreview(mode).then((result) => {
+    previewProviderHandle.setSource(result.source);
+    previewReadyMode = result.effective;
+    syncPreviewModeButtons(result.effective);
+  });
+};
+
 // 事件委托：水合/重建替换按钮节点后仍然有效
 document.addEventListener("click", (event) => {
   const target = event.target;
