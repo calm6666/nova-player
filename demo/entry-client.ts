@@ -863,7 +863,13 @@ if (root) {
     // 水合前应用 URL 参数：用于服务端渲染 / 客户端水合的多格式测试
     const querySrc = new URLSearchParams(location.search).get("src");
     if (querySrc) {
-      DEMO_SSR_PLAYER_CONFIG.src = querySrc;
+      try {
+        DEMO_SSR_PLAYER_CONFIG.src = JSON.parse(
+          querySrc,
+        ) as typeof DEMO_SSR_PLAYER_CONFIG.src;
+      } catch {
+        DEMO_SSR_PLAYER_CONFIG.src = querySrc;
+      }
     }
 
     // 水合前挂上预览 provider：DOM 结构不变，只影响进度条悬停预览

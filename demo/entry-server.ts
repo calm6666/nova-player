@@ -69,7 +69,11 @@ let lastSSRStartTime = 0;
 export function render(query: Record<string, unknown> = {}): string {
   const querySrc = typeof query.src === "string" ? query.src : undefined;
   if (querySrc) {
-    DEMO_SSR_PLAYER_CONFIG.src = querySrc;
+    try {
+      DEMO_SSR_PLAYER_CONFIG.src = JSON.parse(querySrc) as typeof DEMO_SSR_PLAYER_CONFIG.src;
+    } catch {
+      DEMO_SSR_PLAYER_CONFIG.src = querySrc;
+    }
   }
   lastSSRStartTime = performance.now();
   const vnode = RootLayout({});
