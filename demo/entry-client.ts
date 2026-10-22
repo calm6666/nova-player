@@ -18,6 +18,7 @@ import {
   playerInstance,
   setPlayerInstance,
 } from "./main";
+import { DEMO_SSR_PLAYER_CONFIG } from "./ssr-player";
 import { VideoPlayer } from "@/nova/player";
 import { createHlsPlugin } from "@/lumina/plugins/hls";
 import { createDashPlugin } from "@/lumina/plugins/dash";
