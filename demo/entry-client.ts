@@ -863,13 +863,7 @@ if (root) {
     // 水合前应用 URL 参数：用于服务端渲染 / 客户端水合的多格式测试
     const querySrc = new URLSearchParams(location.search).get("src");
     if (querySrc) {
-      try {
-        DEMO_SSR_PLAYER_CONFIG.src = JSON.parse(
-          querySrc,
-        ) as typeof DEMO_SSR_PLAYER_CONFIG.src;
-      } catch {
-        DEMO_SSR_PLAYER_CONFIG.src = querySrc;
-      }
+      DEMO_SSR_PLAYER_CONFIG.src = querySrc;
     }
 
     // 水合前挂上预览 provider：DOM 结构不变，只影响进度条悬停预览
@@ -1703,7 +1697,10 @@ function createEndingPlugin(source?: PlayerSource): Plugin {
   });
 }
 
-function collectPlugins(source?: PlayerSource): Plugin[] {
+function collectPlugins(
+  source?: PlayerSource,
+  forcedProtocol?: string | null,
+): Plugin[] {
   // 模式 B 当前激活的服务端轨 id（activateTrack 写入，fetch 读取）
   let activeRemoteTrack = "zh-ai";
   const list: Plugin[] = [
@@ -1780,11 +1777,12 @@ function collectPlugins(source?: PlayerSource): Plugin[] {
   }
   const text =
     typeof source === "string" ? source : JSON.stringify(source ?? "");
-  if (/\.m3u8(\?|$)/i.test(text)) {
+  const protocol = (forcedProtocol ?? "").toLowerCase();
+  if (protocol === "hls" || (!protocol && /\.m3u8(\?|$)/i.test(text))) {
     list.unshift(createHlsPlugin({ autoplay: false }));
-  } else if (/\.mpd(\?|$)/i.test(text)) {
+  } else if (protocol === "dash" || (!protocol && /\.mpd(\?|$)/i.test(text))) {
     list.unshift(createDashPlugin({ autoplay: false }));
-  } else if (/\.json(\?|$)/i.test(text) || typeof source !== "string") {
+  } else if (!protocol && (/\.json(\?|$)/i.test(text) || typeof source !== "string")) {
     list.unshift(createDashPlugin({ autoplay: false }));
     list.unshift(createHlsPlugin({ autoplay: false }));
   }
@@ -2048,7 +2046,10 @@ async function rebuildPlayer(
       },
     },
     plugins: {
-      list: collectPlugins(current ? current.src : undefined),
+      list: collectPlugins(
+        current ? current.src : undefined,
+        new URLSearchParams(location.search).get("protocol"),
+      ),
     },
     advanced: {
       debug: false,
