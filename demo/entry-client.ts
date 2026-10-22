@@ -656,6 +656,7 @@ const previewProviderHandle: MutablePreviewProvider =
  */
 let previewLoadPromise: Promise<void> | null = null;
 let previewReadyMode: PreviewMode | "none" | null = null;
+let previewRequestedMode: PreviewMode | null = null;
 
 /** 懒加载预览资源（同一模式只请求一次；force 用于用户点击重试） */
 function ensurePreviewLoaded(mode: PreviewMode, force = false): void {
@@ -886,6 +887,7 @@ if (root) {
     const initialPreview = await fetchProgressPreview(previewMode);
     previewProviderHandle.setSource(initialPreview.source);
     previewReadyMode = initialPreview.effective;
+    previewRequestedMode = previewMode;
     previewRequestedMode = previewMode;
     DEMO_SSR_PLAYER_CONFIG.progress = {
       ...(DEMO_SSR_PLAYER_CONFIG.progress ?? {}),
@@ -1324,6 +1326,7 @@ for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
     void fetchProgressPreview(mode).then((result) => {
       previewProviderHandle.setSource(result.source);
       previewReadyMode = result.effective;
+      previewRequestedMode = mode;
       syncPreviewModeButtons(result.effective);
     });
   });
