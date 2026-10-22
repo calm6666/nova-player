@@ -662,8 +662,10 @@ let previewRequestedMode: PreviewMode | null = null;
 function ensurePreviewLoaded(mode: PreviewMode, force = false): void {
   if (!force) {
     if (previewLoadPromise !== null) return;
-    if (previewReadyMode === mode || previewReadyMode === "none") return;
+    // 同一模式只请求一次，鼠标每次移动都不再触发网络
+    if (previewRequestedMode === mode) return;
   }
+  previewRequestedMode = mode;
   const requestMode = mode;
   previewLoadPromise = fetchProgressPreview(requestMode)
     .then((result) => {
