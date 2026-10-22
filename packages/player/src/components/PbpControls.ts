@@ -273,7 +273,13 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
         { class: "nova-player-pbp-pin", role: "button", "aria-label": t("player.ui.controls.pbpPin"), onClick: handlePinClick },
         h(
           "div",
-          { class: "nova-player-pbp-pin-icon nova-player-pbp-pin-icon-off" },
+          {
+            class: "nova-player-pbp-pin-icon nova-player-pbp-pin-icon-off",
+            // 图标跟随图钉状态，不依赖 nova-player-pbp-permanent（该 class 归配置）
+            style: {
+              display: pbpPermanentSignal.value ? "none" : "block",
+            },
+          },
           h(
             "svg",
             {
@@ -286,7 +292,12 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
         ),
         h(
           "div",
-          { class: "nova-player-pbp-pin-icon nova-player-pbp-pin-icon-on" },
+          {
+            class: "nova-player-pbp-pin-icon nova-player-pbp-pin-icon-on",
+            style: {
+              display: pbpPermanentSignal.value ? "block" : "none",
+            },
+          },
           h(
             "svg",
             {
@@ -300,12 +311,10 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
         h(
           "span",
           { class: "nova-player-pbp-pin-tip nova-player-pbp-pin-tip-off" },
-          t("player.ui.pbp.open_permanent"),
-        ),
-        h(
-          "span",
-          { class: "nova-player-pbp-pin-tip nova-player-pbp-pin-tip-on" },
-          t("player.ui.pbp.close_permanent"),
+          () =>
+            pbpPermanentSignal.value
+              ? t("player.ui.pbp.close_permanent")
+              : t("player.ui.pbp.open_permanent"),
         ),
       ),
     );
