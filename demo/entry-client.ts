@@ -861,9 +861,18 @@ if (root) {
     // PlayerSection 内部会创建 VideoPlayer 实例并调用 render()
     // 返回的 VNode 树包含完整播放器 UI 结构
     // 水合前应用 URL 参数：用于服务端渲染 / 客户端水合的多格式测试
-    const querySrc = new URLSearchParams(location.search).get("src");
-    if (querySrc) {
-      DEMO_SSR_PLAYER_CONFIG.src = querySrc;
+    const query = new URLSearchParams(location.search);
+    const querySrc = query.get("src");
+    const protocol = query.get("protocol");
+    const publicManifest =
+      protocol === "hls"
+        ? "/test-hls-segmentbase.json"
+        : protocol === "dash"
+          ? "/test-dash-segmentbase.json"
+          : undefined;
+    const bootSrc = querySrc ?? publicManifest;
+    if (bootSrc) {
+      DEMO_SSR_PLAYER_CONFIG.src = bootSrc;
     }
 
     // 水合前挂上预览 provider：DOM 结构不变，只影响进度条悬停预览
@@ -1978,7 +1987,15 @@ async function rebuildPlayer(
   previewProviderHandle.setSource(null);
   syncPreviewModeButtons("none");
 
-  const urlSrc = new URLSearchParams(location.search).get("src");
+  const queryParams = new URLSearchParams(location.search);
+  const protocol = queryParams.get("protocol");
+  const publicManifest =
+    protocol === "hls"
+      ? "/test-hls-segmentbase.json"
+      : protocol === "dash"
+        ? "/test-dash-segmentbase.json"
+        : undefined;
+  const urlSrc = queryParams.get("src") ?? publicManifest;
   let parsedUrlSrc: typeof MEDIA_LIST[number]["src"] | undefined;
   if (urlSrc) {
     try {
@@ -2048,7 +2065,7 @@ async function rebuildPlayer(
     plugins: {
       list: collectPlugins(
         current ? current.src : undefined,
-        new URLSearchParams(location.search).get("protocol"),
+        protocol,
       ),
     },
     advanced: {

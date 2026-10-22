@@ -373,24 +373,23 @@ player.destroy();         // 卸载并清理全部监听、插件与订阅
 
 ### SSR 多源测试 URL
 
-启动 `pnpm demo:ssr` 后，可通过 `src` 查询参数切换服务端首屏与客户端水合使用的媒体源：
+启动 `pnpm demo:ssr` 后，只需传 `protocol`，JSON 清单直接使用 `demo/public` 里的文件：
 
 ```text
-# MP4
+# HLS（使用 demo/public/test-hls-segmentbase.json）
+http://localhost:5174/?protocol=hls
+
+# DASH（使用 demo/public/test-dash-segmentbase.json）
+http://localhost:5174/?protocol=dash
+
+# 默认 MP4
+http://localhost:5174/
+
+# 仍然可以显式覆盖媒体地址
 http://localhost:5174/?src=/sample.mp4
-
-# HLS URL
-http://localhost:5174/?src=https%3A%2F%2Fexample.com%2Fvideo.m3u8
-
-# DASH URL
-http://localhost:5174/?src=https%3A%2F%2Fexample.com%2Fvideo.mpd
-
-# JSON 清单（URL 编码后传入）
-http://localhost:5174/?src=%7B%22type%22%3A%22hls%22%2C%22url%22%3A%22...%22%7D
 ```
 
-`src` 同时传给服务端 `render(query)` 与客户端水合配置；`protocol=hls|dash` 决定注入哪个流媒体插件，JSON 清单由插件自行解析。
-修改 `demo/server.mjs` 或入口文件后需要重启 SSR server。
+`protocol` 同时决定服务端首屏 src、客户端水合 src 和流媒体插件注册；不再需要把 JSON 内容塞进 URL。
 
 ### 服务端渲染
 
