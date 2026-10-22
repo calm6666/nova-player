@@ -187,7 +187,8 @@ const isProgressSegment = (item: unknown): item is ProgressSegment =>
 
 export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
   (props, lifecycle) => {
-    const { progressSegments: initialSegments } = props;
+    /** 初始分段：仅用于信号初始化，后续经 rebuildSegments API 更新 */
+    const initialSegments = props.progressSegments;
 
     // ============================================
     // 响应式 Signal（渲染层唯一数据源）
