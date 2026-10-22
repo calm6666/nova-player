@@ -699,7 +699,14 @@ interface SpriteIndexData {
     img_y_size?: number;
   };
   index?: number[];
-  sprite?: { status?: string };
+  sprite?: {
+    status?: string;
+    url?: string;
+    xLen?: number;
+    yLen?: number;
+    xSize?: number;
+    ySize?: number;
+  };
 }
 
 /** 判定是否为 index.json 的 data 载荷（类型谓词窄化，替代 as 断言） */
