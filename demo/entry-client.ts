@@ -859,6 +859,14 @@ if (root) {
     // 创建与服务端相同的 VNode 树
     // PlayerSection 内部会创建 VideoPlayer 实例并调用 render()
     // 返回的 VNode 树包含完整播放器 UI 结构
+    // 水合前挂上预览 provider：DOM 结构不变，只影响进度条悬停预览
+    DEMO_SSR_PLAYER_CONFIG.progress = {
+      ...(DEMO_SSR_PLAYER_CONFIG.progress ?? {}),
+      previewProvider: (time: number, duration: number) => {
+        ensurePreviewLoaded(previewMode);
+        return previewProviderHandle.provider(time, duration);
+      },
+    };
     const vnode = RootLayout({});
     const isSSR = root.firstElementChild !== null;
 
