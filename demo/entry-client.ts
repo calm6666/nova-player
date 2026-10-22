@@ -864,7 +864,6 @@ if (root) {
     const querySrc = new URLSearchParams(location.search).get("src");
     if (querySrc) {
       DEMO_SSR_PLAYER_CONFIG.src = querySrc;
-      if (MEDIA_LIST[0]) MEDIA_LIST[0] = { ...MEDIA_LIST[0], src: querySrc };
     }
 
     // 水合前挂上预览 provider：DOM 结构不变，只影响进度条悬停预览
@@ -1975,7 +1974,10 @@ async function rebuildPlayer(
   previewProviderHandle.setSource(null);
   syncPreviewModeButtons("none");
 
-  const current = MEDIA_LIST[targetIndex];
+  const urlSrc = new URLSearchParams(location.search).get("src");
+  const current = urlSrc
+    ? { ...MEDIA_LIST[targetIndex], src: urlSrc }
+    : MEDIA_LIST[targetIndex];
   const config: PlayerConfig = {
     src: current ? current.src : undefined,
     playlist: MEDIA_LIST,
