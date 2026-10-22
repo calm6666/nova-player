@@ -736,7 +736,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         h(ShadowProgressArea, {
           duration: props.duration,
           progressSegments: shadowSegments,
-          permanent: shadowPermanentEnabled && shadowSegments.length > 1,
+          permanent: shadowPermanentEnabled,
           onShadowProgressAreaMounted: (api: ShadowProgressAreaApi) => {
             shadowApi = api;
           },
@@ -752,7 +752,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             // PbpControls 以此初始化 permanentSignal）；后续更新走两条链：
             // 1. PBP_PERMANENT 状态订阅 → pbpApi.setPermanent（图钉点击/程序切换）
             // 2. Show 销毁重建时 onPbpControlsMounted 里重新补调
-            permanent: shadowPermanentEnabled && shadowSegments.length > 1,
+            permanent: shadowPermanentEnabled,
             onPbpControlsMounted: (api: {
               setShow: (show: boolean) => void;
               setPermanent: (permanent: boolean) => void;
