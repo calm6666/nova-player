@@ -886,6 +886,7 @@ if (root) {
     const initialPreview = await fetchProgressPreview(previewMode);
     previewProviderHandle.setSource(initialPreview.source);
     previewReadyMode = initialPreview.effective;
+    previewRequestedMode = previewMode;
     DEMO_SSR_PLAYER_CONFIG.progress = {
       ...(DEMO_SSR_PLAYER_CONFIG.progress ?? {}),
       segments: initialSegments,
