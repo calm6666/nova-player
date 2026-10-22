@@ -25,6 +25,8 @@ import { PlayerState, PlayMode } from "@/types";
 import {
   h,
   mount,
+  hydrate as hydrateVNode,
+  renderToString as renderVNodeToString,
   destroy,
   createTypedStateManager,
   createTypedEventBus,
@@ -2176,6 +2178,27 @@ export class VideoPlayer
    *
    * @param container - 容器元素
    */
+  /**
+   * 服务端渲染播放器为 HTML 字符串（不访问 DOM）
+   *
+   * 与 render() 共用同一 VNode 树；Node 环境可直接调用。
+   * 客户端使用同一份 PlayerConfig 创建实例后调用 hydrate() 完成水合。
+   */
+  renderToString(): string {
+    return renderVNodeToString(this.render());
+  }
+
+  /**
+   * 在已有 SSR HTML 上水合播放器
+   *
+   * 必须使用与 SSR 相同的 PlayerConfig 创建实例，保证 VNode 结构一致。
+   * @param container - 包含 SSR 播放器 HTML 的容器
+   */
+  hydrate(container: HTMLElement): void {
+    this.vnode = this.render();
+    hydrateVNode(this.vnode, container);
+  }
+
   mount(container: HTMLElement): void {
     this.vnode = this.render();
     mount(this.vnode, container);

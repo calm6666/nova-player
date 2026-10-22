@@ -1884,16 +1884,20 @@ function attachAllPlayerEvents(player: VideoPlayer): void {
   }
 }
 
-async function rebuildPlayer(targetIndex: number): Promise<void> {
+async function rebuildPlayer(
+  targetIndex: number,
+  hydrateExisting = false,
+): Promise<void> {
   const wrapper = document.getElementById("player-wrapper");
+  const existing = hydrateExisting ? playerInstance : null;
 
-  destroyCurrentPlayer();
+  if (!existing) destroyCurrentPlayer();
 
-  if (!wrapper) return;
+  if (!existing && !wrapper) return;
 
   // 清掉销毁占位（destroy 已移除播放器根节点，这里只移除占位节点，不再用 innerHTML）
   wrapper
-    .querySelectorAll(".player-destroyed-placeholder")
+    ?.querySelectorAll(".player-destroyed-placeholder")
     .forEach((node) => node.remove());
 
   // 测试期每个视频默认加载：分段点 + 预览数据（雪碧图/逐帧）+ 高能进度条 + 弹幕列表
@@ -1987,21 +1991,31 @@ async function rebuildPlayer(targetIndex: number): Promise<void> {
   };
 
   try {
-    const next = new VideoPlayer(config);
-    setPlayerInstance(next);
-    next.mount(wrapper);
-    attachAllPlayerEvents(next);
+    if (existing) {
+      // SSR 播放器已挂载：增量写入完整 demo 配置与插件，不重建 DOM
+      existing.setConfig(config);
+      attachAllPlayerEvents(existing);
+      (window as unknown as { player: VideoPlayer }).player = existing;
+      if (targetIndex > 0) {
+        void existing.switchTo(targetIndex).catch(() => undefined);
+      }
+    } else {
+      const next = new VideoPlayer(config);
+      setPlayerInstance(next);
+      next.mount(wrapper as HTMLElement);
+      attachAllPlayerEvents(next);
     // 新建播放器的初始语言固定为 zh-CN（config.i18n.locale），
     // 同步语言按钮高亮态，避免「重建后按钮停在旧语言」的观感错位
     for (const [otherId] of LOCALE_BUTTONS) {
       const other = document.getElementById(otherId);
       if (other) other.classList.toggle("active", otherId === "btn-locale-zh");
     }
-    (window as unknown as { player: VideoPlayer }).player = next;
-    // i18n 语言切换示例：控制台调用 player.setLocale('en-US') 即可切换
-    // 切换后所有 t() 文案自动更新 DOM（编译期 _reactiveText 包装的文本节点精准更新）
-    if (targetIndex > 0) {
-      void next.switchTo(targetIndex).catch(() => undefined);
+      (window as unknown as { player: VideoPlayer }).player = next;
+      // i18n 语言切换示例：控制台调用 player.setLocale('en-US') 即可切换
+      // 切换后所有 t() 文案自动更新 DOM（编译期 _reactiveText 包装的文本节点精准更新）
+      if (targetIndex > 0) {
+        void next.switchTo(targetIndex).catch(() => undefined);
+      }
     }
     appEventBus.emit("ACTION_LOG", {
       action:
@@ -4771,8 +4785,13 @@ function installPluginDemoControls(): void {
 installPluginDemoControls();
 
 // 唯一 demo 入口：启动即加载示例视频（Top/Ending 插件演示可见）
-if (!playerInstance && MEDIA_LIST.length > 0) {
-  void rebuildPlayer(0);
+if (MEDIA_LIST.length > 0) {
+  if (playerInstance) {
+    // SSR 已经产出播放器 HTML：水合后增量补齐 demo 插件与媒体数据
+    void rebuildPlayer(0, true);
+  } else {
+    void rebuildPlayer(0);
+  }
 }
 
 // ============================================

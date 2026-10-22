@@ -33,6 +33,7 @@ import {
   useState,
 } from "@/core";
 import { VideoPlayer } from "@/nova/player";
+import { createDemoSSRPlayer } from "./ssr-player";
 
 // SVG 图标组件（替代 Unicode emoji）
 import {
@@ -247,20 +248,28 @@ export function setPlayerInstance(p: VideoPlayer | null): void {
 }
 
 /**
- * VideoPlayer 客户端集成组件
+ * VideoPlayer SSR 集成组件
  *
- * 页面 SSR 只输出播放器占位容器；
- * entry-client 在页面水合完成后创建并挂载播放器。
+ * SSR 阶段：创建播放器实例，render() 返回完整播放器 VNode 供 renderToString 序列化。
+ * 客户端：用同一份配置创建实例并 hydrate 到服务端 HTML 上，不重复创建 DOM。
+ * 水合完成后 entry-client 会向该实例增量安装插件/媒体源。
  */
-const PlayerSection = defineComponent(() => {
+const PlayerSection = defineComponent((_props, lifecycle) => {
+  const player = createDemoSSRPlayer();
+  setPlayerInstance(player);
+
+  lifecycle.onBeforeDestroy = (): void => {
+    if (playerInstance === player) setPlayerInstance(null);
+    player.destroy();
+  };
 
   return h(
     "div",
     { class: "panel player-section" },
-    h("div", { class: "panel-title" }, h(IconVideo, { size: 16 }), "VideoPlayer 客户端渲染 + 页面 SSR"),
+    h("div", { class: "panel-title" }, h(IconVideo, { size: 16 }), "VideoPlayer 服务端渲染 + 客户端水合"),
     /**
      * 播放器容器
-     * 页面由 SSR 输出占位容器，播放器在水合后由 entry-client 创建挂载
+     * 页面由 SSR 输出完整播放器 VNode，客户端 hydrate 复用
      */
     h(
       "div",
@@ -268,7 +277,7 @@ const PlayerSection = defineComponent(() => {
         id: "player-wrapper",
         class: "player-wrapper",
       },
-      h("div", { class: "player-empty" }, "请先添加视频来源"),
+      player.render(),
     ),
     h(
       "div",

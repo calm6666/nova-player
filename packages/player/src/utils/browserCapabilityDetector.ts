@@ -247,6 +247,8 @@ class BrowserCapabilityDetector {
       info.webgpuSupported = true;
     }
 
+    if (typeof document === 'undefined') return info;
+
     try {
       const canvas = document.createElement('canvas');
       const gl =
@@ -736,41 +738,6 @@ class BrowserCapabilityDetector {
     );
     logger.info('='.repeat(50));
   }
-}
-
-// ==================== 使用示例 ====================
-// 以下代码展示如何使用本工具，可根据需要移除
-
-// 1. 获取完整检测结果
-const capability = BrowserCapabilityDetector.getFullCapabilityResult();
-logger.info('Browser capability result:', capability);
-
-// 2. 在控制台打印详细报告
-BrowserCapabilityDetector.printCapabilityReport();
-
-// 3. 异步检测特定编码的硬件解码支持
-(async (): Promise<void> => {
-  const h264Capability = await BrowserCapabilityDetector.checkDecodingCapability(
-    'video/mp4; codecs="avc1.42E01E"'
-  );
-  logger.info('H.264 decode capability:', h264Capability);
-
-  const hevcCapability = await BrowserCapabilityDetector.checkDecodingCapability(
-    'video/mp4; codecs="hvc1.1.6.L93.90"'
-  );
-  logger.info('HEVC decode capability:', hevcCapability);
-})().catch((err) => {
-  logger.error('Decode capability detection failed:', err);
-  // 这里可以做降级处理，例如使用软解
-});
-
-// 4. 根据检测结果进行业务逻辑判断
-if (capability.isIOS) {
-  logger.info('iOS detected, will use native HLS playback, dash.js/flv.js disabled');
-} else if (capability.dashSupported) {
-  logger.info('Desktop browser supports DASH, dash.js can be used');
-} else {
-  logger.info('Current browser does not support advanced streaming features, consider a fallback solution');
 }
 
 // 导出供其他模块使用

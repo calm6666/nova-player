@@ -24,6 +24,7 @@ import { reportError, ErrorSource } from "./warning";
 import {
   serializeStyle,
   normalizeClass,
+  normalizeStyle,
   StyleInput,
 } from "./normalize";
 import { maybeReactiveProps } from "./reactiveProps";
@@ -355,6 +356,10 @@ function renderComponentToString(vnode: VNode): string {
  */
 function serializeAttrs(attrs: VNodeAttrs): string {
   const parts: string[] = [];
+  /** class / style 需要合并静态值与 __reactiveAttrs，避免重复属性或丢失值 */
+  const classParts: string[] = [];
+  const styleParts: StyleInput[] = [];
+  const emitted = new Set<string>();
 
   for (const key in attrs) {
     if (!Object.prototype.hasOwnProperty.call(attrs, key)) continue;
@@ -362,60 +367,49 @@ function serializeAttrs(attrs: VNodeAttrs): string {
 
     const value = attrs[key];
 
-    /**
-     * 风格序列化（统一入口，支持对象和字符串）
-     * 放在事件处理器之前检查，避免 TypeScript 类型窄化导致赋值错误
-     */
     if (key === "style") {
-      const attrStr = serializeStyle(value as StyleInput, escapeHtml);
-      if (attrStr) parts.push(attrStr);
+      styleParts.push(value as StyleInput);
+      continue;
+    }
+
+    if (key === "className" || key === "class") {
+      const cls = normalizeClass(
+        value as Parameters<typeof normalizeClass>[0],
+      );
+      if (cls) classParts.push(cls);
       continue;
     }
 
     /**
      * 显式跳过事件处理器（以 on 开头的函数属性）
-     * 之前通过 typeof value === "function" 隐式过滤，
-     * 现在显式判断，逻辑更清晰
      */
     if (key.startsWith("on") && typeof value === "function") continue;
 
     /** 跳过 undefined */
     if (value === undefined) continue;
 
-    /**
-     * className / class 统一处理
-     *
-     * 支持字符串 / 数组 / 对象格式：
-     * - 'foo bar'                → class="foo bar"
-     * - ['foo', { active: true }] → class="foo active"
-     * - { active: true }         → class="active"
-     * 空值不输出 class 属性
-     */
-    if (key === "className" || key === "class") {
-      const cls = normalizeClass(value as Parameters<typeof normalizeClass>[0]);
-      if (cls) parts.push(` class="${escapeHtml(cls)}"`);
-      continue;
-    }
+    const htmlAttr = DOM_PROPERTY_TO_HTML_ATTR[key] ?? key;
+    if (emitted.has(htmlAttr)) continue;
 
     /**
      * 布尔属性只对 HTML 布尔属性生效。
      * 普通属性即使值是 boolean，也要按字符串序列化，避免和客户端属性行为不一致。
      */
     if (typeof value === "boolean") {
-      const htmlAttr = DOM_PROPERTY_TO_HTML_ATTR[key] ?? key;
       if (isBooleanAttr(key)) {
         if (value) {
+          emitted.add(htmlAttr);
           parts.push(` ${htmlAttr}`);
         }
         continue;
       }
 
+      emitted.add(htmlAttr);
       parts.push(` ${htmlAttr}="${value ? "true" : "false"}"`);
       continue;
     }
 
-    /** 普通属性 */
-    const htmlAttr = DOM_PROPERTY_TO_HTML_ATTR[key] ?? key;
+    emitted.add(htmlAttr);
     parts.push(` ${htmlAttr}="${escapeHtml(String(value))}"`);
   }
 
@@ -426,13 +420,38 @@ function serializeAttrs(attrs: VNodeAttrs): string {
       if (!Object.prototype.hasOwnProperty.call(reactiveAttrs, rKey)) continue;
       const val = reactiveAttrs[rKey]();
       if (val === undefined || val === null) continue;
+
       if (rKey === "class" || rKey === "className") {
         const cls = normalizeClass(val as never);
-        if (cls) parts.push(` class="${escapeHtml(cls)}"`);
-      } else {
-        parts.push(` ${rKey}="${escapeHtml(val)}"`);
+        if (cls) classParts.push(cls);
+        continue;
       }
+
+      if (rKey === "style") {
+        styleParts.push(val as StyleInput);
+        continue;
+      }
+
+      const htmlAttr = DOM_PROPERTY_TO_HTML_ATTR[rKey] ?? rKey;
+      if (emitted.has(htmlAttr)) continue;
+      emitted.add(htmlAttr);
+      parts.push(` ${htmlAttr}="${escapeHtml(String(val))}"`);
     }
+  }
+
+  /** class 合并去重后再输出一次，避免重复 class 属性 */
+  const classValue = Array.from(new Set(classParts.filter(Boolean))).join(" ");
+  if (classValue) parts.push(` class="${escapeHtml(classValue)}"`);
+
+  /** style 先合并为规范化对象，再统一序列化，避免 [object Object] */
+  if (styleParts.length > 0) {
+    const mergedStyle: Record<string, string> = {};
+    for (const raw of styleParts) {
+      const normalized = normalizeStyle(raw);
+      if (normalized) Object.assign(mergedStyle, normalized);
+    }
+    const styleAttr = serializeStyle(mergedStyle as StyleInput, escapeHtml);
+    if (styleAttr) parts.push(styleAttr);
   }
 
   return parts.join("");
