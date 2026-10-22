@@ -208,8 +208,7 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
           {
             show: showSignal.value,
             pin: pbpPermanentSignal.value,
-            "nova-player-pbp-permanent":
-              pbpPermanentSignal.value || permanentSignal.value,
+            "nova-player-pbp-permanent": permanentSignal.value,
           },
         ],
         ref: "pbpRef",
