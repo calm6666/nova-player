@@ -1865,6 +1865,12 @@ export interface PlayerMethods {
   render(): VNode;
   /** 安装插件（可链式） */
   use(plugin: Plugin): PlayerMethods;
+  /** 动态注册插件（UI 响应式自动挂载） */
+  registerPlugin(plugin: Plugin): PlayerMethods;
+  /** 动态卸载插件（UI 响应式自动移除） */
+  unregisterPlugin(name: string): void;
+  /** 是否已注册插件 */
+  hasPlugin(name: string): boolean;
   /** 卸载插件 */
   uninstallPlugin(name: string): void;
   /** 按名字取插件实例 */

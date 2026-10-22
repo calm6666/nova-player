@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import zhCN from "../core/locales/zh-CN.json";
-import enUS from "../core/locales/en-US.json";
+import zhCN from "../locales/zh-CN.json";
+import enUS from "../locales/en-US.json";
 
 /**
  * 提示 / 控件文字 i18n 完整性回归测试

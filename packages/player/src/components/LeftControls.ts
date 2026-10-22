@@ -25,7 +25,7 @@ import {
   onEffect,
   t,
 } from "@/core";
-import type { VNode } from "@/types";
+import type { ProgressSegment, VNode } from "@/types";
 import { PlayerStateKeyEnum, ConfigContext } from "@/store/runtimeState";
 import { StateContext } from "@/store/runtimeState";
 import { ConfigStoreContext } from "@/store/configStore";
@@ -596,15 +596,21 @@ export const LeftControls = defineComponent<
         );
       });
       configCleanups.push(
-        configStore.subscribePath("ui.controls.progressSegments", () => {
-          segmentsSignal.value = (config.progressSegments?.length ?? 0) > 1;
+        configStore.subscribePath("ui.controls.progressSegments", (value) => {
+          config.progressSegments = Array.isArray(value)
+            ? (value as ProgressSegment[])
+            : [];
+          segmentsSignal.value = config.progressSegments.length > 1;
           // segments 变化后重建点位（Show 根据 segmentsSignal 决定是否 mount/destroy）
           viewpointApi?.rebuildPoints(computeViewpointPoints());
         }),
       );
       configCleanups.push(
-        configStore.subscribePath("progress.segments", () => {
-          segmentsSignal.value = (config.progressSegments?.length ?? 0) > 1;
+        configStore.subscribePath("progress.segments", (value) => {
+          config.progressSegments = Array.isArray(value)
+            ? (value as ProgressSegment[])
+            : [];
+          segmentsSignal.value = config.progressSegments.length > 1;
           viewpointApi?.rebuildPoints(computeViewpointPoints());
         }),
       );

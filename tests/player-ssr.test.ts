@@ -5,6 +5,9 @@ import { VideoPlayer } from '../packages/player/src/player/VideoPlayer';
 import { h } from '../core';
 import { TopPlugin } from '../packages/plugins/src/top/TopPlugin';
 import { EndingPlugin } from '../packages/plugins/src/ending/EndingPlugin';
+import { HlsPlugin } from '../packages/plugins/src/hls/HlsPlugin';
+import { DashPlugin } from '../packages/plugins/src/dash/DashPlugin';
+import { FlvPlugin } from '../packages/plugins/src/flv/FlvPlugin';
 
 describe('player SSR', () => {
   it('serializes reactive style attrs as CSS, not [object Object]', () => {
@@ -33,6 +36,19 @@ describe('player SSR', () => {
     });
     expect(() => player.renderToString()).not.toThrow();
     expect(player.getPlugin('top')).toBeUndefined();
+  });
+
+  it('does not install stream plugins in Node', () => {
+    const player = new VideoPlayer({
+      src: 'https://example.com/video.m3u8',
+      plugins: {
+        list: [new HlsPlugin(), new DashPlugin(), new FlvPlugin()],
+      },
+    });
+    expect(() => player.renderToString()).not.toThrow();
+    expect(player.getPlugin('hls')).toBeUndefined();
+    expect(player.getPlugin('dash')).toBeUndefined();
+    expect(player.getPlugin('flv')).toBeUndefined();
   });
 
   it('renders player chrome to HTML in Node', () => {

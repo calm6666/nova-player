@@ -1867,7 +1867,15 @@ export function invokeLifecycle(
  * @param vnode - 虚拟节点
  * @param container - 已有的 DOM 容器（包含服务端渲染的 HTML）
  */
+let hydrationMismatchCount = 0;
+
+/** 最近一次 hydrate 的结构不匹配数量（用于 SSR 自检 / 测试） */
+export function getHydrationMismatchCount(): number {
+  return hydrationMismatchCount;
+}
+
 export function hydrate(vnode: VNode | string, container: HTMLElement): void {
+  hydrationMismatchCount = 0;
   if (!isBrowser()) return;
 
   if (typeof vnode === "string") return;
@@ -1886,6 +1894,12 @@ export function hydrate(vnode: VNode | string, container: HTMLElement): void {
    * container 作为 parent 传入，控制流仍可在其中创建锚点并渲染子树。
    */
   hydrateNode(vnode, container.firstChild, container);
+  if (hydrationMismatchCount > 0) {
+    warn(
+      WarnSource.MOUNT,
+      `[Lumina/hydrate] ${hydrationMismatchCount} SSR DOM mismatch(es) detected; hydration continued with the existing DOM.`,
+    );
+  }
 
   /**
    * 触发生命周期钩子
@@ -2076,7 +2090,8 @@ function hydrateNode(
       if (!vnode._cleanups) vnode._cleanups = [];
       vnode._cleanups.push(dispose);
     }
-    // el 非 Text（SSR 版本错位）→ 保守跳过，不告警不错位扩散
+    // el 非 Text（SSR 版本错位）→ 计数并在 hydrate 结束时提示
+    if (!isTextNode(el)) hydrationMismatchCount += 1;
     return el.nextSibling;
   }
 
@@ -2165,6 +2180,7 @@ function hydrateNode(
     const vnodeTag = String(vnode.tag).toLowerCase();
     const domTag = el.tagName.toLowerCase();
     if (vnodeTag !== "fragment" && vnodeTag !== domTag) {
+      hydrationMismatchCount += 1;
       if (isDev()) {
         console.warn(
           `[Lumina/hydrate] Tag mismatch: VNode tag "${vnodeTag}" does not match DOM tag "${domTag}"`,

@@ -4,8 +4,8 @@ import { Ending } from "../packages/plugins/src/ending/EndingView";
 import type { EndingApi } from "../packages/plugins/src/ending/EndingView";
 import type { VNode } from "../types";
 import countdownAnimation from "../packages/plugins/src/ending/assets/ending-countdown-animation.json";
-import zhCN from "../core/locales/zh-CN.json";
-import enUS from "../core/locales/en-US.json";
+import zhCN from "../locales/zh-CN.json";
+import enUS from "../locales/en-US.json";
 
 const RELATED = [
   { title: "第一集：开始", pic: "https://example.test/1.jpg", duration: 125 },

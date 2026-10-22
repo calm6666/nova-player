@@ -59,8 +59,8 @@ export const TopControls = defineComponent<TopControlsProps, TopControlsEvents>(
         onSeekStart: () => lifecycle.emit?.("seekStart"),
         onSeekEnd: () => lifecycle.emit?.("seekEnd"),
         // 进度条挂载后拿到其更新 API，继续向上层（Controls → PlayerDocker）回传
-        onProgressBarMounted: (api) =>
-          lifecycle.emit?.("progressBarMounted", api),
+        onProgressBarMounted: (api) => {          lifecycle.emit?.("progressBarMounted", api);
+        },
       }),
     );
   },

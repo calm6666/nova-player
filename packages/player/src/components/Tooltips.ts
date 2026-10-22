@@ -54,7 +54,7 @@ export interface TooltipsProps {
 /**
  * 默认提示项列表，包含播放器各按钮的默认提示文本
  *
- * 全部使用 i18n key（titleKey），文案见 core/locales/{zh-CN,en-US}.json；
+ * 全部使用 i18n key（titleKey），文案见根目录 locales/{zh-CN,en-US}.json；
  * 动态态（宽屏进入/退出、网页全屏、画中画、全屏）由 PlayerDocker 通过
  * updateTipKey 在状态变化时切换 key。
  */

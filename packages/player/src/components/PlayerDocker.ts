@@ -3136,8 +3136,7 @@ export const PlayerDocker = defineComponent<
               lifecycle.emit?.("qualityChange", quality);
             },
             // 顶部进度条挂载完成，持有其更新 API（timeupdate / progress 时调用）
-            onProgressBarMounted: (api: ProgressBarApi) => {
-              progressBarApi.updateProgress = api.updateProgress;
+            onProgressBarMounted: (api: ProgressBarApi) => {              progressBarApi.updateProgress = api.updateProgress;
               progressBarApi.updateBuffer = api.updateBuffer;
               progressBarApi.setDuration = api.setDuration;
               progressBarApi.rebuildSegments = api.rebuildSegments;

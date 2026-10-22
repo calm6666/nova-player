@@ -61,7 +61,7 @@ export const ShadowProgressArea = defineComponent<
   /** 当前分段数据 */
   let segments: ProgressSegment[] = props.progressSegments ?? [];
 
-  /** 是否常驻形态（参考实现为 isEdit 且存在多个分段） */
+  /** 是否常驻形态 */
   let permanent = props.permanent === true;
 
   /** 当前播放时间（秒），用于把缓冲条限定在播放头所在的分段 */

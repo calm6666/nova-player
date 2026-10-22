@@ -296,16 +296,28 @@ player.isWideScreen();
 | `prev` | `() => Promise<void>` |
 | `setPoster` | `(url: string) => void` |
 
-### 4.9 插件管理
+### 4.9 进度条（`player.progress`）
+
+| 方法 | 签名 | 说明 |
+| --- | --- | --- |
+| `applyPermanent` | `(enabled: boolean) => void` | 展开 / 收起底部常驻影子进度条 |
+| `isPermanent` | `() => boolean` | 当前是否常驻展开 |
+| `setSegments` | `(segments: ProgressSegment[]) => void` | 注入章节 / 分段数据，章节菜单与顶部、底部进度条共用 |
+| `setEnergy` | `(data: EnergyProgressData \| null) => void` | 注入高能进度条数据，挂载前调用会暂存 |
+
+### 4.10 插件管理
 
 | 方法 | 签名 | 说明 |
 | --- | --- | --- |
 | `use` | `(plugin: Plugin) => VideoPlayer` | 安装插件，返回 this 支持链式 |
+| `registerPlugin` | `(plugin: Plugin) => VideoPlayer` | 动态注册插件，UI 响应式自动挂载 |
 | `uninstallPlugin` | `(name: string) => void` | 卸载按名 |
+| `unregisterPlugin` | `(name: string) => void` | 动态卸载，UI 响应式自动移除 |
+| `hasPlugin` | `(name: string) => boolean` | 是否已注册 |
 | `getPlugin<T>` | `<T extends Plugin>(name: string) => T \| undefined` | 取插件实例 |
 | `getPluginAPI<T>` | `<T extends Plugin>(name: string) => T \| undefined` | 同上（别名） |
 
-### 4.10 配置与事件
+### 4.11 配置与事件
 
 | 方法 | 签名 | 说明 |
 | --- | --- | --- |
@@ -845,17 +857,25 @@ player.use(TopPlugin());
 
 ### 7.4.1 渲染方式
 
-`VideoPlayer` 是纯客户端组件，不提供服务端渲染 API。
-
-页面可以由 SSR 输出播放器占位容器，客户端水合后再创建并挂载播放器：
+`VideoPlayer` 支持真正的服务端渲染：
 
 ```ts
-// 页面 SSR 输出
-<div id="player"></div>
-
-// 客户端
+// 服务端（Node）
 const player = new VideoPlayer(config);
-player.mount(document.getElementById("player")!);
+const html = player.renderToString();
+
+// 客户端（浏览器），config 必须与服务端完全一致
+const player = new VideoPlayer(config);
+player.hydrate(document.getElementById("player")!);
+```
+
+服务端只输出播放器骨架；插件、章节 / 高能数据等浏览器数据在水合后接入：
+
+```ts
+player.registerPlugin(TopPlugin(...));       // UI 响应式自动挂载
+player.unregisterPlugin("top");              // UI 响应式自动移除
+player.progress.setSegments(segments);       // 章节 / 顶部 / 影子进度条共用
+player.progress.setEnergy(energy);           // 高能进度条
 ```
 
 ### 7.4 SlotContext
@@ -1074,24 +1094,43 @@ new VideoPlayer({ storage: { enabled: false } });
 
 ## 10. 页面 SSR 与播放器渲染
 
-`VideoPlayer` 是纯客户端组件，不提供服务端渲染 API。
-
-Demo 页面由 `demo/server.mjs` 做页面级 SSR，但播放器位置只输出占位容器：
-
-```html
-<div id="player-wrapper" class="player-wrapper">
-  <div class="player-empty">请先添加视频来源</div>
-</div>
-```
-
-页面水合完成后，客户端创建并挂载播放器：
+`VideoPlayer` 支持真正的服务端渲染：
 
 ```ts
+// 服务端
 const player = new VideoPlayer(config);
-player.mount(document.getElementById("player-wrapper")!);
+const html = player.renderToString();
 ```
 
-这样页面的静态 UI 可以 SSR，播放器及其全部交互、插件、响应式状态都在客户端初始化。
+```ts
+// 客户端，config 必须与服务端完全一致
+const player = new VideoPlayer(config);
+player.hydrate(document.getElementById("player-wrapper")!);
+```
+
+`hydrate()` 会校验 VNode 与 DOM 结构；不匹配时由 `getHydrationMismatchCount()` 计数并在结束时提示，
+不会静默接受错位 DOM。
+
+SSR 只渲染播放器骨架，不请求章节 / 高能数据；客户端只请求一次后注入：
+
+```ts
+player.progress.setSegments(segments);
+player.progress.setEnergy(energy);
+```
+
+插件也在客户端水合后动态注册，避免 Node 环境访问 DOM：
+
+```ts
+player.registerPlugin(TopPlugin(...));
+player.registerPlugin(DanmakuPlugin(...));
+```
+
+Demo 提供两个启动入口：
+
+```bash
+pnpm demo:ssr   # 服务端渲染 + hydrate，http://localhost:5174
+pnpm demo:csr   # 纯客户端渲染，http://localhost:5175
+```
 
 ---
 

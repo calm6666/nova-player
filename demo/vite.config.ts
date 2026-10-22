@@ -20,6 +20,7 @@ export default defineConfig({
 
       { find: /^@\/lumina\/plugins\/(.*)/, replacement: path.resolve(__dirname, '../packages/plugins/src/$1') },
       { find: /^@\/nova\/(.*)/, replacement: path.resolve(__dirname, '../packages/player/src/$1') },
+      { find: /^@\/locales\/(.*)/, replacement: path.resolve(__dirname, '../locales/$1') },
       { find: /^@\/core\/(.*)/, replacement: path.resolve(__dirname, '../core/$1') },
       { find: /^@\/types\/(.*)/, replacement: path.resolve(__dirname, '../types/$1') },
       { find: /^@\/utils\/(.*)/, replacement: path.resolve(__dirname, '../utils/$1') },

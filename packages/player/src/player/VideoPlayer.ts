@@ -20,6 +20,8 @@ import type {
   DisplayMode,
   SubtitleConfig,
   ProgressSkipPoints,
+  ProgressSegment,
+  EnergyProgressData,
 } from "@/types";
 import { PlayerState, PlayMode } from "@/types";
 import {
@@ -303,6 +305,9 @@ export class VideoPlayer
 
   /** 控制栏 API（控制栏挂载后由 PlayerDocker 回填） */
   private controlsApi: ControlsAPI | null = null;
+
+  /** 挂载前注入的高能数据，Controls 挂载后补发 */
+  private pendingEnergy: EnergyProgressData | null | undefined;
 
   /** 播放器根元素 */
   el?: HTMLElement;
@@ -961,7 +966,45 @@ export class VideoPlayer
     this.controlsApi.setShadowPermanent(
       this.props.progress?.shadowPermanent === true,
     );
+    if (this.pendingEnergy !== undefined) {
+      this.controlsApi.setEnergy(this.pendingEnergy);
+    }
   }
+
+  /**
+   * 进度条公开 API（统一挂在 progress 命名空间下）
+   *
+   * 用法：
+   * player.progress.applyPermanent(true)   // 展开底部影子进度条
+   * player.progress.applyPermanent(false)  // 收起
+   */
+  readonly progress = {
+    /** 是否展开底部常驻影子进度条（等价于 setShadowPermanent） */
+    applyPermanent: (enabled: boolean): void => {
+      this.setShadowPermanent(enabled);
+    },
+    /** 当前是否处于常驻展开态 */
+    isPermanent: (): boolean => this.props.progress?.shadowPermanent === true,
+    /**
+     * 注入章节 / 分段数据。
+     * 章节菜单、顶部进度条、底部影子进度条共用这一份数据。
+     */
+    setSegments: (segments: ProgressSegment[]): void => {
+      this.props.progress = {
+        ...(this.props.progress ?? {}),
+        segments,
+      };
+      this.syncSegmentsToControls();
+      // 通知 ConfigStore：章节菜单与进度条订阅 progress.segments 自动更新
+      this.configStore.set(this.props);
+      this.controlsApi?.setProgressSegments(segments);
+    },
+    /** 注入高能进度条数据（客户端水合后一次请求；挂载前调用会暂存） */
+    setEnergy: (data: EnergyProgressData | null): void => {
+      this.pendingEnergy = data;
+      this.controlsApi?.setEnergy(data);
+    },
+  };
 
   /**
    * 设置分段进度条常驻展开
@@ -2246,6 +2289,26 @@ export class VideoPlayer
     this.syncPluginFlags(plugin.name, true);
     this.pluginManager.install(plugin);
     return this;
+  }
+
+  /**
+   * 动态注册插件（use 的语义化别名）
+   *
+   * 插件 UI 的显示/隐藏由 pluginFlags 响应式驱动，
+   * 运行期注册后无需手动操作 DOM，控制栏/图层会自动挂载。
+   */
+  registerPlugin(plugin: Plugin): VideoPlayer {
+    return this.use(plugin);
+  }
+
+  /** 动态卸载插件（uninstallPlugin 的语义化别名），UI 自动移除 */
+  unregisterPlugin(name: string): void {
+    this.uninstallPlugin(name);
+  }
+
+  /** 是否已注册某个插件 */
+  hasPlugin(name: string): boolean {
+    return this.getPlugin(name) !== undefined;
   }
 
   /**

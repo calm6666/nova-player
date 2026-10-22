@@ -7,11 +7,11 @@
  */
 
 import "@/styles/style.scss";
-import { hydrate } from "@/core";
+import { hydrate, mount } from "@/core";
 import { PlayerEventEnum } from "@/core/events";
 // 内置语言包：随 i18n 配置注入播放器（core/index.ts 已自动注册，这里显式传入保证配置完整）
-import zhCN from "@/core/locales/zh-CN.json";
-import enUS from "@/core/locales/en-US.json";
+import zhCN from "@/locales/zh-CN.json";
+import enUS from "@/locales/en-US.json";
 import {
   RootLayout,
   appEventBus,
@@ -644,6 +644,43 @@ let previewMode: PreviewMode =
 const previewProviderHandle: MutablePreviewProvider =
   createMutablePreviewProvider(null);
 
+/**
+ * 预览资源懒加载状态。
+ * 进入页面 / 重建播放器时不请求 /videoshot/*；只有用户实际悬停进度条或
+ * 点击预览模式时才加载一次，并按模式缓存，避免重复下载 preview.bin。
+ */
+let previewLoadPromise: Promise<void> | null = null;
+let previewReadyMode: PreviewMode | "none" | null = null;
+
+/** 懒加载预览资源（同一模式只请求一次；force 用于用户点击重试） */
+function ensurePreviewLoaded(mode: PreviewMode, force = false): void {
+  if (!force) {
+    if (previewLoadPromise !== null) return;
+    if (previewReadyMode === mode || previewReadyMode === "none") return;
+  }
+  const requestMode = mode;
+  previewLoadPromise = fetchProgressPreview(requestMode)
+    .then((result) => {
+      previewProviderHandle.setSource(result.source);
+      previewReadyMode = result.effective;
+      syncPreviewModeButtons(result.effective);
+      appEventBus.emit("ACTION_LOG", {
+        action:
+          result.effective === "none"
+            ? "预览图无可用数据（雪碧图未就绪且 preview.bin 为空）"
+            : "预览图已加载：" +
+              (result.effective === "sprite" ? "雪碧图模式" : "逐帧 bin 模式") +
+              (result.effective !== requestMode
+                ? "（所选形态不可用，已回退）"
+                : ""),
+        timestamp: Date.now(),
+      });
+    })
+    .finally(() => {
+      previewLoadPromise = null;
+    });
+}
+
 /** index.json 的 data 载荷（雪碧图切片参数 + 就绪状态，B 站形状） */
 interface SpriteIndexData {
   pvdata?: {
@@ -717,6 +754,8 @@ async function fetchSpritePreviewSource(): Promise<DemoPreviewSource | null> {
 async function fetchProgressPreview(
   mode: PreviewMode,
 ): Promise<PreviewFetchResult> {
+  // 预览图默认关闭：/videoshot/preview.bin 会触发浏览器下载与 IDM 弹窗。
+  // 需要预览时显式改为 false，并自行承担网络开销。
   if (mode === "sprite") {
     const sprite = await fetchSpritePreviewSource();
     if (sprite) return { source: sprite, effective: "sprite" };
@@ -821,18 +860,20 @@ if (root) {
     // PlayerSection 内部会创建 VideoPlayer 实例并调用 render()
     // 返回的 VNode 树包含完整播放器 UI 结构
     const vnode = RootLayout({});
+    const isSSR = root.firstElementChild !== null;
 
-    // 执行水合
+    // SSR 页面执行水合；纯客户端页面直接 mount
     // hydrate() 会：
     // 1. 遍历 VNode 树，匹配已有 DOM 元素
     // 2. 绑定 ref（videoRef, playerDockerRef 等）
     // 3. 调用 onMounted 生命周期
     //    - PlayerDocker.onMounted → initVideo() + initEvent()
     //    - VideoPlayer 通过回调获取 DOM 引用，绑定视频事件
-    hydrate(vnode, root);
+    if (isSSR) hydrate(vnode, root);
+    else mount(vnode, root);
 
-    // 更新 SSR 徽章为 "Hydrated"
-    updateBadgeToHydrated();
+    // 更新徽章状态
+    updateBadgeToHydrated(isSSR ? "Hydrated" : "CSR Mounted");
 
     // PlayerSection 在 SSR / hydration 阶段创建的播放器实例
     const ssrPlayer = (window as unknown as { __ssrPlayer?: VideoPlayer })
@@ -1242,21 +1283,8 @@ for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
   if (!button) continue;
   button.addEventListener("click", () => {
     previewMode = mode;
-    // 每次点击都重新拉取：既是模式切换，也是所选形态不可用后的「重试」
-    void fetchProgressPreview(mode).then((result) => {
-      // 数据源换到可变 provider：下一次进度条悬停即用新形态，无需重建播放器
-      previewProviderHandle.setSource(result.source);
-      syncPreviewModeButtons(result.effective);
-      appEventBus.emit("ACTION_LOG", {
-        action:
-          result.effective === "none"
-            ? "预览图无可用数据（雪碧图未就绪且 preview.bin 为空）"
-            : "预览图切换为 " +
-              (result.effective === "sprite" ? "雪碧图模式" : "逐帧 bin 模式") +
-              (result.effective !== mode ? "（所选形态不可用，已回退）" : ""),
-        timestamp: Date.now(),
-      });
-    });
+    // 用户主动切换 / 重试时才加载，避免页面加载即下载 videoshot 资源
+    ensurePreviewLoaded(mode, true);
   });
 }
 
@@ -1906,8 +1934,7 @@ async function rebuildPlayer(
   if (demoSegments.length === 0) {
     demoSegments = await fetchProgressSegments();
   }
-  const [previewResult, energy, danmakuList] = await Promise.all([
-    fetchProgressPreview(previewMode),
+  const [energy, danmakuList] = await Promise.all([
     fetchEnergyProgress(),
     fetchDanmakuList(),
   ]);
@@ -1916,10 +1943,9 @@ async function rebuildPlayer(
   danmakuPanelList = danmakuList;
   renderDanmakuList();
 
-  // 预览数据源写入可变 provider（供本次及后续模式切换复用），
-  // 并按实际生效形态同步切换按钮高亮（所选形态不可用被回退时用户可见）
-  previewProviderHandle.setSource(previewResult.source);
-  syncPreviewModeButtons(previewResult.effective);
+  // 预览图默认关闭：不请求 /videoshot/*（避免触发浏览器下载与 IDM 弹窗）
+  previewProviderHandle.setSource(null);
+  syncPreviewModeButtons("none");
 
   const current = MEDIA_LIST[targetIndex];
   const config: PlayerConfig = {
@@ -1942,7 +1968,11 @@ async function rebuildPlayer(
       // 播放器只在进度条悬停时按时间调用（ProgressPreview API，解耦数据来源）。
       // 用可变 provider：数据源已在上面拉好写入 handle，模式切换按钮
       // 运行期 setSource 即可换源，无需重建播放器实例
-      previewProvider: previewProviderHandle.provider,
+      previewProvider: (time: number, duration: number) => {
+        // 首次悬停进度条时才懒加载预览资源
+        ensurePreviewLoaded(previewMode);
+        return previewProviderHandle.provider(time, duration);
+      },
       // 高能进度条数据 Provider：demo 侧拉取 /x/player/pbp 并归一化后注入，
       // 播放器只负责绘制曲线（数据获取与绘制彻底解耦）
       energyProvider: () => energy,
@@ -1992,8 +2022,15 @@ async function rebuildPlayer(
 
   try {
     if (existing) {
-      // SSR 播放器已挂载：增量写入完整 demo 配置与插件，不重建 DOM
-      existing.setConfig(config);
+      // SSR 播放器已挂载：基础配置增量写入，插件全部由客户端动态注册
+      const { plugins: dynamicPlugins, ...baseConfig } = config;
+      existing.setConfig(baseConfig);
+      for (const plugin of dynamicPlugins?.list ?? []) {
+        existing.registerPlugin(plugin);
+      }
+      // 章节 / 分段进度条 / 影子进度条共用同一份 segments；高能曲线同一份 energy
+      existing.progress.setSegments(config.progress?.segments ?? []);
+      existing.progress.setEnergy(energy);
       attachAllPlayerEvents(existing);
       (window as unknown as { player: VideoPlayer }).player = existing;
       if (targetIndex > 0) {
@@ -2003,6 +2040,8 @@ async function rebuildPlayer(
       const next = new VideoPlayer(config);
       setPlayerInstance(next);
       next.mount(wrapper as HTMLElement);
+      next.progress.setSegments(config.progress?.segments ?? []);
+      next.progress.setEnergy(energy);
       attachAllPlayerEvents(next);
     // 新建播放器的初始语言固定为 zh-CN（config.i18n.locale），
     // 同步语言按钮高亮态，避免「重建后按钮停在旧语言」的观感错位
@@ -4656,12 +4695,12 @@ syncInteractionUi();
 // 辅：徽章状态更新
 // ============================================
 
-function updateBadgeToHydrated(): void {
+function updateBadgeToHydrated(label = "Hydrated"): void {
   const badge = document.getElementById("ssr-badge");
   if (badge) {
     badge.className = "ssr-badge hydrated";
     const text = badge.querySelector(".text");
-    if (text) text.textContent = "Hydrated";
+    if (text) text.textContent = label;
   }
 }
 

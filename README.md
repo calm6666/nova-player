@@ -25,7 +25,7 @@
 | **弹幕智能防挡** | 外部遮罩 provider 或本地语义分割（MediaPipe ImageSegmenter，Web Worker + GPU delegate，懒加载不阻塞主线程），开关持久化 |
 | **字幕** | SRT / ASS / WebVTT 解析与渲染；样式语义化持久化 |
 | **互动插件** | 引导 / 投票 / 评分 / 外链四个子插件，二分查找 + 增量 diff，编辑态拖拽 |
-| **页面 SSR + Hydration** | Demo 页面服务端渲染；播放器本身为纯客户端组件，水合后创建挂载 |
+| **播放器 SSR + Hydration** | 服务端直接输出完整播放器 HTML（控制栏 / 视频区 / 状态层），客户端 `hydrate()` 复用 DOM；插件在浏览器侧增量安装 |
 | **播放列表** | 换源复用同一个 `video` 元素与整棵 DOM |
 | **37 个 UI 组件** | 控制栏、进度条、音量、画质菜单、弹幕设置、快捷键面板、迷你播放器等，图标走 Lottie 动画系统 |
 | **持久化** | 音量 / 静音 / 倍速 / 画质偏好 / 进度条偏好（localStorage） |
@@ -63,6 +63,7 @@ nova-player/
 │   ├── streamPlugin.ts         #   流媒体插件契约（QualityLevel / MediaManifestSource）
 │   └── plugin.ts  danmaku.ts  subtitle.ts  callbacks.ts
 ├── utils/  directives/  events/  error/     # 工具、指令、事件、错误处理
+├── locales/                    # 应用层语言包（core 不再内置 JSON）
 ├── packages/
 │   ├── player/                 # @lumina/nova —— 播放器本体
 │   │   ├── media/              #   媒体工具库参考实现（监控器 / SVG 图表 / 信息面板，不参与编译）
@@ -112,8 +113,11 @@ git submodule update --init
 # 安装依赖
 pnpm install
 
-# 启动唯一 demo（SSR + Hydrate，默认 http://localhost:5174）
-pnpm demo
+# 启动 SSR demo（默认 http://localhost:5174）
+pnpm demo:ssr
+
+# 启动纯客户端 demo（默认 http://localhost:5175）
+pnpm demo:csr
 
 # 类型检查 / 代码检查 / 测试
 pnpm typecheck
@@ -126,7 +130,8 @@ pnpm build:player
 pnpm build:plugins
 ```
 
-`demo/` 是 SSR + 水合的完整演示，入口为 `demo/server.mjs`；包含 Top / Ending 插件演示控制。启动：`pnpm demo`。
+`demo/` 提供两个入口：`pnpm demo:ssr` 使用 `demo/server.mjs` 做服务端渲染 + 水合；
+`pnpm demo:csr` 使用 Vite 启动纯客户端渲染。两者共用同一套页面与插件演示控制。
 
 ---
 
@@ -174,13 +179,32 @@ const player = new VideoPlayer({
   plugins:     { /* ... DanmakuPlugin({ source: { provider } }) ... */ },
   storage:     { /* ... */ },
   advanced:    { debug: false },
-  advanced:    { debug: false },
   callbacks:   { ready: () => console.log('ready') },
 });
 ```
 
 > 历史版本的扁平配置（`autoplay` / `volume` / `controls` / `controlBtns` …写在顶层）仍可通过内置兼容层
 > `normalizeConfig()` 使用，开发环境会打印一次性迁移提示。新代码请一律使用命名空间形态。
+
+### 国际化
+
+`core` 只提供 i18n 机制，不再内置任何语言 JSON；语言包属于应用层，由使用方注册：
+
+```ts
+import zhCN from './locales/zh-CN.json';
+import enUS from './locales/en-US.json';
+
+const player = new VideoPlayer({
+  i18n: {
+    enabled: true,
+    locale: 'zh-CN',
+    fallbackLocale: 'en-US',
+    messages: { 'zh-CN': zhCN, 'en-US': enUS },
+  },
+});
+```
+
+仓库的语言包位于根目录 `locales/`，demo 通过 `@/locales/*.json` 引用。
 
 ### 多清晰度（仅原生 MP4 需要手填）
 
@@ -217,6 +241,17 @@ player.use(InteractionPlugin({ isEdit: false }));
 
 player.mount(el);
 ```
+
+插件支持运行期动态注册 / 卸载，UI 由响应式 flags 自动同步：
+
+```ts
+player.registerPlugin(DanmakuPlugin({ options: { debug: false } }));
+player.unregisterPlugin('danmaku'); // 对应图层、控制栏入口自动移除
+player.hasPlugin('danmaku');
+```
+
+`use()` / `uninstallPlugin()` 是等价旧 API；SSR 阶段会跳过插件 `install()`，
+客户端水合后再动态注入，避免在 Node 中访问 DOM。
 
 弹幕的字号 / 透明度 / 速度 / 区域 / 渲染模式有两种调整途径：构造时走播放器配置的 `danmaku`
 命名空间，或运行时调用播放器与插件的 API（`player.setDanmakuOpacity()`、`DanmakuPluginAPI.setRenderMode()` 等）。
@@ -316,6 +351,13 @@ player.getConfig();                       // Readonly<PlayerConfig>
 player.setConfig({ playback: { volume: 0.3 } });   // 深层局部更新
 player.setPoster('/new.jpg');
 
+// 进度条（progress 命名空间）
+player.progress.applyPermanent(true);     // 展开底部常驻影子进度条
+player.progress.applyPermanent(false);    // 收起
+player.progress.isPermanent();            // 当前是否常驻展开
+player.progress.setSegments(segments);    // 章节 / 顶部 / 影子进度条共用
+player.progress.setEnergy(energy);        // 高能进度条数据
+
 // 状态查询
 const s = player.getState();   // PlayerStateData 快照
 player.getCurrentTime();  player.getDuration();  player.getBuffered();
@@ -331,18 +373,31 @@ player.destroy();         // 卸载并清理全部监听、插件与订阅
 
 ### 服务端渲染
 
-`VideoPlayer` 是纯客户端组件，不做服务端渲染。
-
-Demo 页面本身仍由 `demo/server.mjs` SSR 输出，但只输出播放器占位容器；页面水合完成后，客户端创建并挂载播放器。
+播放器支持真正的服务端渲染：`renderToString()` 在 Node 环境直接输出完整播放器 HTML，
+客户端使用同一份 `PlayerConfig` 创建实例后通过 `hydrate()` 复用服务端 DOM。
 
 ```ts
-// 页面 SSR：只输出容器
-<div id="player"></div>
+// 服务端（Node）
+const serverPlayer = new VideoPlayer(config);
+const html = serverPlayer.renderToString();
 
-// 客户端水合后
-const player = new VideoPlayer(config);
-player.mount(document.getElementById('player')!);
+// 客户端（浏览器）
+const clientPlayer = new VideoPlayer(config);
+clientPlayer.hydrate(document.getElementById('player')!);
 ```
+
+插件安装、媒体源切换、弹幕/字幕等浏览器数据在客户端水合后增量接入；
+`VideoPlayer.use()` 在服务端会跳过插件 `install()`，避免访问 `document` / `window`。
+
+章节 / 分段 / 高能曲线不参与 SSR 数据请求；客户端只请求一次后注入：
+
+```ts
+player.progress.setSegments(segments); // 章节菜单、顶部/底部进度条共用
+player.progress.setEnergy(energy);     // 高能进度条
+```
+
+Demo 页面由 `demo/server.mjs` 在服务端把播放器 HTML 注入 `<!--ssr-outlet-->`，
+不再输出占位容器。`pnpm demo:ssr` 启动 SSR 版本，`pnpm demo:csr` 启动纯客户端版本。
 
 > 播放器 CSS 由父应用显式 `import "@lumina/nova/style.css"`，不由 `VideoPlayer` 副作用导入。
 

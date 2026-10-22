@@ -127,6 +127,8 @@ export interface ControlsProps {
    * 按钮整体隐藏，支持运行中装卸插件
    */
   plugins?: () => PlayerPluginFlags;
+  /** 顶部进度条挂载完成，向上回传更新 API */
+  onProgressBarMounted?: (api: ProgressBarApi) => void;
 }
 
 /**
@@ -153,6 +155,8 @@ export interface ControlsAPI {
   setProgressSegments: (segments?: ProgressSegment[]) => void;
   /** 分段进度条常驻展开开关（仅多段时生效） */
   setShadowPermanent: (enabled: boolean) => void;
+  /** 注入高能进度条数据（客户端水合后唯一数据源） */
+  setEnergy: (data: EnergyProgressData | null) => void;
 }
 
 /**
@@ -177,6 +181,9 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     /** 底部影子进度条 API（由 ShadowProgressArea 挂载后填充） */
     let shadowApi: ShadowProgressAreaApi | null = null;
+
+    /** 顶部进度条 API（由 TopControls 挂载后回传，用于重建分段） */
+    let topProgressBarApi: ProgressBarApi | null = null;
 
     /** 高能进度条常驻态初值：读运行时状态（由 VideoPlayer 构造期写入——
      *  持久化恢复或「多分段即常驻」规则兜底），此处禁止再无条件 set：
@@ -337,6 +344,9 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     /** 高能数据请求序号（异步 energyProvider 竞态保护：仅应用最新一次请求的结果） */
     let energyRequestId = 0;
 
+    /** 外部注入的高能数据；undefined 表示尚未注入 */
+    let injectedEnergy: EnergyProgressData | null | undefined;
+
     /**
      * 拉取高能进度条数据（同步或异步 provider 均兼容）
      *
@@ -345,7 +355,17 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
      * - 异步返回：resolve 后经序号校验再写入，过期的响应（组件重挂期间
      *   发起的更新请求）直接丢弃，避免旧数据覆盖新数据。
      */
+    /** 外部注入高能数据：PBP 未挂载时暂存，挂载后补发 */
+    const setEnergy = (data: EnergyProgressData | null): void => {
+      injectedEnergy = data;
+      pbpApi?.setEnergy(data);
+    };
+
     const loadEnergyData = (): void => {
+      if (injectedEnergy !== undefined) {
+        pbpApi?.setEnergy(injectedEnergy);
+        return;
+      }
       const provider = props.energyProvider;
       if (!provider) return;
       energyRequestId += 1;
@@ -511,6 +531,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     const setProgressSegments = (next?: ProgressSegment[]): void => {
       shadowSegments = next ?? [];
       shadowApi?.rebuildSegments(next);
+      topProgressBarApi?.rebuildSegments?.(next);
       // 不再因「多段」自动常驻；只有 progress.shadowPermanent 开启才展开
       syncShadowPermanent();
     };
@@ -566,6 +587,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         setDuration,
         setProgressSegments,
         setShadowPermanent,
+        setEnergy,
       });
     };
 
@@ -676,8 +698,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             lifecycle.emit?.("seekEnd");
           },
           // 继续向上转发 ProgressBar 的更新 API，最终由 PlayerDocker 持有
-          onProgressBarMounted: (api) =>
-            lifecycle.emit?.("progressBarMounted", api),
+          onProgressBarMounted: (api) => {
+            topProgressBarApi = api;            props.onProgressBarMounted?.(api);
+            lifecycle.emit?.("progressBarMounted", api);
+          },
         }),
         h(
           "div",
@@ -755,7 +779,8 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
               api.setShow(!shadowShowSignal.value);
               // 高能数据经 energyProvider 拉取（异步结果经序号校验写入，
               // 重新勾选 Show 由 false → true 时也走这里恢复数据）
-              loadEnergyData();
+              if (injectedEnergy !== undefined) api.setEnergy(injectedEnergy);
+              else loadEnergyData();
               api.setProgress(videoProgress.currentTime);
             },
             onPbpClick: ({ time }: { time: number }) => {

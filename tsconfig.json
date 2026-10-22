@@ -20,6 +20,7 @@
     "paths": {
       "@/live/*": ["packages/live-player/src/*"],
       "@/*": ["packages/player/src/*"],
+      "@/locales/*": ["locales/*"],
       "@/types": ["types/index.ts"],
       "@/types/*": ["types/*"],
       "@/core": ["core/index.ts"],

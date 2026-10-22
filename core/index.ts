@@ -5,7 +5,7 @@
  */
 
 export { h, defineComponent, Fragment, when, each, show } from './h';
-export { mount, materialize, applyAttrs, destroy, invokeLifecycle, hydrate } from './mount';
+export { mount, materialize, applyAttrs, destroy, invokeLifecycle, hydrate, getHydrationMismatchCount } from './mount';
 
 // 响应式控制流组件（For/Show/Switch/Match/Dynamic）
 // key-based 列表精准更新 + 条件渲染 + 动态组件切换
@@ -29,9 +29,7 @@ export { warn, reportError, safeCall, safeAsyncCall, assertWarn, onFrameworkErro
 export { WarnSource, ErrorSource } from './warning';
 export type { FrameworkError, FrameworkWarning, GlobalErrorHandler, GlobalWarningHandler } from './warning';
 
-// i18n 国际化（响应式动态切换：localeSignal + t + setLocale）
-// 副作用导入 locales 触发内置语言包自动注册
-import './locales';
+// i18n 国际化机制（语言包由应用层通过 initI18n / registerLocale 注册）
 export { t, setLocale, getLocale, registerLocale, subscribeLocale, isI18nEnabled, initI18n, localeSignal } from './i18n';
 export type { Locale, I18nConfig } from './i18n';
 

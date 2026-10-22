@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import { h, renderToString, hydrate, getHydrationMismatchCount } from '../core';
 import { VideoPlayer } from '../packages/player/src/player/VideoPlayer';
 
 // jsdom 不实现浏览器观察器；播放器挂载会注册它们
@@ -15,6 +16,13 @@ class TestObserver {
   TestObserver;
 
 describe('player SSR hydration', () => {
+  it('counts DOM structure mismatches instead of silently accepting them', () => {
+    const host = document.createElement('div');
+    host.innerHTML = renderToString(h('span', { class: 'server' }, 'ok'));
+    hydrate(h('div', { class: 'client', 'data-mismatch': Math.random() }, 'bad'), host);
+    expect(getHydrationMismatchCount()).toBeGreaterThan(0);
+  });
+
   it('hydrates server-rendered player chrome without replacing it', () => {
     const config = {
       src: 'https://example.com/video.mp4',
