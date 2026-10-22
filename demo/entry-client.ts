@@ -2109,7 +2109,6 @@ async function rebuildPlayer(
         existing
           .getPluginAPI<DanmakuPluginAPI>("danmaku")
           ?.loadDanmaku(danmakuPanelList);
-        existing.setDanmakuVisible(true);
       }, 300);
       (window as unknown as { player: VideoPlayer }).player = existing;
       if (targetIndex > 0) {
@@ -2127,7 +2126,6 @@ async function rebuildPlayer(
         next
           .getPluginAPI<DanmakuPluginAPI>("danmaku")
           ?.loadDanmaku(danmakuPanelList);
-        next.setDanmakuVisible(true);
       }, 300);
       for (const [otherId] of LOCALE_BUTTONS) {
         const other = document.getElementById(otherId);
