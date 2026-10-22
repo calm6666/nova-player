@@ -271,7 +271,7 @@ async function createServer() {
        */
       let html = template.replace('<!--ssr-outlet-->', appHtml);
       html = html.replace('<!--ssr-meta-outlet-->', metaTags);
-      html = html.replace('<!--ssr-css-outlet-->', ssrCss ? '<style>' + ssrCss + '</style>' : '');
+      html = html.replace('<!--ssr-css-outlet-->', ssrCss ? '<style data-ssr-css>' + ssrCss + '</style>' : '');
 
       /**
        * 2f. 发送完整的 HTML 给浏览器

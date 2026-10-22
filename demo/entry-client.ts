@@ -7,6 +7,10 @@
  */
 
 import "@/styles/style.scss";
+// SSR 已把播放器 CSS 注入 HTML；只有纯客户端页面才由客户端注入样式
+if (!document.querySelector("style[data-ssr-css]")) {
+  await import("@/styles/style.scss");
+}
 import { hydrate, mount } from "@/core";
 import { PlayerEventEnum } from "@/core/events";
 // 内置语言包：随 i18n 配置注入播放器（core/index.ts 已自动注册，这里显式传入保证配置完整）
