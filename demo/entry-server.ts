@@ -32,6 +32,7 @@
 import "@/styles/style.scss";
 import { renderToString } from "@/core";
 import { RootLayout, playerInstance, setPlayerInstance } from "./main";
+import { DEMO_SSR_PLAYER_CONFIG } from "./ssr-player";
 
 /**
  * SSR 渲染开始时间戳（模块加载时记录）
@@ -65,7 +66,11 @@ let lastSSRStartTime = 0;
  *    - 文本节点 → 直接输出文本内容（经过 HTML 转义）
  *    - Context Provider → 在渲染子树前设置上下文，渲染后恢复
  */
-export function render(): string {
+export function render(query: Record<string, unknown> = {}): string {
+  const querySrc = typeof query.src === "string" ? query.src : undefined;
+  if (querySrc) {
+    DEMO_SSR_PLAYER_CONFIG.src = querySrc;
+  }
   lastSSRStartTime = performance.now();
   const vnode = RootLayout({});
   const html = renderToString(vnode);

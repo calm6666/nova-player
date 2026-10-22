@@ -860,6 +860,13 @@ if (root) {
     // 创建与服务端相同的 VNode 树
     // PlayerSection 内部会创建 VideoPlayer 实例并调用 render()
     // 返回的 VNode 树包含完整播放器 UI 结构
+    // 水合前应用 URL 参数：用于服务端渲染 / 客户端水合的多格式测试
+    const querySrc = new URLSearchParams(location.search).get("src");
+    if (querySrc) {
+      DEMO_SSR_PLAYER_CONFIG.src = querySrc;
+      if (MEDIA_LIST[0]) MEDIA_LIST[0] = { ...MEDIA_LIST[0], src: querySrc };
+    }
+
     // 水合前挂上预览 provider：DOM 结构不变，只影响进度条悬停预览
     const initialSegments = await fetchProgressSegments();
     if (demoSegments.length === 0) demoSegments = initialSegments;

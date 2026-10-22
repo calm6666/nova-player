@@ -240,7 +240,7 @@ async function createServer() {
        *   2. 调用 renderToString 将 VNode 树序列化为 HTML 字符串
        *   3. 返回 HTML 字符串
        */
-      const appHtml = await render();
+      const appHtml = await render(req.query);
 
       /**
        * 2c-1. 收集 SSR 渲染过程中涉及的 CSS
