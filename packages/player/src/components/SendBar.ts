@@ -132,13 +132,6 @@ export const SendBar = defineComponent<SendBarProps>(
     const selectionShowSig = signal<boolean>(false);
 
     /**
-     * 弹幕开关状态信号（true 表示弹幕开启）
-     * 作为渲染层的唯一数据源，所有依赖此状态的 UI（弹幕类型按钮显隐、
-     * 发送按钮 disabled 态、「已关闭弹幕」提示）均由此信号驱动响应式更新
-     */
-    const isDanmakuEnabledSignal = signal<boolean>(props.danmakuSwitch ?? true);
-
-    /**
      * 在线观看人数 / 弹幕总条数（发送栏底部计数唯一数据源）
      *
      * 由 VideoPlayer.setOnlineCount / setDanmakuCount 写入运行时状态；
@@ -153,6 +146,18 @@ export const SendBar = defineComponent<SendBarProps>(
     const danmakuCountSignal = state
       ? useReactiveState(state, PlayerStateKeyEnum.DANMAKU_COUNT, lifecycle)
       : signal<number | undefined>(undefined);
+
+    /**
+     * 弹幕开关：运行时状态优先，未接入状态时回落到 props
+     * 不再维护本地镜像 signal，所有 UI 读取派生值
+     */
+    const danmakuVisibleState = state
+      ? useReactiveState(state, PlayerStateKeyEnum.DANMAKU_VISIBLE, lifecycle)
+      : signal<unknown>(undefined);
+    const isDanmakuEnabled = computed<boolean>(() => {
+      const next = danmakuVisibleState.value;
+      return typeof next === "boolean" ? next : (props.danmakuSwitch ?? true);
+    });
 
     /**
      * 在线观看人数展示文本（状态值优先，props 兜底）
@@ -182,7 +187,7 @@ export const SendBar = defineComponent<SendBarProps>(
      */
     const canSendSignal = computed((): boolean => {
       const hasText = inputValueSignal.value.trim().length > 0;
-      const dmEnabled = isDanmakuEnabledSignal.value;
+      const dmEnabled = isDanmakuEnabled.value;
       return hasText && dmEnabled;
     });
 
@@ -266,7 +271,6 @@ export const SendBar = defineComponent<SendBarProps>(
      */
     const handleSwitchChange = (event: Event): void => {
       if (!(event.target instanceof HTMLInputElement)) return;
-      isDanmakuEnabledSignal.value = event.target.checked;
       lifecycle.emit?.("danmakuSwitch", event.target.checked);
     };
 
@@ -357,7 +361,7 @@ export const SendBar = defineComponent<SendBarProps>(
      * @param enabled - true 开启弹幕，false 关闭弹幕
      */
     const setDanmakuSwitch = (enabled: boolean): void => {
-      isDanmakuEnabledSignal.value = enabled;
+      state?.set(PlayerStateKeyEnum.DANMAKU_VISIBLE, enabled);
       if (switchInputRef.value) {
         switchInputRef.value.checked = enabled;
       }
@@ -482,7 +486,7 @@ export const SendBar = defineComponent<SendBarProps>(
             h("input", {
               class: "danmaku-switch-input",
               type: "checkbox",
-              checked: isDanmakuEnabledSignal.value,
+              checked: isDanmakuEnabled.value,
               ref: "switchInputRef",
               onChange: handleSwitchChange,
             }),
@@ -511,7 +515,7 @@ export const SendBar = defineComponent<SendBarProps>(
             // class: "nova-player-dm-setting",
             class: [
               "nova-player-dm-setting",
-              { disabled: !isDanmakuEnabledSignal.value },
+              { disabled: !isDanmakuEnabled.value },
             ],
             ref: "settingIconRef",
           },
@@ -552,7 +556,7 @@ export const SendBar = defineComponent<SendBarProps>(
               "div",
               {
                 class: "nova-player-video-btn-dm",
-                style: { display: isDanmakuEnabledSignal.value ? "" : "none" },
+                style: { display: isDanmakuEnabled.value ? "" : "none" },
                 ref: "textSettingIconRef",
               },
               h(
@@ -610,7 +614,7 @@ export const SendBar = defineComponent<SendBarProps>(
               {
                 class: "nova-player-dm-wrap",
                 style: {
-                  display: isDanmakuEnabledSignal.value ? "none" : "block",
+                  display: isDanmakuEnabled.value ? "none" : "block",
                 },
               },
               t("player.ui.sendbar.danmaku_closed"),
@@ -626,7 +630,7 @@ export const SendBar = defineComponent<SendBarProps>(
               // 弹幕类型按钮的 display 写法）
               style: {
                 display:
-                  props.showLoginTip || !isDanmakuEnabledSignal.value
+                  props.showLoginTip || !isDanmakuEnabled.value
                     ? "none"
                     : "block",
               },
