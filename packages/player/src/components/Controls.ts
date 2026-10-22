@@ -212,8 +212,8 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     /** 同步影子进度条常驻态：只由分段开关 + 多段决定 */
     const syncShadowPermanent = (): void => {
-      const permanent: boolean =
-        shadowPermanentEnabled && shadowSegments.length > 1;
+      // 只由 progress.shadowPermanent / progress.applyPermanent 决定
+      const permanent: boolean = shadowPermanentEnabled;
       shadowApi?.setPermanent(permanent);
       pbpApi?.setPermanent(permanent);
     };
