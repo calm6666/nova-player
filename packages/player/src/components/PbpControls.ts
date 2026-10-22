@@ -86,7 +86,7 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
     /**
      * 响应式信号：常驻态（决定图钉图标与提示文字）
      */
-    const permanentSignal = signal<boolean>(props.permanent === true);
+    const permanentSignal = signal<boolean>(props.permanent ?? false);
 
     /** 重绘曲线与已播放裁切窗口（保留命令式：SVG 路径绘制，性能关键） */
     const render = (): void => {

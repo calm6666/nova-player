@@ -697,14 +697,13 @@ export class VideoPlayer
         persistentState.pbpPin === 1,
       );
     } else {
-      // 无持久化数据：业务规则兜底初始化——渲染态默认开，
-      // 常驻态按「存在多个分段即常驻」（与 Controls 旧初始化语义一致；
-      // 写入早于落库订阅注册，兜底值不会被误落库）
+      // 无持久化数据：业务规则兜底初始化——渲染态默认开，常驻态默认关。
+      // 常驻（图钉）是用户动作语义：只由图钉点击 / applyPermanent 写入并
+      // 持久化，不再因「多段」自动常驻；shadowPermanent 配置只作用于
+      // 底部影子进度条（ShadowProgressArea），与高能进度条图钉彻底解耦；
+      // 写入早于落库订阅注册，兜底值不会被误落库
       this.state.set(PlayerStateKeyEnum.PBP_RENDERED, true);
-      this.state.set(
-        PlayerStateKeyEnum.PBP_PERMANENT,
-        (this.props.progress?.segments?.length ?? 0) > 1,
-      );
+      this.state.set(PlayerStateKeyEnum.PBP_PERMANENT, false);
     }
 
     /**
