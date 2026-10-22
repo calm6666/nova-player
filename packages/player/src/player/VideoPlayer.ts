@@ -2301,6 +2301,18 @@ export class VideoPlayer
     return this.use(plugin);
   }
 
+  /** 重新通知运行期注册的插件：播放器已挂载（补发 player:mounted） */
+  notifyPluginsMounted(): void {
+    if (!this.containerEl || !this.videoEl) return;
+    const payload = {
+      container: this.containerEl,
+      video: this.videoEl,
+      sendingArea: undefined,
+    };
+    this.events.emit("player:mounted", payload);
+    this.events.emit(PlayerEventEnum.MOUNTED, payload);
+  }
+
   /** 动态卸载插件（uninstallPlugin 的语义化别名），UI 自动移除 */
   unregisterPlugin(name: string): void {
     this.uninstallPlugin(name);
