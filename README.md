@@ -371,6 +371,27 @@ player.uninstallPlugin('danmaku');
 player.destroy();         // 卸载并清理全部监听、插件与订阅
 ```
 
+### SSR 多源测试 URL
+
+启动 `pnpm demo:ssr` 后，可通过 `src` 查询参数切换服务端首屏与客户端水合使用的媒体源：
+
+```text
+# MP4
+http://localhost:5174/?src=/sample.mp4
+
+# HLS URL
+http://localhost:5174/?src=https%3A%2F%2Fexample.com%2Fvideo.m3u8
+
+# DASH URL
+http://localhost:5174/?src=https%3A%2F%2Fexample.com%2Fvideo.mpd
+
+# JSON 清单（URL 编码后传入）
+http://localhost:5174/?src=%7B%22type%22%3A%22hls%22%2C%22url%22%3A%22...%22%7D
+```
+
+`src` 同时传给服务端 `render(query)` 与客户端水合配置；HLS / DASH 插件按 URL 后缀自动注册。
+修改 `demo/server.mjs` 或入口文件后需要重启 SSR server。
+
 ### 服务端渲染
 
 播放器支持真正的服务端渲染：`renderToString()` 在 Node 环境直接输出完整播放器 HTML，
