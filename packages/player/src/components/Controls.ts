@@ -731,6 +731,12 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
           Show,
           { when: () => pbpRenderedSignal.value !== false },
           h(PbpControls, {
+            // 常驻态初值：来自播放器配置 / 持久化恢复（构造期已写入
+            // PBP_PERMANENT 运行时状态，setup 读取为局部快照传入 props，
+            // PbpControls 以此初始化 permanentSignal）；后续更新走两条链：
+            // 1. PBP_PERMANENT 状态订阅 → pbpApi.setPermanent（图钉点击/程序切换）
+            // 2. Show 销毁重建时 onPbpControlsMounted 里重新补调
+            permanent,
             onPbpControlsMounted: (api: {
               setShow: (show: boolean) => void;
               setPermanent: (permanent: boolean) => void;

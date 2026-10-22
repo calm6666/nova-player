@@ -85,8 +85,6 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
 
     /**
      * 响应式信号：常驻态（决定图钉图标与提示文字）
-     * 替代旧的 pbpRef.value?.classList.toggle('nova-player-pbp-permanent', value) 命令式操作
-     * 同样由根节点 class 数组+对象形式自动追踪
      */
     const permanentSignal = signal<boolean>(props.permanent === true);
 

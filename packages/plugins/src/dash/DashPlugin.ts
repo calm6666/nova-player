@@ -134,6 +134,80 @@ export class DashPlugin implements StreamPlugin {
   /** 首帧时间（毫秒） */
   private firstFrameTime = 0;
 
+  /**
+   * 最近完成分片的吞吐采样点（按完成时刻记录，bytes 取响应体字节数）
+   * 用「分片数量窗」而非时间窗：慢网络下单分片下载耗时长（可达数秒），
+   * 时间窗会长期空转返回 0，导致缓冲期间速度文本无法显示
+   */
+  private fragmentThroughputSamples: Array<{ time: number; bytes: number }> = [];
+
+  /** 吞吐采样保留的分片数量（最近 3 个分片：字节总和 / 首尾时间差） */
+  private static readonly THROUGHPUT_SAMPLE_COUNT = 3;
+
+  /**
+   * MediaPlayerErrorEvent 的致命错误码白名单
+   * dashjs 仅导出 MediaPlayerErrors 接口（无运行时常量对象），
+   * 错误码取自 dashjs index.d.ts 的 MediaPlayerErrors 成员字面量：
+   * - 10 MANIFEST_LOADER_PARSING_FAILURE / 11 MANIFEST_LOADER_LOADING_FAILURE
+   * - 31 MANIFEST_ERROR_ID_PARSE / 32 NOSTREAMS / 34 MULTIPLEXED
+   * - 25 DOWNLOAD_ERROR_ID_MANIFEST（清单类下载失败）
+   * - 23 CAPABILITY_MEDIASOURCE / 24 CAPABILITY_MEDIAKEYS
+   * - 35 MEDIASOURCE_TYPE_UNSUPPORTED
+   * 分片加载失败（17/18/27/28）、append 错误（20）、字幕与 IndexedDB 等
+   * 可自愈或非核心错误不在其中
+   */
+  private static readonly FATAL_MEDIA_PLAYER_ERROR_CODES: ReadonlySet<number> =
+    new Set<number>([10, 11, 31, 32, 34, 25, 23, 24, 35]);
+
+  /**
+   * 判断 dash.js 错误是否致命（需要上报播放器总线触发错误面板 / 备用源切换）
+   *
+   * dash.js 的 ErrorEvent 是五成员联合（Generic / Download / Manifest /
+   * TimedText / MediaPlayer），其中大量错误可自愈（分片下载失败内部重试 +
+   * ABR 降档、字幕解析错误等）；全量转发会让初始加载期任何一次分片抖动
+   * 直接弹出错误页面（遮住 LoadingPanel），因此按成员分别判定：
+   * - ManifestErrorEvent（清单解析失败）→ 致命
+   * - GenericErrorEvent 的 capability / mediasource / key_* → 致命；
+   *   cc（TimedText，字幕类）→ 非致命
+   * - DownloadErrorEvent → 仅清单类 id（如 'ManifestError'）致命，
+   *   分片 / init 段下载失败由 dash.js 内部重试与降档自愈
+   * - MediaPlayerErrorEvent（error 为 { code, message, data } 对象）→
+   *   按致命错误码白名单判定（清单加载/解析、能力、MSE 类型不支持等）
+   *
+   * @param data - dash.js ErrorEvent
+   */
+  private isFatalDashError(data: ErrorEvent): boolean {
+    if (data.error === 'manifestError') return true;
+    if (data.error === 'download') {
+      return data.event.id.toLowerCase().includes('manifest');
+    }
+    if (typeof data.error === 'string') {
+      // capability / mediasource / key_session / key_message 致命；
+      // cc（TimedTextErrorEvent，字幕类）非致命
+      return data.error !== 'cc';
+    }
+    // MediaPlayerErrorEvent：error 为 DashJSError 形状对象，按错误码白名单
+    return DashPlugin.FATAL_MEDIA_PLAYER_ERROR_CODES.has(data.error.code);
+  }
+
+  /**
+   * 提取 dash.js 错误的可读描述（错误面板 message 用）
+   * @param data - dash.js ErrorEvent
+   */
+  private describeDashError(data: ErrorEvent): string {
+    if (data.error === 'manifestError') {
+      return data.event.message || '清单加载失败';
+    }
+    if (data.error === 'download') {
+      return `${data.event.id}: ${data.event.url}`;
+    }
+    if (typeof data.error === 'string') {
+      return data.error;
+    }
+    // MediaPlayerErrorEvent：error 为 { code, message, data } 对象
+    return data.error.message || `code ${String(data.error.code)}`;
+  }
+
   /** 浏览器能力检测结果 */
   private browserCapability: ReturnType<typeof BrowserCapabilityDetector.getFullCapabilityResult> | null = null;
 
@@ -277,6 +351,8 @@ export class DashPlugin implements StreamPlugin {
     this.loadStartTime = Date.now();
     this.firstFrameRecorded = false;
     this.firstFrameTime = 0;
+    // 换源重置吞吐采样窗口（旧源的采样点不代表新源的网络状况）
+    this.fragmentThroughputSamples = [];
 
     // 步骤 4：注册首帧时间追踪
     this.registerFirstFrameTracking();
@@ -540,26 +616,18 @@ export class DashPlugin implements StreamPlugin {
     });
 
     // 播放器错误处理
+    // 只有致命错误才向播放器总线上报 STREAM_ERROR（错误面板 / 备用源由
+    // VideoPlayer 决定）；分片下载失败等可自愈错误仅记录日志 + 私有总线上报，
+    // 避免初始加载期非致命抖动直接弹出错误页面（遮住 LoadingPanel）
     this.dashPlayer.on('error', (data: ErrorEvent) => {
-      if ('error' in data && typeof data.error === 'string' && 'event' in data) {
-        const errorData = { error: data.error, event: data.event };
-        logger.error('播放器错误:', errorData);
-        this.streamEventBus.emit(StreamPluginEventEnum.ERROR, errorData);
-        // 向播放器总线广播契约事件 STREAM_ERROR
-        // message 取 dash.js 错误详情里的字符串，error 传原始错误对象
-        this.eventBus?.emit(PlayerEventEnum.STREAM_ERROR, {
-          message: data.error,
-          error: data,
-        });
-      } else {
-        logger.error('播放器错误:', data);
-        this.streamEventBus.emit(StreamPluginEventEnum.ERROR, { message: String(data) });
-        // 无详情字符串的错误：message 退化为错误对象的字符串形式，error 传原始错误对象
-        this.eventBus?.emit(PlayerEventEnum.STREAM_ERROR, {
-          message: String(data),
-          error: data,
-        });
-      }
+      const message = this.describeDashError(data);
+      logger.error('播放器错误:', message, data);
+      this.streamEventBus.emit(StreamPluginEventEnum.ERROR, { message });
+      if (!this.isFatalDashError(data)) return;
+      this.eventBus?.emit(PlayerEventEnum.STREAM_ERROR, {
+        message,
+        error: data,
+      });
     });
 
     // 画质切换完成（手动选档后触发；ABR 每次切档也会触发）
@@ -584,8 +652,18 @@ export class DashPlugin implements StreamPlugin {
       this.eventBus?.emit(PlayerEventEnum.STREAM_QUALITY_CHANGE, payload);
     });
 
-    // 片段加载完成 → 更新统计信息
-    this.dashPlayer.on('fragmentLoadingCompleted', () => {
+    // 片段加载完成 → 记录吞吐采样点（慢网下持续可用的速度数据源）+ 更新统计
+    this.dashPlayer.on('fragmentLoadingCompleted', (e) => {
+      const bytes = e.response?.byteLength ?? 0;
+      if (bytes > 0) {
+        this.fragmentThroughputSamples.push({ time: Date.now(), bytes });
+        const overflow =
+          this.fragmentThroughputSamples.length -
+          DashPlugin.THROUGHPUT_SAMPLE_COUNT;
+        if (overflow > 0) {
+          this.fragmentThroughputSamples.splice(0, overflow);
+        }
+      }
       this.streamEventBus.emit(StreamPluginEventEnum.STATS_UPDATE, this.getStats());
     });
   }
@@ -648,6 +726,7 @@ export class DashPlugin implements StreamPlugin {
     this.loadStartTime = 0;
     this.firstFrameRecorded = false;
     this.firstFrameTime = 0;
+    this.fragmentThroughputSamples = [];
     this.qualityListeners.clear();
   }
 
@@ -685,6 +764,24 @@ export class DashPlugin implements StreamPlugin {
   }
 
   /**
+   * 计算最近分片数量窗内的实际下载吞吐（字节/秒）
+   * 慢网络下（单分片下载数秒）该口径仍能给出稳定的非零速度，
+   * 解决缓冲期间「速度文本不显示」的问题
+   */
+  private getFragmentThroughput(): number {
+    const samples = this.fragmentThroughputSamples;
+    // 少于 2 个采样点无法计算时间差，返回 0（由调用方回退 ABR 吞吐估计）
+    if (samples.length < 2) return 0;
+    const spanSeconds = (samples[samples.length - 1].time - samples[0].time) / 1000;
+    if (spanSeconds <= 0) return 0;
+    let bytes = 0;
+    samples.forEach((item) => {
+      bytes += item.bytes;
+    });
+    return bytes / spanSeconds;
+  }
+
+  /**
    * 获取统计信息
    * 收集当前播放器状态，包括播放时间、缓冲长度、码率、分辨率、首帧时间等
    *
@@ -694,13 +791,16 @@ export class DashPlugin implements StreamPlugin {
     const video = this.videoElement;
     const bufferInfo = this.getBufferInfo();
     const currentRepresentation = this.dashPlayer?.getCurrentRepresentationForType('video');
-    // 单位换算：dash.js 的 getAverageThroughput() 返回 **kbit/s**
-    // （dash.mediaplayer.debug.js：“The returned value is depicted in kbit/s”，
-    //   底层 _getThroughputInBitPerMs = 8 * bytes / ms，即比特/毫秒 = kbit/s），
+    // 下载速度优先取「最近分片数量窗」的实际吞吐（真实传输口径，慢网可用）；
+    // 回退 dash.js 的 ABR 平均吞吐估计。单位换算：getAverageThroughput() 返回
+    // **kbit/s**（dash.mediaplayer.debug.js："The returned value is depicted in
+    // kbit/s"，底层 _getThroughputInBitPerMs = 8 * bytes / ms，即比特/毫秒 = kbit/s），
     // 而 StreamStats.downloadSpeed 约定为「字节/秒」→ kbit/s × 1000 ÷ 8
     // 注意：旁边的 videoBitrate 是另一个字段，语义本就是比特/秒，不做换算。
+    const fragmentThroughput = this.getFragmentThroughput();
     const throughputKbit = this.dashPlayer?.getAverageThroughput('video') ?? 0;
-    const downloadSpeed = throughputKbit > 0 ? (throughputKbit * 1000) / 8 : 0;
+    const fallbackSpeed = throughputKbit > 0 ? (throughputKbit * 1000) / 8 : 0;
+    const downloadSpeed = fragmentThroughput > 0 ? fragmentThroughput : fallbackSpeed;
 
     return {
       ...this.stats,
