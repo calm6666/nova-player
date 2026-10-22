@@ -1994,8 +1994,6 @@ async function rebuildPlayer(
   renderDanmakuList();
 
   // 预览图默认关闭：不请求 /videoshot/*（避免触发浏览器下载与 IDM 弹窗）
-  previewProviderHandle.setSource(null);
-  syncPreviewModeButtons("none");
 
   const queryParams = new URLSearchParams(location.search);
   const protocol = queryParams.get("protocol");
