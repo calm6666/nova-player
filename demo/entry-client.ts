@@ -2096,6 +2096,8 @@ async function rebuildPlayer(
       for (const plugin of config.plugins?.list ?? []) {
         existing.registerPlugin(plugin);
       }
+      // 插件在挂载后动态注册，补发 mounted 事件给流媒体/弹幕/交互插件
+      existing.notifyPluginsMounted();
       const applyProgressData = (): void => {
         existing.progress.setSegments(config.progress?.segments ?? []);
         existing.progress.setEnergy(energy);
