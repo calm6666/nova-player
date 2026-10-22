@@ -1301,7 +1301,11 @@ for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
   button.addEventListener("click", () => {
     previewMode = mode;
     // 用户主动切换 / 重试时才加载，避免页面加载即下载 videoshot 资源
-    ensurePreviewLoaded(mode, true);
+    void fetchProgressPreview(mode).then((result) => {
+      previewProviderHandle.setSource(result.source);
+      previewReadyMode = result.effective;
+      syncPreviewModeButtons(result.effective);
+    });
   });
 }
 

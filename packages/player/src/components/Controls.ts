@@ -782,7 +782,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             },
             // 图钉：切换《高能进度条》常驻（与提示文案语义一致）
             onPbpPinClick: () => {
-              applyPermanent(!pbpPermanent);
+              const current = Boolean(
+                stateMgr?.get(PlayerStateKeyEnum.PBP_PERMANENT),
+              );
+              applyPermanent(!current);
             },
           }),
         ),
