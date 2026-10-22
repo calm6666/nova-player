@@ -14,7 +14,7 @@
   "player.ui.controls.prev": "Previous",
   "player.ui.controls.next": "Next",
   "player.ui.controls.playPause": "Play or pause",
-  "player.ui.controls.playbackRate": "Playback speed",
+  "player.ui.controls.playbackRate": "Playback",
   "player.ui.controls.quality": "Quality",
   "player.ui.controls.hires": "Hi-Res lossless audio",
   "player.ui.controls.pbpPin": "Keep the energy bar visible",
