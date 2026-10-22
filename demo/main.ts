@@ -327,6 +327,10 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         "button",
         {
           id: "btn-preview-sprite",
+          onclick: () => {
+            (window as unknown as { __setPreviewMode?: (mode: "sprite" | "frames") => void })
+              .__setPreviewMode?.("sprite");
+          },
           class: "btn-locale active",
         },
         "预览·雪碧图",
@@ -335,6 +339,10 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         "button",
         {
           id: "btn-preview-frames",
+          onclick: () => {
+            (window as unknown as { __setPreviewMode?: (mode: "sprite" | "frames") => void })
+              .__setPreviewMode?.("frames");
+          },
           class: "btn-locale",
         },
         "预览·逐帧bin",
