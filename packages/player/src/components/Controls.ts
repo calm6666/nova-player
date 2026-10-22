@@ -231,7 +231,6 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         pbpPermanent = Boolean(pbpPermanentSignal.value);
         syncShadowPermanent();
         pbpApi?.setPbpPermanent(pbpPermanent);
-        pbpApi?.setPermanent(pbpPermanent);
         pbpApi?.setShow(pbpPermanent || !shadowShowSignal.value);
       });
 

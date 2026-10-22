@@ -208,7 +208,8 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
           {
             show: showSignal.value,
             pin: pbpPermanentSignal.value,
-            "nova-player-pbp-permanent": permanentSignal.value,
+            // 该 class 的图标/文字语义就是“高能进度条常驻”，必须跟随 PBP 图钉
+            "nova-player-pbp-permanent": pbpPermanentSignal.value,
           },
         ],
         ref: "pbpRef",
