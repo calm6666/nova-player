@@ -30,7 +30,7 @@
  */
 
 import { renderToString } from "@/core";
-import { RootLayout } from "./main";
+import { RootLayout, playerInstance, setPlayerInstance } from "./main";
 
 /**
  * SSR 渲染开始时间戳（模块加载时记录）
@@ -69,6 +69,12 @@ export function render(): string {
   const vnode = RootLayout({});
   const html = renderToString(vnode);
   lastSSRDuration = performance.now() - lastSSRStartTime;
+  // SSR 播放器实例不进入请求生命周期：序列化完成后释放，避免下一个请求复用到带状态的实例
+  try {
+    playerInstance?.destroy();
+  } finally {
+    setPlayerInstance(null);
+  }
   return html;
 }
 

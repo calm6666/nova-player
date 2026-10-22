@@ -51,7 +51,7 @@ import { PluginManager } from "@/nova/core/pluginManager";
 import { teardownComponentTree } from "@/nova/core/componentUnmount";
 import { createPlayerStore } from "@/nova/store";
 import type { PlayerStore } from "@/nova/store";
-import { createLogger, loggerManager, LogLevel, clearStyle } from "@/utils";
+import { createLogger, loggerManager, LogLevel, clearStyle, isBrowser } from "@/utils";
 import { isDev } from "@/core/warning";
 import {
   setLocale,
@@ -2230,6 +2230,8 @@ export class VideoPlayer
    * @returns 当前播放器实例
    */
   use(plugin: Plugin): VideoPlayer {
+    // SSR 环境只做数据侧初始化，插件 install 可能挂载 DOM / 读取 window
+    if (!isBrowser()) return this;
     if (!this.pluginManager) {
       logger.error("插件管理器未初始化");
       return this;

@@ -17,7 +17,7 @@
  * 组件覆盖清单（核心 SSR + 水合测试）
  * 1.  ThemeSwitcher    - lifecycle.emit + 状态管理
  * 2.  EventLog         - ref 回调 + 事件总线
- * 3.  PlayerSection    - 页面 SSR 输出播放器占位，播放器由客户端创建挂载
+ * 3.  PlayerSection    - 服务端渲染完整 VideoPlayer，客户端 hydrate 复用并补齐插件
  * 4.  App              - 根组件
  * 7.  RootLayout       - 根布局（注入 Context）
  */
