@@ -1326,20 +1326,24 @@ function syncPreviewModeButtons(effective: PreviewMode | "none"): void {
 // 拉取完成 / 播放器重建后由 effective 再纠正回退场景）
 syncPreviewModeButtons(previewMode);
 
-for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
-  const button = document.getElementById(buttonId);
-  if (!button) continue;
-  button.addEventListener("click", () => {
-    previewMode = mode;
-    // 用户主动切换 / 重试时才加载，避免页面加载即下载 videoshot 资源
-    void fetchProgressPreview(mode).then((result) => {
-      previewProviderHandle.setSource(result.source);
-      previewReadyMode = result.effective;
-      previewRequestedMode = mode;
-      syncPreviewModeButtons(result.effective);
-    });
+// 事件委托：水合/重建替换按钮节点后仍然有效
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest<HTMLElement>(
+    "#btn-preview-sprite, #btn-preview-frames",
+  );
+  if (!button) return;
+  const mode = PREVIEW_MODE_BUTTONS.get(button.id);
+  if (!mode) return;
+  previewMode = mode;
+  previewRequestedMode = mode;
+  void fetchProgressPreview(mode).then((result) => {
+    previewProviderHandle.setSource(result.source);
+    previewReadyMode = result.effective;
+    syncPreviewModeButtons(result.effective);
   });
-}
+});
 
 // ============================================
 // 交互卡片：展示 / 编辑双模式状态与配置组装
