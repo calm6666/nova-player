@@ -164,8 +164,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     // 状态数据
     // ============================================
 
-    /** 视频总时长（秒），元数据加载后由 setDuration 更新 */
-    let duration = props.duration;
+    /** 视频总时长由 props 直接提供；元数据更新仍通过 setDuration 同步给子条 */
     const configCtx = useContext<ControlsConfig>(ConfigContext);
     /** 控制条配置（浅拷贝，避免修改原始 props） */
     const config: ControlsConfig = {
@@ -183,9 +182,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
      *  持久化恢复或「多分段即常驻」规则兜底），此处禁止再无条件 set：
      *  setup 无条件覆盖会把构造期恢复的持久化值抹掉，并经落库订阅
      *  把覆盖值写回 store，导致用户设置每次刷新被重置 */
-    let pbpPermanent = Boolean(
-      stateMgr?.get(PlayerStateKeyEnum.PBP_PERMANENT),
-    );
+    let pbpPermanent = Boolean(stateMgr?.get(PlayerStateKeyEnum.PBP_PERMANENT));
 
     /**
      * 响应式信号：高能进度条渲染态
@@ -212,9 +209,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     /** 同步影子进度条常驻态：只由分段开关 + 多段决定 */
     const syncShadowPermanent = (): void => {
-      shadowApi?.setPermanent(
-        shadowPermanentEnabled && shadowSegments.length > 1,
-      );
+      const permanent: boolean =
+        shadowPermanentEnabled && shadowSegments.length > 1;
+      shadowApi?.setPermanent(permanent);
+      pbpApi?.setPermanent(permanent);
     };
 
     // 常驻态订阅：图钉点击写入运行时状态，这里落到影子条与高能条。
@@ -330,6 +328,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     let pbpApi: {
       setShow: (show: boolean) => void;
       setPbpPermanent: (pbpPermanent: boolean) => void;
+      setPermanent: (permanent: boolean) => void;
       setEnergy: (data: EnergyProgressData | null) => void;
       setProgress: (time: number) => void;
       setDuration: (duration: number) => void;
@@ -376,13 +375,13 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
      * @param target - mouseover/mouseout 的事件目标
      * @returns 命中的按钮描述；未命中任何提示按钮时返回 null
      */
-    const findTipBtnFromTarget = (target: EventTarget | null): Tooltip | null => {
+    const findTipBtnFromTarget = (
+      target: EventTarget | null,
+    ): Tooltip | null => {
       if (!(target instanceof Element)) return null;
       for (const btn of tooltipBtns) {
         const selector = TOOLTIP_SELECTORS[btn.name] ?? "";
-        const element = selector
-          ? target.closest<HTMLElement>(selector)
-          : null;
+        const element = selector ? target.closest<HTMLElement>(selector) : null;
         if (element) {
           return { element, name: btn.name, dataName: btn.dataName };
         }
@@ -447,7 +446,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         if (!current || !current.element) return;
         // 仅处理「离开当前悬停按钮」：事件目标在按钮内、
         // 且相关目标（移入目的地）不在按钮内时才算真正离开
-        if (!(event.target instanceof Node) || !current.element.contains(event.target)) {
+        if (
+          !(event.target instanceof Node) ||
+          !current.element.contains(event.target)
+        ) {
           return;
         }
         const related = event.relatedTarget;
@@ -497,7 +499,6 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
      * @param value - 视频总时长（秒）
      */
     const setDuration = (value: number): void => {
-      duration = value;
       shadowApi?.setDuration(value);
       // 高能进度条需要总时长把播放进度换算成采样点下标
       pbpApi?.setDuration(value);
@@ -716,13 +717,11 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         ),
         // 底部影子进度条（控制栏隐藏时常驻下沿，与顶部进度条同几何同数据源）
         h(ShadowProgressArea, {
-          duration,
+          duration: props.duration,
           progressSegments: shadowSegments,
-          permanent:
-            shadowPermanentEnabled && shadowSegments.length > 1,
+          permanent: shadowPermanentEnabled && shadowSegments.length > 1,
           onShadowProgressAreaMounted: (api: ShadowProgressAreaApi) => {
             shadowApi = api;
-            syncShadowPermanent();
           },
         }),
         // 高能进度条（常驻 DOM，控制栏展开时由 setShow(true) 抬到控制栏之上）
@@ -739,6 +738,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             permanent: shadowPermanentEnabled && shadowSegments.length > 1,
             onPbpControlsMounted: (api: {
               setShow: (show: boolean) => void;
+              setPermanent: (permanent: boolean) => void;
               setPbpPermanent: (pbpPermanent: boolean) => void;
               setEnergy: (data: EnergyProgressData | null) => void;
               setProgress: (time: number) => void;
@@ -747,7 +747,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
               pbpApi = api;
               // 数据与常驻态可能早于组件挂载到达：挂载时补一次
               // 重新勾选（Show 由 false → true）时也走这里恢复数据
-              api.setDuration(duration);
+              api.setDuration(props.duration);
               api.setPbpPermanent(pbpPermanent);
               // 恢复展开态：重挂实例的 showSignal 重置为 false，
               // 若控制栏正显示中（shadowShow=false）不补调 setShow，
