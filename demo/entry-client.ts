@@ -1981,8 +1981,16 @@ async function rebuildPlayer(
   syncPreviewModeButtons("none");
 
   const urlSrc = new URLSearchParams(location.search).get("src");
-  const current = urlSrc
-    ? { ...MEDIA_LIST[targetIndex], src: urlSrc }
+  let parsedUrlSrc: typeof MEDIA_LIST[number]["src"] | undefined;
+  if (urlSrc) {
+    try {
+      parsedUrlSrc = JSON.parse(urlSrc) as typeof MEDIA_LIST[number]["src"];
+    } catch {
+      parsedUrlSrc = urlSrc;
+    }
+  }
+  const current = parsedUrlSrc
+    ? { ...MEDIA_LIST[targetIndex], src: parsedUrlSrc }
     : MEDIA_LIST[targetIndex];
   const config: PlayerConfig = {
     src: current ? current.src : undefined,
