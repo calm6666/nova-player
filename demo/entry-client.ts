@@ -2098,6 +2098,8 @@ async function rebuildPlayer(
       }
       // 插件在挂载后动态注册，补发 mounted 事件给流媒体/弹幕/交互插件
       existing.notifyPluginsMounted();
+      // 水合前没有流媒体插件，重新加载当前源让新插件接管
+      existing.reload();
       const applyProgressData = (): void => {
         existing.progress.setSegments(config.progress?.segments ?? []);
         existing.progress.setEnergy(energy);
