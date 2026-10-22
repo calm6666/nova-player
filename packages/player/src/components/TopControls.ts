@@ -5,7 +5,8 @@
  * 独立的函数组件，拥有自己的生命周期
  */
 
-import { h, defineComponent } from "@/core";
+import { h, defineComponent, Show } from "@/core";
+import { isBrowser } from "@/utils";
 import { ProgressBar, type ProgressBarApi } from "./ProgressBar";
 import type {
   ProgressPreviewProvider,
@@ -50,18 +51,24 @@ export const TopControls = defineComponent<TopControlsProps, TopControlsEvents>(
     return h(
       "div",
       { class: "nova-player-control-top" },
-      h(ProgressBar, {
-        duration: props.duration ?? 0,
-        progressSegments: props.progressSegments,
-        previewProvider: props.previewProvider,
-        skipPoints: props.skipPoints,
-        onSeek: (time) => lifecycle.emit?.("seek", time),
-        onSeekStart: () => lifecycle.emit?.("seekStart"),
-        onSeekEnd: () => lifecycle.emit?.("seekEnd"),
-        // 进度条挂载后拿到其更新 API，继续向上层（Controls → PlayerDocker）回传
-        onProgressBarMounted: (api) => {          lifecycle.emit?.("progressBarMounted", api);
-        },
-      }),
+      // 进度条不参与 SSR：服务端只输出控制栏骨架，
+      // 客户端挂载后再创建 ProgressBar（DOM 引用与更新 API 都是全新的）
+      h(
+        Show,
+        { when: () => isBrowser() },
+        h(ProgressBar, {
+          duration: props.duration ?? 0,
+          progressSegments: props.progressSegments,
+          previewProvider: props.previewProvider,
+          skipPoints: props.skipPoints,
+          onSeek: (time) => lifecycle.emit?.("seek", time),
+          onSeekStart: () => lifecycle.emit?.("seekStart"),
+          onSeekEnd: () => lifecycle.emit?.("seekEnd"),
+          // 进度条挂载后拿到其更新 API，继续向上层（Controls → PlayerDocker）回传
+          onProgressBarMounted: (api) =>
+            lifecycle.emit?.("progressBarMounted", api),
+        }),
+      ),
     );
   },
 );

@@ -43,6 +43,7 @@ import {
 import type { PlayerStateMap, TypedStateManager } from "@/store/runtimeState";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
+import { isBrowser } from "@/utils";
 import { ComponentEventEnum } from "@/core/events";
 import { LeftControls } from "./LeftControls";
 import { RightControls } from "./RightControls";
@@ -127,8 +128,6 @@ export interface ControlsProps {
    * 按钮整体隐藏，支持运行中装卸插件
    */
   plugins?: () => PlayerPluginFlags;
-  /** 顶部进度条挂载完成，向上回传更新 API */
-  onProgressBarMounted?: (api: ProgressBarApi) => void;
 }
 
 /**
@@ -181,9 +180,6 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     /** 底部影子进度条 API（由 ShadowProgressArea 挂载后填充） */
     let shadowApi: ShadowProgressAreaApi | null = null;
-
-    /** 顶部进度条 API（由 TopControls 挂载后回传，用于重建分段） */
-    let topProgressBarApi: ProgressBarApi | null = null;
 
     /** 高能进度条常驻态初值：读运行时状态（由 VideoPlayer 构造期写入——
      *  持久化恢复或「多分段即常驻」规则兜底），此处禁止再无条件 set：
@@ -346,6 +342,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     /** 外部注入的高能数据；undefined 表示尚未注入 */
     let injectedEnergy: EnergyProgressData | null | undefined;
+    const setEnergy = (data: EnergyProgressData | null): void => {
+      injectedEnergy = data;
+      pbpApi?.setEnergy(data);
+    };
 
     /**
      * 拉取高能进度条数据（同步或异步 provider 均兼容）
@@ -355,12 +355,6 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
      * - 异步返回：resolve 后经序号校验再写入，过期的响应（组件重挂期间
      *   发起的更新请求）直接丢弃，避免旧数据覆盖新数据。
      */
-    /** 外部注入高能数据：PBP 未挂载时暂存，挂载后补发 */
-    const setEnergy = (data: EnergyProgressData | null): void => {
-      injectedEnergy = data;
-      pbpApi?.setEnergy(data);
-    };
-
     const loadEnergyData = (): void => {
       if (injectedEnergy !== undefined) {
         pbpApi?.setEnergy(injectedEnergy);
@@ -531,7 +525,6 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     const setProgressSegments = (next?: ProgressSegment[]): void => {
       shadowSegments = next ?? [];
       shadowApi?.rebuildSegments(next);
-      topProgressBarApi?.rebuildSegments?.(next);
       // 不再因「多段」自动常驻；只有 progress.shadowPermanent 开启才展开
       syncShadowPermanent();
     };
@@ -698,10 +691,8 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             lifecycle.emit?.("seekEnd");
           },
           // 继续向上转发 ProgressBar 的更新 API，最终由 PlayerDocker 持有
-          onProgressBarMounted: (api) => {
-            topProgressBarApi = api;            props.onProgressBarMounted?.(api);
-            lifecycle.emit?.("progressBarMounted", api);
-          },
+          onProgressBarMounted: (api) =>
+            lifecycle.emit?.("progressBarMounted", api),
         }),
         h(
           "div",
@@ -752,7 +743,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         // 渲染开关（设置面板复选框）驱动 Show 条件渲染：false → 整个组件不挂载
         h(
           Show,
-          { when: () => pbpRenderedSignal.value !== false },
+          { when: () => isBrowser() && pbpRenderedSignal.value !== false },
           h(PbpControls, {
             // 常驻态初值：来自播放器配置 / 持久化恢复（构造期已写入
             // PBP_PERMANENT 运行时状态，setup 读取为局部快照传入 props，

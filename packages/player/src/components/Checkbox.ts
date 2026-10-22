@@ -77,12 +77,6 @@ export const Checkbox = defineComponent<CheckboxProps>((props, lifecycle: Compon
 
   return h('span', {
     class: 'ui-checkbox',
-    // 让整行（图标 / 文案）都可点击，而不是只有原生 input
-    onClick: (event: MouseEvent) => {
-      const target = event.target;
-      if (target instanceof HTMLInputElement) return;
-      checkboxInputRef.value?.click();
-    },
   },
     h('div', {
       class: 'ui-checkbox-area',

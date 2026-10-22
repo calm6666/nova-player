@@ -2037,6 +2037,7 @@ async function rebuildPlayer(
     } else {
       const next = new VideoPlayer(config);
       setPlayerInstance(next);
+      if (wrapper) wrapper.replaceChildren();
       next.mount(wrapper as HTMLElement);
       next.progress.setSegments(config.progress?.segments ?? []);
       next.progress.setEnergy(energy);

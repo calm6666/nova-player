@@ -74,9 +74,8 @@ export const Context = defineComponent<ContextProps>(
     // 状态数据
     // ============================================
 
-    /** 实际使用的菜单项列表，未传入时使用默认菜单项 */
+    /** 实际使用的菜单项列表（默认菜单；音效项由 Show 响应式插入） */
     const menuItems = props.menuItems || DEFAULT_MENU_ITEMS;
-    /** 音效插件是否启用（函数形态让插件装卸后菜单自动更新） */
     const isAudioEnabled = (): boolean =>
       typeof props.audioEnabled === "function"
         ? props.audioEnabled()
@@ -161,25 +160,22 @@ export const Context = defineComponent<ContextProps>(
     // 渲染函数
     // ============================================
 
-    const renderLi = (item: ContextMenuItem): VNode =>
-      h(
-        "li",
-        {
-          "data-action": item.dataAction,
-          onClick: () => clickMenu(item.dataAction),
-        },
-        item.dataAction === "version" ? `${item.text} ${version}` : item.text,
-      );
-
     /**
      * 渲染菜单项列表
      * @returns 菜单项 VNode 数组
      */
     const renderMenuItems = (): VNode[] => {
-      // 自定义菜单完全由调用方决定
+      const renderLi = (item: ContextMenuItem): VNode =>
+        h(
+          "li",
+          {
+            "data-action": item.dataAction,
+            onClick: () => clickMenu(item.dataAction),
+          },
+          item.dataAction === "version" ? `${item.text} ${version}` : item.text,
+        );
       if (props.menuItems) return menuItems.map(renderLi);
-
-      // 默认菜单：音效项用 Show 包裹，插件运行期注册 / 卸载后立即出现 / 消失
+      // 音效项按插件注册状态响应式显示：插件客户端动态注册后菜单自动出现
       return [
         renderLi(menuItems[0]),
         renderLi(menuItems[1]),
