@@ -6,14 +6,11 @@ $eplist-scrollbar-width: 6px;
   width: 0;
 }
 
-.nova-player-docker.mode-webscreen
-  .nova-player-ctrl-btn.nova-player-ctrl-eplist.nova-player-has-playlist,
 .nova-player-container[data-screen="web"]
   .nova-player-ctrl-btn.nova-player-ctrl-eplist.nova-player-has-playlist,
 .nova-player-container[data-screen="full"]
   .nova-player-ctrl-btn.nova-player-ctrl-eplist.nova-player-has-playlist {
   visibility: visible;
-  width: auto;
 }
 
 // 全屏 / 网页全屏下面板更高（控制栏 73px，与既有面板 bottom:74px 对齐：

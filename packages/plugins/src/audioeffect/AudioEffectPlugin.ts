@@ -27,6 +27,8 @@ import type { PlayerEventBus } from '../../../player/src/core/plugin';
 import { PlayerEventEnum } from '@/core/events';
 import { createLogger, isBrowser } from '@/utils';
 import { EffectChain } from './effects/EffectChain';
+import { HiResAudioDecoder, detectHiResSupport } from './HiResAudioDecoder';
+import type { HiResDecodedAudio, HiResSupportInfo } from './HiResAudioDecoder';
 import type {
   EffectName,
   EQPresetName,
@@ -69,6 +71,16 @@ export interface AudioEffectPluginAPI extends Plugin {
   getEffectsList(): EffectName[];
   /** 获取内部 EffectChain 实例（只读访问） */
   getEffectChain(): EffectChain | null;
+  /** 浏览器 Hi-Res 无损解码能力 */
+  getHiResSupportInfo(): HiResSupportInfo;
+  /** 是否支持 Hi-Res 无损音频 */
+  isHiResSupported(): boolean;
+  /** 解码完整无损音频缓冲（FLAC/ALAC 等） */
+  decodeHiResAudio(data: ArrayBuffer): Promise<HiResDecodedAudio>;
+  /** 播放已解码的 Hi-Res 音频缓冲 */
+  playHiResAudio(decoded: HiResDecodedAudio, offset?: number): void;
+  /** 停止 Hi-Res 解码音频播放 */
+  stopHiResAudio(): void;
 }
 
 // ============================================
@@ -101,6 +113,10 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
   private unsubscribers: Array<() => void> = [];
   /** 初始音量（dB），由配置传入 */
   private initialVolume: number;
+  /** Hi-Res 无损音频解码器 */
+  private readonly hiresDecoder: HiResAudioDecoder;
+  /** 当前 Hi-Res 解码播放源 */
+  private hiresSource: AudioBufferSourceNode | null = null;
   /** video 的 play 事件回调 —— 每次播放时确保 AudioContext 恢复 running */
   private readonly handlePlayResume = (): void => {
     this.tryResume();
@@ -109,6 +125,7 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
   constructor(config?: AudioEffectPluginConfig) {
     this.options = config?.options;
     this.initialVolume = config?.volume ?? 0;
+    this.hiresDecoder = new HiResAudioDecoder(() => this.audioCtx);
   }
 
   /**
@@ -205,6 +222,7 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
    * close 后 createMediaElementSource 对 video 的接管解除，原生音频恢复
    */
   private releaseAudioGraph(): void {
+    this.stopHiResAudio();
     if (this.video) {
       this.video.removeEventListener('play', this.handlePlayResume);
     }
@@ -266,6 +284,52 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
   /** 获取内部 EffectChain 实例 */
   getEffectChain(): EffectChain | null {
     return this.effectChain;
+  }
+
+  /** 浏览器 Hi-Res 无损解码能力 */
+  getHiResSupportInfo(): HiResSupportInfo {
+    return detectHiResSupport();
+  }
+
+  /** 是否支持 Hi-Res 无损音频 */
+  isHiResSupported(): boolean {
+    return detectHiResSupport().supported;
+  }
+
+  /** 解码完整无损音频缓冲（Web Audio decodeAudioData 回退） */
+  async decodeHiResAudio(data: ArrayBuffer): Promise<HiResDecodedAudio> {
+    return this.hiresDecoder.decode(data);
+  }
+
+  /** 播放已解码的 Hi-Res 音频缓冲（接入当前音效总 gain） */
+  playHiResAudio(decoded: HiResDecodedAudio, offset = 0): void {
+    const ctx = this.audioCtx;
+    if (!ctx) {
+      logger.warn('AudioContext 未初始化，无法播放 Hi-Res 音频');
+      return;
+    }
+    this.stopHiResAudio();
+    const source = ctx.createBufferSource();
+    source.buffer = decoded.buffer;
+    source.connect(this.gain ?? ctx.destination);
+    source.onended = (): void => {
+      if (this.hiresSource === source) this.hiresSource = null;
+    };
+    this.hiresSource = source;
+    void this.tryResume();
+    source.start(0, Math.max(0, offset));
+  }
+
+  /** 停止 Hi-Res 解码音频播放 */
+  stopHiResAudio(): void {
+    if (!this.hiresSource) return;
+    try {
+      this.hiresSource.stop();
+    } catch {
+      // 已停止
+    }
+    this.hiresSource.disconnect();
+    this.hiresSource = null;
   }
 
   /**

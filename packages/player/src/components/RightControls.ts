@@ -31,6 +31,7 @@ import { SubtitleMenu } from "./SubtitleMenu";
 import type { SubtitleStylePatch } from "./SubtitleMenu";
 import type { EpisodeOption } from "./EpisodesMenu";
 import { LottieIcon, type LottieIconApi } from "./LottieIcon";
+import { HiRes } from "./icons";
 import fullscreenAnimationData from "../assets/lottie-icon/fullscreen-animation.json";
 import webFullscreenAnimationData from "../assets/lottie-icon/web-fullscreen-animation.json";
 import webExitFullscreenAnimationData from "../assets/lottie-icon/web-exit-fullscreen-animation.json";
@@ -70,6 +71,8 @@ export type RightControlsEvents = {
 export interface RightControlsProps {
   /** 播放场景：embedded 时仅保留清晰度 / 倍速 / 音量 / 全屏 */
   scene?: "station" | "embedded";
+  /** 是否显示 Hi-Res 无损音质标识（播放器能力检测后传入） */
+  hiRes?: boolean;
   /**
    * 插件安装标志读取器（getter 形态，Controls 透传）：
    * 字幕按钮按 subtitle 标志显隐，未装 subtitle 插件时整体不显示
@@ -489,6 +492,26 @@ export const RightControls = defineComponent<
 
   /** 按钮类型到渲染函数的映射表，每个键对应一种控制按钮的渲染逻辑 */
   const bottomRightRenderers: Record<string, () => VNode | null> = {
+    /** 渲染 Hi-Res 无损音质标识 */
+    flac: () => {
+      if (props.hiRes === false) return null;
+      return h(
+        "div",
+        {
+          class: "nova-player-ctrl-btn nova-player-ctrl-flac",
+          role: "img",
+          "aria-label": t("player.ui.controls.hires"),
+          title: t("player.ui.controls.hires"),
+        },
+        h(
+          "div",
+          {
+            class: "nova-player-ctrl-btn-icon",
+          },
+          h(HiRes),
+        ),
+      );
+    },
     /** 渲染画质选择菜单（visible 经响应式 prop 传入，display 由其根节点单一来源管理） */
     quality: () => {
       return h(QualityMenu, {
@@ -707,6 +730,7 @@ export const RightControls = defineComponent<
     props.scene === "embedded"
       ? ["quality", "playbackrate", "volume", "full"]
       : [
+          "flac",
           "quality",
           "eplist",
           "playbackrate",

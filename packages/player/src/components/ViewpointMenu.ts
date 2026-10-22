@@ -14,7 +14,7 @@
  *   hover 定时器（rafTimeout）仅负责延迟时序并写信号，不直接操作 DOM
  */
 
-import { h, defineComponent, signal, For } from "@/core";
+import { h, defineComponent, signal, For, t } from "@/core";
 import { useComponentUnmount } from "@/nova/core/componentUnmount";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
@@ -272,6 +272,8 @@ export const ViewpointMenu = defineComponent<
         "nova-player-ctrl-viewpoint",
         { "state-show": shownSignal.value },
       ],
+      role: "button",
+      "aria-label": t("player.ui.controls.chapters"),
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
     },

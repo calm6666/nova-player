@@ -183,7 +183,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
      *  持久化恢复或「多分段即常驻」规则兜底），此处禁止再无条件 set：
      *  setup 无条件覆盖会把构造期恢复的持久化值抹掉，并经落库订阅
      *  把覆盖值写回 store，导致用户设置每次刷新被重置 */
-    let permanent = Boolean(
+    let pbpPermanent = Boolean(
       stateMgr?.get(PlayerStateKeyEnum.PBP_PERMANENT),
     );
 
@@ -199,7 +199,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     /** 应用常驻态到运行时状态（订阅方据此更新影子进度条与高能进度条） */
     const applyPermanent = (next: boolean): void => {
-      permanent = next;
+      pbpPermanent = next;
       stateMgr?.set(PlayerStateKeyEnum.PBP_PERMANENT, next);
     };
 
@@ -218,8 +218,8 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     };
 
     // 常驻态订阅：图钉点击写入运行时状态，这里落到影子条与高能条。
-    // ★ 必须在 setup 阶段调用 onEffect：mount 在 onMounted 阶段先启动 _effects 再执行用户钩子，
-    //   若在 onMounted 回调内注册，effect 将错过启动窗口永不运行，pin 点击后状态无人消费（点击失效根因）
+    // 必须在 setup 阶段调用 onEffect：mount 在 onMounted 阶段先启动 _effects 再执行用户钩子，
+    // 若在 onMounted 回调内注册，effect 将错过启动窗口永不运行，pin 点击后状态无人消费（点击失效根因）
     if (stateMgr) {
       const pbpPermanentSignal = useReactiveState(
         stateMgr,
@@ -227,9 +227,9 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         lifecycle,
       );
       onEffect(lifecycle, () => {
-        permanent = Boolean(pbpPermanentSignal.value);
+        pbpPermanent = Boolean(pbpPermanentSignal.value);
         syncShadowPermanent();
-        pbpApi?.setPermanent(permanent);
+        pbpApi?.setPbpPermanent(pbpPermanent);
       });
 
       /**
@@ -246,7 +246,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       onEffect(lifecycle, () => {
         // 读取建立依赖：索引变化（切换视频）时重跑
         playlistIndexSignal.value;
-        // ★ 副作用必须包裹 untracked 阻断依赖追踪泄漏：
+        // 副作用必须包裹 untracked 阻断依赖追踪泄漏：
         //   hideTip / emit("hideTooltip") 的同步调用链会一路延伸到
         //   Tooltips.hideTooltip，其幂等守卫 `name in activePositionsSig.value`
         //   会读取 Tooltips 内部的 tip 显示状态 signal——若不隔离，该 signal
@@ -329,7 +329,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     // 高能进度条 API（由 PbpControls 挂载后填充）
     let pbpApi: {
       setShow: (show: boolean) => void;
-      setPermanent: (permanent: boolean) => void;
+      setPbpPermanent: (pbpPermanent: boolean) => void;
       setEnergy: (data: EnergyProgressData | null) => void;
       setProgress: (time: number) => void;
       setDuration: (duration: number) => void;
@@ -532,7 +532,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     lifecycle.onMounted = (): void => {
       // 常驻态订阅已在 setup 阶段注册（onEffect 依赖 mount 的 _effects 启动窗口，onMounted 回调内注册不会生效）
       syncShadowPermanent();
-      pbpApi?.setPermanent(permanent);
+      pbpApi?.setPbpPermanent(pbpPermanent);
 
       // 填充菜单配置：子组件（LeftControls / RightControls）先于父组件挂载，
       // 此处控制条主体 DOM 已就绪，可在实体容器上挂载 tooltip 事件委托
@@ -736,10 +736,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             // PbpControls 以此初始化 permanentSignal）；后续更新走两条链：
             // 1. PBP_PERMANENT 状态订阅 → pbpApi.setPermanent（图钉点击/程序切换）
             // 2. Show 销毁重建时 onPbpControlsMounted 里重新补调
-            permanent,
+            permanent: shadowPermanentEnabled && shadowSegments.length > 1,
             onPbpControlsMounted: (api: {
               setShow: (show: boolean) => void;
-              setPermanent: (permanent: boolean) => void;
+              setPbpPermanent: (pbpPermanent: boolean) => void;
               setEnergy: (data: EnergyProgressData | null) => void;
               setProgress: (time: number) => void;
               setDuration: (duration: number) => void;
@@ -748,7 +748,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
               // 数据与常驻态可能早于组件挂载到达：挂载时补一次
               // 重新勾选（Show 由 false → true）时也走这里恢复数据
               api.setDuration(duration);
-              api.setPermanent(permanent);
+              api.setPbpPermanent(pbpPermanent);
               // 恢复展开态：重挂实例的 showSignal 重置为 false，
               // 若控制栏正显示中（shadowShow=false）不补调 setShow，
               // 高能条会落回 bottom:3px 被 mask 遮罩盖住（z-index:-1），勾选后肉眼不可见
@@ -764,7 +764,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             },
             // 图钉：切换《高能进度条》常驻（与提示文案语义一致）
             onPbpPinClick: () => {
-              applyPermanent(!permanent);
+              applyPermanent(!pbpPermanent);
             },
           }),
         ),

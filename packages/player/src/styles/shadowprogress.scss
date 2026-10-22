@@ -131,6 +131,10 @@
     }
   }
 
+  &.pin {
+    opacity: 1;
+  }
+
   &.show {
     bottom: 100%;
     left: 0;

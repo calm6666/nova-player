@@ -62,6 +62,10 @@ interface BrowserCapabilityResult {
   hlsjsSupported: boolean;
   /** hls.js 支持的详细说明 */
   hlsjsSupportDetail: string;
+  /** 是否支持 Hi-Res 无损音频解码（FLAC/ALAC） */
+  hiResSupported: boolean;
+  /** Hi-Res 能力说明 */
+  hiResSupportDetail: string;
 }
 
 interface NavigatorUABrandVersion {
@@ -576,6 +580,82 @@ class BrowserCapabilityDetector {
   }
 
   /**
+   * 检测浏览器是否具备 Hi-Res 无损音频解码能力
+   *
+   * 覆盖原生 canPlayType 与 MSE isTypeSupported（DASH/HLS 的 fMP4 FLAC/ALAC 轨）。
+   * 位深/采样率精确能力由 checkHiResDecodingCapability() 补充。
+   */
+  static checkHiResAudioSupport(): {
+    supported: boolean;
+    detail: string;
+    nativeTypes: string[];
+    mseTypes: string[];
+  } {
+    const probes = [
+      'audio/mp4; codecs="flac"',
+      'audio/flac',
+      'audio/x-flac',
+      'audio/mp4; codecs="alac"',
+    ];
+    const nativeTypes: string[] = [];
+    const mseTypes: string[] = [];
+
+    if (typeof document !== 'undefined') {
+      const audio = document.createElement('audio');
+      for (const type of probes) {
+        if (audio.canPlayType(type) !== '') nativeTypes.push(type);
+      }
+    }
+
+    if (this.isMSESupported()) {
+      for (const type of probes) {
+        if (MediaSource.isTypeSupported(type)) mseTypes.push(type);
+      }
+    }
+
+    const supported = nativeTypes.length > 0 || mseTypes.length > 0;
+    const detail = supported
+      ? `Hi-Res audio supported (native: ${nativeTypes.join(', ') || 'none'}; MSE: ${mseTypes.join(', ') || 'none'})`
+      : 'Hi-Res audio not supported (no FLAC/ALAC decoder)';
+
+    return { supported, detail, nativeTypes, mseTypes };
+  }
+
+  /**
+   * MediaCapabilities 精确检测 24bit/96kHz Hi-Res 音频解码能力
+   */
+  static async checkHiResDecodingCapability(): Promise<DecodingCapabilityInfo> {
+    const fallback = this.checkHiResAudioSupport();
+    const defaultResult: DecodingCapabilityInfo = {
+      supported: fallback.supported,
+      smooth: false,
+      powerEfficient: false,
+    };
+    if (typeof navigator === 'undefined' || !('mediaCapabilities' in navigator)) {
+      return defaultResult;
+    }
+    try {
+      const result = await navigator.mediaCapabilities.decodingInfo({
+        type: 'media-source',
+        audio: {
+          contentType: 'audio/mp4; codecs="flac"',
+          channels: 2,
+          bitrate: 4608000,
+          samplerate: 96000,
+        },
+      } as unknown as MediaDecodingConfiguration);
+      return {
+        supported: result.supported,
+        smooth: result.smooth,
+        powerEfficient: result.powerEfficient,
+      };
+    } catch (e) {
+      logger.warn('Hi-Res MediaCapabilities detection failed:', e);
+      return defaultResult;
+    }
+  }
+
+  /**
    * 获取完整的浏览器能力检测结果
    *
    * 执行所有检测并返回综合结果。
@@ -591,6 +671,7 @@ class BrowserCapabilityDetector {
     const browserInfo = this.getBrowserInfo();
     const osInfo = this.getOSInfo();
     const hlsjsSupport = this.checkHlsjsSupport();
+    const hiResSupport = this.checkHiResAudioSupport();
 
     return {
       browserName: browserInfo.name,
@@ -605,6 +686,8 @@ class BrowserCapabilityDetector {
       flvjsSupported: this.isFlvjsSupported(),
       hlsjsSupported: hlsjsSupport.supported, // 新增
       hlsjsSupportDetail: hlsjsSupport.detail, // 新增
+      hiResSupported: hiResSupport.supported,
+      hiResSupportDetail: hiResSupport.detail,
       hardwareInfo: this.getHardwareInfo(),
     };
   }

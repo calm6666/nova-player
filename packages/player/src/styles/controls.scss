@@ -24,13 +24,6 @@
       display: block;
     }
   }
-
-  .show {
-    bottom: 100%;
-    left: 0;
-    width: 100%;
-    opacity: 1;
-  }
 }
 
 .nova-player-control-top {
@@ -717,4 +710,9 @@
       }
     }
   }
+}
+
+.nova-player-ctrl-flac {
+  margin-right: 20px;
+  width: 99px;
 }

@@ -25,6 +25,7 @@ import type { EnergyProgressData } from "@/nova/utils/media/energyProgress";
 export interface PbpControlsProps {
   visible?: boolean;
   permanent?: boolean;
+  pbpPermanent?: boolean;
 }
 
 export type PbpControlsEvents = {
@@ -33,6 +34,7 @@ export type PbpControlsEvents = {
   pbpPinClick: undefined;
   pbpControlsMounted: {
     setShow: (show: boolean) => void;
+    setPbpPermanent: (pbpPermanent: boolean) => void;
     setPermanent: (permanent: boolean) => void;
     setEnergy: (data: EnergyProgressData | null) => void;
     setProgress: (time: number) => void;
@@ -86,6 +88,10 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
     /**
      * 响应式信号：常驻态（决定图钉图标与提示文字）
      */
+    const pbpPermanentSignal = signal<boolean>(props.pbpPermanent ?? false);
+    /**
+     * 响应式信号：高能进度条高度（决定曲线与已播放裁切窗口的垂直位置）
+     */
     const permanentSignal = signal<boolean>(props.permanent ?? false);
 
     /** 重绘曲线与已播放裁切窗口（保留命令式：SVG 路径绘制，性能关键） */
@@ -122,6 +128,14 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
     /**
      * 设置常驻态（响应式：更新信号，根节点 class effect 自动同步，切换图钉图标与提示文字）
      * @param value - 是否常驻
+     */
+    const setPbpPermanent = (value: boolean): void => {
+      pbpPermanentSignal.value = value;
+    };
+
+    /**
+     * 设置高能进度条高度（响应式：更新信号，根节点 class effect 自动同步）
+     * @param value - 高度（像素）
      */
     const setPermanent = (value: boolean): void => {
       permanentSignal.value = value;
@@ -176,6 +190,7 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
       // setShow/setPermanent 已由信号 + onEffect 自动同步首帧 class，无需手动调用
       lifecycle.emit?.("pbpControlsMounted", {
         setShow,
+        setPbpPermanent,
         setPermanent,
         setEnergy,
         setProgress,
@@ -192,6 +207,7 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
           "nova-player-pbp",
           {
             show: showSignal.value,
+            pin: pbpPermanentSignal.value,
             "nova-player-pbp-permanent": permanentSignal.value,
           },
         ],
@@ -254,7 +270,7 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
       ),
       h(
         "div",
-        { class: "nova-player-pbp-pin", onClick: handlePinClick },
+        { class: "nova-player-pbp-pin", role: "button", "aria-label": t("player.ui.controls.pbpPin"), onClick: handlePinClick },
         h(
           "div",
           { class: "nova-player-pbp-pin-icon nova-player-pbp-pin-icon-off" },

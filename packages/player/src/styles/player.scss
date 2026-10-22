@@ -607,139 +607,143 @@ img {
     height: 45px;
     line-height: 34px;
     margin: 20px 0 0;
+  }
 
-    .nova-player-control-bottom-left {
-      min-width: 273px;
+  .nova-player-control-bottom-left {
+    min-width: 273px;
+  }
+
+  .nova-player-ctrl-btn {
+    height: 43px;
+    line-height: 32px;
+    width: 54px;
+
+    .nova-player-ctrl-btn-icon > .common-svg-icon {
+      height: 28px;
+    }
+  }
+
+  .nova-player-ctrl-time-label {
+    font-size: 14px;
+    text-align: left;
+    text-indent: 16px;
+  }
+
+  .nova-player-control-bottom-center {
+    -webkit-box-flex: 1;
+    -ms-flex-positive: 1;
+    flex-grow: 1;
+    height: 34px;
+    line-height: 34px;
+    padding: 0 60px;
+
+    .nova-player-sending-bar {
+      background: none !important;
+      border: none !important;
+      height: 34px !important;
+      line-height: 34px !important;
+      margin: 0 auto !important;
+      max-width: 729px !important;
+      padding: 0 !important;
+
+      .nova-player-dm-root {
+        .nova-player-dm-setting-wrap {
+          bottom: 63px;
+          right: -105px;
+        }
+      }
+    }
+  }
+
+  .nova-player-control-bottom-right {
+    min-width: 370px;
+
+    .nova-player-ctrl-btn.nova-player-ctrl-quality {
+      width: auto;
+
+      .nova-player-ctrl-quality-result {
+        font-size: 16px;
+        width: auto;
+      }
+
+      .nova-player-ctrl-quality-menu-wrap {
+        bottom: 74px;
+
+        .nova-player-ctrl-quality-result-auto-badge {
+          font-size: 8px;
+          height: 13px;
+          margin-left: -14px;
+          margin-top: -10px;
+          padding: 0 3px;
+        }
+
+        &:after {
+          height: 32px;
+        }
+      }
+
+      .nova-player-ctrl-quality-bubble {
+        bottom: 78px;
+      }
     }
 
-    .nova-player-ctrl-btn {
-      height: 43px;
-      line-height: 32px;
+    .nova-player-ctrl-btn.nova-player-ctrl-eplist {
       width: 54px;
 
-      .nova-player-ctrl-btn-icon > .common-svg-icon {
-        height: 28px;
-      }
-    }
-
-    .nova-player-ctrl-time-label {
-      font-size: 14px;
-      text-align: left;
-      text-indent: 16px;
-    }
-
-    .nova-player-control-bottom-center {
-      -webkit-box-flex: 1;
-      -ms-flex-positive: 1;
-      flex-grow: 1;
-      height: 34px;
-      line-height: 34px;
-      padding: 0 60px;
-
-      .nova-player-sending-bar {
-        background: none !important;
-        border: none !important;
-        height: 34px !important;
-        line-height: 34px !important;
-        margin: 0 auto !important;
-        max-width: 729px !important;
-        padding: 0 !important;
-
-        .nova-player-dm-root {
-          .nova-player-dm-setting-wrap {
-            bottom: 63px;
-            right: -105px;
-          }
-        }
-      }
-    }
-
-    .nova-player-control-bottom-right {
-      min-width: 370px;
-
-      .nova-player-ctrl-btn.nova-player-ctrl-quality {
+      .nova-player-ctrl-eplist-result {
+        font-size: 16px;
         width: auto;
-
-        .nova-player-ctrl-quality-result {
-          font-size: 16px;
-          width: auto;
-        }
-
-        .nova-player-ctrl-quality-menu-wrap {
-          bottom: 74px;
-
-          .nova-player-ctrl-quality-result-auto-badge {
-            font-size: 8px;
-            height: 13px;
-            margin-left: -14px;
-            margin-top: -10px;
-            padding: 0 3px;
-          }
-
-          &:after {
-            height: 32px;
-          }
-        }
-
-        .nova-player-ctrl-quality-bubble {
-          bottom: 78px;
-        }
       }
 
-      .nova-player-ctrl-btn.nova-player-ctrl-eplist {
-        width: 54px;
+      .nova-player-ctrl-eplist-menu-wrap {
+        bottom: 74px;
+      }
+    }
 
-        .nova-player-ctrl-eplist-result {
-          font-size: 16px;
-          width: auto;
-        }
-
-        .nova-player-ctrl-eplist-menu-wrap {
-          bottom: 74px;
-        }
+    .nova-player-ctrl-btn.nova-player-ctrl-playbackrate {
+      // width: 66px;
+      .nova-player-ctrl-playbackrate-result {
+        font-size: 16px;
+        width: auto;
       }
 
-      .nova-player-ctrl-btn.nova-player-ctrl-playbackrate {
-        // width: 66px;
-        .nova-player-ctrl-playbackrate-result {
-          font-size: 16px;
-          width: auto;
-        }
+      .nova-player-ctrl-playbackrate-menu {
+        bottom: 74px;
+      }
+    }
 
-        .nova-player-ctrl-playbackrate-menu {
-          bottom: 74px;
-        }
+    .nova-player-ctrl-btn.nova-player-ctrl-subtitle {
+      // width: 66px;
+
+      .nova-player-ctrl-subtitle-result {
+        font-size: 16px;
+        width: auto;
       }
 
-      .nova-player-ctrl-btn.nova-player-ctrl-subtitle {
-        // width: 66px;
+      .nova-player-ctrl-subtitle-box {
+        bottom: 74px;
 
-        .nova-player-ctrl-subtitle-result {
-          font-size: 16px;
-          width: auto;
-        }
-
-        .nova-player-ctrl-subtitle-box {
-          bottom: 74px;
-
-          &:after {
-            height: 32px;
-          }
+        &:after {
+          height: 32px;
         }
       }
+    }
 
-      .nova-player-ctrl-btn.nova-player-ctrl-volume {
-        .nova-player-ctrl-volume-box {
-          bottom: 74px;
-        }
+    .nova-player-ctrl-btn.nova-player-ctrl-volume {
+      .nova-player-ctrl-volume-box {
+        bottom: 74px;
       }
+    }
 
-      .nova-player-ctrl-btn.nova-player-ctrl-setting {
-        .nova-player-ctrl-setting-box {
-          bottom: 74px;
-          right: -40px;
-        }
+    .nova-player-ctrl-btn.nova-player-ctrl-setting {
+      .nova-player-ctrl-setting-box {
+        bottom: 74px;
+        right: -40px;
       }
+    }
+    .nova-player-ctrl-btn.nova-player-ctrl-flac {
+      margin-right: 24px;
+      min-width: 115px;
     }
   }
 }

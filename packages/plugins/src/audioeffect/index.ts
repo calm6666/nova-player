@@ -7,6 +7,8 @@
 
 export { AudioEffectPlugin, createAudioEffectPlugin } from './AudioEffectPlugin';
 export type { AudioEffectPluginConfig, AudioEffectPluginAPI } from './AudioEffectPlugin';
+export { HiResAudioDecoder, detectHiResSupport } from './HiResAudioDecoder';
+export type { HiResDecodedAudio, HiResSupportInfo } from './HiResAudioDecoder';
 
 export type {
   EffectName,

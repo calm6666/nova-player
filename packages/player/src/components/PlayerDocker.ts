@@ -73,6 +73,7 @@ import type { ToastOptions } from "@/nova/components/Toast";
 import { Loading } from "@/nova/components/Loading";
 import { State } from "@/nova/components/State";
 import { createBufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
+import { BrowserCapabilityDetector } from "@/nova/utils/browserCapabilityDetector";
 import type { BufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
 import { SendBar } from "@/nova/components/SendBar";
 import { ColorPanel, type ColorPanelApi } from "@/nova/components/ColorPanel";
@@ -507,6 +508,10 @@ export const PlayerDocker = defineComponent<
   );
 
   /** 播放器容器 */
+  /** Hi-Res 无损音频能力（能力检测只做一次） */
+  const hiResSupported =
+    BrowserCapabilityDetector.checkHiResAudioSupport().supported;
+
   const playerContainerRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
     "playerContainerRef",
@@ -3034,6 +3039,7 @@ export const PlayerDocker = defineComponent<
             volume: readVolume(),
             backrate: readBackrate(),
             scene: embeddedMode ? "embedded" : "station",
+            hiRes: hiResSupported,
             /** 插件安装标志读取器：字幕按钮按 subtitle 标志显隐（getter 本体透传给 SubtitleMenu） */
             plugins: props.plugins,
             previewProvider: props.previewProvider,
