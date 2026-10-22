@@ -29,6 +29,7 @@
  *   否则 hydrate 时 VNode 与 DOM 不匹配会导致水合失败
  */
 
+import "@/styles/style.scss";
 import { renderToString } from "@/core";
 import { RootLayout, playerInstance, setPlayerInstance } from "./main";
 
