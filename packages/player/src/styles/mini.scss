@@ -14,84 +14,93 @@
       opacity: 1;
     }
   }
+}
+.nova-player-mini-close,
+.nova-player-mini-state {
+  cursor: pointer;
+  opacity: 0;
+  -webkit-transition: opacity 0.2s ease-in-out;
+  transition: opacity 0.2s ease-in-out;
+}
 
-  .nova-player-mini-close,
-  .nova-player-mini-state {
-    cursor: pointer;
-    opacity: 0;
-    -webkit-transition: opacity 0.2s ease-in-out;
-    transition: opacity 0.2s ease-in-out;
-  }
+.nova-player-mini-close {
+  fill: #fff;
+  float: right;
+  height: 22px;
+  margin-right: 8px;
+  margin-top: 8px;
+  width: 22px;
+}
 
-  .nova-player-mini-close {
-    fill: #fff;
-    float: right;
-    height: 22px;
-    margin-right: 8px;
-    margin-top: 8px;
-    width: 22px;
-  }
+.nova-player-mini-state {
+  height: 100px;
+  left: 50%;
+  margin: -50px 0 0 -50px;
+  position: absolute;
+  top: 50%;
+  width: 100px;
 
-  .nova-player-mini-state {
-    height: 100px;
-    left: 50%;
-    margin: -50px 0 0 -50px;
-    position: absolute;
-    top: 50%;
-    width: 100px;
-
-    .nova-player-mini-state-pause,
-    .nova-player-mini-state-play {
-      background-position: 50%;
-      background-repeat: no-repeat;
-      background-size: 80px 80px;
-      bottom: 0;
-      left: 0;
-      position: absolute;
-      right: 0;
-      top: 0;
-    }
-
-    .nova-player-mini-state-play {
-      background-image: url(@/assets/images/pause.svg);
-      visibility: visible;
-    }
-
-    .nova-player-mini-state-pause {
-      background-image: url(@/assets/images/play.svg);
-      visibility: hidden;
-    }
-  }
-
-  .nova-player-mini-progress {
-    background-color: hsla(0, 0%, 100%, 0.2);
-    border-radius: 1.5px;
+  .nova-player-mini-state-pause,
+  .nova-player-mini-state-play {
+    background-position: 50%;
+    background-repeat: no-repeat;
+    background-size: 80px 80px;
     bottom: 0;
-    height: 3px;
     left: 0;
     position: absolute;
     right: 0;
+    top: 0;
+  }
 
-    .nova-player-mini-progress-buffer,
-    .nova-player-mini-progress-tempo {
-      bottom: 0;
-      left: 0;
-      position: absolute;
-      right: 0;
-      top: 0;
-      -webkit-transform: scaleX(0);
-      transform: scaleX(0);
-      -webkit-transform-origin: 0 0;
-      transform-origin: 0 0;
+  .nova-player-mini-state-play {
+    background-image: url(@/assets/images/pause.svg);
+    visibility: visible;
+  }
+
+  .nova-player-mini-state-pause {
+    background-image: url(@/assets/images/play.svg);
+    visibility: hidden;
+  }
+}
+
+.nova-player-mini-progress {
+  background-color: hsla(0, 0%, 100%, 0.2);
+  border-radius: 1.5px;
+  bottom: 0;
+  height: 3px;
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+.nova-player-mini-progress-buffer,
+.nova-player-mini-progress-tempo {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  -webkit-transform: scaleX(0);
+  transform: scaleX(0);
+  -webkit-transform-origin: 0 0;
+  transform-origin: 0 0;
+}
+
+.nova-player-mini-progress-buffer {
+  background-color: hsla(0, 0%, 100%, 0.3);
+}
+
+.nova-player-mini-progress-tempo {
+  background-color: #00a1d6;
+  background-color: var(--nova-player-primary-color, #00a1d6);
+}
+
+.state-paused {
+  .nova-player-mini-state {
+    .nova-player-mini-state-play {
+      visibility: hidden;
     }
-
-    .nova-player-mini-progress-buffer {
-      background-color: hsla(0, 0%, 100%, 0.3);
-    }
-
-    .nova-player-mini-progress-tempo {
-      background-color: #00a1d6;
-      background-color: var(--nova-player-primary-color, #00a1d6);
+    .nova-player-mini-state-pause {
+      visibility: visible;
     }
   }
 }

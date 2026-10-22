@@ -1,0 +1,165 @@
+{
+  "mediaSourceType": "dash",
+  "duration": 253.6,
+  "minBufferTime": 12.0,
+  "video": [
+    {
+      "id": "380014545541926912-video-h264-1920_1080",
+      "baseUrl": "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-1920_1080.m4s",
+      "backupUrls": [
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-1920_1080.m4s",
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-1920_1080.m4s"
+      ],
+      "bandwidth": 2896721,
+      "mimeType": "video/mp4",
+      "codecs": "avc1.4d4028",
+      "segmentInfo": {
+        "mode": "single",
+        "timescale": 24000,
+        "initialization": "0-879",
+        "indexRange": "880-1435",
+        "targetDuration": 6.006
+      },
+      "width": 1920,
+      "height": 1080,
+      "frameRate": 23.98,
+      "sar": "1:1"
+    },
+    {
+      "id": "380014545541926912-video-h264-1280_720",
+      "baseUrl": "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-1280_720.m4s",
+      "backupUrls": [
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-1280_720.m4s",
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-1280_720.m4s"
+      ],
+      "bandwidth": 1843170,
+      "mimeType": "video/mp4",
+      "codecs": "avc1.4d401f",
+      "segmentInfo": {
+        "mode": "single",
+        "timescale": 24000,
+        "initialization": "0-879",
+        "indexRange": "880-1435",
+        "targetDuration": 6.006
+      },
+      "width": 1280,
+      "height": 720,
+      "frameRate": 23.98,
+      "sar": "1:1"
+    },
+    {
+      "id": "380014545541926912-video-h264-854_480",
+      "baseUrl": "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-854_480.m4s",
+      "backupUrls": [
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-854_480.m4s",
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h264-854_480.m4s"
+      ],
+      "bandwidth": 1012587,
+      "mimeType": "video/mp4",
+      "codecs": "avc1.4d401e",
+      "segmentInfo": {
+        "mode": "single",
+        "timescale": 24000,
+        "initialization": "0-878",
+        "indexRange": "879-1434",
+        "targetDuration": 6.006
+      },
+      "width": 854,
+      "height": 480,
+      "frameRate": 23.98,
+      "sar": "1:1"
+    },
+    {
+      "id": "380014545541926912-video-h265-1920_1080",
+      "baseUrl": "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-1920_1080.m4s",
+      "backupUrls": [
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-1920_1080.m4s",
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-1920_1080.m4s"
+      ],
+      "bandwidth": 2444958,
+      "mimeType": "video/mp4",
+      "codecs": "hvc1.1.6.L120.B0",
+      "segmentInfo": {
+        "mode": "single",
+        "timescale": 24000,
+        "initialization": "0-960",
+        "indexRange": "961-1516",
+        "targetDuration": 6.006
+      },
+      "width": 1920,
+      "height": 1080,
+      "frameRate": 23.98,
+      "sar": "1:1"
+    },
+    {
+      "id": "380014545541926912-video-h265-1280_720",
+      "baseUrl": "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-1280_720.m4s",
+      "backupUrls": [
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-1280_720.m4s",
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-1280_720.m4s"
+      ],
+      "bandwidth": 1711402,
+      "mimeType": "video/mp4",
+      "codecs": "hvc1.1.6.L93.B0",
+      "segmentInfo": {
+        "mode": "single",
+        "timescale": 24000,
+        "initialization": "0-959",
+        "indexRange": "960-1515",
+        "targetDuration": 6.006
+      },
+      "width": 1280,
+      "height": 720,
+      "frameRate": 23.98,
+      "sar": "1:1"
+    },
+    {
+      "id": "380014545541926912-video-h265-854_480",
+      "baseUrl": "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-854_480.m4s",
+      "backupUrls": [
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-854_480.m4s",
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-video-h265-854_480.m4s"
+      ],
+      "bandwidth": 943688,
+      "mimeType": "video/mp4",
+      "codecs": "hvc1.1.6.L93.B0",
+      "segmentInfo": {
+        "mode": "single",
+        "timescale": 24000,
+        "initialization": "0-958",
+        "indexRange": "959-1514",
+        "targetDuration": 6.006
+      },
+      "width": 854,
+      "height": 480,
+      "frameRate": 23.98,
+      "sar": "1:1"
+    }
+  ],
+  "audio": [
+    {
+      "id": "380014545541926912-audio",
+      "baseUrl": "http://192.168.0.15:9000/video/dash2/380014545541926912-audio.m4s",
+      "backupUrls": [
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-audio.m4s",
+        "http://192.168.0.15:9000/video/dash2/380014545541926912-audio.m4s"
+      ],
+      "bandwidth": 121407,
+      "mimeType": "audio/mp4",
+      "codecs": "mp4a.40.2",
+      "segmentInfo": {
+        "mode": "single",
+        "timescale": 48000,
+        "initialization": "0-768",
+        "indexRange": "769-1324",
+        "targetDuration": 5.909333
+      },
+      "audioSamplingRate": 48000,
+      "channelConfig": {
+        "value": 2
+      },
+      "lang": "und",
+      "role": "main"
+    }
+  ]
+}

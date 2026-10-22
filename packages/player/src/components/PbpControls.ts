@@ -201,8 +201,6 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
     return h(
       "div",
       {
-        // 响应式 class：编译期将含 signal.value 的数组提取到 __reactiveAttrs，
-        // mount 时注册 effect，showSignal/permanentSignal 变化时自动 normalizeClass 重新应用
         class: [
           "nova-player-pbp",
           {
@@ -270,7 +268,12 @@ export const PbpControls = defineComponent<PbpControlsProps, PbpControlsEvents>(
       ),
       h(
         "div",
-        { class: "nova-player-pbp-pin", role: "button", "aria-label": t("player.ui.controls.pbpPin"), onClick: handlePinClick },
+        {
+          class: "nova-player-pbp-pin",
+          role: "button",
+          "aria-label": t("player.ui.controls.pbpPin"),
+          onClick: handlePinClick,
+        },
         h(
           "div",
           {
