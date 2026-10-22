@@ -1017,17 +1017,17 @@ export class VideoPlayer
       shadowPermanent: enabled,
     };
     this.syncSegmentsToControls();
+    this.configStore.set(this.props);
     this.controlsApi?.setShadowPermanent(enabled);
   }
 
   /** 把 progress.segments 同步进 ui.controls.progressSegments（Controls 读取路径） */
   private syncSegmentsToControls(): void {
     const segments = this.props.progress?.segments;
-    if (segments === undefined) return;
     // 构造新对象，避免污染共享的 defaultControlConfig
     const controls = {
       ...(this.props.ui?.controls ?? defaultControlConfig),
-      progressSegments: segments,
+      ...(segments !== undefined ? { progressSegments: segments } : {}),
       shadowPermanent: this.props.progress?.shadowPermanent === true,
     };
     this.props.ui = { ...(this.props.ui ?? {}), controls };
