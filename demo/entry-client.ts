@@ -724,16 +724,19 @@ async function fetchSpritePreviewSource(): Promise<DemoPreviewSource | null> {
       return null;
     }
     const pv = payload.data.pvdata;
-    const spriteReady =
-      payload.data.sprite?.status === "ready" &&
-      pv?.img_url?.includes("sprite") === true;
-    if (spriteReady && pv?.img_url && pv.img_x_len && pv.img_y_len) {
+    const sprite = payload.data.sprite;
+    const spriteUrl =
+      sprite?.url ??
+      (pv?.img_url?.includes("sprite") === true ? pv.img_url : undefined);
+    const xLen = sprite?.xLen ?? pv?.img_x_len;
+    const yLen = sprite?.yLen ?? pv?.img_y_len;
+    if (spriteUrl && xLen && yLen) {
       return {
-        imgUrl: `${MOCK_SERVER_BASE}${pv.img_url}`,
-        imgXLen: pv.img_x_len,
-        imgYLen: pv.img_y_len,
-        imgXSize: pv.img_x_size,
-        imgYSize: pv.img_y_size,
+        imgUrl: MOCK_SERVER_BASE + spriteUrl,
+        imgXLen: xLen,
+        imgYLen: yLen,
+        imgXSize: sprite?.xSize ?? pv?.img_x_size,
+        imgYSize: sprite?.ySize ?? pv?.img_y_size,
         sliceCount: payload.data.index?.length,
       };
     }
