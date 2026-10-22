@@ -6,7 +6,6 @@
  *
  */
 
-import "@/styles/style.scss";
 // SSR 已把播放器 CSS 注入 HTML；只有纯客户端页面才由客户端注入样式
 if (!document.querySelector("style[data-ssr-css]")) {
   await import("@/styles/style.scss");
