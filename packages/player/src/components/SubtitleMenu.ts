@@ -24,7 +24,9 @@ import {
   useTemplateRef,
   useState,
   useContext,
+  useReactiveState,
   signal,
+  computed,
   onEffect,
   t,
   For,
@@ -460,11 +462,23 @@ export const SubtitleMenu = defineComponent<
   // props 仅作初值快照，运行时变化经状态订阅 / API 写入 signal）
   // ============================================
 
-  /** 字幕开关（仅作初值快照） */
-  const visibleSig = signal<boolean>(props.visible ?? false);
+  /** 运行时字幕开关（优先），未接入状态时回落到 props */
+  const visibleState = state
+    ? useReactiveState(state, PlayerStateKeyEnum.SUBTITLE_VISIBLE, lifecycle)
+    : signal<unknown>(undefined);
+  const visible = computed<boolean>(() => {
+    const next = visibleState.value;
+    return typeof next === "boolean" ? next : (props.visible ?? false);
+  });
 
-  /** 当前语言（仅作初值快照） */
-  const langSig = signal<string>(props.lang ?? "");
+  /** 运行时字幕语言（优先），未接入状态时回落到 props */
+  const langState = state
+    ? useReactiveState(state, PlayerStateKeyEnum.SUBTITLE_LANG, lifecycle)
+    : signal<unknown>(undefined);
+  const currentLang = computed<string>(() => {
+    const next = langState.value;
+    return typeof next === "string" && next ? next : (props.lang ?? "");
+  });
 
   /**
    * 运行时字幕轨道列表（插件经 SUBTITLE_TRACKS_CHANGE 上报的统一注册表）
@@ -646,8 +660,7 @@ export const SubtitleMenu = defineComponent<
    * @param next - 目标状态
    */
   const setVisible = (next: boolean): void => {
-    if (visibleSig.value !== next) {
-      visibleSig.value = next;
+    if (visible.value !== next) {
       lifecycle.emit?.("subtitleToggle", next);
     }
   };
@@ -665,9 +678,7 @@ export const SubtitleMenu = defineComponent<
    * @param next - 目标语言
    */
   const setLang = (next: string): void => {
-    langSig.value = next;
-    if (!visibleSig.value) {
-      visibleSig.value = true;
+    if (!visible.value) {
       lifecycle.emit?.("subtitleToggle", true);
     }
     lifecycle.emit?.("subtitleLangChange", next);
@@ -953,7 +964,7 @@ export const SubtitleMenu = defineComponent<
         class: [
           "nova-player-ctrl-subtitle-language-item",
           {
-            "nova-player-state-active": visibleSig.value && id === langSig.value,
+            "nova-player-state-active": visible.value && id === currentLang.value,
           },
         ],
         "data-lan": id,
@@ -1190,26 +1201,6 @@ export const SubtitleMenu = defineComponent<
   // ============================================
 
   if (state) {
-    useState(
-      state,
-      PlayerStateKeyEnum.SUBTITLE_VISIBLE,
-      (next) => {
-        if (typeof next !== "boolean") return;
-        visibleSig.value = next;
-      },
-      lifecycle,
-    );
-
-    useState(
-      state,
-      PlayerStateKeyEnum.SUBTITLE_LANG,
-      (next) => {
-        if (typeof next !== "string" || !next) return;
-        langSig.value = next;
-      },
-      lifecycle,
-    );
-
     // 轨道列表：插件上报的统一注册表（文件轨/服务端轨/本地识别轨）
     useState(
       state,
@@ -1279,8 +1270,8 @@ export const SubtitleMenu = defineComponent<
         // 结果文案：字幕关闭时显示「字幕」，开启时显示当前语言名
         // （visibleSig + langSig + localeSignal 三依赖，显式 getter 协议）
         () => {
-          const hit = languages.find((item) => item.lang === langSig.value);
-          return visibleSig.value && hit
+          const hit = languages.find((item) => item.lang === currentLang.value);
+          return visible.value && hit
             ? hit.label
             : t("player.ui.subtitle.label");
         },
@@ -1290,7 +1281,7 @@ export const SubtitleMenu = defineComponent<
         "span",
         {
           class: "nova-player-ctrl-subtitle-result-icon",
-          style: { display: visibleSig.value ? "" : "none" },
+          style: { display: visible.value ? "" : "none" },
         },
         SubtitleMarkIcon(),
       ),
@@ -1369,7 +1360,7 @@ export const SubtitleMenu = defineComponent<
                         {
                           class: [
                             "nova-player-ctrl-subtitle-close-switch",
-                            { "nova-player-state-active": !visibleSig.value },
+                            { "nova-player-state-active": !visible.value },
                           ],
                           "data-action": "close",
                           onClick: handleCloseClick,
