@@ -2022,13 +2022,11 @@ async function rebuildPlayer(
 
   try {
     if (existing) {
-      // SSR 播放器已挂载：基础配置增量写入，插件全部由客户端动态注册
-      const { plugins: dynamicPlugins, ...baseConfig } = config;
-      existing.setConfig(baseConfig);
-      for (const plugin of dynamicPlugins?.list ?? []) {
+      // 水合实例的初始 config 已与 SSR 完全一致；这里只动态注入运行期数据与插件，
+      // 不再 setConfig，避免配置快照导致设置 / 自动播放 / 进度条 UI 失效。
+      for (const plugin of config.plugins?.list ?? []) {
         existing.registerPlugin(plugin);
       }
-      // 章节 / 分段进度条 / 影子进度条共用同一份 segments；高能曲线同一份 energy
       existing.progress.setSegments(config.progress?.segments ?? []);
       existing.progress.setEnergy(energy);
       attachAllPlayerEvents(existing);
@@ -2043,15 +2041,11 @@ async function rebuildPlayer(
       next.progress.setSegments(config.progress?.segments ?? []);
       next.progress.setEnergy(energy);
       attachAllPlayerEvents(next);
-    // 新建播放器的初始语言固定为 zh-CN（config.i18n.locale），
-    // 同步语言按钮高亮态，避免「重建后按钮停在旧语言」的观感错位
-    for (const [otherId] of LOCALE_BUTTONS) {
-      const other = document.getElementById(otherId);
-      if (other) other.classList.toggle("active", otherId === "btn-locale-zh");
-    }
+      for (const [otherId] of LOCALE_BUTTONS) {
+        const other = document.getElementById(otherId);
+        if (other) other.classList.toggle("active", otherId === "btn-locale-zh");
+      }
       (window as unknown as { player: VideoPlayer }).player = next;
-      // i18n 语言切换示例：控制台调用 player.setLocale('en-US') 即可切换
-      // 切换后所有 t() 文案自动更新 DOM（编译期 _reactiveText 包装的文本节点精准更新）
       if (targetIndex > 0) {
         void next.switchTo(targetIndex).catch(() => undefined);
       }
@@ -4873,5 +4867,8 @@ function wireThemeToggle(): void {
     });
   });
 }
+
+// 预览资源只预取一次（同一模式缓存）；避免每次重建都重复下载 preview.bin
+setTimeout(() => ensurePreviewLoaded(previewMode), 800);
 
 wireThemeToggle();

@@ -12,7 +12,7 @@
  * API 内部仅写 signal；document click 关闭监听保留命令式（时序行为）。
  */
 
-import { h, defineComponent, signal, t } from "@/core";
+import { h, defineComponent, signal, t, Show } from "@/core";
 import { isBrowser } from "@/utils";
 import type { VNode, ComponentLifecycle } from "@/types";
 
@@ -49,7 +49,7 @@ export interface ContextProps {
   /** 关闭菜单回调 */
   onClose?: () => void;
   /** 是否加载了音效插件（决定是否显示「音效调节」菜单项） */
-  audioEnabled?: boolean;
+  audioEnabled?: boolean | (() => boolean);
   /** 打开面板回调（色彩调整、音效调节、快捷键说明、视频统计信息） */
   onOpenPanel?: (panel: "color" | "audio" | "keyboard" | "info") => void;
 }
@@ -74,14 +74,13 @@ export const Context = defineComponent<ContextProps>(
     // 状态数据
     // ============================================
 
-    /** 实际使用的菜单项列表，未传入时使用默认菜单项；音效项按插件状态插入 */
-    const menuItems = props.menuItems || [
-      ...DEFAULT_MENU_ITEMS.slice(0, 2),
-      ...(props.audioEnabled
-        ? [{ dataAction: "audio", text: t("player.ui.audio.title") }]
-        : []),
-      ...DEFAULT_MENU_ITEMS.slice(2),
-    ];
+    /** 实际使用的菜单项列表，未传入时使用默认菜单项 */
+    const menuItems = props.menuItems || DEFAULT_MENU_ITEMS;
+    /** 音效插件是否启用（函数形态让插件装卸后菜单自动更新） */
+    const isAudioEnabled = (): boolean =>
+      typeof props.audioEnabled === "function"
+        ? props.audioEnabled()
+        : props.audioEnabled === true;
     /** 播放器版本号，未传入时默认为 1.0.0 */
     const version = props.version || "1.0.0";
 
@@ -162,21 +161,42 @@ export const Context = defineComponent<ContextProps>(
     // 渲染函数
     // ============================================
 
+    const renderLi = (item: ContextMenuItem): VNode =>
+      h(
+        "li",
+        {
+          "data-action": item.dataAction,
+          onClick: () => clickMenu(item.dataAction),
+        },
+        item.dataAction === "version" ? `${item.text} ${version}` : item.text,
+      );
+
     /**
      * 渲染菜单项列表
      * @returns 菜单项 VNode 数组
      */
     const renderMenuItems = (): VNode[] => {
-      return menuItems.map((item) =>
+      // 自定义菜单完全由调用方决定
+      if (props.menuItems) return menuItems.map(renderLi);
+
+      // 默认菜单：音效项用 Show 包裹，插件运行期注册 / 卸载后立即出现 / 消失
+      return [
+        renderLi(menuItems[0]),
+        renderLi(menuItems[1]),
         h(
-          "li",
-          {
-            "data-action": item.dataAction,
-            onClick: () => clickMenu(item.dataAction),
-          },
-          item.dataAction === "version" ? `${item.text} ${version}` : item.text,
+          Show,
+          { when: isAudioEnabled },
+          h(
+            "li",
+            {
+              "data-action": "audio",
+              onClick: () => clickMenu("audio"),
+            },
+            t("player.ui.audio.title"),
+          ),
         ),
-      );
+        ...menuItems.slice(2).map(renderLi),
+      ];
     };
 
     // ============================================

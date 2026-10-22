@@ -5,8 +5,12 @@ import {
   signal,
   For,
   t,
+  useContext,
+  useReactiveState,
+  onEffect,
 } from "@/core";
 import { useComponentUnmount } from "@/nova/core/componentUnmount";
+import { StateContext, PlayerStateKeyEnum } from "@/store/runtimeState";
 import { normalizeSegmentSpan } from "@/nova/utils/media/progressSegment";
 import type {
   ProgressPreviewFrame,
@@ -875,6 +879,29 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     // ============================================
     // API 方法（对外签名与旧实现完全一致）
     // ============================================
+
+    // 直接订阅播放器运行时状态：即使上层 API 未回传，进度条也能自更新
+    const stateMgr = useContext(StateContext);
+    const currentTimeState = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.CURRENT_TIME, lifecycle)
+      : null;
+    const bufferState = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.BUFFERED, lifecycle)
+      : null;
+    const durationState = stateMgr
+      ? useReactiveState(stateMgr, PlayerStateKeyEnum.DURATION, lifecycle)
+      : null;
+
+    onEffect(lifecycle, () => {
+      const duration = durationState?.value;
+      if (typeof duration === "number" && duration > 0) {
+        setDuration(duration);
+      }
+      const current = currentTimeState?.value;
+      if (typeof current === "number") updateProgressUI(current);
+      const buffer = bufferState?.value;
+      if (typeof buffer === "number") updateBufferUI(buffer);
+    });
 
     /**
      * 更新播放进度

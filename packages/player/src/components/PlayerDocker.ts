@@ -3231,7 +3231,7 @@ export const PlayerDocker = defineComponent<
       }),
       // 右键菜单（默认隐藏，右键视频区域时在鼠标位置显示）
       h(ContextMenu, {
-        audioEnabled: hasPlugin("audioEffect"),
+        audioEnabled: () => hasPlugin("audioEffect"),
         onContextMounted: (api: {
           showMenu: (x: number, y: number) => void;
           hideMenu: () => void;
