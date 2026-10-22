@@ -663,7 +663,7 @@ function ensurePreviewLoaded(mode: PreviewMode, force = false): void {
   if (!force) {
     if (previewLoadPromise !== null) return;
     // 同一模式只请求一次，鼠标每次移动都不再触发网络
-    if (previewRequestedMode === mode) return;
+    if (previewRequestedMode === mode || previewReadyMode === mode) return;
   }
   previewRequestedMode = mode;
   const requestMode = mode;
