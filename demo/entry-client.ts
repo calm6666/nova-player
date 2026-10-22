@@ -605,20 +605,6 @@ async function fetchSubtitleCues(
  *
  * @returns 预览帧数组；请求失败返回空数组
  */
-async function fetchPreviewFrames(): Promise<string[]> {
-  try {
-    const response = await fetch(`${MOCK_SERVER_BASE}/videoshot/preview.bin`);
-    if (!response.ok) return [];
-    const text = await response.text();
-    return text
-      .split("\u001f")
-      .map((frame) => frame.trim())
-      .filter((frame) => frame.startsWith("data:"));
-  } catch {
-    return [];
-  }
-}
-
 /**
  * ============================================
  * 预览图模式（雪碧图 ↔ 逐帧 bin）运行期切换
@@ -769,19 +755,8 @@ async function fetchSpritePreviewSource(): Promise<DemoPreviewSource | null> {
 async function fetchProgressPreview(
   mode: PreviewMode,
 ): Promise<PreviewFetchResult> {
-  // 预览图默认关闭：/videoshot/preview.bin 会触发浏览器下载与 IDM 弹窗。
-  // 需要预览时显式改为 false，并自行承担网络开销。
-  if (mode === "sprite") {
-    const sprite = await fetchSpritePreviewSource();
-    if (sprite) return { source: sprite, effective: "sprite" };
-    const frames = await fetchPreviewFrames();
-    return frames.length > 0
-      ? { source: frames, effective: "frames" }
-      : { source: null, effective: "none" };
-  }
-
-  const frames = await fetchPreviewFrames();
-  if (frames.length > 0) return { source: frames, effective: "frames" };
+  // 只加载雪碧图；绝不请求 /videoshot/preview.bin
+  void mode;
   const sprite = await fetchSpritePreviewSource();
   return sprite
     ? { source: sprite, effective: "sprite" }
