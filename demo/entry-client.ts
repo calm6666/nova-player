@@ -2102,9 +2102,12 @@ async function rebuildPlayer(
         setTimeout(applyProgressData, 500);
       });
       attachAllPlayerEvents(existing);
-      existing
-        .getPluginAPI<DanmakuPluginAPI>("danmaku")
-        ?.loadDanmaku(danmakuPanelList);
+      setTimeout(() => {
+        existing
+          .getPluginAPI<DanmakuPluginAPI>("danmaku")
+          ?.loadDanmaku(danmakuPanelList);
+        existing.setDanmakuVisible(true);
+      }, 300);
       (window as unknown as { player: VideoPlayer }).player = existing;
       if (targetIndex > 0) {
         void existing.switchTo(targetIndex).catch(() => undefined);
@@ -2117,9 +2120,12 @@ async function rebuildPlayer(
       next.progress.setSegments(config.progress?.segments ?? []);
       next.progress.setEnergy(energy);
       attachAllPlayerEvents(next);
-      next
-        .getPluginAPI<DanmakuPluginAPI>("danmaku")
-        ?.loadDanmaku(danmakuPanelList);
+      setTimeout(() => {
+        next
+          .getPluginAPI<DanmakuPluginAPI>("danmaku")
+          ?.loadDanmaku(danmakuPanelList);
+        next.setDanmakuVisible(true);
+      }, 300);
       for (const [otherId] of LOCALE_BUTTONS) {
         const other = document.getElementById(otherId);
         if (other) other.classList.toggle("active", otherId === "btn-locale-zh");
