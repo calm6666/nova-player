@@ -48,6 +48,8 @@ export interface PersistedSettings {
   danmakuBlockWords?: string[];
   /** 屏幕形态（只持久化网页全屏，原生全屏不可恢复）。 */
   screenMode?: 'normal' | 'webscreen';
+  /** 悬浮小窗配色主题。 */
+  miniTheme?: 'dark' | 'light';
 }
 
 /** localStorage 是否可用（服务端 / 隐私模式返回 false）。 */

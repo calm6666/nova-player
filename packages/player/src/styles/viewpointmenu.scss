@@ -6,7 +6,8 @@
   flex-grow: 1;
   flex-shrink: 0;
   margin: 0 10px;
-  max-width: 240px;
+  // max-width: 240px;
+  max-width: fit-content;
   min-width: 45px;
 
   .nova-player-ctrl-viewpoint-inner,

@@ -43,6 +43,9 @@ nova-live-player[data-screen='fullscreen'] {
   left: 0;
   overflow: hidden;
   background-color: #000000;
+  /* 独立层叠上下文：页面上的 z-index / 混合模式不会穿透到播放器内部图层。
+     不使用 layout/paint 容器隔离，避免 context-menu 的 fixed 定位失效。 */
+  isolation: isolate;
 }
 
 .nova-live-player [hidden] {
@@ -71,6 +74,9 @@ nova-live-player-danmaku {
   display: block;
   overflow: hidden;
   pointer-events: none;
+  /* 弹幕层有明确尺寸且内部无 fixed 定位元素：
+     布局 / 绘制隔离后，弹幕逐帧运动不会触发播放器外部的布局与重绘。 */
+  contain: layout paint;
 }
 
 .nova-live-player-danmaku-layer {

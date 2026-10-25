@@ -13,7 +13,7 @@
  * 配置只通过 property 传入，根元素不观察任何 attribute。
  */
 
-import { getLocale, h, initI18n, isI18nEnabled, setLocale, signal, t } from '@/core';
+import { getLocale, h, initI18n, isI18nEnabled, setLocale, Show, signal, t } from '@/core';
 import { dispatchPlayerEvent } from '@/live/core/events';
 import { NOVA_LIVE_HOTKEYS } from '@/live/core/hotkeys';
 import {
@@ -92,6 +92,9 @@ const MINI_VIEWPORT_MARGIN = 24;
 
 /** 小窗尺寸兜底值（与 mini.scss 中的 CSS 变量保持一致，仅用于布局未就绪时收敛坐标）。*/
 const MINI_FALLBACK_SIZE = { width: 380, height: 248 } as const;
+
+/** 设置持久化防抖延时（拖动音量 / 弹幕滑块时合并同步写入）。*/
+const PERSIST_DEBOUNCE_MS = 250;
 
 /** 信息面板行定义。*/
 const INFO_ROWS: ReadonlyArray<{ key: keyof NovaVideoInfo; labelKey: string }> = [
@@ -228,6 +231,9 @@ export class LivePlayerElement extends NovaLiveUiElement {
   /** 是否处于小窗。*/
   private miniMode = false;
 
+  /** 悬浮小窗配色主题（'dark' 深底浅字 / 'light' 浅底深字）。*/
+  private miniThemeValue: 'dark' | 'light' = 'dark';
+
   /** 关闭小窗后暂停自动弹出（玩家滚回可见位置时解除）。*/
   private autoMiniSuppressed = false;
 
@@ -259,6 +265,9 @@ export class LivePlayerElement extends NovaLiveUiElement {
     pointerId: number;
     offsetX: number;
     offsetY: number;
+    /** 拖动开始时缓存的小窗尺寸，避免每次 pointermove 强制同步布局。 */
+    width: number;
+    height: number;
   } | null = null;
 
   // ============================================================
@@ -269,11 +278,15 @@ export class LivePlayerElement extends NovaLiveUiElement {
   private readonly sMuted = signal(false);
   private readonly sVolume = signal(80);
   private readonly sDanmakuOn = signal(true);
+  /** 是否已安装弹幕插件（驱动弹幕层与控制条入口的条件渲染）。 */
+  private readonly sDanmakuAvailable = signal(false);
   private readonly sQualityLabel = signal('');
   private readonly sSpeedLabel = signal('1x');
   private readonly sSpeedRate = signal(1);
   private readonly sScreenMode = signal<NovaScreenMode>('normal');
   private readonly sMini = signal(false);
+  /** 系统画中画状态（跟随 video 的 enter/leavepictureinpicture 事件）。 */
+  private readonly sPip = signal(false);
   private readonly sMiniTitle = signal('');
   private readonly sMiniRoom = signal('');
   private readonly sControlVisible = signal(true);
@@ -377,6 +390,25 @@ export class LivePlayerElement extends NovaLiveUiElement {
     return this.miniMode;
   }
 
+  /** 悬浮小窗配色主题。*/
+  get miniTheme(): 'dark' | 'light' {
+    return this.miniThemeValue;
+  }
+
+  /**
+   * 切换悬浮小窗配色主题（'dark' 深底浅字 / 'light' 浅底深字）。
+   *
+   * 只改小窗外壳（头部 / 背景 / 关闭按钮 / 水印），可随时调用、
+   * 下次进入小窗即生效；开启持久化时写入用户设置。
+   */
+  public setMiniTheme(theme: 'dark' | 'light'): void {
+    if (theme !== 'dark' && theme !== 'light') return;
+    if (theme === this.miniThemeValue) return;
+    this.miniThemeValue = theme;
+    this.dataset.miniTheme = theme;
+    this.persistState();
+  }
+
   /** 弹幕设置副本。*/
   public getDanmakuSetting(): NovaDanmakuSetting {
     return { ...this.danmakuSetting, blockWords: [...this.danmakuSetting.blockWords] };
@@ -402,15 +434,22 @@ export class LivePlayerElement extends NovaLiveUiElement {
   /** 渲染整棵播放器树（声明式）。*/
   protected render(): VNode {
     this.initI18n();
-    // 弹幕层只在开发者传入弹幕插件时渲染；未提供时整个弹幕图层不挂载。
-    this.danmakuAvailable = this.resolveDanmakuPlugin() !== null;
     return h(
       'div',
       {
         class: 'nova-live-player',
-        onPointerenter: (): void => this.showControls(),
-        onPointermove: (): void => this.showControls(),
-        onPointerleave: (): void => this.scheduleHideControls(700),
+        onPointerenter: (): void => {
+          this.pointerInside = true;
+          this.showControls();
+        },
+        onPointermove: (): void => {
+          this.pointerInside = true;
+          this.showControls();
+        },
+        onPointerleave: (): void => {
+          this.pointerInside = false;
+          this.scheduleHideControls(700);
+        },
         onContextmenu: (event: MouseEvent): void => this.handleContextMenu(event),
       },
       h('video', {
@@ -424,20 +463,23 @@ export class LivePlayerElement extends NovaLiveUiElement {
           this.videoEl = el instanceof HTMLVideoElement ? el : null;
         },
       }),
-      ...(this.danmakuAvailable
-        ? [
-            h(DANMAKU_TAG, {
-              ref: (el: unknown): void => {
-                this.danmakuEl = el instanceof NovaLivePlayerDanmakuElement ? el : null;
-                if (this.danmakuEl) {
-                  this.danmakuEl.onHover = (item): void => {
-                    this.hoveredDanmaku = item;
-                  };
-                }
-              },
-            }),
-          ]
-        : []),
+      h(
+        Show,
+        { when: (): boolean => this.sDanmakuAvailable.value },
+        h(DANMAKU_TAG, {
+          ref: (el: unknown): void => {
+            this.danmakuEl = el instanceof NovaLivePlayerDanmakuElement ? el : null;
+            if (this.danmakuEl) {
+              this.danmakuEl.onHover = (item): void => {
+                this.hoveredDanmaku = item;
+              };
+              // 弹幕层可能晚于插件就绪（动态启用时 Show 异步挂载）：
+              // 挂载即补齐 video / 插件 / 设置的绑定，方法内部幂等。
+              this.syncDanmakuLayer();
+            }
+          },
+        }),
+      ),
       LoadingView({ visible: this.sLoading }),
       ErrorPanel({ visible: this.sErrorVisible, message: this.sErrorMessage, onRetry: (): void => this.reload() }),
       ToastView({ visible: this.sToastVisible, message: this.sToastMessage, type: this.sToastType }),
@@ -451,11 +493,11 @@ export class LivePlayerElement extends NovaLiveUiElement {
               muted: this.sMuted,
               volume: this.sVolume,
               danmakuOn: this.sDanmakuOn,
-              danmakuAvailable: this.danmakuAvailable,
+              danmakuAvailable: this.sDanmakuAvailable,
               qualityLabel: this.sQualityLabel,
               speedLabel: this.sSpeedLabel,
               screenMode: this.sScreenMode,
-              mini: this.sMini,
+              pip: this.sPip,
               visible: this.sControlVisible,
               liveTime: this.sLiveTime,
               timers: this.timers,
@@ -469,68 +511,92 @@ export class LivePlayerElement extends NovaLiveUiElement {
         },
       }),
       this.renderMiniChrome(),
-      QualityPanel({
-        open: this.sQualityOpen,
-        page: this.sQualityPage,
-        candidates: this.sQualityCandidates,
-        current: this.sQualityValue,
-        lines: this.sLineCandidates,
-        lineCurrent: this.sLineValue,
-        onSelectQuality: (qn): void => void this.setQuality(qn),
-        onSelectLine: (line): void => { this.setLine(line); },
-        onPointerEnter: (): void => this.keepPanel('quality'),
-        onPointerLeave: (): void => this.leavePanel('quality'),
-        onPin: (): void => this.pinPanel('quality'),
-      }),
-      DmSettingPanel({
-        setting: this.sDmSetting,
-        page: this.sDmPage,
-        visible: this.sDmOpen,
-        onChange: (patch): void => this.updateDanmakuSetting(patch),
-        onReset: (): void => this.resetDanmakuSetting(),
-        onPointerEnter: (): void => this.keepPanel('danmaku'),
-        onPointerLeave: (): void => this.leavePanel('danmaku'),
-        onPin: (): void => this.pinPanel('danmaku'),
-      }),
-      InfoPanel({
-        open: this.sInfoOpen,
-        values: this.sInfoValues,
-        rows: INFO_ROWS,
-        series: this.sInfoSeries,
-        onClose: (): void => this.closePanel('info'),
-        onPointerEnter: (): void => this.keepPanel('info'),
-        onPointerLeave: (): void => this.leavePanel('info'),
-        onPin: (): void => this.pinPanel('info'),
-      }),
-      HotkeyPanel({
-        open: this.sHotkeyOpen,
-        rows: NOVA_LIVE_HOTKEYS,
-        onClose: (): void => this.closePanel('hotkey'),
-        onPointerEnter: (): void => this.keepPanel('hotkey'),
-        onPointerLeave: (): void => this.leavePanel('hotkey'),
-        onPin: (): void => this.pinPanel('hotkey'),
-      }),
-      CodecPanel({
-        open: this.sCodecOpen,
-        candidates: this.sCodecCandidates,
-        current: this.sCodecValue,
-        onSelect: (codec): void => void this.setCodec(codec),
-        onClose: (): void => this.closePanel('codec'),
-        onPointerEnter: (): void => this.keepPanel('codec'),
-        onPointerLeave: (): void => this.leavePanel('codec'),
-        onPin: (): void => this.pinPanel('codec'),
-      }),
-      ContextMenu({
-        open: this.sMenuOpen,
-        x: this.sMenuX,
-        y: this.sMenuY,
-        items: this.sMenuItems,
-        target: this.sMenuTarget,
-        onAction: (action): void => this.handleMenuAction(action),
-        onClose: (): void => {
-          this.sMenuOpen.value = false;
-        },
-      }),
+      h(
+        Show,
+        { when: (): boolean => this.sQualityOpen.value },
+        QualityPanel({
+          open: this.sQualityOpen,
+          page: this.sQualityPage,
+          candidates: this.sQualityCandidates,
+          current: this.sQualityValue,
+          lines: this.sLineCandidates,
+          lineCurrent: this.sLineValue,
+          onSelectQuality: (qn): void => void this.setQuality(qn),
+          onSelectLine: (line): void => { this.setLine(line); },
+          onPointerEnter: (): void => this.keepPanel('quality'),
+          onPointerLeave: (): void => this.leavePanel('quality'),
+          onPin: (): void => this.pinPanel('quality'),
+        }),
+      ),
+      h(
+        Show,
+        { when: (): boolean => this.sDmOpen.value },
+        DmSettingPanel({
+          setting: this.sDmSetting,
+          page: this.sDmPage,
+          visible: this.sDmOpen,
+          onChange: (patch): void => this.updateDanmakuSetting(patch),
+          onReset: (): void => this.resetDanmakuSetting(),
+          onPointerEnter: (): void => this.keepPanel('danmaku'),
+          onPointerLeave: (): void => this.leavePanel('danmaku'),
+          onPin: (): void => this.pinPanel('danmaku'),
+        }),
+      ),
+      h(
+        Show,
+        { when: (): boolean => this.sInfoOpen.value },
+        InfoPanel({
+          open: this.sInfoOpen,
+          values: this.sInfoValues,
+          rows: INFO_ROWS,
+          series: this.sInfoSeries,
+          onClose: (): void => this.closePanel('info'),
+          onPointerEnter: (): void => this.keepPanel('info'),
+          onPointerLeave: (): void => this.leavePanel('info'),
+          onPin: (): void => this.pinPanel('info'),
+        }),
+      ),
+      h(
+        Show,
+        { when: (): boolean => this.sHotkeyOpen.value },
+        HotkeyPanel({
+          open: this.sHotkeyOpen,
+          rows: NOVA_LIVE_HOTKEYS,
+          onClose: (): void => this.closePanel('hotkey'),
+          onPointerEnter: (): void => this.keepPanel('hotkey'),
+          onPointerLeave: (): void => this.leavePanel('hotkey'),
+          onPin: (): void => this.pinPanel('hotkey'),
+        }),
+      ),
+      h(
+        Show,
+        { when: (): boolean => this.sCodecOpen.value },
+        CodecPanel({
+          open: this.sCodecOpen,
+          candidates: this.sCodecCandidates,
+          current: this.sCodecValue,
+          onSelect: (codec): void => void this.setCodec(codec),
+          onClose: (): void => this.closePanel('codec'),
+          onPointerEnter: (): void => this.keepPanel('codec'),
+          onPointerLeave: (): void => this.leavePanel('codec'),
+          onPin: (): void => this.pinPanel('codec'),
+        }),
+      ),
+      h(
+        Show,
+        { when: (): boolean => this.sMenuOpen.value },
+        ContextMenu({
+          open: this.sMenuOpen,
+          x: this.sMenuX,
+          y: this.sMenuY,
+          items: this.sMenuItems,
+          target: this.sMenuTarget,
+          onAction: (action): void => this.handleMenuAction(action),
+          onClose: (): void => {
+            this.sMenuOpen.value = false;
+          },
+        }),
+      ),
     );
   }
 
@@ -578,8 +644,10 @@ export class LivePlayerElement extends NovaLiveUiElement {
         h('button', {
           type: 'button',
           class: 'nova-live-player-mini-close',
-          title: t('livePlayer.mini.close'),
-          'aria-label': t('livePlayer.mini.close'),
+          ...reactive({
+            title: (): string => t('livePlayer.mini.close'),
+            'aria-label': (): string => t('livePlayer.mini.close'),
+          }),
           onClick: (): void => this.closeMiniByUser(),
         }),
       ),
@@ -658,6 +726,10 @@ export class LivePlayerElement extends NovaLiveUiElement {
     this.restoring = true;
     this.initI18n();
     this.restoreSettings();
+    // 弹幕层用 Show 条件渲染：挂载前必须先确定可用性，
+    // 避免初始 render（可能早于 onConnect）读到默认 false 后无人再触发挂载。
+    this.danmakuAvailable = this.resolveDanmakuPlugin() !== null;
+    this.sDanmakuAvailable.value = this.danmakuAvailable;
     this.pluginHost = new LivePluginHost();
     this.pluginHost.onStreamQualities = (list, current): void => this.applyStreamQualities(list, current);
     this.pluginHost.onStreamError = (message): void => this.reportStreamError(message);
@@ -680,6 +752,7 @@ export class LivePlayerElement extends NovaLiveUiElement {
 
   /** 离开文档。*/
   protected onDisconnect(): void {
+    this.flushPersistedSettings();
     this.stopInfoTimer();
     this.stopLiveTimeTimer();
     // 统一清理：Toast / 控制条自动隐藏 / 面板 hover 与延迟关闭 / 音量浮层
@@ -695,6 +768,7 @@ export class LivePlayerElement extends NovaLiveUiElement {
     this.pluginHost = null;
     this.danmakuPlugin = null;
     this.volumeHovered = false;
+    this.pointerInside = false;
     this.initialized = false;
   }
 
@@ -981,12 +1055,21 @@ export class LivePlayerElement extends NovaLiveUiElement {
     else this.enterWebFullscreen();
   }
 
-  /** 画中画。*/
+  /** 系统画中画（控制栏按钮入口；状态经 bindMediaEvents 的事件同步）。*/
   public async togglePip(): Promise<void> {
+    const video = this.videoEl;
+    if (
+      !video ||
+      !document.pictureInPictureEnabled ||
+      typeof video.requestPictureInPicture !== 'function'
+    ) {
+      this.showToast(t('livePlayer.toast.pipUnsupported'), 'warning');
+      return;
+    }
     try {
-      if (document.pictureInPictureElement) await document.exitPictureInPicture();
-      else if (this.videoEl?.requestPictureInPicture) await this.videoEl.requestPictureInPicture();
-      else this.showToast(t('livePlayer.toast.pipUnsupported'), 'warning');
+      // 只操作本播放器的 PiP：同页多实例时不能误退别的播放器的画中画。
+      if (document.pictureInPictureElement === video) await document.exitPictureInPicture();
+      else await video.requestPictureInPicture();
     } catch {
       this.showToast(t('livePlayer.toast.pipUnsupported'), 'warning');
     }
@@ -1087,8 +1170,11 @@ export class LivePlayerElement extends NovaLiveUiElement {
   }
 
   /** 收敛到视口内。*/
-  private clampMiniPosition(left: number, top: number): { left: number; top: number } {
-    const size = this.measureMiniSize();
+  private clampMiniPosition(
+    left: number,
+    top: number,
+    size: { width: number; height: number } = this.measureMiniSize(),
+  ): { left: number; top: number } {
     const maxLeft = Math.max(0, window.innerWidth - size.width);
     const maxTop = Math.max(0, window.innerHeight - size.height);
     return {
@@ -1109,8 +1195,11 @@ export class LivePlayerElement extends NovaLiveUiElement {
    *
    * 运行期坐标只能走内联样式（静态尺寸 / 颜色仍在 SCSS 里）。
    */
-  private applyMiniPosition(position: { left: number; top: number }): void {
-    const next = this.clampMiniPosition(position.left, position.top);
+  private applyMiniPosition(
+    position: { left: number; top: number },
+    size?: { width: number; height: number },
+  ): void {
+    const next = this.clampMiniPosition(position.left, position.top, size);
     this.miniPosition = next;
     this.style.left = `${next.left}px`;
     this.style.top = `${next.top}px`;
@@ -1128,10 +1217,13 @@ export class LivePlayerElement extends NovaLiveUiElement {
     if (!header) return;
     event.preventDefault();
     const rect = this.getBoundingClientRect();
+    const size = this.measureMiniSize();
     this.miniDrag = {
       pointerId: event.pointerId,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
+      width: size.width,
+      height: size.height,
     };
     // 指针捕获保证鼠标移出 header 后依然能收到 pointermove。
     try {
@@ -1146,10 +1238,14 @@ export class LivePlayerElement extends NovaLiveUiElement {
 
   private readonly onMiniDragMove = (event: PointerEvent): void => {
     if (!this.miniDrag || event.pointerId !== this.miniDrag.pointerId) return;
-    this.applyMiniPosition({
-      left: event.clientX - this.miniDrag.offsetX,
-      top: event.clientY - this.miniDrag.offsetY,
-    });
+    // 拖动期间窗口尺寸不变：复用按下时缓存的尺寸，避免读写交替触发重排
+    this.applyMiniPosition(
+      {
+        left: event.clientX - this.miniDrag.offsetX,
+        top: event.clientY - this.miniDrag.offsetY,
+      },
+      { width: this.miniDrag.width, height: this.miniDrag.height },
+    );
   };
 
   private readonly onMiniDragEnd = (event: PointerEvent): void => {
@@ -1252,7 +1348,9 @@ export class LivePlayerElement extends NovaLiveUiElement {
    * 滚动可见性回调。
    *
    * threshold 为 0：`isIntersecting=false` 等价于「完全滚出视口」。
-   * 只在播放中自动弹出；关闭小窗后的一次性抑制标记在播放器重新可见时解除。
+   * 只要播放器整体离开视口就自动弹小窗——不要求视频在播放中
+   * （与 B 站 / 抖音一致；否则流加载失败或暂停时用户会认为功能坏了）。
+   * 全屏 / 网页全屏 / 系统画中画态、以及手动关闭后的一次性抑制除外。
    */
   private handleMiniIntersection(entries: IntersectionObserverEntry[]): void {
     if (!this.initialized || this.destroyed) return;
@@ -1273,7 +1371,8 @@ export class LivePlayerElement extends NovaLiveUiElement {
     }
     if (this.autoMiniSuppressed) return;
     if (this.screenMode !== 'normal') return;
-    if (this.videoEl?.paused !== false) return;
+    // 系统画中画进行中不再叠加悬浮小窗（PiP 窗口本身已置顶悬浮）。
+    if (this.videoEl && document.pictureInPictureElement === this.videoEl) return;
     this.enterMini();
   }
 
@@ -1615,6 +1714,10 @@ export class LivePlayerElement extends NovaLiveUiElement {
       ...(saved.danmakuBlockWords !== undefined ? { blockWords: [...saved.danmakuBlockWords] } : {}),
     };
     if (saved.screenMode === 'webscreen') this.screenMode = 'webscreen';
+    if (saved.miniTheme !== undefined) this.miniThemeValue = saved.miniTheme;
+    // 初始 attribute 同步：CSS 只在 [data-mini='true'] 作用域内读取该值，
+    // 提前写在根元素上不产生任何样式副作用，进入小窗即生效。
+    this.dataset.miniTheme = this.miniThemeValue;
   }
 
   /** 应用 options。*/
@@ -1631,17 +1734,19 @@ export class LivePlayerElement extends NovaLiveUiElement {
     if (options.room !== undefined) this.roomLabel = options.room;
     if (options.line !== undefined && !this.lineValue) this.lineValue = options.line;
     if (options.autoplay !== undefined) this.pendingAutoplay = options.autoplay;
+    if (options.miniTheme !== undefined) this.setMiniTheme(options.miniTheme);
     this.restoring = false;
     this.syncMiniMeta();
 
-    // 构造后再传入插件：按需重挂弹幕层并安装新增插件（插件实例变化时才处理）。
+    // 构造后再传入插件：按需显示弹幕层并安装新增插件（插件实例变化时才处理）。
+    // Show 条件渲染只增删弹幕层节点，不会销毁 <video>，因此无需重绑媒体事件。
     const nextAvailable = this.resolveDanmakuPlugin() !== null;
     if (nextAvailable !== this.danmakuAvailable) {
       this.danmakuAvailable = nextAvailable;
-      this.remountView();
-      // 重挂会替换 <video>：旧监听必须解绑后重新绑定到新元素。
-      for (const cleanup of this.mediaCleanups.splice(0)) cleanup();
-      this.bindMediaEvents();
+      this.sDanmakuAvailable.value = nextAvailable;
+      // 框架的 clearRef 不会对回调式 ref 调用 null，Show 卸载后这里会残留
+      // 已脱离文档的弹幕层引用：主动清空，避免 sendDanmaku 写入游离节点。
+      if (!nextAvailable) this.danmakuEl = null;
     }
     this.ensurePlugins();
 
@@ -1711,13 +1816,31 @@ export class LivePlayerElement extends NovaLiveUiElement {
     const host = this.pluginHost;
     if (!host) return;
     host.install(this.collectPlugins());
-    this.danmakuPlugin = host.getDanmakuPlugin();
-    const video = this.videoEl;
-    if (!video) return;
-    if (this.danmakuEl) this.danmakuEl.attach(video, this.danmakuPlugin);
-    host.mount(video, this.danmakuEl?.getContainerElement() ?? null);
-    host.applyDanmakuSetting(this.danmakuSetting);
     if (this.codecValue) host.setCodecPreference(this.codecValue);
+    this.syncDanmakuLayer();
+  }
+
+  /**
+   * 把 video / 弹幕插件 / 弹幕设置同步到弹幕层与插件宿主。
+   *
+   * 弹幕层（Show 条件渲染）与插件（ensurePlugins 安装）的就绪顺序不固定：
+   * 任意一方晚到时都会调用本方法补齐绑定，因此必须幂等——
+   * `attach` / `host.mount` 重复调用只覆盖引用，不产生叠加副作用。
+   */
+  private syncDanmakuLayer(): void {
+    const host = this.pluginHost;
+    if (!host || !this.videoEl) return;
+    this.danmakuPlugin = host.getDanmakuPlugin();
+    if (!this.danmakuEl) {
+      // 弹幕层未挂载（未装插件或动态移除中）：容器置空，插件侧感知不到弹幕层。
+      host.mount(this.videoEl, null);
+      return;
+    }
+    this.danmakuEl.attach(this.videoEl, this.danmakuPlugin);
+    this.danmakuEl.setSetting(this.danmakuSetting);
+    this.danmakuEl.hidden = !this.danmakuSetting.visible;
+    host.mount(this.videoEl, this.danmakuEl.getContainerElement());
+    host.applyDanmakuSetting(this.danmakuSetting);
   }
 
   /** 音量浮层 hover：打开期间控制条保持显示。*/
@@ -1811,6 +1934,13 @@ export class LivePlayerElement extends NovaLiveUiElement {
       });
     });
     bind('volumechange', (): void => this.handleVolumeChange());
+    // 系统画中画状态同步：控制栏按钮的图标 / tooltip 依赖 sPip。
+    bind('enterpictureinpicture', (): void => {
+      this.sPip.value = true;
+    });
+    bind('leavepictureinpicture', (): void => {
+      this.sPip.value = false;
+    });
     bind('ratechange', (): void => {
       this.speedRate = video.playbackRate;
       this.sSpeedRate.value = this.speedRate;
@@ -2012,7 +2142,9 @@ export class LivePlayerElement extends NovaLiveUiElement {
       this.sSendOpen.value = !this.sSendOpen.value;
       if (this.sSendOpen.value) this.closePanels();
     } else if (action === 'webscreen') this.toggleWebFullscreen();
-    else if (action === 'mini') this.toggleMini();
+    // 控制栏「小窗」按钮 = 系统画中画；悬浮 mini 播放器只由
+    // 「滚动后播放器不在视口」自动触发，并保留 enterMini/exitMini 公开 API。
+    else if (action === 'pip') void this.togglePip();
     else void this.toggleFullscreen();
   }
 
@@ -2092,9 +2224,10 @@ export class LivePlayerElement extends NovaLiveUiElement {
     }
   }
 
-  /** 快捷键。*/
+  /** 快捷键。 */
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.initialized) return;
+    if (this.playerOptions.keyboard === false) return;
     const target = event.target;
     if (target instanceof HTMLElement) {
       const tag = target.tagName.toLowerCase();
@@ -2103,6 +2236,10 @@ export class LivePlayerElement extends NovaLiveUiElement {
         return;
       }
     }
+    // 快捷键只在播放器处于「激活作用域」时生效：
+    // 鼠标悬停在播放器内、焦点在其内部，或处于全屏 / 网页全屏。
+    // 避免页面上有多个播放器时同时响应按键，也避免劫持页面方向键滚动。
+    if (!this.isKeyboardActive()) return;
     const key = event.key;
     if (key === ' ' || key.toLowerCase() === 'k') {
       event.preventDefault();
@@ -2134,6 +2271,22 @@ export class LivePlayerElement extends NovaLiveUiElement {
     }
   }
 
+  /** 指针是否位于播放器内（快捷键作用域判定）。 */
+  private pointerInside = false;
+
+  /**
+   * 当前播放器是否处于快捷键激活作用域。
+   *
+   * 全屏 / 网页全屏属于独占视图，始终响应；
+   * 普通模式下要求指针悬停或焦点在播放器内部，避免多实例抢按键。
+   */
+  private isKeyboardActive(): boolean {
+    if (this.screenMode !== 'normal') return true;
+    if (this.pointerInside) return true;
+    const active = document.activeElement;
+    return active !== null && this.contains(active);
+  }
+
   // ============================================================
   // 内部：时长 / 信息 / 持久化  // ============================================================
 
@@ -2145,9 +2298,7 @@ export class LivePlayerElement extends NovaLiveUiElement {
 
   /** 更新直播时长。*/
   private updateLiveTimeText(): void {
-    const value = formatDuration(this.getLiveSeconds());
-    this.sLiveTime.value = value;
-    this.sInfoValues.value = { ...this.sInfoValues.value, liveDuration: value };
+    this.sLiveTime.value = formatDuration(this.getLiveSeconds());
   }
 
   /** 直播时长定时器。*/
@@ -2261,8 +2412,21 @@ export class LivePlayerElement extends NovaLiveUiElement {
     dispatchPlayerEvent(this, 'error', { code: 'stream', message });
   }
 
-  /** 持久化。*/
+  /** 持久化（防抖：拖动音量 / 弹幕滑块时避免逐档同步写 localStorage）。*/
   private persistState(): void {
+    if (!this.persistEnabled || this.restoring) return;
+    this.timers.setTimeout('persist', (): void => this.writePersistedSettings(), PERSIST_DEBOUNCE_MS);
+  }
+
+  /** 卸载前把待写入的持久化数据立即落盘（防抖任务会被 clearAll 清掉）。*/
+  private flushPersistedSettings(): void {
+    if (!this.timers.hasPendingTimeout('persist')) return;
+    this.timers.clearTimeout('persist');
+    this.writePersistedSettings();
+  }
+
+  /** 立即写入持久化数据（防抖到期或卸载前 flush）。*/
+  private writePersistedSettings(): void {
     if (!this.persistEnabled || this.restoring) return;
     saveSettings({
       volume: this.volumeValue,
@@ -2284,6 +2448,7 @@ export class LivePlayerElement extends NovaLiveUiElement {
       danmakuFontBorder: this.danmakuSetting.fontBorder,
       danmakuBlockWords: [...this.danmakuSetting.blockWords],
       screenMode: this.screenMode === 'webscreen' ? 'webscreen' : 'normal',
+      miniTheme: this.miniThemeValue,
     });
   }
 }

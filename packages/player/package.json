@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && vite build --mode lib-cdn && sass src/styles/style.scss dist/style.css --no-source-map --style=compressed && node ../../scripts/minify-dist.mjs dist",
+    "build": "tsc && vite build && vite build --mode lib-cdn && sass src/styles/style.scss dist/style.css --no-source-map --style=compressed",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"

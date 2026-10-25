@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import * as sass from 'sass';
 import { createServer as createViteServer } from 'vite';
 
 /**
@@ -253,11 +254,17 @@ async function createServer() {
        * 注意：必须在 render() 之后调用，因为 ssrLoadModule 加载入口模块时
        * 才会建立完整的模块依赖图（包括 VideoPlayer → index.scss 等）
        */
-      // 单独加载样式入口以建立 CSS 模块依赖；不把样式 import 放进 SSR 运行时入口
-      await vite.ssrLoadModule('/styles-entry.ts').catch((err) => {
-        console.warn('[SSR CSS] styles entry load failed:', err?.message ?? err);
-      });
-      const ssrCss = await collectSSRCss('/styles-entry.ts');
+      // 直接用 Sass 编译播放器样式，避免从 Vite CSS 模块字符串里截取导致嵌套样式丢失
+      let ssrCss = '';
+      try {
+        ssrCss = sass.compile(
+          path.resolve(__dirname, '../packages/player/src/styles/style.scss'),
+          { style: 'expanded' },
+        ).css;
+        console.log('[SSR CSS] compiled player style:', ssrCss.length, 'bytes');
+      } catch (err) {
+        console.warn('[SSR CSS] sass compile failed:', err?.message ?? err);
+      }
 
       /**
        * 2d. 注入 SSR 元信息（meta 标签）

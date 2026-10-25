@@ -487,7 +487,6 @@ export const PlayerDocker = defineComponent<
   /** 片尾形态：standard（普通）/ ogv（电视剧 / 番剧） */
   const endingStyle = props.config?.ui?.endingStyle ?? "standard";
 
-
   /** 打开外链场景的跳转地址（无地址时静默忽略） */
   const openEmbeddedUrl = (url?: string): void => {
     if (!url || !isBrowser()) return;
@@ -581,7 +580,9 @@ export const PlayerDocker = defineComponent<
   type MountFn = (container: HTMLElement) => void | (() => void);
 
   /** 把插槽内容转成挂载函数；不创建包装 DOM */
-  const createSlotMount = (content: SlotContent | undefined): MountFn | null => {
+  const createSlotMount = (
+    content: SlotContent | undefined,
+  ): MountFn | null => {
     const resolved = resolveSlotContent(content, slotContext);
     if (!resolved) return null;
     if (isSlotMount(resolved)) {
@@ -591,7 +592,8 @@ export const PlayerDocker = defineComponent<
       return (container) => {
         container.appendChild(resolved);
         return () => {
-          if (resolved.parentNode === container) container.removeChild(resolved);
+          if (resolved.parentNode === container)
+            container.removeChild(resolved);
         };
       };
     }
@@ -667,7 +669,6 @@ export const PlayerDocker = defineComponent<
         } as SlotContext) ?? null;
     }
   };
-
 
   // ============================================
   // 状态读取辅助（单一来源：stateMgr；为 null 时安全降级到 props）
@@ -969,7 +970,11 @@ export const PlayerDocker = defineComponent<
     cleanupFns.push(
       props.events.on(
         PlayerEventEnum.ERROR,
-        (payload: { error: unknown; code?: number | string; message?: string }) => {
+        (payload: {
+          error: unknown;
+          code?: number | string;
+          message?: string;
+        }) => {
           /** 撤下缓冲指示（转圈/蒙层/延迟句柄），错误面板与转圈不并存 */
           hideBuffIndicator();
           /** 撤下初始加载遮罩：错误面板与 LoadingPanel 不并存 */
@@ -1247,9 +1252,7 @@ export const PlayerDocker = defineComponent<
    * 按需挂载面板（已挂载则直接复用）
    * @param name - 面板名：color 色彩调整 / info 视频统计信息 / keyboard 快捷键说明
    */
-  const ensurePanel = (
-    name: "color" | "audio" | "info" | "keyboard",
-  ): void => {
+  const ensurePanel = (name: "color" | "audio" | "info" | "keyboard"): void => {
     const videoArea = playerVideoAreaRef.value;
     if (!videoArea) return;
 
@@ -1856,7 +1859,8 @@ export const PlayerDocker = defineComponent<
   };
 
   /** 切换静音状态 */
-  const toggleMute = (): void => {    const next = !readMuted();
+  const toggleMute = (): void => {
+    const next = !readMuted();
     if (videoRef.value) {
       videoRef.value.muted = next;
     }
@@ -2346,7 +2350,9 @@ export const PlayerDocker = defineComponent<
       }
     };
     container.addEventListener("click", onControlCapture, true);
-    cleanupFns.push(() => container.removeEventListener("click", onControlCapture, true));
+    cleanupFns.push(() =>
+      container.removeEventListener("click", onControlCapture, true),
+    );
 
     // --- ResizeObserver 容器尺寸变化 ---
     resizeObserver?.observe(docker);
@@ -2681,129 +2687,114 @@ export const PlayerDocker = defineComponent<
 
   /** 插件视图数据（挂载时构造，避免提前引用未初始化函数） */
   const buildTopProps = () => ({
-            title:
-              (embeddedMode
-                ? (embeddedConfig?.title ?? readUi()?.title)
-                : readUi()?.title) ?? props.playerName,
-            avatar:
-              embeddedConfig?.up?.face ?? readUi()?.up?.face,
-            upName:
-              embeddedConfig?.up?.name ?? readUi()?.up?.name,
-            embedded: embeddedMode,
-            tv: readTopStyle() === "tv",
-            music: readTopStyle() === "music",
-            musicTitle: readUi()?.musicTitle,
-            followed: Boolean(
-              embeddedConfig?.up?.followed ?? readUi()?.up?.followed,
-            ),
-            likeCount: embeddedConfig?.stats?.like,
-            commentCount: embeddedConfig?.stats?.comment,
-            onFollowClick: () => {
-              lifecycle.emit?.("follow");
-            },
-            onLikeClick: () => {
-              lifecycle.emit?.("like");
-            },
-            onCommentClick: () => {
-              lifecycle.emit?.("comment");
-            },
-            onShareClick: () => {
-              lifecycle.emit?.("share");
-            },
-            onMoreClick: () => {
-              lifecycle.emit?.("more");
-            },
-            // 问题反馈图标的悬停提示（既有实现的
-            // top.on("show-tooltip"/"hide-tooltip") 接通 Tooltips 组件）
-            onShowTooltip: handleShowTooltip,
-            onHideTooltip: handleHideTooltip,
-          });
+    title:
+      (embeddedMode
+        ? (embeddedConfig?.title ?? readUi()?.title)
+        : readUi()?.title) ?? props.playerName,
+    avatar: embeddedConfig?.up?.face ?? readUi()?.up?.face,
+    upName: embeddedConfig?.up?.name ?? readUi()?.up?.name,
+    embedded: embeddedMode,
+    tv: readTopStyle() === "tv",
+    music: readTopStyle() === "music",
+    musicTitle: readUi()?.musicTitle,
+    followed: Boolean(embeddedConfig?.up?.followed ?? readUi()?.up?.followed),
+    likeCount: embeddedConfig?.stats?.like,
+    commentCount: embeddedConfig?.stats?.comment,
+    onFollowClick: () => {
+      lifecycle.emit?.("follow");
+    },
+    onLikeClick: () => {
+      lifecycle.emit?.("like");
+    },
+    onCommentClick: () => {
+      lifecycle.emit?.("comment");
+    },
+    onShareClick: () => {
+      lifecycle.emit?.("share");
+    },
+    onMoreClick: () => {
+      lifecycle.emit?.("more");
+    },
+    // 问题反馈图标的悬停提示（既有实现的
+    // top.on("show-tooltip"/"hide-tooltip") 接通 Tooltips 组件）
+    onShowTooltip: handleShowTooltip,
+    onHideTooltip: handleHideTooltip,
+  });
   const buildEndingProps = () => ({
-            variant: embeddedMode
-              ? "embedded"
-              : readEndingStyle() === "ogv"
-                ? "ogv"
-                : readEndingStyle() === "interactive"
-                  ? "interactive"
-                  : "station",
-            title: embeddedMode
-              ? (embeddedConfig?.title ??
-                readUi()?.title ??
-                props.playerName)
-              : readEndingStyle() === "ogv"
-                ? (readUi()?.ogv?.title ??
-                  readUi()?.title ??
-                  props.playerName)
-                : (readUi()?.title ?? props.playerName),
-            cover: readUi()?.ogv?.cover,
-            followed: readUi()?.ogv?.followed,
-            followers: readUi()?.interactive?.followers,
-            backtrack: readUi()?.interactive?.backtrack,
-            activeBacktrackIndex:
-              readUi()?.interactive?.activeBacktrackIndex,
-            ratingPrompt: readUi()?.interactive?.ratingPrompt,
-            upInfo: embeddedMode
-              ? embeddedConfig?.up
-              : readUi()?.up,
-            likeCount: embeddedMode ? embeddedConfig?.stats?.like : undefined,
-            shareCount: embeddedMode
-              ? embeddedConfig?.stats?.comment
-              : undefined,
-            shareUrl: readUi()?.share?.url,
-            embedCode: readUi()?.share?.embedCode,
-            qrCodeUrl: readUi()?.share?.qrCodeUrl,
-            related: embeddedMode
-              ? embeddedConfig?.related
-              : readEndingStyle() === "ogv"
-                ? readUi()?.ogv?.related
-                : readEndingStyle() === "interactive"
-                  ? (readUi()?.interactive?.related ??
-                    readUi()?.related)
-                  : readUi()?.related,
-            autoNext: embeddedMode
-              ? false
-              : () =>
-                  (stateMgr?.get(PlayerStateKeyEnum.PLAYLIST_LENGTH) ?? 0) >
-                    1 &&
-                  !(props.config?.playback?.pauseAfterEnd ?? false),
-            onRestart: () => {
-              seekTo(0);
-              void videoRef.value?.play();
-            },
-            onLike: () => {
-              lifecycle.emit?.("like");
-            },
-            onCoin: () => {
-              lifecycle.emit?.("coin");
-            },
-            onCollect: () => {
-              lifecycle.emit?.("favorite");
-            },
-            onFollow: () => {
-              lifecycle.emit?.("follow");
-            },
-            onAutoNext: () => {
-              lifecycle.emit?.("next");
-            },
-            onRelatedClick: (item: { url?: string }) => {
-              if (item.url) openEmbeddedUrl(item.url);
-            },
-            onEnterSite: () => {
-              openEmbeddedUrl(embeddedConfig?.enterUrl);
-            },
-            onDownloadApp: () => {
-              openEmbeddedUrl(embeddedConfig?.downloadUrl);
-            },
-            onEndingMounted: (api: EndingApi) => {
-              Object.assign(endingApi, api);
-            },
-          });
+    variant: embeddedMode
+      ? "embedded"
+      : readEndingStyle() === "ogv"
+        ? "ogv"
+        : readEndingStyle() === "interactive"
+          ? "interactive"
+          : "station",
+    title: embeddedMode
+      ? (embeddedConfig?.title ?? readUi()?.title ?? props.playerName)
+      : readEndingStyle() === "ogv"
+        ? (readUi()?.ogv?.title ?? readUi()?.title ?? props.playerName)
+        : (readUi()?.title ?? props.playerName),
+    cover: readUi()?.ogv?.cover,
+    followed: readUi()?.ogv?.followed,
+    followers: readUi()?.interactive?.followers,
+    backtrack: readUi()?.interactive?.backtrack,
+    activeBacktrackIndex: readUi()?.interactive?.activeBacktrackIndex,
+    ratingPrompt: readUi()?.interactive?.ratingPrompt,
+    upInfo: embeddedMode ? embeddedConfig?.up : readUi()?.up,
+    likeCount: embeddedMode ? embeddedConfig?.stats?.like : undefined,
+    shareCount: embeddedMode ? embeddedConfig?.stats?.comment : undefined,
+    shareUrl: readUi()?.share?.url,
+    embedCode: readUi()?.share?.embedCode,
+    qrCodeUrl: readUi()?.share?.qrCodeUrl,
+    related: embeddedMode
+      ? embeddedConfig?.related
+      : readEndingStyle() === "ogv"
+        ? readUi()?.ogv?.related
+        : readEndingStyle() === "interactive"
+          ? (readUi()?.interactive?.related ?? readUi()?.related)
+          : readUi()?.related,
+    autoNext: embeddedMode
+      ? false
+      : () =>
+          (stateMgr?.get(PlayerStateKeyEnum.PLAYLIST_LENGTH) ?? 0) > 1 &&
+          !(props.config?.playback?.pauseAfterEnd ?? false),
+    onRestart: () => {
+      seekTo(0);
+      void videoRef.value?.play();
+    },
+    onLike: () => {
+      lifecycle.emit?.("like");
+    },
+    onCoin: () => {
+      lifecycle.emit?.("coin");
+    },
+    onCollect: () => {
+      lifecycle.emit?.("favorite");
+    },
+    onFollow: () => {
+      lifecycle.emit?.("follow");
+    },
+    onAutoNext: () => {
+      lifecycle.emit?.("next");
+    },
+    onRelatedClick: (item: { url?: string }) => {
+      if (item.url) openEmbeddedUrl(item.url);
+    },
+    onEnterSite: () => {
+      openEmbeddedUrl(embeddedConfig?.enterUrl);
+    },
+    onDownloadApp: () => {
+      openEmbeddedUrl(embeddedConfig?.downloadUrl);
+    },
+    onEndingMounted: (api: EndingApi) => {
+      Object.assign(endingApi, api);
+    },
+  });
 
   return h(
     "div",
     {
       class: "nova-player-docker nova-player-docker-major",
-      "data-injector": "nano",
+      "data-injector": "lumina-nova",
       ref: "playerDockerRef",
     },
     h(
@@ -2986,20 +2977,17 @@ export const PlayerDocker = defineComponent<
           // 首次通过右键菜单打开时才创建，不再常驻渲染
           // 片尾推荐面板（默认隐藏，播放结束时显示、重新播放时隐藏；
           // 推荐列表无真实数据源，仅渲染面板结构）
-          h(
-            "div",
-            {
-              class:
-                endingStyle === "ogv"
-                  ? "nova-player-ending-wrap nova-ogv-ending-wrap"
-                  : endingStyle === "interactive"
-                    ? "nova-player-ending-wrap nova-interactive-ending-wrap"
-                    : embeddedMode
-                      ? "nova-player-ending-wrap nova-player-embeded-ending-wrap"
-                      : "nova-player-ending-wrap",
-              ref: "endingRootRef",
-            },
-          ),
+          h("div", {
+            class:
+              endingStyle === "ogv"
+                ? "nova-player-ending-wrap nova-ogv-ending-wrap"
+                : endingStyle === "interactive"
+                  ? "nova-player-ending-wrap nova-interactive-ending-wrap"
+                  : embeddedMode
+                    ? "nova-player-ending-wrap nova-player-embeded-ending-wrap"
+                    : "nova-player-ending-wrap",
+            ref: "endingRootRef",
+          }),
           // 迷你播放器面板（默认隐藏，播放器滚出视口进入迷你模式时由
           // data-screen="mini" 的样式规则显示；关闭 / 状态切换回调向上处理）
           h(Mini, {
@@ -3026,7 +3014,9 @@ export const PlayerDocker = defineComponent<
             Show,
             { when: (): boolean => hasPlugin("interactiveVideo") },
             h(InteractiveVideoLayer, {
-              onInteractiveVideoLayerMounted: (data: InteractiveVideoLayerAPI) => {
+              onInteractiveVideoLayerMounted: (
+                data: InteractiveVideoLayerAPI,
+              ) => {
                 interactiveVideoApi.wrap = data.wrap;
                 lifecycle.emit?.("interactiveVideoLayerMounted", data);
                 props.events?.emit("interactiveVideoLayerMounted", data);
@@ -3170,45 +3160,45 @@ export const PlayerDocker = defineComponent<
               ref: "playerSendingAreaRef",
             },
             h(SendBar, {
-            // 弹幕开关初始状态来自运行时状态（与设置面板共享同一状态源）
-            danmakuSwitch:
-              stateMgr?.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true,
-            placeholder: embeddedMode
-              ? t("player.ui.embed.send_placeholder")
-              : undefined,
-            // 输入框聚焦 / 失焦：维护 isSendFocus，供 mouseleave 豁免判断
-            onInputFocus: () => {
-              isSendFocus = true;
-              // 聚焦输入时保持控制栏显示、取消自动隐藏（既有实现 input-focus 行为）
-              showControls("control");
-            },
-            onInputBlur: () => {
-              isSendFocus = false;
-            },
-            // 弹幕开关：写运行时状态（唯一数据源，插件订阅后自动应用）
-            // 注意：不再向上发 danmakuToggle lifecycle 事件——
-            // VideoPlayer 的该事件处理器是 toggle 语义，会把刚写入的值再翻转一次
-            onDanmakuSwitch: (checked: boolean) => {
-              stateMgr?.set(PlayerStateKeyEnum.DANMAKU_VISIBLE, checked);
-              props.events?.emit(PlayerEventEnum.DANMAKU_TOGGLE, {
-                visible: checked,
-              });
-            },
-            // 发送弹幕：向上转发文本，同时广播「提交请求」事件（DANMAKU_SEND）
-            // 注意：DANMAKU_SENT 的语义是「发送成功」，由 DanmakuPlugin 在服务器确认后发出；
-            // 此处只是提交请求，若在此发 DANMAKU_SENT 会把「提交」误当成「成功」。
-            onSendDanmaku: (text: string) => {
-              props.events?.emit(PlayerEventEnum.DANMAKU_SEND, { text });
-              lifecycle.emit?.("sendDanmaku", text);
-            },
-            // 弹幕开关提示气泡：与控制栏 tooltip 走同一通道（接通 Tooltips 组件）
-            onShowTooltip: handleShowTooltip,
-            onHideTooltip: handleHideTooltip,
-            // 持有 SendBar 控制方法（setInputValue / focusInput 等）
-            onSendBarMounted: (api: SendBarAPI) => {
-              Object.assign(sendBarApi, api);
-            },
-          }),
+              // 弹幕开关初始状态来自运行时状态（与设置面板共享同一状态源）
+              danmakuSwitch:
+                stateMgr?.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true,
+              placeholder: embeddedMode
+                ? t("player.ui.embed.send_placeholder")
+                : undefined,
+              // 输入框聚焦 / 失焦：维护 isSendFocus，供 mouseleave 豁免判断
+              onInputFocus: () => {
+                isSendFocus = true;
+                // 聚焦输入时保持控制栏显示、取消自动隐藏（既有实现 input-focus 行为）
+                showControls("control");
+              },
+              onInputBlur: () => {
+                isSendFocus = false;
+              },
+              // 弹幕开关：写运行时状态（唯一数据源，插件订阅后自动应用）
+              // 注意：不再向上发 danmakuToggle lifecycle 事件——
+              // VideoPlayer 的该事件处理器是 toggle 语义，会把刚写入的值再翻转一次
+              onDanmakuSwitch: (checked: boolean) => {
+                stateMgr?.set(PlayerStateKeyEnum.DANMAKU_VISIBLE, checked);
+                props.events?.emit(PlayerEventEnum.DANMAKU_TOGGLE, {
+                  visible: checked,
+                });
+              },
+              // 发送弹幕：向上转发文本，同时广播「提交请求」事件（DANMAKU_SEND）
+              // 注意：DANMAKU_SENT 的语义是「发送成功」，由 DanmakuPlugin 在服务器确认后发出；
+              // 此处只是提交请求，若在此发 DANMAKU_SENT 会把「提交」误当成「成功」。
+              onSendDanmaku: (text: string) => {
+                props.events?.emit(PlayerEventEnum.DANMAKU_SEND, { text });
+                lifecycle.emit?.("sendDanmaku", text);
+              },
+              // 弹幕开关提示气泡：与控制栏 tooltip 走同一通道（接通 Tooltips 组件）
+              onShowTooltip: handleShowTooltip,
+              onHideTooltip: handleHideTooltip,
+              // 持有 SendBar 控制方法（setInputValue / focusInput 等）
+              onSendBarMounted: (api: SendBarAPI) => {
+                Object.assign(sendBarApi, api);
+              },
+            }),
           ),
         ),
       ),

@@ -28,8 +28,8 @@ const ZH_CN: Record<string, string> = {
   'livePlayer.control.exitWebscreen': '退出网页全屏',
   'livePlayer.control.fullscreen': '全屏',
   'livePlayer.control.exitFullscreen': '退出全屏',
-  'livePlayer.control.mini': '小窗模式',
-  'livePlayer.control.exitMini': '退出小窗模式',
+  'livePlayer.control.pip': '画中画',
+  'livePlayer.control.exitPip': '退出画中画',
 
   // 小窗
   'livePlayer.mini.label': '小窗播放器',
@@ -213,8 +213,8 @@ const EN_US: Record<string, string> = {
   'livePlayer.control.exitWebscreen': 'Exit web fullscreen',
   'livePlayer.control.fullscreen': 'Fullscreen',
   'livePlayer.control.exitFullscreen': 'Exit fullscreen',
-  'livePlayer.control.mini': 'Mini player',
-  'livePlayer.control.exitMini': 'Exit mini player',
+  'livePlayer.control.pip': 'Picture in picture',
+  'livePlayer.control.exitPip': 'Exit picture in picture',
 
   'livePlayer.mini.label': 'Mini player',
   'livePlayer.mini.close': 'Close floating player',

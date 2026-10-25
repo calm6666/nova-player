@@ -6,7 +6,7 @@
   这个页面的定位是「接口体检表」，不是播放器：
     - 每个接口都能一键点开看原始 JSON/XML，省得切到 Postman；
     - 能直接发弹幕并立刻在 SSE 窗口里看到它回来，验证「推送」这条链路是通的；
-    - 能把 preview.bin 拆开看前 20 张缩略图，肉眼确认抽帧、切片、下标都对。
+    - 能把雪碧图拆格演示裁切取帧，肉眼确认抽帧、拼版、时间表都对。
   为什么用 fetch + EventSource 而不是让播放器来测：
     播放器有它自己的渲染逻辑，出问题时很难判断是「接口数据不对」还是「播放器画得不对」；
     这里显示的是原始数据，能把两类问题彻底分开。
@@ -77,11 +77,7 @@
   #stream .seq, #wsStream .seq { color: var(--dim); margin-right: 8px; }
   #stream .t, #wsStream .t { color: var(--blue); margin-right: 8px; }
   #wsStream .sys { color: #ffcc66; }
-  /* 缩略图网格 */
-  #thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
-  #thumbs figure { margin: 0; background: #0e0f16; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  #thumbs img { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover; background: #000; }
-  #thumbs figcaption { font-size: 11px; color: var(--dim); padding: 3px 5px; }
+  /* 雪碧图面板（无额外样式，img 与光标都是内联的） */
   /* 高能进度条示意 */
   #pbp { width: 100%; height: 90px; background: #0e0f16; border: 1px solid var(--line); border-radius: 6px; }
   .hint { color: var(--dim); font-size: 12px; margin-top: 6px; }
@@ -101,7 +97,7 @@
     <li>
       起服务（在 <code>front/player/mock-server</code> 目录下）：
       <pre style="margin:6px 0">node server.js --port 9101 --video "D:\你的片子.mp4"</pre>
-      不带 <code>--video</code> 也能起，只是 <code>preview.bin</code> 是空文件、片长按 600 秒算（其余接口全部正常）。
+      不带 <code>--video</code> 也能起，只是雪碧图/bin 时间表不可用（接口 404）、片长按 600 秒算（其余接口全部正常）。
     </li>
     <li>
       浏览器打开 <code id="hereUrl">http://127.0.0.1:9101/</code>
@@ -112,7 +108,7 @@
       页面上往下依次是：<b>运行环境</b>（片长来源、弹幕条数、ffmpeg 是否可用、预览图状态）→ <b>接口一览</b>（点「请求」看每项的 URL 与返回前 200 字符）
       → <b>发弹幕</b>（POST <code>/danmaku/send</code>）→ <b>SSE 实时弹幕</b>（<code>/danmaku/stream</code>，发完立刻能看到）
       → <b>WebSocket 实时弹幕</b>（<code>ws://…/danmaku/ws</code>，双向：既能实时收，也能直接发）
-      → <b>分段 + 高能曲线</b> → <b>缩略图网格</b>（<code>/videoshot/preview.bin</code> 的前 20 帧）。
+      → <b>分段 + 高能曲线</b> → <b>进度条预览</b>（B 站 videoshot：雪碧图裁切 + bin 时间表）。
     </li>
     <li>
       每一块的输出里都带了<b>请求 URL</b>和<b>返回片段</b>，直接复制就能贴进联调记录；
@@ -134,8 +130,8 @@
   <h2>运行环境</h2>
   <div class="stat" id="env">读取中…</div>
   <div class="hint">
-    预览图不可用时，<code>/videoshot/preview.bin</code> 会返回<strong>空文件</strong>（HTTP 200，不是 404）——
-    这样播放器拿到的数组是 <code>[""]</code>，只会安静地不显示预览图，不会刷一屏报错，其余接口也不受影响。
+    预览图不可用时，<code>/x/player/videoshot</code> 会返回 <strong>404</strong>（B 站「无快照」口径）——
+    播放器把它当可选增强，只会安静地不显示预览图，不会刷一屏报错，其余接口也不受影响。
   </div>
 </div>
 
@@ -354,43 +350,34 @@
     </div>
   </div>
 
-  <!-- 6. 缩略图 -->
+  <!-- 6. 进度条预览（B 站 videoshot 口径：雪碧图 + pvdata bin 时间表） -->
   <div class="panel wide">
-    <h2>预览缩略图（GET /videoshot/preview.bin，前 20 张）</h2>
+    <h2>进度条预览（GET /x/player/videoshot，B 站形状）</h2>
     <div class="hint" style="margin-bottom:8px">
-      <b>每 5 秒 1 帧</b>：整个文件按 <code>\u001F</code> 切分后，<code>arr[0]</code> 是空占位（永远不用），
-      <code>arr[k]</code> 是第 <code>5*(k-1)</code> 秒的帧。
-      播放器就是这么取的（<code>controls/index.ts:1410-1417</code>）：
-      <code>videoshot[Math.floor(当前秒 / 5) + 1]</code>；
-      反查：t=0/4→下标 1，t=5→下标 2，t=12→下标 3。
-    </div>
-    <div id="thumbs"></div>
-    <pre id="thumbOut">加载中…</pre>
-  </div>
-
-  <!-- 6b. 雪碧图预览模式（与 preview.bin 并列的第二种数据源） -->
-  <div class="panel wide">
-    <h2>雪碧图预览模式（GET /videoshot/sprite.jpg）</h2>
-    <div class="hint" style="margin-bottom:8px">
-      和上面的 preview.bin（逐帧 data URL 列表）并列的<strong>第二种预览数据源</strong>：一张真实图片。
-      参数从 <code>/videoshot/index.json</code> 的 <code>pvdata</code> 拿（B 站形状）：
-      <code>img_x_len × img_y_len</code> 网格、每格 <code>img_x_size × img_y_size</code>；
-      取第 t 秒的帧 = 切片下标 <code>Math.floor(t / 5)</code> →
-      列 <code>下标 % img_x_len</code>、行 <code>Math.floor(下标 / img_x_len)</code>。
-      两种模式按需取用（雪碧图 = 一次 HTTP 拿全部帧；bin = 无需知道尺寸直接当 img src）。
+      接口返回 <code>data.{pvdata, img_x_len, img_y_len, img_x_size, img_y_size, image[], index[]}</code>：
+      <code>image</code> 是雪碧图拼版数组（每张 <code>img_x_len × img_y_len</code> = 100 格，帧多时多张拼版）；
+      <code>pvdata</code> 指向 bin 截取时间表——<b>uint16 小端数组</b>，第 0 项恒为 0（占位），
+      第 k 项是第 k 张截图的秒数（B 站按画面变化程度不均匀截图，所以需要这份「帧 ↔ 时间」映射；
+      本 mock 等间隔 5 秒抽帧，时间表是等差数列，格式与 B 站一致）。
+      取第 t 秒的帧 = 时间表里找「最后一个 ≤ t」的项 i → 帧 k = i−1 →
+      拼版 <code>floor(k / 100)</code>、列 <code>k % img_x_len</code>、行 <code>floor((k%100) / img_x_len)</code>。
+      请求带 <code>index=1</code> 时 <code>data.index</code> 直接给同一份时间表的 JSON 数组（免解析 bin）。
     </div>
     <div class="row" style="margin-bottom:8px">
       <span id="spriteState" class="badge warn">加载中…</span>
       <span class="hint" id="spriteInfo"></span>
-      <button id="spriteLoad">（重新）加载雪碧图</button>
+      <button id="spriteLoad">（重新）加载预览图</button>
     </div>
     <div id="spriteWrap" style="display:none; position:relative; border:1px solid var(--line); border-radius:6px; background:#0e0f16; padding:8px">
-      <img id="spriteImg" style="width:100%; display:block; border-radius:4px" alt="雪碧图">
+      <img id="spriteImg" style="width:100%; display:block; border-radius:4px" alt="雪碧图第一张拼版">
       <!-- 裁切演示光标：鼠标在图上左右移动，框住的格子随时间轴变化 -->
       <div id="spriteCursor" style="position:absolute; border:2px solid var(--pink); border-radius:2px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.35)"></div>
-      <div class="hint" style="margin-top:6px">把鼠标放到图上移动：粉色框是「当前秒」对应的格子（演示播放器的裁切取帧）。<span id="spritePos"></span></div>
+      <div class="hint" style="margin-top:6px">
+        把鼠标放到图上移动：粉色框是「当前秒」经 bin 时间表二分定位的格子（演示播放器的裁切取帧；多拼版时这里只展示第一张）。
+        <span id="spritePos"></span>
+      </div>
     </div>
-    <pre id="spriteOut">雪碧图状态与参数会显示在这里。</pre>
+    <pre id="spriteOut">预览图状态与参数会显示在这里。</pre>
   </div>
 
 </div>
@@ -415,11 +402,11 @@ const BASE = CFG.base;
 // 这些提示必须**明确写出来**，不能让用户面对一片空白去猜：
 // 「没给 --video」和「ffmpeg 不可用」是两种不同的原因，修复方式也不同。
 const PREVIEW_REASON = {
-  unavailable: '未提供 --video 或 ffmpeg 不可用：/videoshot/preview.bin 返回空文件，'
-    + '进度条预览图不可用（其余接口正常）。想看缩略图请用 '
+  unavailable: '未提供 --video 或 ffmpeg 不可用：/x/player/videoshot 返回 404（B 站「无快照」口径），'
+    + '进度条预览图不可用（其余接口正常）。想看雪碧图请用 '
     + 'node server.js --port 9101 --video "D:\\你的片子.mp4" 重新启动，'
     + '并确保 ffmpeg 在 PATH 里（或用环境变量 FFMPEG_PATH 指定）。',
-  idle: '预览图是懒加载的：还没有人请求过 /videoshot/preview.bin，所以这里还没数据。',
+  idle: '预览图是懒加载的：还没有人请求过 /x/player/videoshot，所以这里还没数据。',
   ready: '预览图已就绪。',
 };
 
@@ -440,8 +427,9 @@ async function loadHealth() {
       wsClients: data.wsClients,
       wsPath: data.wsPath,
       wsHeartbeatMs: data.wsHeartbeatMs,
-      previewStatus: data.preview,
-      previewFrames: data.previewFrames,
+      previewStatus: data.sprite,
+      previewFrames: data.spriteFrames,
+      previewSheets: data.spriteSheets,
       hasFfmpeg: data.hasFfmpeg,
       hasFfprobe: data.hasFfprobe,
     });
@@ -469,7 +457,7 @@ function renderEnv() {
     ['ffmpeg', CFG.hasFfmpeg ? '<span class="badge ok">可用</span>' : '<span class="badge err">不可用</span>'],
     ['ffprobe', CFG.hasFfprobe ? '<span class="badge ok">可用</span>' : '<span class="badge err">不可用</span>'],
     ['预览图', '<span class="badge ' + (CFG.previewStatus === 'ready' ? 'ok' : 'warn') + '">'
-        + CFG.previewStatus + '</span> ' + CFG.previewFrames + ' 帧'
+        + CFG.previewStatus + '</span> ' + CFG.previewFrames + ' 帧 / ' + (CFG.previewSheets || '-') + ' 张拼版'
         + (CFG.previewStatus === 'ready' ? '' : '　<span class="hint">' + (PREVIEW_REASON[CFG.previewStatus] || '') + '</span>')],
   ].map(([k, v]) => '<span>' + k + '：<b>' + v + '</b></span>').join('');
 }
@@ -487,8 +475,8 @@ const APIS = [
   { name: 'GET /danmaku/since', url: '/danmaku/since?seq=0', desc: '长轮询兜底（没有新弹幕时会挂 25 秒，别急）', kind: 'json' },
   // WS 不能用 fetch 请求，所以 kind 单独标一类：点了只打印地址和消息格式，真正验证走下面的 WebSocket 面板
   { name: 'WS /danmaku/ws', url: '/danmaku/ws', desc: 'WebSocket 实时弹幕（双向：收广播 / 发弹幕）', kind: 'ws' },
-  { name: 'GET /videoshot/index.json', url: '/videoshot/index.json', desc: '预览图元信息（含取图公式）', kind: 'json' },
-  { name: 'GET /videoshot/preview.bin', url: '/videoshot/preview.bin', desc: '预览图文件（\\u001F 分隔的 data URL）', kind: 'blob' },
+  { name: 'GET /x/player/videoshot', url: '/x/player/videoshot?index=1', desc: '预览图接口（B 站形状：拼版 + 时间表）', kind: 'json' },
+  { name: 'GET /videoshot/pvdata.bin', url: '/videoshot/pvdata.bin', desc: 'bin 截取时间表（uint16 小端，帧 ↔ 时间）', kind: 'blob' },
   { name: 'GET /healthz', url: '/healthz', desc: '运行状态：片长、ffmpeg、预览图状态', kind: 'json' },
 ];
 
@@ -519,15 +507,15 @@ async function callApi(api) {
         + '其它下行：{"type":"hello",…}（连上就发）、{"type":"pong","t":…}（回客户端的 ping）、'
         + '{"type":"error","message":"…"}（上行消息有问题时）';
     } else if (api.kind === 'blob') {
-      // 和 player/src/api/preview.ts 完全一样的读法，顺便验证前端那套解析能不能跑通
+      // pvdata.bin 是 uint16 小端数组（B 站 bin 截取时间表）：第 0 项占位 0，
+      // 第 k 项 = 第 k 张截图的秒数。这里顺带验证前端这套解析能不能跑通。
       const resp = await fetch(BASE + api.url);
       const buf = await resp.arrayBuffer();
-      const text = new TextDecoder('utf-8').decode(buf);
-      const arr = text.split('\u001F');
+      const u16 = new Uint16Array(buf);
       out.textContent = 'HTTP ' + resp.status + '　' + (performance.now() - started).toFixed(0) + ' ms\n'
-        + '字节数：' + buf.byteLength + '\n'
-        + 'split("\\u001F") 后长度：' + arr.length + '（第 0 项应当为空串：' + JSON.stringify(arr[0]) + '）\n'
-        + '第 1 项前 80 字符：' + String(arr[1] || '').slice(0, 80) + '…';
+        + '字节数：' + buf.byteLength + '（uint16 项数：' + u16.length + '）\n'
+        + '第 0 项（占位，应为 0）：' + u16[0] + '\n'
+        + '第 1~10 项（秒）：' + Array.from(u16.slice(1, 11)).join(', ') + (u16.length > 11 ? ' …' : '');
     } else {
       const resp = await fetch(BASE + api.url);
       const text = await resp.text();
@@ -1040,56 +1028,14 @@ function drawPbp(data) {
 }
 
 // ---------------------------------------------------------------------------
-// 缩略图：先拿 preview.bin（这一步也会触发服务端抽帧），再拉 index.json 看状态
+// 进度条预览（B 站 videoshot 口径：/x/player/videoshot + pvdata bin 时间表）
 // ---------------------------------------------------------------------------
-async function loadThumbs() {
-  const thumbOut = document.getElementById('thumbOut');
-  const grid = document.getElementById('thumbs');
-  grid.innerHTML = '';
-  thumbOut.textContent = '正在请求 /videoshot/preview.bin ……（首次且带 --video 时服务端要抽帧，可能要等几秒到几十秒）';
-
-  const resp = await fetch(BASE + '/videoshot/preview.bin');
-  const buf = await resp.arrayBuffer();
-  // 和 player/src/api/preview.ts 完全一样的读法：UTF-8 解码后按 \u001F 切分
-  const arr = new TextDecoder('utf-8').decode(buf).split('\u001F');
-
-  const idx = await fetch(BASE + '/videoshot/index.json').then((r) => r.json());
-  const mock = (idx.data && idx.data.mock) || {};
-  thumbOut.textContent = 'HTTP ' + resp.status + '，' + buf.byteLength + ' 字节，切分后 ' + arr.length + ' 项；'
-    + '第 0 项 = ' + JSON.stringify(arr[0]) + '（空占位）\n'
-    + 'index.json：' + JSON.stringify(idx.data, null, 2).slice(0, 1200);
-
-  if (arr.length <= 1) {
-    // 空文件 = 没缩略图。这里必须写清楚原因，不能留一片空白让人猜。
-    thumbOut.textContent += '\n\n⚠ 服务端返回了空文件：' + (mock.message || '(没有说明)')
-      + '\n\n' + (PREVIEW_REASON[mock.status] || PREVIEW_REASON.unavailable);
-    return;
-  }
-
-  for (let i = 1; i <= 20 && i < arr.length; i++) {
-    if (!arr[i]) continue;
-    // 下标换算照抄播放器的取图算法（controls/index.ts:1410-1417）：
-    //   currTime = floor(currentTime / 5);  src = videoshot[currTime + 1]
-    // 反推：下标 i 对应的就是第 5*(i-1) 秒
-    const second = 5 * (i - 1);
-    const fig = document.createElement('figure');
-    const img = document.createElement('img');
-    img.src = arr[i];
-    img.alt = '第 ' + second + ' 秒';
-    const cap = document.createElement('figcaption');
-    cap.textContent = 'arr[' + i + '] → 第 ' + second + ' 秒';
-    fig.appendChild(img); fig.appendChild(cap);
-    grid.appendChild(fig);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 雪碧图预览模式（/videoshot/sprite.jpg + index.json 的 pvdata 参数）
-// ---------------------------------------------------------------------------
-// 【和 loadThumbs 的分工】那边验证的是 preview.bin（逐帧 data URL）这条数据源，
-// 这里验证的是雪碧图（一张真图 + 裁切参数）这条 —— 播放器两种都能吃，
-// 自测页把两条并排摆出来，接口对不对一眼分开。
-// 鼠标悬停演示的是播放器的取格算法：x 比例 → 秒 → 切片下标 → 列/行 → 格子坐标。
+// 演示的取格算法和 demo 播放器一致：
+//   1. GET /x/player/videoshot?index=1 拿 data（拼版数组 + JSON 时间表）；
+//   2. GET data.pvdata 拉 bin，按 uint16 小端解析（第 0 项占位 0，第 k 项 = 第 k 帧秒数），
+//      解析失败退 data.index（同一份时间表的 JSON 形式）；
+//   3. 悬停 t 秒 → 时间表里找「最后一个 ≤ t」的项 i → 帧 k = i−1 →
+//      拼版 floor(k/100)、列 k % img_x_len、行 floor((k%100)/img_x_len)。
 const spriteOut = document.getElementById('spriteOut');
 const spriteStateEl = document.getElementById('spriteState');
 const spriteInfoEl = document.getElementById('spriteInfo');
@@ -1097,47 +1043,73 @@ const spriteWrap = document.getElementById('spriteWrap');
 const spriteImg = document.getElementById('spriteImg');
 const spriteCursor = document.getElementById('spriteCursor');
 const spritePos = document.getElementById('spritePos');
-let spriteGeo = null; // { xLen, yLen, xSize, ySize, frameCount }
+// 拿到数据后的运行期状态：几何参数 + 解析好的时间表 + 拼版张数
+let spriteGeo = null;   // { xLen, yLen, xSize, ySize, frameCount, sheetCount }
+let times = null;       // bin/index 解析出的时间表（第 0 项占位 0）；null = 退均匀换算
 
 async function loadSprite() {
   spriteStateEl.className = 'badge warn';
   spriteStateEl.textContent = '加载中…';
   try {
-    // index.json 先拿参数（B 站 pvdata 形状）；请求它也会顺带触发服务端抽帧/拼图
-    const idx = await fetch(BASE + '/videoshot/index.json').then((r) => r.json());
-    const pv = (idx.data && idx.data.pvdata) || {};
-    const sp = (idx.data && idx.data.sprite) || {};
-    const frameCount = (idx.data && idx.data.frames && idx.data.frames.count) || 0;
-
-    // 再拉图片本体。404（没 --video / 生成失败）要明确写出来，不能只留一片空白
-    const resp = await fetch(BASE + '/videoshot/sprite.jpg');
+    // 先拿接口 data（也会顺带触发服务端抽帧/拼图）；404 = 无 --video / ffmpeg 不可用
+    const resp = await fetch(BASE + '/x/player/videoshot?index=1');
     if (!resp.ok) {
       spriteStateEl.className = 'badge err';
       spriteStateEl.textContent = '不可用（HTTP ' + resp.status + '）';
-      spriteOut.textContent = 'GET /videoshot/sprite.jpg → HTTP ' + resp.status + '\n'
-        + '常见原因：未提供 --video、ffmpeg 不可用。\n\nindex.json 的说明：\n'
-        + JSON.stringify(idx.data && idx.data.mock, null, 2);
+      spriteOut.textContent = 'GET /x/player/videoshot → HTTP ' + resp.status + '\n'
+        + '常见原因：未提供 --video、ffmpeg 不可用。\n\n'
+        + PREVIEW_REASON.unavailable;
       spriteWrap.style.display = 'none';
       return;
     }
-    const blob = await resp.blob();
-    spriteImg.src = URL.createObjectURL(blob);
+    const d = (await resp.json()).data;
 
+    // 再拉 bin 截取时间表（uint16 小端数组，帧 ↔ 时间映射），失败退 data.index
+    times = null;
+    let binNote = '';
+    try {
+      const binResp = await fetch(BASE + d.pvdata);
+      if (binResp.ok) {
+        const buf = new Uint16Array(await binResp.arrayBuffer());
+        const parsed = Array.from(buf);
+        // 校验 B 站口径：第 0 项恒为 0，时间单调不减（不均匀截图也满足）
+        if (parsed.length > 1 && parsed[0] === 0
+          && parsed.every((v, i) => i < 2 || v >= parsed[i - 1])) {
+          times = parsed;
+          binNote = 'bin 时间表 ' + parsed.length + ' 项（' + buf.byteLength + ' 字节，uint16 小端）';
+        } else {
+          binNote = 'bin 格式异常（长度 ' + parsed.length + '、首项 ' + parsed[0] + '），退用 index';
+        }
+      } else {
+        binNote = 'bin HTTP ' + binResp.status + '，退用 index';
+      }
+    } catch (binErr) {
+      binNote = 'bin 请求失败（' + binErr + '），退用 index';
+    }
+    if (times === null && Array.isArray(d.index) && d.index.length > 1) {
+      times = d.index;
+      binNote += '；index 时间表 ' + d.index.length + ' 项';
+    }
+
+    // 显示第一张拼版（多拼版时其余张按同一公式换算，只是 URL 不同）
+    const imgResp = await fetch(BASE + d.image[0]);
+    spriteImg.src = URL.createObjectURL(await imgResp.blob());
+    const tilesPerSheet = d.img_x_len * d.img_y_len;
     spriteGeo = {
-      xLen: pv.img_x_len || sp.xLen || 5,
-      yLen: pv.img_y_len || sp.yLen || 1,
-      xSize: pv.img_x_size || sp.xSize || 160,
-      ySize: pv.img_y_size || sp.ySize || 90,
-      frameCount,
+      xLen: d.img_x_len,
+      yLen: d.img_y_len,
+      xSize: d.img_x_size,
+      ySize: d.img_y_size,
+      frameCount: times ? times.length - 1 : d.image.length * tilesPerSheet,
+      sheetCount: d.image.length,
     };
     spriteStateEl.className = 'badge ok';
     spriteStateEl.textContent = '已加载';
-    spriteInfoEl.textContent = (blob.size / 1024).toFixed(0) + ' KB · '
-      + spriteGeo.xLen + 'x' + spriteGeo.yLen + ' 格 · 每格 ' + spriteGeo.xSize + 'x' + spriteGeo.ySize
-      + ' · 共 ' + frameCount + ' 帧';
+    spriteInfoEl.textContent = spriteGeo.frameCount + ' 帧 · ' + spriteGeo.sheetCount + ' 张拼版（每张 '
+      + spriteGeo.xLen + 'x' + spriteGeo.yLen + ' 格，每格 ' + spriteGeo.xSize + 'x' + spriteGeo.ySize + '）';
     spriteWrap.style.display = '';
-    spriteOut.textContent = 'GET /videoshot/index.json 的 pvdata：\n' + JSON.stringify(pv, null, 2)
-      + '\n\nGET /videoshot/sprite.jpg → ' + blob.size + ' 字节';
+    spriteOut.textContent = 'GET /x/player/videoshot 的 data：\n' + JSON.stringify(d, null, 2).slice(0, 1500)
+      + '\n\n' + binNote;
   } catch (err) {
     spriteStateEl.className = 'badge err';
     spriteStateEl.textContent = '加载失败';
@@ -1145,24 +1117,41 @@ async function loadSprite() {
   }
 }
 
-// 鼠标在雪碧图上移动：x 比例 → 秒 → 下标 → 列/行，粉色框套住那个格子（遮罩压暗其它格子）
+// 鼠标在雪碧图上移动：x 比例 → 秒 → 时间表二分 → 帧 → 拼版/列/行，粉色框套住那个格子
 spriteWrap.addEventListener('mousemove', (ev) => {
   if (!spriteGeo) return;
   const rect = spriteImg.getBoundingClientRect();
   const ratio = Math.min(1, Math.max(0, (ev.clientX - rect.left) / rect.width));
   const second = ratio * CFG.duration;
-  const cellIndex = Math.min(spriteGeo.frameCount - 1, Math.floor(second / 5));
-  const col = cellIndex % spriteGeo.xLen;
-  const row = Math.floor(cellIndex / spriteGeo.xLen);
-  // 图是按宽度 100% 显示的：格子的屏幕尺寸按比例换算
+
+  // 定位帧：有时间表走二分（B 站写法），没有退「帧数均分片长」的均匀换算
+  let frame;
+  if (times && times.length > 1) {
+    let lo = 1, hi = times.length - 1, hit = 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid] <= second) { hit = mid; lo = mid + 1; } else { hi = mid - 1; }
+    }
+    frame = hit - 1;
+  } else {
+    frame = Math.min(spriteGeo.frameCount - 1, Math.floor(ratio * spriteGeo.frameCount));
+  }
+
+  const tilesPerSheet = spriteGeo.xLen * spriteGeo.yLen;
+  const sheet = Math.floor(frame / tilesPerSheet);
+  const local = frame % tilesPerSheet;
+  const col = local % spriteGeo.xLen;
+  const row = Math.floor(local / spriteGeo.xLen);
+  // 图是按宽度 100% 显示的：格子的屏幕尺寸按比例换算；
+  // 光标是 wrap 的子元素，left/top 要加 img 在 wrap 内的偏移（padding 造成的 8px）
   const cellW = rect.width / spriteGeo.xLen;
   const cellH = rect.height / spriteGeo.yLen;
-  spriteCursor.style.left = (col * cellW) + 'px';
-  spriteCursor.style.top = (row * cellH) + 'px';
+  spriteCursor.style.left = (spriteImg.offsetLeft + col * cellW) + 'px';
+  spriteCursor.style.top = (spriteImg.offsetTop + row * cellH) + 'px';
   spriteCursor.style.width = cellW + 'px';
   spriteCursor.style.height = cellH + 'px';
-  spritePos.textContent = '　t=' + second.toFixed(1) + 's → 下标 ' + cellIndex
-    + ' → 第 ' + col + ' 列 / 第 ' + row + ' 行';
+  spritePos.textContent = '　t=' + second.toFixed(1) + 's → 帧 ' + frame
+    + '（' + (times ? '时间表二分' : '均匀换算') + '）→ 第 ' + sheet + ' 张拼版 / 第 ' + col + ' 列 / 第 ' + row + ' 行';
 });
 
 document.getElementById('spriteLoad').onclick = loadSprite;
@@ -1181,8 +1170,6 @@ document.getElementById('spriteLoad').onclick = loadSprite;
   await loadViewPointsAndPbp().catch((err) => {
     document.getElementById('vpList').textContent = '加载失败：' + err;
   });
-  await loadThumbs().catch((err) => { document.getElementById('thumbOut').textContent = '加载失败：' + err; });
-  // 雪碧图面板：preview.bin 那边已经在服务端触发了抽帧，这里通常直接命中缓存
   await loadSprite().catch((err) => { spriteOut.textContent = '加载失败：' + err; });
 })();
 </script>

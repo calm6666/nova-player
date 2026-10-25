@@ -158,17 +158,12 @@
   }
 }
 
-/* 真实规则：只有 web / 全屏档位放大关注胶囊 */
-.nova-player-container[data-screen="web"] .nova-player-follow,
-.nova-player-container[data-screen="full"] .nova-player-follow {
-  height: 40px;
-  line-height: 40px;
-  margin-bottom: 12px;
-  min-width: 97px;
-}
-
-.nova-player-container[data-screen="web"] .nova-player-follow .nova-player-follow-face,
-.nova-player-container[data-screen="full"] .nova-player-follow .nova-player-follow-face {
+.nova-player-container[data-screen="web"]
+  .nova-player-follow
+  .nova-player-follow-face,
+.nova-player-container[data-screen="full"]
+  .nova-player-follow
+  .nova-player-follow-face {
   height: 32px;
   width: 32px;
 }
@@ -308,30 +303,4 @@
 .nova-player-container[data-screen="full"] .nova-player-top-left-title,
 .nova-player-container[data-screen="web"] .nova-player-top-left-title {
   display: block;
-}
-
-/* 真实规则：web / 全屏档位才使用 24px 边距与 54px 反馈按钮 */
-.nova-player-container[data-screen="web"] .nova-player-top-left,
-.nova-player-container[data-screen="full"] .nova-player-top-left {
-  left: 24px;
-  margin-top: 24px;
-}
-
-.nova-player-container[data-screen="web"] .nova-player-top-left-title,
-.nova-player-container[data-screen="full"] .nova-player-top-left-title {
-  margin-bottom: 12px;
-}
-
-.nova-player-container[data-screen="normal"] .nova-player-top-issue,
-.nova-player-container[data-screen="web"] .nova-player-top-issue,
-.nova-player-container[data-screen="full"] .nova-player-top-issue {
-  font-size: 28px;
-  width: 54px;
-}
-
-.nova-player-container[data-screen="normal"] .nova-player-top-issue-icon,
-.nova-player-container[data-screen="web"] .nova-player-top-issue-icon,
-.nova-player-container[data-screen="full"] .nova-player-top-issue-icon {
-  height: 28px;
-  width: 54px;
 }

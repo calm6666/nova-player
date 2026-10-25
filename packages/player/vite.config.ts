@@ -51,7 +51,9 @@ export default defineConfig(({ command, mode }) => {
         : [
             dts({
               root: __dirname,
-              include: ["src/**/*"],
+              // 根 vite-env.d.ts 声明了 *.png / *.scss?inline / *?url 等资源模块，
+              // 不挂进 include 的话 dts 内部 tsc 解析资源导入会报 TS2307（构建噪音）
+              include: ["src/**/*", "../../vite-env.d.ts"],
               exclude: ["**/*.test.ts"],
               insertTypesEntry: true,
               entryRoot: "src",
@@ -139,9 +141,9 @@ export default defineConfig(({ command, mode }) => {
           // CDN 构建与工程构建共用 dist：不清空目录（工程产物先构建，CDN 后构建）
           emptyOutDir: false,
           sourcemap: false,
-          // 工程产物同样压缩 + 混淆 + 去注释
-          minify: "esbuild",
-          terserOptions,
+          // 不压缩不混淆（与顶部注释的三方库标准做法一致）：产物可读、可调试、
+          // 可 tree-shake，压缩混淆由父工程生产构建统一处理；仅 CDN UMD 产物压缩
+          minify: false,
         },
     resolve: {
       alias: [

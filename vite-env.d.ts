@@ -6,6 +6,18 @@ declare module '*.scss' {
   export default content;
 }
 
+// SCSS 以 ?inline 后缀导入（插件运行时注入样式，如 SubtitlePlugin/TopPlugin）
+declare module '*.scss?inline' {
+  const css: string;
+  export default css;
+}
+
+// ?url 后缀导入（资源转 URL，如 @mediapipe 的 wasm 加载器）
+declare module '*?url' {
+  const url: string;
+  export default url;
+}
+
 // 图片资源声明
 declare module '*.png' {
   const src: string;

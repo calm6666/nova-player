@@ -198,24 +198,88 @@ export class LivePluginHost {
   }
 
   /**
-   * 安装开发者传入的插件。
+   * 同步开发者传入的插件集合。
+   *
+   * 与「只增不减」的旧实现不同，这里按 `name` / `type` 做 diff：
+   * - 本次未提供的普通插件 → 卸载；
+   * - 同名但实例变化 → 先卸载旧实例再安装新实例；
+   * - 流媒体插件同理，被替换时重新加载当前流地址。
+   * 这样动态更新 `options.plugins` 才能真正生效，而不是静默保留旧实例。
    *
    * @param plugins - 插件实例列表。
    */
   install(plugins: readonly NovaLivePluginInput[]): void {
+    /** 本次期望安装的普通插件（按 name 去重，后者覆盖前者）。 */
+    const desired = new Map<string, NovaLivePlugin>();
+    /** 本次期望安装的流媒体插件（按 type 去重）。 */
+    const desiredStreams = new Map<string, StreamPlugin>();
+
     for (const plugin of plugins) {
       if (!plugin) continue;
       if (isStreamPluginInstance(plugin)) {
-        if (!this.streamPlugins.some((item) => String(item.type) === String(plugin.type))) {
-          this.streamPlugins.push(plugin);
-        }
+        desiredStreams.set(String(plugin.type), plugin);
         continue;
       }
-      const lifecycle = plugin as NovaLivePlugin;
-      if (this.pluginManager.has(lifecycle.name)) continue;
-      this.pluginManager.install(lifecycle);
-      if (isDanmakuPluginInstance(lifecycle)) this.danmakuPlugin = lifecycle;
+      desired.set(plugin.name, plugin as NovaLivePlugin);
     }
+
+    // 1. 卸载本次未提供的普通插件
+    const installedNames: string[] = [];
+    this.pluginManager.forEachPlugin((plugin): void => {
+      installedNames.push(plugin.name);
+    });
+    for (const name of installedNames) {
+      if (!desired.has(name)) this.pluginManager.uninstall(name);
+    }
+
+    // 2. 安装新增插件；同名但实例变化时先卸载旧实例
+    for (const [name, plugin] of desired) {
+      const current = this.pluginManager.get(name);
+      if (current === plugin) continue;
+      if (current) this.pluginManager.uninstall(name);
+      this.pluginManager.install(plugin);
+      if (isDanmakuPluginInstance(plugin)) this.danmakuPlugin = plugin;
+    }
+
+    // 3. 流媒体插件 diff：按 type 对齐本次期望集合
+    let streamReplaced = false;
+    // 3a. 移除本次未提供的、或同名但实例已更换的旧插件
+    for (const existing of [...this.streamPlugins]) {
+      const next = desiredStreams.get(String(existing.type));
+      if (next === existing) continue;
+      this.removeStreamPlugin(existing);
+      streamReplaced = true;
+    }
+    // 3b. 追加本次新增的类型（旧集合中不存在）
+    for (const [type, plugin] of desiredStreams) {
+      if (this.streamPlugins.some((item) => String(item.type) === type)) continue;
+      this.streamPlugins.push(plugin);
+      streamReplaced = true;
+    }
+
+    // 弹幕插件缓存失效：可能在 diff 中被卸载，getDanmakuPlugin 会重新扫描
+    if (this.danmakuPlugin && !this.pluginManager.has(this.danmakuPlugin.name)) {
+      this.danmakuPlugin = null;
+    }
+
+    // 流插件被替换后重新加载当前地址，避免旧实例继续占用 <video>
+    if (streamReplaced && this.currentUrl) this.loadStream(this.currentUrl);
+  }
+
+  /**
+   * 移除一个流媒体插件，必要时先解除当前绑定。
+   *
+   * @param plugin - 待移除的流媒体插件。
+   */
+  private removeStreamPlugin(plugin: StreamPlugin): void {
+    if (this.activeStream === plugin) {
+      this.detachStream();
+      this.activeStream = null;
+    }
+    const index = this.streamPlugins.indexOf(plugin);
+    if (index >= 0) this.streamPlugins.splice(index, 1);
+    // 流插件不归 PluginManager 管理，被替换时需要自行释放实例资源
+    plugin.destroy?.();
   }
 
   /**
@@ -367,6 +431,7 @@ export class LivePluginHost {
     state.set(PlayerStateKeyEnum.DANMAKU_AREA, setting.area);
     state.set(PlayerStateKeyEnum.DANMAKU_FONT_SIZE, danmakuFontSizeToSlider(setting.fontsize));
     state.set(PlayerStateKeyEnum.DANMAKU_SCALE_WITH_SCREEN, setting.autoScale);
+    state.set(PlayerStateKeyEnum.DANMAKU_MASK_ENABLED, setting.mask);
     state.set(PlayerStateKeyEnum.DANMAKU_COLOR, setting.color);
     state.set(PlayerStateKeyEnum.DANMAKU_MODE, 1);
 

@@ -86,7 +86,7 @@ function check(name, condition, detail) {
 }
 
 // ---------------------------------------------------------------------------
-// HTTP 小工具（原生 http，能拿到原始 buffer 和响应头 —— 验证 preview.bin 需要它）
+// HTTP 小工具（原生 http，能拿到原始 buffer 和响应头 —— 验证雪碧图二进制需要它）
 // ---------------------------------------------------------------------------
 function request(method, urlPath, { body, headers, timeoutMs = 30000 } = {}) {
   return new Promise((resolve, reject) => {
@@ -333,6 +333,11 @@ async function testHealth() {
   check('带 WebSocket 状态字段（wsClients / wsPath / wsHeartbeatMs）',
     Number.isInteger(health.wsClients) && health.wsPath === '/danmaku/ws' && Number.isFinite(health.wsHeartbeatMs),
     `wsClients=${health.wsClients} wsPath=${health.wsPath} wsHeartbeatMs=${health.wsHeartbeatMs}`);
+  // 雪碧图状态：status 取值 idle（还没人请求）/ ready / unavailable；帧数与拼版数只有 ready 后才有值
+  check('带雪碧图状态字段（sprite / spriteFrames / spriteSheets / spriteBytes）',
+    typeof health.sprite === 'string' && Number.isInteger(health.spriteFrames)
+    && Number.isInteger(health.spriteSheets) && Number.isInteger(health.spriteBytes),
+    `sprite=${health.sprite}，frames=${health.spriteFrames}，sheets=${health.spriteSheets}`);
 }
 
 async function testViewPoints() {
@@ -351,10 +356,10 @@ async function testViewPoints() {
   check('每段都带 img_url / img_x_len / img_y_len / img_x_size / img_y_size',
     vp.every((p) => p.img_url && p.img_x_len && p.img_y_len && p.img_x_size && p.img_y_size),
     `img_url 示例：${vp[0].img_url}`);
-  // img_url 不能是空串或编造的 sprite_*.jpg（本服务不提供雪碧图）：必须指向真实存在的 preview.bin，
-  // 这一点和 /videoshot/index.json 的 image[0]、pvdata.img_url 是同一个约定
-  check('每段 img_url 都指向 /videoshot/preview.bin（本 mock 没有雪碧图）',
-    vp.every((p) => typeof p.img_url === 'string' && p.img_url.endsWith('/videoshot/preview.bin')),
+  // img_url 指向雪碧图第一张拼版 /videoshot/sprite.jpg（可直接当图片加载、按参数裁切）；
+  // 全部拼版（多张）以 /x/player/videoshot 的 data.image 数组为准
+  check('每段 img_url 都指向 /videoshot/sprite.jpg（雪碧图第一张拼版）',
+    vp.every((p) => typeof p.img_url === 'string' && p.img_url.endsWith('/videoshot/sprite.jpg')),
     `实际：${JSON.stringify(vp.map((p) => p.img_url).slice(0, 2))}`);
 }
 
@@ -658,67 +663,194 @@ async function testSince() {
 }
 
 /**
- * 预览图：重点验证「5 秒一帧 + 下标 0 是空占位」这套约定。
- * 播放器取图算法（front/player/src/component/controls/index.ts:1410-1417）：
- *   const currTime = Math.floor(this.popup.currentTime / 5);
- *   this.previewImage.src = this.videoshot[currTime + 1];
- * 所以：下标 = floor(秒 / 5) + 1，arr[0] 是永远用不到的空占位。
+ * 预览图：验证 B 站 /x/player/videoshot 口径（雪碧图 + pvdata bin 时间表）。
+ *
+ * B 站形状（bilibili-API-collect「视频快照」）：
+ *   data = { pvdata: '<bin url>', img_x_len: 10, img_y_len: 10, img_x_size: 160,
+ *            img_y_size: 90, image: ['<hash>.jpg', '<hash>-1.jpg', …], index: [] }
+ *   - 带 index=1 参数时 index 给 JSON 时间表，否则空数组；
+ *   - index/bin 内容：第 0 项恒为 0（占位），第 k 项 = 第 k 张截图的秒数，
+ *     时间按画面变化程度决定（不均匀），前端用它定位「第 N 秒该用哪张拼版的哪个格子」；
+ *   - bin 是 uint16 小端数组（2 字节对齐），与 index 一一对应。
+ * 本 mock 等间隔抽帧（FRAME_INTERVAL_SEC=5），时间表是等差数列，格式与 B 站一致。
  */
 async function testVideoshot() {
-  line(C.title('【8】GET /videoshot/preview.bin + /videoshot/index.json　进度条预览图'));
+  line(C.title('【8】GET /x/player/videoshot + /videoshot/sprite.jpg + /videoshot/pvdata.bin　进度条预览'));
 
-  const bin = await request('GET', '/videoshot/preview.bin');
-  const parts = bin.text.split('\u001F');
-  line(`  preview.bin：HTTP ${bin.status}，Content-Type=${bin.headers['content-type']}，${bin.buf.length} 字节，切分后 ${parts.length} 项`);
-  check('HTTP 200（没视频/没 ffmpeg 时也必须是 200 空文件，不能 404）', bin.status === 200);
-  check('按 \\u001F 切分后 arr[0] 是空占位（播放器 [floor(秒/5)+1] 的下标基准）',
-    parts.length >= 1 && parts[0] === '', `arr[0]=${JSON.stringify(parts[0])}`);
+  const r = await request('GET', '/x/player/videoshot?aid=123&cid=456');
+  line(`  videoshot：HTTP ${r.status}，${clip(r.text, 400)}`);
 
-  const idx = JSON.parse((await request('GET', '/videoshot/index.json')).text);
-  line(`  index.json：${clip(JSON.stringify(idx.data), 500)}`);
-  check('code=0 且 pvdata 字段齐全（含 img_url）',
-    idx.code === 0 && idx.data.pvdata
-    && ['duration', 'img_x_len', 'img_y_len', 'img_x_size', 'img_y_size', 'img_url'].every((k) => k in idx.data.pvdata),
-    `pvdata=${JSON.stringify(idx.data.pvdata)}`);
-  // img_url 必须是「有值的、且和 image[0] 指向同一个地址」：留空或编一个 sprite_*.jpg（本服务不提供）
-  // 都会让 B 站形状的客户端以为图片地址是坏的
-  check('pvdata.img_url 与 image[0] 一致（都指向 /videoshot/preview.bin）',
-    idx.data.pvdata.img_url === idx.data.image[0]
-    && String(idx.data.pvdata.img_url).endsWith('/videoshot/preview.bin'),
-    `img_url=${idx.data.pvdata.img_url}，image[0]=${idx.data.image[0]}`);
-  check('mock.img_urlNote 说明了 img_url 指向的其实是 \\u001F 分隔的数据文件',
-    typeof idx.data.mock.img_urlNote === 'string' && idx.data.mock.img_urlNote.includes('/videoshot/preview.bin'),
-    clip(idx.data.mock.img_urlNote, 160));
-  check('index 数组是按 5 秒递增的秒数 [0,5,10,…]',
-    Array.isArray(idx.data.index) && idx.data.index.every((v, k) => v === k * 5),
-    `前几项：${JSON.stringify(idx.data.index.slice(0, 5))}`);
-
-  // ---- 关键用例：给定 t=0/4/5/12 秒，下标必须是 1/1/2/3，且对应文件/项存在 ----
-  line(C.dim('  验证取图算法：t=0/4/5/12 秒 → 下标 floor(秒/5)+1 应为 1/1/2/3'));
-  const cases = [[0, 1], [4, 1], [5, 2], [12, 3]];
-  for (const [t, expectIdx] of cases) {
-    const i = Math.floor(t / 5) + 1;
-    const exists = parts.length > i;
-    const isFrame = exists && parts[i].startsWith('data:image/jpeg;base64,');
-    line(`    t=${String(t).padStart(2)}s → 下标 ${i}（期望 ${expectIdx}）`
-      + `；arr[${i}] ${exists
-        ? (isFrame ? `是 jpeg 帧（对应第 ${5 * (i - 1)} 秒，${parts[i].length} 字节）` : '为空')
-        : '不存在（preview.bin 是空文件）'}`);
-    check(`t=${t}s 算出的下标是 ${expectIdx}`, i === expectIdx, `实际 ${i}`);
-    // 只有真有帧时才断言「对应项非空」，否则空文件场景会误报
-    if (parts.length > 1) check(`t=${t}s 对应的 arr[${expectIdx}] 存在且是 jpeg 帧`, isFrame);
+  const hasSprite = health.sprite === 'ready';
+  if (!hasSprite) {
+    check('没视频/没 ffmpeg 时接口 404（B 站「无快照」口径，不能 500）', r.status === 404,
+      `HTTP ${r.status}，health.sprite=${health.sprite}`);
+    const img = await request('GET', '/videoshot/sprite.jpg');
+    check('无快照时雪碧图也是 404', img.status === 404, `HTTP ${img.status}`);
+    const bin = await request('GET', '/videoshot/pvdata.bin');
+    check('无快照时 bin 时间表也是 404', bin.status === 404, `HTTP ${bin.status}`);
+    line(C.dim('  （未提供 --video 或 ffmpeg 不可用：预览链路整体降级，其余接口正常）'));
+    return;
   }
 
-  if (parts.length > 1) {
-    check('每一帧都是 jpeg data URL', parts.slice(1, 6).every((p) => p.startsWith('data:image/jpeg;base64,')));
-    check('帧数 ≈ ceil(片长 / 5)', Math.abs((parts.length - 1) - Math.ceil(health.durationSec / 5)) <= 1,
-      `帧=${parts.length - 1}，期望 ${Math.ceil(health.durationSec / 5)}`);
-    check('index.json 的 index 长度 = 帧数', idx.data.index.length === parts.length - 1,
-      `index=${idx.data.index.length}，帧=${parts.length - 1}`);
+  const json = JSON.parse(r.text);
+  const d = json.data;
+  check('HTTP 200 且 code=0、ttl=1', r.status === 200 && json.code === 0 && json.ttl === 1);
+  check('data 字段齐全（pvdata/img_x_len/img_y_len/img_x_size/img_y_size/image/index）',
+    ['pvdata', 'img_x_len', 'img_y_len', 'img_x_size', 'img_y_size', 'image', 'index'].every((k) => k in d),
+    `pvdata=${d.pvdata}，每格 ${d.img_x_size}x${d.img_y_size}`);
+  check('B 站口径：每张拼版 10x10=100 格', d.img_x_len === 10 && d.img_y_len === 10);
+  check('pvdata 指向 bin 时间表（/videoshot/pvdata.bin）',
+    typeof d.pvdata === 'string' && d.pvdata.endsWith('/videoshot/pvdata.bin'));
+  check('不带 index=1 时 index 是空数组（B 站「无为空」口径）',
+    Array.isArray(d.index) && d.index.length === 0, `实际 ${JSON.stringify(d.index)}`);
+  check('image 是非空数组且第一项是 /videoshot/sprite.jpg',
+    Array.isArray(d.image) && d.image.length > 0 && d.image[0].endsWith('/videoshot/sprite.jpg'),
+    `image=${JSON.stringify(d.image)}`);
+  check('拼版张数 = ceil(帧数 / 100)',
+    d.image.length === Math.ceil(health.spriteFrames / 100),
+    `张数=${d.image.length}，帧数=${health.spriteFrames}`);
+  check('多拼版命名规律（sprite-1.jpg、sprite-2.jpg…）',
+    d.image.every((u, k) => (k === 0 ? u.endsWith('/videoshot/sprite.jpg') : u.endsWith(`/videoshot/sprite-${k}.jpg`))));
+
+  // ---- 带 index=1：JSON 时间表 ----
+  const withIdx = JSON.parse((await request('GET', '/x/player/videoshot?aid=123&cid=456&index=1')).text);
+  const idxList = withIdx.data.index;
+  line(`  index=1 时间表：${idxList.length} 项（首 6 项 ${JSON.stringify(idxList.slice(0, 6))}…）`);
+  check('带 index=1 时 index 是非空 JSON 时间表', Array.isArray(idxList) && idxList.length > 1);
+  check('第 0 项恒为 0（占位）', idxList[0] === 0);
+  check('时间表长度 = 帧数 + 1（第 k 项是第 k 张截图的秒数）',
+    idxList.length === health.spriteFrames + 1,
+    `时间表 ${idxList.length}，帧数 ${health.spriteFrames}`);
+  // 本 mock 等间隔抽帧：第 k 项 = (k-1) * 5 秒（B 站是不均匀的，格式一致、数值规律不同）
+  check('等间隔抽帧口径：第 k 项 = (k-1) * 5 秒',
+    idxList.every((v, k) => k === 0 || v === (k - 1) * 5),
+    `首 6 项 ${JSON.stringify(idxList.slice(0, 6))}`);
+
+  // ---- bin 文件：uint16 小端数组，与 index 一一对应 ----
+  const bin = await request('GET', d.pvdata);
+  const binTimes = [];
+  for (let off = 0; off + 1 < bin.buf.length; off += 2) binTimes.push(bin.buf.readUInt16LE(off));
+  check('GET pvdata 返回 200 且是二进制流',
+    bin.status === 200 && String(bin.headers['content-type']).includes('octet-stream'),
+    `${bin.buf.length} 字节`);
+  check('bin 字节数 = 时间表长度 × 2（uint16 对齐）',
+    bin.buf.length === idxList.length * 2 && bin.buf.length % 2 === 0,
+    `字节 ${bin.buf.length}，期望 ${idxList.length * 2}`);
+  check('bin 内容与 index JSON 数组一一对应（uint16 小端）',
+    binTimes.length === idxList.length && binTimes.every((v, k) => v === idxList[k]));
+  check('bin 第 0 项恒为 0（占位）', binTimes[0] === 0);
+
+  // ---- 验证取图算法：悬停时间 → 时间表二分 → 拼版 + 格内坐标 ----
+  line(C.dim('  验证取图算法（时间表二分，B 站写法）：'));
+  const tilesPerSheet = d.img_x_len * d.img_y_len;
+  const cases = [0, 7, 30, health.durationSec];
+  for (const t of cases) {
+    // 找最后一个 ≤ t 的项（i ≥ 1），帧 k = i - 1
+    let hit = 1;
+    for (let i = 1; i < idxList.length; i += 1) {
+      if (idxList[i] <= t) hit = i; else break;
+    }
+    const frame = hit - 1;
+    const sheet = Math.floor(frame / tilesPerSheet);
+    const local = frame % tilesPerSheet;
+    const col = local % d.img_x_len;
+    const row = Math.floor(local / d.img_x_len);
+    line(`    t=${String(Math.round(t)).padStart(3)}s → 帧 ${frame}（第 ${sheet} 张拼版，列 ${col} 行 ${row}）`);
+    check(`t=${Math.round(t)}s 定位到的拼版在 [0, ${d.image.length})`, sheet >= 0 && sheet < d.image.length);
+  }
+
+  // ---- 雪碧图文件本身可访问 ----
+  const img = await request('GET', d.image[0]);
+  check(`GET ${d.image[0]} 返回 200 且是 jpeg`, img.status === 200
+    && String(img.headers['content-type']).includes('image/jpeg'), `${img.buf.length} 字节`);
+  if (d.image.length > 1) {
+    const img2 = await request('GET', d.image[1]);
+    check(`多拼版第 2 张 ${d.image[1]} 也返回 200`, img2.status === 200
+      && String(img2.headers['content-type']).includes('image/jpeg'), `${img2.buf.length} 字节`);
+    const over = await request('GET', `/videoshot/sprite-${d.image.length}.jpg`);
+    check('超出张数的拼版返回 404', over.status === 404, `HTTP ${over.status}`);
+  }
+}
+
+/**
+ * 互动视频 perVideo 预览：验证带 avid 的 /x/player/videoshot 与默认视频
+ * **完全同一套 B 站口径**（10x10 多拼版 + pvdata bin + index 时间表），
+ * 不再是转码脚本时代的 5 列单拼版旧口径。
+ */
+async function testInteractiveVideoshot() {
+  line(C.title('【8b】带 avid 的预览三接口　互动视频 perVideo 与默认视频同口径'));
+
+  // ffmpeg 不可用时互动预览也会整体 404（与默认分支同降级），先探一下：
+  // 用一个真实 avid 请求，404 且带 message 就跳过本节（不误报失败）。
+  const probe = await request('GET', '/x/player/videoshot?avid=av1000001&index=1');
+  if (probe.status !== 200) {
+    check('无 ffmpeg 时互动预览按 404 降级（不 500）', probe.status === 404
+      && JSON.parse(probe.text).message, `HTTP ${probe.status}`);
+    line(C.dim('  （ffmpeg 不可用：互动预览链路整体降级，跳过详细断言）'));
+    return;
+  }
+
+  // ---- av1000001：正常时长节点，B 站 10x10 多拼版口径 ----
+  const json = JSON.parse(probe.text);
+  const d = json.data;
+  line(`  av1000001 videoshot：${d.image.length} 张拼版（${d.img_x_len}x${d.img_y_len}），每格 ${d.img_x_size}x${d.img_y_size}`);
+  check('HTTP 200 且 code=0', probe.status === 200 && json.code === 0);
+  check('B 站口径：每张拼版 10x10=100 格（与默认视频同几何）',
+    d.img_x_len === 10 && d.img_y_len === 10);
+  check('每格 160x90（与默认视频同尺寸）', d.img_x_size === 160 && d.img_y_size === 90);
+  check('pvdata 带 avid 指向 bin 时间表',
+    typeof d.pvdata === 'string' && d.pvdata.includes('/videoshot/pvdata.bin') && d.pvdata.includes('avid='));
+  check('image 数组每项都带同一 avid 参数',
+    Array.isArray(d.image) && d.image.length > 0
+    && d.image.every((u) => u.includes('avid=av1000001')),
+    `image=${JSON.stringify(d.image)}`);
+
+  // ---- index=1 时间表 + bin 一致性（与默认分支同校验口径）----
+  const idxList = d.index;
+  check('带 index=1 时 index 是非空时间表且首项为 0',
+    Array.isArray(idxList) && idxList.length > 1 && idxList[0] === 0);
+  check('等间隔抽帧口径：第 k 项 = (k-1) * 5 秒',
+    idxList.every((v, k) => k === 0 || v === (k - 1) * 5),
+    `首 6 项 ${JSON.stringify(idxList.slice(0, 6))}`);
+  check('拼版张数 = ceil((时间表长度-1) / 100)',
+    d.image.length === Math.ceil((idxList.length - 1) / 100),
+    `张数=${d.image.length}，帧数=${idxList.length - 1}`);
+
+  const bin = await request('GET', d.pvdata);
+  const binTimes = [];
+  for (let off = 0; off + 1 < bin.buf.length; off += 2) binTimes.push(bin.buf.readUInt16LE(off));
+  check('GET pvdata 返回 200 且与 index 一一对应（uint16 小端）',
+    bin.status === 200 && binTimes.length === idxList.length
+    && binTimes.every((v, k) => v === idxList[k]), `${bin.buf.length} 字节`);
+
+  // ---- 拼版文件可访问、越界 404 ----
+  const img = await request('GET', d.image[0]);
+  check(`GET 拼版图返回 200 且是 jpeg`, img.status === 200
+    && String(img.headers['content-type']).includes('image/jpeg'), `${img.buf.length} 字节`);
+  if (d.image.length > 1) {
+    const img2 = await request('GET', d.image[1]);
+    check('多拼版第 2 张也返回 200', img2.status === 200, `HTTP ${img2.status}`);
+  }
+  const over = await request('GET', `/videoshot/sprite-${d.image.length}.jpg?avid=av1000001`);
+  check('超出张数的拼版返回 404（多拼版语义）', over.status === 404, `HTTP ${over.status}`);
+
+  // ---- av1000009：时长不足一个抽帧间隔的短节点，首帧兜底后仍可用 ----
+  const shortR = await request('GET', '/x/player/videoshot?avid=av1000009&index=1');
+  if (shortR.status === 200) {
+    const sd = JSON.parse(shortR.text).data;
+    check('短节点（<5s）首帧兜底：仍返回 B 站口径数据',
+      sd.img_x_len === 10 && sd.img_y_len === 10 && sd.index.length === 2,
+      `时间表 ${sd.index.length} 项（1 帧）`);
+    const shortImg = await request('GET', sd.image[0]);
+    check('短节点拼版图可访问', shortImg.status === 200
+      && String(shortImg.headers['content-type']).includes('image/jpeg'));
   } else {
-    line(C.dim(`  （当前 preview.bin 是空文件：${idx.data.mock.message}）`));
-    check('不可用时返回空文件而不是报错（播放器会拿到 [""]）', bin.buf.length === 0, `实际 ${bin.buf.length} 字节`);
+    line(C.dim(`  （av1000009 返回 HTTP ${shortR.status}：本机源视频缺失时允许 404）`));
   }
+
+  // ---- 不存在的 avid：404「无快照」口径 ----
+  const missing = await request('GET', '/x/player/videoshot?avid=av9999999');
+  check('不存在的 avid 返回 404（不 500）', missing.status === 404, `HTTP ${missing.status}`);
 }
 
 async function testCorsAnd404() {
@@ -787,6 +919,7 @@ async function main() {
   await testWebSocket();
   await testSince();
   await testVideoshot();
+  await testInteractiveVideoshot();
   await testCorsAnd404();
 
   line(C.title('自测汇总'));

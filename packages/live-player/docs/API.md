@@ -61,6 +61,10 @@ interface NovaLivePlayerOptions {
   muted?: boolean;
   autoplay?: boolean;
   persist?: boolean;
+  /** 是否启用键盘快捷键（默认 true，仅在悬停 / 聚焦 / 全屏时生效） */
+  keyboard?: boolean;
+  /** 悬浮小窗配色主题：'dark' 深底浅字（默认）/ 'light' 浅底深字，可经 setMiniTheme() 运行时切换并持久化 */
+  miniTheme?: 'dark' | 'light';
   locale?: string;
   room?: string;
   danmaku?: Partial<NovaDanmakuSetting>;

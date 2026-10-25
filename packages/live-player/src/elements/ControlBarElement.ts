@@ -48,15 +48,15 @@ export interface ControlBarProps {
   /** 弹幕开关。 */
   danmakuOn: Signal<boolean>;
   /** 是否已安装弹幕插件（未安装时弹幕入口禁用并 Toast 提示）。 */
-  danmakuAvailable: boolean;
+  danmakuAvailable: Signal<boolean>;
   /** 清晰度文案。 */
   qualityLabel: Signal<string>;
   /** 倍速文案。 */
   speedLabel: Signal<string>;
   /** 屏幕形态。 */
   screenMode: Signal<NovaScreenMode>;
-  /** 是否处于小窗（悬浮小播放器）状态。 */
-  mini: Signal<boolean>;
+  /** 是否处于系统画中画（浏览器 PiP）状态。 */
+  pip: Signal<boolean>;
   /** 控制条是否显示。 */
   visible: Signal<boolean>;
   /** 开播时长文案。 */
@@ -101,7 +101,7 @@ const RIGHT_ACTIONS: NovaControlAction[] = [
   "danmaku-setting",
   "send-danmaku",
   "webscreen",
-  "mini",
+  "pip",
   "fullscreen",
 ];
 
@@ -133,7 +133,7 @@ const BUTTONS: Record<string, ButtonSpec> = {
     panel: "speed",
   },
   webscreen: { action: "webscreen", label: "livePlayer.control.webscreen" },
-  mini: { action: "mini", label: "livePlayer.control.mini" },
+  pip: { action: "pip", label: "livePlayer.control.pip" },
   fullscreen: { action: "fullscreen", label: "livePlayer.control.fullscreen" },
 };
 
@@ -157,10 +157,16 @@ export class NovaLivePlayerControlBarElement extends NovaLiveUiElement {
     this.remountView();
   }
 
-  /** 离开文档：收起音量浮层（计时器由根元素的统一注册表清理）。 */
+  /**
+   * 离开文档：收起音量浮层（计时器由根元素的统一注册表清理）。
+   *
+   * 保留 `props`：框架在挂载静态子树时可能把节点插入后再移动，
+   * 期间会触发一次 disconnected → connected 循环。
+   * 若在这里清空 props，重连后的 render 会退化成一个空壳，
+   * 表现为控制条只剩一个没有按钮的空 div。
+   */
   protected onDisconnect(): void {
     this.volumeOpen.value = false;
-    this.props = null;
   }
 
   /** 显示音量浮层，并清除可能存在的隐藏计时器。 */
@@ -217,7 +223,7 @@ export class NovaLivePlayerControlBarElement extends NovaLiveUiElement {
           h(
             "span",
             { class: "nova-live-player-control-time-label" },
-            t("livePlayer.info.liveDuration"),
+            text((): string => t("livePlayer.info.liveDuration")),
           ),
           h(
             "span",
@@ -227,7 +233,7 @@ export class NovaLivePlayerControlBarElement extends NovaLiveUiElement {
           h(
             "span",
             { class: "nova-live-player-control-tip" },
-            t("livePlayer.info.liveDuration"),
+            text((): string => t("livePlayer.info.liveDuration")),
           ),
         ),
         h(
@@ -263,10 +269,10 @@ export class NovaLivePlayerControlBarElement extends NovaLiveUiElement {
         return props.screenMode.value === "fullscreen"
           ? t("livePlayer.control.exitFullscreen")
           : t("livePlayer.control.fullscreen");
-      case "mini":
-        return props.mini.value
-          ? t("livePlayer.control.exitMini")
-          : t("livePlayer.control.mini");
+      case "pip":
+        return props.pip.value
+          ? t("livePlayer.control.exitPip")
+          : t("livePlayer.control.pip");
       default:
         return t(BUTTONS[key].label);
     }
@@ -289,7 +295,7 @@ export class NovaLivePlayerControlBarElement extends NovaLiveUiElement {
      * - 已安装但弹幕关闭：设置入口禁用（与点播播放器一致）。
      */
     const disabled = (): boolean => {
-      if (isDanmakuControl && !props.danmakuAvailable) return true;
+      if (isDanmakuControl && !props.danmakuAvailable.value) return true;
       return key === "danmaku-setting" && !props.danmakuOn.value;
     };
 
@@ -310,27 +316,27 @@ export class NovaLivePlayerControlBarElement extends NovaLiveUiElement {
     const buttonAttrs: Record<string, unknown> = {
       type: "button",
       "data-action": spec.action,
-      "aria-label": t(spec.label),
       onClick: (): void => props.onAction(spec.action),
     };
+    // 无障碍文案与状态类名以 getter 绑定（reactive() 生成框架识别的
+    // __reactiveAttrs 契约）：tipLabel 内部读取 localeSignal，
+    // 切换语言时 aria-label 能跟随更新，而不是停留在首帧语言。
+    const reactiveAttrs: Record<string, () => unknown> = {
+      "aria-label": (): string => this.tipLabel(key, props),
+    };
     if (isDanmakuControl || key === "webscreen" || key === "fullscreen") {
-      buttonAttrs.__reactiveAttrs = {
-        class: (): string =>
-          `nova-live-player-control-button${spec.text ? " is-text" : ""}${disabled() ? " is-disabled" : ""}`,
-        "aria-disabled": (): string => String(disabled()),
-      };
-    } else if (key === "mini") {
-      // 小窗按钮的 tooltip / 无障碍文案随状态切换。
-      buttonAttrs.__reactiveAttrs = {
-        class: (): string => "nova-live-player-control-button",
-        "aria-label": (): string => this.tipLabel(key, props),
-      };
+      reactiveAttrs.class = (): string =>
+        `nova-live-player-control-button${spec.text ? " is-text" : ""}${disabled() ? " is-disabled" : ""}`;
+      reactiveAttrs["aria-disabled"] = (): string => String(disabled());
+    } else if (key === "pip") {
+      reactiveAttrs.class = (): string => "nova-live-player-control-button";
     } else {
       buttonAttrs.class = [
         "nova-live-player-control-button",
         { "is-text": spec.text === true },
       ];
     }
+    Object.assign(buttonAttrs, reactive(reactiveAttrs));
 
     const button = h(
       "button",
@@ -472,9 +478,10 @@ export class NovaLivePlayerControlBarElement extends NovaLiveUiElement {
         ),
       );
     }
-    if (key === "mini") {
-      // 小窗按钮：进入小窗后图标与 tooltip 同步切换为「退出小窗模式」。
-      const active = (): boolean => props.mini.value;
+    if (key === "pip") {
+      // 画中画按钮：进入系统 PiP 后图标与 tooltip 同步切换为「退出画中画」。
+      // 图标沿用小窗样式（形状与浏览器画中画入口一致），状态来自 PiP 信号。
+      const active = (): boolean => props.pip.value;
       return h(
         "span",
         { class: "nova-live-player-control-icon" },

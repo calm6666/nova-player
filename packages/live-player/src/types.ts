@@ -293,7 +293,7 @@ export type NovaControlAction =
   | 'speed'
   | 'send-danmaku'
   | 'webscreen'
-  | 'mini'
+  | 'pip'
   | 'fullscreen';
 
 /** 播放信息面板的数据快照（每 500ms 刷新一次）。 */
@@ -358,6 +358,22 @@ export interface NovaLivePlayerOptions {
   locale?: string;
   /** 是否把用户设置写入 localStorage（默认 true）。 */
   persist?: boolean;
+  /**
+   * 是否启用键盘快捷键（默认 true）。
+   *
+   * 启用后快捷键只在播放器处于激活作用域时生效：
+   * 指针悬停在播放器内、焦点在其内部，或处于全屏 / 网页全屏；
+   * 因此同页多个播放器不会互相抢按键，也不会劫持页面方向键滚动。
+   */
+  keyboard?: boolean;
+  /**
+   * 悬浮小窗配色主题（默认 'dark'）。
+   *
+   * 'dark' 深底浅字；'light' 浅底深字。仅影响小窗外壳
+   * （头部 / 背景 / 关闭按钮 / 水印），视频上的悬浮遮罩保持深色系。
+   * 通过 `setMiniTheme()` 运行时切换。
+   */
+  miniTheme?: 'dark' | 'light';
   /** 初始弹幕设置。 */
   danmaku?: Partial<NovaDanmakuSetting>;
   /** 房间标识（只用于信息面板展示）。 */

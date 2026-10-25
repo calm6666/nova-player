@@ -20,7 +20,9 @@ const terserOptions = {
 export default defineConfig({
   plugins: [
     dts({
-      include: ['src/**/*'],
+      // 根 vite-env.d.ts 声明了 *.png / *.scss?inline / *?url 等资源模块，
+      // 不挂进 include 的话 dts 内部 tsc 解析资源导入会报 TS2307（构建噪音）
+      include: ['src/**/*', '../../vite-env.d.ts'],
       // 注意：hls.js 现指向包内的独立 fork 仓库 hls/（git submodule，独立双远程维护）。
       // dts 插件会按导入图把 fork 源文件也镜像输出（路径镜像成 dist/hls/...），
       // 与 rollup 要写出的入口 chunk（entryFileNames 的 hls → dist/hls.js）**同名冲突**，

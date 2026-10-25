@@ -121,9 +121,9 @@ const ThemeSwitcher = defineComponent<
   Record<string, unknown>,
   ThemeSwitcherEvents
 >((_props, lifecycle) => {
-  const themeBtnRef = useTemplateRef<HTMLElement>(lifecycle, 'themeBtnRef');
-  const themeIconRef = useTemplateRef<HTMLElement>(lifecycle, 'themeIconRef');
-  const themeLabelRef = useTemplateRef<HTMLElement>(lifecycle, 'themeLabelRef');
+  const themeBtnRef = useTemplateRef<HTMLElement>(lifecycle, "themeBtnRef");
+  const themeIconRef = useTemplateRef<HTMLElement>(lifecycle, "themeIconRef");
+  const themeLabelRef = useTemplateRef<HTMLElement>(lifecycle, "themeLabelRef");
 
   lifecycle.onMounted = () => {
     appEventBus.emit("ACTION_LOG", {
@@ -137,7 +137,9 @@ const ThemeSwitcher = defineComponent<
       (newTheme: string) => {
         const isDark = newTheme === "dark";
         if (themeLabelRef.value) {
-          themeLabelRef.value.textContent = isDark ? "切换到亮色" : "切换到暗色";
+          themeLabelRef.value.textContent = isDark
+            ? "切换到亮色"
+            : "切换到暗色";
         }
         // 通过 data 属性标记当前主题图标，初次的图标由 SSR 渲染决定
         if (themeIconRef.value) {
@@ -174,24 +176,33 @@ const ThemeSwitcher = defineComponent<
   return h(
     "div",
     { class: "panel theme-switcher" },
-    h("div", { class: "panel-title" }, h(IconSettings, { size: 16 }), "主题切换（lifecycle.emit）"),
+    h(
+      "div",
+      { class: "panel-title" },
+      h(IconSettings, { size: 16 }),
+      "主题切换（lifecycle.emit）",
+    ),
     h(
       "div",
       { class: "theme-switcher-row" },
       h(
         "button",
         {
-          ref: 'themeBtnRef',
+          ref: "themeBtnRef",
           onClick: handleToggle,
           class: "btn",
           "aria-label": "切换主题",
         },
         h(
           "span",
-          { ref: 'themeIconRef', class: "theme-icon-wrap" },
+          { ref: "themeIconRef", class: "theme-icon-wrap" },
           isDark ? h(IconMoon, { size: 14 }) : h(IconSun, { size: 14 }),
         ),
-        h("span", { ref: 'themeLabelRef' }, isDark ? "切换到亮色" : "切换到暗色"),
+        h(
+          "span",
+          { ref: "themeLabelRef" },
+          isDark ? "切换到亮色" : "切换到暗色",
+        ),
       ),
     ),
   );
@@ -266,7 +277,12 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
   return h(
     "div",
     { class: "panel player-section" },
-    h("div", { class: "panel-title" }, h(IconVideo, { size: 16 }), "VideoPlayer 服务端渲染 + 客户端水合"),
+    h(
+      "div",
+      { class: "panel-title" },
+      h(IconVideo, { size: 16 }),
+      "VideoPlayer 服务端渲染 + 客户端水合",
+    ),
     /**
      * 播放器容器
      * 页面由 SSR 输出完整播放器 VNode，客户端 hydrate 复用
@@ -319,33 +335,6 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
           class: "btn-locale",
         },
         "i18n 状态",
-      ),
-      // 预览图模式切换：雪碧图（sprite.jpg + pvdata 裁切）↔ 逐帧（preview.bin data URL）
-      // 点击不重建播放器：demo 侧用可变 provider 运行期替换数据源，下次悬停即生效
-      // （active 高亮由 entry-client 水合后按当前模式 / 回退结果同步，SSR 默认雪碧图）
-      h(
-        "button",
-        {
-          id: "btn-preview-sprite",
-          onclick: () => {
-            (window as unknown as { __setPreviewMode?: (mode: "sprite" | "frames") => void })
-              .__setPreviewMode?.("sprite");
-          },
-          class: "btn-locale active",
-        },
-        "预览·雪碧图",
-      ),
-      h(
-        "button",
-        {
-          id: "btn-preview-frames",
-          onclick: () => {
-            (window as unknown as { __setPreviewMode?: (mode: "sprite" | "frames") => void })
-              .__setPreviewMode?.("frames");
-          },
-          class: "btn-locale",
-        },
-        "预览·逐帧bin",
       ),
       h(
         "button",
@@ -430,7 +419,11 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
       {
         class: "source-card",
       },
-      h("h3", { class: "source-card-title" }, "弹幕列表（mock 拉取 + 本地发送）"),
+      h(
+        "h3",
+        { class: "source-card-title" },
+        "弹幕列表（mock 拉取 + 本地发送）",
+      ),
       h("ul", { id: "danmaku-list", class: "danmaku-list" }),
     ),
     // 插件 API 演示：调用 player 公开方法 / 插件运行时 API
@@ -446,11 +439,7 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         {
           class: "demo-btn-row",
         },
-        h(
-          "button",
-          { id: "btn-danmaku-toggle", class: "btn" },
-          "切换弹幕显隐",
-        ),
+        h("button", { id: "btn-danmaku-toggle", class: "btn" }, "切换弹幕显隐"),
         h(
           "button",
           { id: "btn-danmaku-opacity", class: "btn" },
@@ -466,21 +455,9 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
           { id: "btn-subtitle-toggle", class: "btn" },
           "切换字幕显隐",
         ),
-        h(
-          "button",
-          { id: "btn-quality-auto", class: "btn" },
-          "画质 auto",
-        ),
-        h(
-          "button",
-          { id: "btn-display-wide", class: "btn" },
-          "宽屏模式",
-        ),
-        h(
-          "button",
-          { id: "btn-display-normal", class: "btn" },
-          "普通模式",
-        ),
+        h("button", { id: "btn-quality-auto", class: "btn" }, "画质 auto"),
+        h("button", { id: "btn-display-wide", class: "btn" }, "宽屏模式"),
+        h("button", { id: "btn-display-normal", class: "btn" }, "普通模式"),
       ),
     ),
     // 互动视频（华强买瓜）：协议（HLS/DASH）× playurl 格式（URL/JSON）选择 +
@@ -502,31 +479,11 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         {
           class: "demo-btn-row",
         },
-        h(
-          "button",
-          { id: "btn-hq-protocol-hls", class: "btn" },
-          "协议：HLS",
-        ),
-        h(
-          "button",
-          { id: "btn-hq-protocol-dash", class: "btn" },
-          "协议：DASH",
-        ),
-        h(
-          "button",
-          { id: "btn-hq-format-url", class: "btn" },
-          "格式：URL",
-        ),
-        h(
-          "button",
-          { id: "btn-hq-format-json", class: "btn" },
-          "格式：JSON",
-        ),
-        h(
-          "button",
-          { id: "btn-hq-play", class: "btn" },
-          "播放互动视频",
-        ),
+        h("button", { id: "btn-hq-protocol-hls", class: "btn" }, "协议：HLS"),
+        h("button", { id: "btn-hq-protocol-dash", class: "btn" }, "协议：DASH"),
+        h("button", { id: "btn-hq-format-url", class: "btn" }, "格式：URL"),
+        h("button", { id: "btn-hq-format-json", class: "btn" }, "格式：JSON"),
+        h("button", { id: "btn-hq-play", class: "btn" }, "播放互动视频"),
       ),
       // 状态行：剧情树加载进度 / 协议格式生效组合 / 接口报错信息
       h("div", { id: "hq-status", class: "hq-status" }, "未加载剧情树"),
@@ -546,16 +503,8 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         {
           class: "demo-btn-row",
         },
-        h(
-          "button",
-          { id: "btn-interaction-view", class: "btn" },
-          "展示模式",
-        ),
-        h(
-          "button",
-          { id: "btn-interaction-edit", class: "btn" },
-          "编辑模式",
-        ),
+        h("button", { id: "btn-interaction-view", class: "btn" }, "展示模式"),
+        h("button", { id: "btn-interaction-edit", class: "btn" }, "编辑模式"),
       ),
       // 运行期添加卡片表单（两模式均可用）：时间窗可手填或一键取当前
       // 播放时间，类型专属字段由 entry-client 按下拉选择动态渲染
@@ -750,9 +699,21 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         "div",
         { class: "demo-btn-row" },
         h("button", { id: "btn-sub-ai", class: "btn" }, "AI 字幕总开关"),
-        h("button", { id: "btn-sub-localai-start", class: "btn" }, "启动本地识别"),
-        h("button", { id: "btn-sub-localai-stop", class: "btn" }, "停止本地识别"),
-        h("button", { id: "btn-sub-localai-lang", class: "btn" }, "切换识别语言"),
+        h(
+          "button",
+          { id: "btn-sub-localai-start", class: "btn" },
+          "启动本地识别",
+        ),
+        h(
+          "button",
+          { id: "btn-sub-localai-stop", class: "btn" },
+          "停止本地识别",
+        ),
+        h(
+          "button",
+          { id: "btn-sub-localai-lang", class: "btn" },
+          "切换识别语言",
+        ),
         h("button", { id: "btn-sub-refresh", class: "btn" }, "刷新识别/区间"),
       ),
       h(
@@ -795,11 +756,7 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         {
           class: "demo-btn-row",
         },
-        h(
-          "button",
-          { id: "btn-seg-reset", class: "btn" },
-          "重新拉取分段",
-        ),
+        h("button", { id: "btn-seg-reset", class: "btn" }, "重新拉取分段"),
         h(
           "button",
           { id: "btn-seg-apply", class: "btn" },
@@ -933,7 +890,11 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         h("button", { id: "btn-api-pip", class: "btn" }, "画中画切换"),
         h("button", { id: "btn-api-enterpip", class: "btn" }, "进入画中画"),
         h("button", { id: "btn-api-exitpip", class: "btn" }, "退出画中画"),
-        h("button", { id: "btn-api-displaymode", class: "btn" }, "显示模式轮换"),
+        h(
+          "button",
+          { id: "btn-api-displaymode", class: "btn" },
+          "显示模式轮换",
+        ),
       ),
       h(
         "div",
@@ -955,8 +916,16 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         h("button", { id: "btn-api-getquality", class: "btn" }, "当前画质"),
         h("button", { id: "btn-api-qualities", class: "btn" }, "画质列表"),
         h("button", { id: "btn-api-qualitymode", class: "btn" }, "画质能力"),
-        h("button", { id: "btn-api-setqualitymode", class: "btn" }, "画质模式轮换"),
-        h("button", { id: "btn-api-qualitylimits", class: "btn" }, "画质上限 2000"),
+        h(
+          "button",
+          { id: "btn-api-setqualitymode", class: "btn" },
+          "画质模式轮换",
+        ),
+        h(
+          "button",
+          { id: "btn-api-qualitylimits", class: "btn" },
+          "画质上限 2000",
+        ),
       ),
       h(
         "div",
@@ -1002,7 +971,11 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
           class: "demo-btn-row",
         },
         h("button", { id: "btn-api-subvisible", class: "btn" }, "字幕显隐轮换"),
-        h("button", { id: "btn-api-subvisstate", class: "btn" }, "字幕显隐状态"),
+        h(
+          "button",
+          { id: "btn-api-subvisstate", class: "btn" },
+          "字幕显隐状态",
+        ),
         h("button", { id: "btn-api-sublang", class: "btn" }, "字幕语言轮换"),
         h("button", { id: "btn-api-sublist", class: "btn" }, "装填内联字幕轨"),
       ),
@@ -1014,8 +987,16 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         h("button", { id: "btn-api-pluginapi", class: "btn" }, "弹幕插件实例"),
         h("button", { id: "btn-api-once", class: "btn" }, "once 绑定 play"),
         h("button", { id: "btn-api-onoff", class: "btn" }, "on/off 切换 pause"),
-        h("button", { id: "btn-api-applysetting", class: "btn" }, "设置项 loop 轮换"),
-        h("button", { id: "btn-api-setconfig", class: "btn" }, "setConfig 音量 0.8"),
+        h(
+          "button",
+          { id: "btn-api-applysetting", class: "btn" },
+          "设置项 loop 轮换",
+        ),
+        h(
+          "button",
+          { id: "btn-api-setconfig", class: "btn" },
+          "setConfig 音量 0.8",
+        ),
       ),
     ),
     // 音效插件 API（AudioEffectPlugin，经 getPluginAPI("audioEffect") 获取）：
@@ -1060,7 +1041,7 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
 // ============================================
 
 const App = defineComponent((_props, lifecycle) => {
-  const appRootRef = useTemplateRef<HTMLElement>(lifecycle, 'appRootRef');
+  const appRootRef = useTemplateRef<HTMLElement>(lifecycle, "appRootRef");
 
   /**
    * 生成主题 CSS 自定义属性
@@ -1111,7 +1092,7 @@ const App = defineComponent((_props, lifecycle) => {
     "div",
     {
       class: "app-root",
-      ref: 'appRootRef',
+      ref: "appRootRef",
       style: themeVars,
     },
     // ===== 顶部标题 =====
@@ -1148,7 +1129,6 @@ const App = defineComponent((_props, lifecycle) => {
       // 主题切换
       h(ThemeSwitcher, {}),
 
-
       // 事件日志
       h(EventLog, {}),
     ),
@@ -1172,9 +1152,8 @@ export const RootLayout = defineComponent(() => {
   return h(
     "div",
     {},
-    provide(
-      [{ contextId: ThemeContext.id, value: darkTheme }],
-      () => h(App, {}),
+    provide([{ contextId: ThemeContext.id, value: darkTheme }], () =>
+      h(App, {}),
     ),
   );
 });

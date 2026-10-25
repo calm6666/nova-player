@@ -574,7 +574,7 @@ export function SendBar(props: SendBarProps): VNode {
     h('input', {
       type: 'text',
       class: 'nova-live-player-send-input',
-      placeholder: t('livePlayer.send.placeholder'),
+      ...reactive({ placeholder: (): string => t('livePlayer.send.placeholder') }),
       ref: (el: unknown): void => {
         inputEl = el instanceof HTMLInputElement ? el : null;
         if (inputEl) inputEl.focus();

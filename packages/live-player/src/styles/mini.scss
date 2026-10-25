@@ -28,8 +28,14 @@ nova-live-player[data-mini='true'] {
   --nova-live-player-mini-width: 380px;
   --nova-live-player-mini-header: 34px;
   --nova-live-player-mini-radius: 8px;
+  /* 深色主题（默认）：深底浅字。 */
   --nova-live-player-mini-bg: #18191c;
   --nova-live-player-mini-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --nova-live-player-mini-title: rgba(255, 255, 255, 0.9);
+  --nova-live-player-mini-close: #a2a7ae;
+  --nova-live-player-mini-close-hover: #ffffff;
+  --nova-live-player-mini-watermark: rgba(255, 255, 255, 0.62);
+  --nova-live-player-mini-watermark-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 
   position: fixed;
   z-index: 9500;
@@ -42,6 +48,18 @@ nova-live-player[data-mini='true'] {
   box-shadow: var(--nova-live-player-mini-shadow);
   -webkit-user-select: none;
   user-select: none;
+
+  /* 浅色主题：浅底深字（外壳配色反转；视频上的悬浮遮罩与圆钮保持深色系，
+     它们叠在视频画面上，与页面主题无关）。 */
+  &[data-mini-theme='light'] {
+    --nova-live-player-mini-bg: #f1f2f3;
+    --nova-live-player-mini-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    --nova-live-player-mini-title: rgba(0, 0, 0, 0.9);
+    --nova-live-player-mini-close: #6b7075;
+    --nova-live-player-mini-close-hover: #18191c;
+    --nova-live-player-mini-watermark: rgba(0, 0, 0, 0.6);
+    --nova-live-player-mini-watermark-shadow: none;
+  }
 
   /* 小窗内不再显示完整控制条（真实 mini 结构只有悬停遮罩按钮）。 */
   nova-live-player-control-bar {
@@ -112,7 +130,7 @@ nova-live-player[data-mini='true'] {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--nova-live-player-mini-title);
   font-size: 13px;
   line-height: var(--nova-live-player-mini-header);
   text-overflow: ellipsis;
@@ -128,7 +146,7 @@ nova-live-player[data-mini='true'] {
   padding: 0;
   border: 0;
   background-color: transparent;
-  color: #a2a7ae;
+  color: var(--nova-live-player-mini-close);
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.22, 0.58, 0.12, 0.98), color 0.2s;
 
@@ -152,7 +170,7 @@ nova-live-player[data-mini='true'] {
   }
 
   &:hover {
-    color: #ffffff;
+    color: var(--nova-live-player-mini-close-hover);
     transform: rotate(180deg) scale(1.1);
   }
 
@@ -177,10 +195,10 @@ nova-live-player[data-mini='true'] {
   top: 8px;
   left: 10px;
   z-index: 2;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--nova-live-player-mini-watermark);
   font-size: 12px;
   line-height: 16px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  text-shadow: var(--nova-live-player-mini-watermark-shadow);
   pointer-events: none;
 }
 

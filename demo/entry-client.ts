@@ -82,8 +82,10 @@ import {
 } from "@/nova/utils/media/energyProgress";
 import {
   createMutablePreviewProvider,
-  type DemoPreviewSource,
+  isVideoshotData,
+  parsePvdata,
   type MutablePreviewProvider,
+  type VideoshotData,
 } from "./preview-provider";
 
 /**
@@ -597,75 +599,48 @@ async function fetchSubtitleCues(
 }
 
 /**
- * 拉取逐帧预览图
- *
- * 接口：GET http://127.0.0.1:9101/videoshot/preview.bin
- * 响应：UTF-8 文本，逐帧 data URL，以 \u001f 分隔。
- *
- * @returns 预览帧数组；请求失败返回空数组
- */
-/**
  * ============================================
- * 预览图模式（雪碧图 ↔ 逐帧 bin）运行期切换
+ * 预览图数据（B 站 videoshot 形状：雪碧图 + pvdata bin 时间表）
  * ============================================
- * 模式状态与数据拉取分离：
- * - previewMode 是页面级状态（URL `?preview=frames` 定初值，点击切换按钮修改）；
- * - 拉取按模式走对应接口，所选形态不可用时自动回退到另一形态
- *   （回退结果同步到按钮高亮，用户能看出实际生效的是哪条路径）；
- * - 数据源经可变 provider 注入播放器，切换模式不重建播放器实例。
+ * 接口：GET ${MOCK_SERVER_BASE}/x/player/videoshot?index=1
+ * 响应：{ code, message, ttl, data: { pvdata, img_x_len, img_y_len,
+ *        img_x_size, img_y_size, image: [拼版1, 拼版2, ...], index: [0,0,5,10,…] } }
+ * 与 B 站现网一致：data.pvdata 指向 bin 截取时间表（uint16 小端数组，
+ * 帧 ↔ 时间映射，B 站用它支持按画面变化程度的不均匀截图）；
+ * data.index 是同一份时间表的 JSON 数组形式（请求带 index=1 时返回）。
+ * 加载顺序：bin 解析成功优先用 bin，失败退 index，两者都不可用才由查帧侧
+ * 按悬停比例均匀换算兜底（换算写法见 preview-provider.ts 顶注）。
+ *
+ * 数据源经可变 provider 注入播放器；懒加载——进入页面 / 重建播放器时不请求，
+ * 用户首次悬停进度条才拉一次并缓存。
  */
 
-/** 预览图模式：雪碧图（sprite.jpg + pvdata 裁切）或逐帧（preview.bin data URL） */
-type PreviewMode = "sprite" | "frames";
-
-/** 预览图拉取结果：source 为最终可用的数据源，effective 为实际生效的形态 */
-interface PreviewFetchResult {
-  source: DemoPreviewSource | string[] | null;
-  effective: PreviewMode | "none";
-}
-
-/** 当前预览图模式（URL 参数定初值：`?preview=frames` 强制逐帧，默认雪碧图） */
-let previewMode: PreviewMode =
-  new URLSearchParams(location.search).get("preview") === "frames"
-    ? "frames"
-    : "sprite";
-
-/** 可变预览 provider：数据源运行期可替换（模式切换 / 播放器重建共用） */
+/** 可变预览 provider：数据源运行期可替换（懒加载写入 / 播放器重建共用） */
 const previewProviderHandle: MutablePreviewProvider =
   createMutablePreviewProvider(null);
 
-/**
- * 预览资源懒加载状态。
- * 进入页面 / 重建播放器时不请求 /videoshot/*；只有用户实际悬停进度条或
- * 点击预览模式时才加载一次，并按模式缓存，避免重复下载 preview.bin。
- */
+/** 懒加载状态：进行中的请求（同一时刻只发一次，鼠标每次移动都不再触发网络） */
 let previewLoadPromise: Promise<void> | null = null;
-let previewReadyMode: PreviewMode | "none" | null = null;
-let previewRequestedMode: PreviewMode | null = null;
 
-/** 懒加载预览资源（同一模式只请求一次；force 用于用户点击重试） */
-function ensurePreviewLoaded(mode: PreviewMode, force = false): void {
-  if (!force) {
-    if (previewLoadPromise !== null) return;
-    // 同一模式只请求一次，鼠标每次移动都不再触发网络
-    if (previewRequestedMode === mode || previewReadyMode === mode) return;
-  }
-  previewRequestedMode = mode;
-  const requestMode = mode;
-  previewLoadPromise = fetchProgressPreview(requestMode)
-    .then((result) => {
-      previewProviderHandle.setSource(result.source);
-      previewReadyMode = result.effective;
-      syncPreviewModeButtons(result.effective);
+/**
+ * 已成功加载标志：加载成功后永久缓存，后续悬停不再发任何请求。
+ * 只在成功时置位——失败（服务没起 / 无视频 404）时保持 false，
+ * 下次悬停静默重试，用户中途启动带视频的 mock-server 后无需刷新页面。
+ */
+let previewLoaded = false;
+
+/** 懒加载 B 站 videoshot 数据源（成功一次后不再请求；force 用于失败后重试） */
+function ensurePreviewLoaded(force = false): void {
+  if (previewLoaded && !force) return;
+  if (previewLoadPromise !== null) return;
+  previewLoadPromise = fetchVideoshotPreview()
+    .then((source) => {
+      if (source !== null) previewLoaded = true;
+      previewProviderHandle.setSource(source);
       appEventBus.emit("ACTION_LOG", {
-        action:
-          result.effective === "none"
-            ? "预览图无可用数据（雪碧图未就绪且 preview.bin 为空）"
-            : "预览图已加载：" +
-              (result.effective === "sprite" ? "雪碧图模式" : "逐帧 bin 模式") +
-              (result.effective !== requestMode
-                ? "（所选形态不可用，已回退）"
-                : ""),
+        action: source
+          ? `预览图已加载：B 站 videoshot 雪碧图 ${source.image.length} 张拼版（${source.img_x_len}x${source.img_y_len}）${source.times ? `+ 时间表 ${source.times.length - 1} 帧` : "+ 无时间表（均匀换算）"}`
+          : "预览图无可用数据（/x/player/videoshot 不可用）",
         timestamp: Date.now(),
       });
     })
@@ -674,95 +649,55 @@ function ensurePreviewLoaded(mode: PreviewMode, force = false): void {
     });
 }
 
-/** index.json 的 data 载荷（雪碧图切片参数 + 就绪状态，B 站形状） */
-interface SpriteIndexData {
-  pvdata?: {
-    img_url?: string;
-    img_x_len?: number;
-    img_y_len?: number;
-    img_x_size?: number;
-    img_y_size?: number;
-  };
-  index?: number[];
-  sprite?: {
-    status?: string;
-    url?: string;
-    xLen?: number;
-    yLen?: number;
-    xSize?: number;
-    ySize?: number;
-  };
-}
-
-/** 判定是否为 index.json 的 data 载荷（类型谓词窄化，替代 as 断言） */
-function isSpriteIndexData(value: unknown): value is SpriteIndexData {
-  return typeof value === "object" && value !== null;
-}
-
 /**
- * 拉取雪碧图数据源
+ * 拉取 B 站 videoshot 预览数据源
  *
- * 接口：GET http://127.0.0.1:9101/videoshot/index.json
- * 取 pvdata 的 img_url + img_x_len/img_y_len/img_x_size/img_y_size；
- * 只在服务端确认雪碧图可用（sprite.status === "ready"）时才返回数据源，
- * 否则 img_url 可能指向 404，预览区会整块空白。
+ * 两级请求（B 站口径）：
+ * 1. GET /x/player/videoshot?index=1 —— 拼版元数据 + JSON 时间表（index 数组）；
+ * 2. GET data.pvdata —— bin 截取时间表（uint16 小端数组），解析成功优先用它。
  *
- * @returns 雪碧图数据源；不可用返回 null
+ * @returns 归一后的数据源（拼版 URL 已拼上 mock 地址）；不可用返回 null
  */
-async function fetchSpritePreviewSource(): Promise<DemoPreviewSource | null> {
+async function fetchVideoshotPreview(): Promise<VideoshotData | null> {
   try {
-    const response = await fetch(`${MOCK_SERVER_BASE}/videoshot/index.json`);
+    const response = await fetch(
+      `${MOCK_SERVER_BASE}/x/player/videoshot?index=1`,
+    );
     if (!response.ok) return null;
     const payload: unknown = await response.json();
     if (
       typeof payload !== "object" ||
       payload === null ||
       !("data" in payload) ||
-      !isSpriteIndexData(payload.data)
+      !isVideoshotData(payload.data)
     ) {
       return null;
     }
-    const pv = payload.data.pvdata;
-    const sprite = payload.data.sprite;
-    const spriteUrl =
-      sprite?.url ??
-      (pv?.img_url?.includes("sprite") === true ? pv.img_url : undefined);
-    const xLen = sprite?.xLen ?? pv?.img_x_len;
-    const yLen = sprite?.yLen ?? pv?.img_y_len;
-    if (spriteUrl && xLen && yLen) {
-      return {
-        imgUrl: MOCK_SERVER_BASE + spriteUrl,
-        imgXLen: xLen,
-        imgYLen: yLen,
-        imgXSize: sprite?.xSize ?? pv?.img_x_size,
-        imgYSize: sprite?.ySize ?? pv?.img_y_size,
-        sliceCount: payload.data.index?.length,
-      };
+    const data = payload.data;
+
+    // bin 截取时间表（帧 ↔ 时间映射）优先：拉取/解析失败退回接口的 index
+    // JSON 数组，两者都不可用时 times = null（查帧侧按均匀换算兜底）
+    let times: number[] | null = null;
+    try {
+      const binResponse = await fetch(`${MOCK_SERVER_BASE}${data.pvdata}`);
+      if (binResponse.ok) {
+        times = parsePvdata(await binResponse.arrayBuffer());
+      }
+    } catch {
+      // bin 请求失败不致命：还有 index 兜底
     }
-    return null;
+    if (times === null && data.index.length > 1) times = data.index;
+
+    return {
+      ...data,
+      // 接口里是相对路径（/videoshot/sprite.jpg），按 B 站「拼协议+域名」的
+      // 写法补全成绝对地址（B 站返回 //i0.hdslb.com/...，这里拼 mock 基地址）
+      image: data.image.map((item) => `${MOCK_SERVER_BASE}${item}`),
+      times,
+    };
   } catch {
     return null;
   }
-}
-
-/**
- * 按模式拉取预览数据源（另一形态自动回退）
- *
- * - sprite 模式：优先雪碧图；雪碧图未就绪时回退逐帧 preview.bin；
- * - frames 模式：优先逐帧 preview.bin；空（mock 未带 --video）时回退雪碧图。
- *
- * @param mode - 想要的预览形态
- * @returns 实际生效的数据源与形态（供按钮高亮同步 / 日志提示）
- */
-async function fetchProgressPreview(
-  mode: PreviewMode,
-): Promise<PreviewFetchResult> {
-  // 只加载雪碧图；绝不请求 /videoshot/preview.bin
-  void mode;
-  const sprite = await fetchSpritePreviewSource();
-  return sprite
-    ? { source: sprite, effective: "sprite" }
-    : { source: null, effective: "none" };
 }
 
 /**
@@ -870,17 +805,14 @@ if (root) {
     const initialSegments = await fetchProgressSegments();
     if (demoSegments.length === 0) demoSegments = initialSegments;
     const initialEnergy = await fetchEnergyProgress();
-    const initialPreview = await fetchProgressPreview(previewMode);
-    previewProviderHandle.setSource(initialPreview.source);
-    previewReadyMode = initialPreview.effective;
-    previewRequestedMode = previewMode;
-    previewRequestedMode = previewMode;
+    const initialPreview = await fetchVideoshotPreview();
+    previewProviderHandle.setSource(initialPreview);
     DEMO_SSR_PLAYER_CONFIG.progress = {
       ...(DEMO_SSR_PLAYER_CONFIG.progress ?? {}),
       segments: initialSegments,
       energyProvider: () => initialEnergy,
       previewProvider: (time: number, duration: number) => {
-        ensurePreviewLoaded(previewMode);
+        ensurePreviewLoaded();
         return previewProviderHandle.provider(time, duration);
       },
     };
@@ -1276,62 +1208,6 @@ const DEMO_EMBEDDED_RELATED = [
     url: "https://www.bilibili.com/",
   },
 ];
-
-// ============================================
-// 预览图模式切换按钮（雪碧图 ↔ 逐帧 bin）
-// ============================================
-
-/** 预览模式按钮 id → 模式值映射（按钮为 SSR 静态输出，水合后绑定事件） */
-const PREVIEW_MODE_BUTTONS: ReadonlyMap<string, PreviewMode> = new Map([
-  ["btn-preview-sprite", "sprite"],
-  ["btn-preview-frames", "frames"],
-]);
-
-/**
- * 同步预览模式按钮高亮态
- *
- * @param effective - 实际生效的形态（拉取回退后可能不同于所选模式）；"none" 时全部熄灭
- */
-function syncPreviewModeButtons(effective: PreviewMode | "none"): void {
-  for (const [buttonId, mode] of PREVIEW_MODE_BUTTONS) {
-    const button = document.getElementById(buttonId);
-    if (button) button.classList.toggle("active", mode === effective);
-  }
-}
-
-// 水合后先按所选模式同步一次高亮（纠正 SSR 的默认输出；
-// 拉取完成 / 播放器重建后由 effective 再纠正回退场景）
-syncPreviewModeButtons(previewMode);
-
-// 暴露给按钮 inline onclick：不依赖监听器挂载时机
-(window as unknown as { __setPreviewMode?: (mode: PreviewMode) => void }).__setPreviewMode = (mode) => {
-  previewMode = mode;
-  previewRequestedMode = mode;
-  void fetchProgressPreview(mode).then((result) => {
-    previewProviderHandle.setSource(result.source);
-    previewReadyMode = result.effective;
-    syncPreviewModeButtons(result.effective);
-  });
-};
-
-// 事件委托：水合/重建替换按钮节点后仍然有效
-document.addEventListener("click", (event) => {
-  const target = event.target;
-  if (!(target instanceof Element)) return;
-  const button = target.closest<HTMLElement>(
-    "#btn-preview-sprite, #btn-preview-frames",
-  );
-  if (!button) return;
-  const mode = PREVIEW_MODE_BUTTONS.get(button.id);
-  if (!mode) return;
-  previewMode = mode;
-  previewRequestedMode = mode;
-  void fetchProgressPreview(mode).then((result) => {
-    previewProviderHandle.setSource(result.source);
-    previewReadyMode = result.effective;
-    syncPreviewModeButtons(result.effective);
-  });
-});
 
 // ============================================
 // 交互卡片：展示 / 编辑双模式状态与配置组装
@@ -1977,7 +1853,7 @@ async function rebuildPlayer(
     ?.querySelectorAll(".player-destroyed-placeholder")
     .forEach((node) => node.remove());
 
-  // 测试期每个视频默认加载：分段点 + 预览数据（雪碧图/逐帧）+ 高能进度条 + 弹幕列表
+  // 测试期每个视频默认加载：分段点 + 预览数据（B 站 videoshot 雪碧图）+ 高能进度条 + 弹幕列表
   // 分段数据跨播放器重建保留（demoSegments 模块级）：仅首次拉取 mock，
   // 运行时编辑结果随 demoSegments 带入新实例
   if (demoSegments.length === 0) {
@@ -2030,13 +1906,12 @@ async function rebuildPlayer(
         endTime: segment.endTime,
         label: segment.label,
       })),
-      // 预览图 Provider：demo 侧自行实现获取逻辑（雪碧图裁切 / 逐帧 URL），
+      // 预览图 Provider：demo 侧自行实现获取逻辑（B 站 videoshot 雪碧图裁切），
       // 播放器只在进度条悬停时按时间调用（ProgressPreview API，解耦数据来源）。
-      // 用可变 provider：数据源已在上面拉好写入 handle，模式切换按钮
-      // 运行期 setSource 即可换源，无需重建播放器实例
+      // 用可变 provider：数据源由懒加载写入 handle，无需重建播放器实例
       previewProvider: (time: number, duration: number) => {
         // 首次悬停进度条时才懒加载预览资源
-        ensurePreviewLoaded(previewMode);
+        ensurePreviewLoaded();
         return previewProviderHandle.provider(time, duration);
       },
       // 高能进度条数据 Provider：demo 侧拉取 /x/player/pbp 并归一化后注入，
@@ -4959,7 +4834,7 @@ function wireThemeToggle(): void {
   });
 }
 
-// 预览资源只预取一次（同一模式缓存）；避免每次重建都重复下载 preview.bin
-setTimeout(() => ensurePreviewLoaded(previewMode), 800);
+// 预览资源只预取一次（结果缓存在 provider handle 里）；避免每次重建都重复请求
+setTimeout(() => ensurePreviewLoaded(), 800);
 
 wireThemeToggle();

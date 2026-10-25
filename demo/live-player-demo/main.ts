@@ -182,6 +182,44 @@ $("btn-clear-log").addEventListener("click", (): void => {
   logList.replaceChildren();
 });
 
+/** 切换悬浮小窗配色（深色 / 浅色）：验证 data-mini-theme 双主题与持久化。 */
+$("btn-mini-theme").addEventListener("click", (): void => {
+  const next = player.miniTheme === "light" ? "dark" : "light";
+  player.setMiniTheme(next);
+  log(`切换小窗配色 -> ${next}（滚动出视口触发小窗后观察外壳颜色）`);
+});
+
+/** 动态切换语言：验证显式响应式文案是否跟随 localeSignal 更新。 */
+let useEnglish = false;
+$("btn-locale").addEventListener("click", (): void => {
+  useEnglish = !useEnglish;
+  const locale = useEnglish ? "en-US" : "zh-CN";
+  player.setLocale(locale);
+  const labeled = player.querySelector<HTMLElement>(".nova-live-player-control button[data-action='toggle-play']");
+  log(`调用 setLocale(${locale}) -> ${player.getLocale()}，播放按钮 aria-label "${labeled?.getAttribute("aria-label") ?? ""}"`);
+});
+
+/** 动态换插件：验证插件 diff 生效且 <video> 不被重建。 */
+let danmakuPluginInstalled = true;
+$("btn-swap-plugin").addEventListener("click", (): void => {
+  const videoBefore = player.getVideoElement();
+  danmakuPluginInstalled = !danmakuPluginInstalled;
+  const current = player.options;
+  const plugins = current.plugins ?? [];
+  const others = plugins.filter((plugin) => !("name" in plugin) || plugin.name !== "danmaku");
+  player.options = {
+    ...current,
+    plugins: danmakuPluginInstalled ? [...others, createDanmakuPlugin()] : others,
+  };
+  const sameVideo = player.getVideoElement() === videoBefore;
+  const layer = player.querySelector("nova-live-player-danmaku");
+  log(
+    `动态换插件 -> 弹幕插件${danmakuPluginInstalled ? "重新创建" : "移除"}，` +
+      `video ${sameVideo ? "未重建" : "被重建"}，弹幕层${layer ? "存在" : "不存在"}` +
+      `（内部引用${player.getDanmakuElement() ? "有" : "无"}）`,
+  );
+});
+
 urlInput.addEventListener("keydown", (event: KeyboardEvent): void => {
   if (event.key === "Enter") {
     (document.getElementById("btn-load") as HTMLButtonElement).click();

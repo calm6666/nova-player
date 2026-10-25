@@ -38,7 +38,7 @@ node server.js --port 9101 --video "D:\你的片子.mp4"
 > ⚠️ 两件事必须注意：
 > 1. **不要双击打开 `test-page.html`**（那样是 `file://` 源，页面里的请求会变成 `file:///x/player/v2` 这种不存在的磁盘路径，
 >    而且 `EventSource` 在 `file://` 下不可用）。必须通过 `http://127.0.0.1:9101/` 访问。
-> 2. 不给 `--video` 也能起：只是 `preview.bin` 是空文件、片长按 600 秒算，其余接口全部正常。
+> 2. 不给 `--video` 也能起：只是雪碧图/bin 时间表不可用（`/x/player/videoshot` 返回 404）、片长按 600 秒算，其余接口全部正常。
 
 **QML/客户端只要两个地址**（起完服务就能连）：
 
@@ -54,13 +54,13 @@ node server.js --port 9101 --video "D:\你的片子.mp4"
 | `Main.qml` 的 `dataBaseUrl` 默认 `http://127.0.0.1:9101` | 服务默认端口就是 **9101**（`DEFAULT_PORT`），开箱即用，不用改 |
 | 片源开始播放时拉一次 `/x/player/v2` | `GET /x/player/v2?aid=&cid=` → `view_points`（from/to 单位**秒**） |
 | 片源开始播放时拉一次 `/x/player/pbp` | `GET /x/player/pbp?aid=&cid=` → `step_sec` + 0~1 曲线 |
-| 进度条悬浮取预览图 | `GET /videoshot/preview.bin` → `\u001F` 分隔，`arr[floor(秒/5)+1]` |
+| 进度条悬浮取预览图 | `GET /x/player/videoshot`（B 站形状）→ 雪碧图拼版 + `pvdata` bin 时间表；带 `?avid=` 时互动节点**同一套口径**（懒抽帧缓存） |
 | 加载历史弹幕 | `GET /x/v1/dm/list.so?oid=` → 1000 条随机弹幕（B 站 XML，`p` 8 段） |
 | 实时弹幕（推荐，双向） | `ws://127.0.0.1:9101/danmaku/ws` → 收 `{"type":"danmaku",…}`，发 `{"type":"send",…}` |
 | 实时弹幕（网页端） | `GET /danmaku/stream`（SSE）+ `POST /danmaku/send` |
 
 > 前端 `front/player/src/api/preview.ts` 里的预览图地址目前写死成线上地址，
-> 联调时把它换成 `http://127.0.0.1:9101/videoshot/preview.bin`（或用 vite 的 `server.proxy` 转发）。
+> 联调时把它换成 `http://127.0.0.1:9101/x/player/videoshot`（或用 vite 的 `server.proxy` 转发）。
 
 ---
 
@@ -120,9 +120,9 @@ GET http://127.0.0.1:9101/x/player/v2?aid=123&cid=456
         "from": 0,
         "to": 150,
         "content": "开场",
-        "img_url": "/videoshot/preview.bin",
-        "img_x_len": 5,
-        "img_y_len": 5,
+        "img_url": "/videoshot/sprite.jpg",
+        "img_x_len": 10,
+        "img_y_len": 10,
         "img_x_size": 160,
         "img_y_size": 90
       }
@@ -134,9 +134,9 @@ GET http://127.0.0.1:9101/x/player/v2?aid=123&cid=456
 - **`from` / `to` 的单位是秒**（不是毫秒）。播放器拿它算进度条宽度：`(to - from) / duration * 100`；用毫秒会让整条进度条算错。
 - 默认造 **4~6 段**，首段 `from=0`、末段 `to=片长`，段与段**首尾相接不留缝**。
 - 段名依次为：开场 / 第一部分 / 第二部分 / 高能片段 / 结尾 / 彩蛋。
-- `img_url` 指向 `/videoshot/preview.bin`（**相对路径**，和 `index.json` 的 `image[0]`/`pvdata.img_url` 是同一个字符串）。
-  B 站这个字段原本指向一张雪碧图，本服务不做雪碧图、所有帧都在 `preview.bin` 里，所以直接指向真实存在的那个文件；
-  客户端按 `dataBaseUrl + img_url` 拼即可。注意它**不是一张可以直接加载的图片**，而是 `\u001F` 分隔的 jpeg data URL 列表。
+- `img_url` 指向 `/videoshot/sprite.jpg`（**相对路径**，雪碧图第一张拼版，和 `/x/player/videoshot` 的 `image[0]` 是同一个字符串）。
+  B 站这个字段原本就指向一张雪碧图，本服务与 B 站口径一致；全部拼版（多张）以 videoshot 接口的 `image` 数组为准。
+  客户端按 `dataBaseUrl + img_url` 拼即可；它**是一张真实图片**，按 `img_x_len × img_y_len` 网格 + `object-position` 负偏移裁格显示。
 
 **播放器侧怎么用**：映射成 `progressViewPoints[i].startTime / endTime`（见 `src/types/player.ts` 的 `ProgressViewPoint`），
 渲染时 `left = startTime / duration * 100`、`width = (endTime - startTime) / duration * 100`。
@@ -360,99 +360,76 @@ ws://127.0.0.1:9101/danmaku/ws/     # 末尾斜杠也兼容
 > 连接建立后**不会**补发历史弹幕（避免播放器突然糊一屏旧弹幕）：历史请走 `GET /x/v1/dm/list.so`，
 > 断线补齐请走 `GET /danmaku/since?seq=N`。
 
-### 5. 进度条预览图 `GET /videoshot/preview.bin`
+### 5. 进度条预览图 `GET /x/player/videoshot`（B 站形状）+ 雪碧图 + bin 时间表
+
+与 B 站现网 `api.bilibili.com/x/player/videoshot` 完全一致（bilibili-API-collect「视频快照」）：
 
 ```
-GET http://127.0.0.1:9101/videoshot/preview.bin
-Content-Type: text/plain; charset=utf-8
+GET http://127.0.0.1:9101/x/player/videoshot?aid=&cid=&index=
 ```
-
-文件内容是 **UTF-8 纯文本**，一串图片 data URL 用 `\u001F`（ASCII 0x1F）分隔：
-
-```
-\u001Fdata:image/jpeg;base64,/9j/4AAQ...\u001Fdata:image/jpeg;base64,/9j/4AAQ...\u001F...
-```
-
-#### ⚠️ 索引约定：每 5 秒 1 帧，下标 0 是空占位
-
-取图算法在播放器里是写死的（`front/player/src/component/controls/index.ts:1410-1417`）：
-
-```ts
-const currTime = Math.floor(this.popup.currentTime / 5);
-if (currTime === this.popup.prevTime) return;   // 同一格不重复换图
-this.previewImage.src = this.videoshot[currTime + 1];
-```
-
-这段代码同时定死了两件事：
-
-1. **粒度是 5 秒** —— 它把 `currentTime` 除以 5 取整，5 秒内共用一张图，所以服务端每 5 秒抽一帧正好够用（每秒抽只会让文件大 5 倍却看不出区别）；
-2. **下标 0 是空占位** —— 它取的是 `[currTime + 1]`，那个 `+1` 就是跳过下标 0。
-
-所以本服务的排布是：
-
-| `split("\u001F")` 后的下标 | 内容 |
-| --- | --- |
-| `arr[0]` | `""`（空占位，播放器永远用不到） |
-| `arr[k]`（k ≥ 1） | 第 `5*(k-1)` 秒的帧 |
-
-**反查公式：`下标 = floor(秒 / 5) + 1`**
-
-| 当前秒 t | `floor(t/5)` | 下标 | 取到的帧 |
-| --- | --- | --- | --- |
-| 0 | 0 | 1 | 第 0 秒 |
-| 4 | 0 | 1 | 第 0 秒 |
-| 5 | 1 | 2 | 第 5 秒 |
-| 12 | 2 | 3 | 第 10 秒 |
-
-以 600 秒的片子为例：抽 120 帧，`preview.bin` 切分后是 **121 项**（1 个占位 + 120 帧），
-`index.json` 的 `index` 是 `[0,5,10,…,595]`（120 项，单位秒）。
-
-**为什么用 `\u001F` 当分隔符**：
-
-1. `\u001F` 是 ASCII 的 Unit Separator，**非打印控制字符**，data URL 的字符集（`data:image/jpeg;base64,` 前缀 + base64 字母表）里不可能出现，天然不冲突；
-2. 换行、逗号、`|` 这些可打印字符都可能和 base64 或未来的字段打架；
-3. **B 站自己就是这么干的**，播放器 `src/api/preview.ts` 已按 `split("\u001F")` 写好，保持一致最省事。
-
-**怎么生成的**：一次 `ffmpeg -i <video> -vf fps=1/5,scale=160:90 -frames:v <帧数> -q:v 6` 批量抽帧
-（循环 `-ss` 一帧一帧抽要起几百个进程，10 分钟的片子要几十秒；批量抽只要几秒），
-再把每帧转成 `data:image/jpeg;base64,...`、用 `\u001F` 连接，写入
-`.cache/<视频路径+参数 的 md5>/preview.bin`；**第二次启动直接读缓存**。
-
-**没给 `--video` / ffmpeg 不存在 / 抽帧失败时**：往 stderr 打一条**带修复建议**的警告，
-`preview.bin` 返回**空文件（HTTP 200，不是 404）**，服务绝不崩。
-
-> 为什么用空文件而不是 404：播放器拿到空 body 后 `split("\u001F")` 得到 `[""]`，
-> 只会安静地不显示预览图，不会刷一屏红色报错，其它接口照常能用。
-
-### 6. `GET /videoshot/index.json` —— 预览图元信息
 
 ```json
 {
   "code": 0,
   "message": "0",
+  "ttl": 1,
   "data": {
-    "pvdata": { "duration": 600, "img_x_len": 5, "img_y_len": 5, "img_x_size": 160, "img_y_size": 90, "img_url": "/videoshot/preview.bin" },
-    "image": ["/videoshot/preview.bin"],
-    "index": [0, 5, 10, 15, "…共 120 项"],
-    "mock": {
-      "status": "ready",
-      "message": "已生成 120 帧（每 5 秒 1 帧）",
-      "stepSec": 5,
-      "frameCount": 120,
-      "img_urlNote": "pvdata.img_url 与 image[0] 是同一个地址（/videoshot/preview.bin）：本 mock 没有独立雪碧图，该文件是 \\u001F 分隔的 jpeg data URL 列表，不是一张可直接加载的图片",
-      "indexOf": "preview.bin 按 \\u001F 切分后取 arr[Math.floor(秒 / 5) + 1]（arr[0] 是空占位）"
-    }
+    "pvdata": "/videoshot/pvdata.bin",
+    "img_x_len": 10,
+    "img_y_len": 10,
+    "img_x_size": 160,
+    "img_y_size": 90,
+    "image": ["/videoshot/sprite.jpg", "/videoshot/sprite-1.jpg"],
+    "index": [0, 0, 5, 10, 15, "…共 帧数+1 项"]
   }
 }
 ```
 
-- `pvdata.img_url` / `image[0]` / `view_points[i].img_url` **三处是同一个相对路径** `/videoshot/preview.bin`：
-  B 站的 `pvdata.img_url` 原本指向雪碧图，本服务没有雪碧图（所有帧都在这一个文件里），所以指向真实存在的文件而不是编一个 `sprite_*.jpg`（那样只会 404）。
-- `index` 给的是**秒**（0,5,10,…），和 `image` 一一对应，方便核对「第 12 秒该看到哪张图」。
-- `mock` 是本服务多给的字段（B 站没有），自测页用它显示状态；按 B 站格式解析的代码会直接忽略它。
-  `img_urlNote` 专门提醒「img_url 指向的不是图片而是数据文件」，省得对接的人拿它当图片资源去加载然后一头雾水。
+- **`image` 是雪碧图拼版数组**：每张拼版固定 `img_x_len × img_y_len` = **10×10 = 100 格**，
+  每格 `img_x_size × img_y_size`（160×90，B 站同款）；帧数超过 100 张时拆多张拼版，
+  命名规律 `<hash>.jpg` / `<hash>-1.jpg`（本服务为 `sprite.jpg` / `sprite-1.jpg` …），
+  张数 = `ceil(帧数 / 100)`。
+- **`pvdata` 指向 bin 截取时间表**（帧 ↔ 时间映射）：
+  内容是 **uint16 小端数组（2 字节对齐）**，与 `index` JSON 数组一一对应——
+  第 0 项恒为 0（占位），从第 1 项开始是每张截图的截取时间（秒）。
+  B 站的截图时间按画面变化程度决定（不均匀），这正是需要这份映射文件的原因；
+  本 mock 等间隔 5 秒抽帧，时间表是等差数列，但 bin 的二进制格式与 B 站完全一致。
+- **`index` 参数**：请求带 `index=1` 时 `data.index` 给 JSON 时间表（免解析 bin）；
+  不带时按 B 站口径给**空数组**。
+- **取图公式（前端，B 站写法）**：悬停 t 秒 → 时间表里找「最后一个 ≤ t」的项 i →
+  帧 `k = i - 1`（0 起）→ 拼版 `floor(k / 100)`、格内下标 `k % 100` →
+  列 `k % img_x_len`、行 `floor((k % 100) / img_x_len)`，
+  再用对应拼版 URL + `object-position` 负偏移裁出当前帧。
+  没有时间表可用时（bin 和 index 都拉不到）退均匀换算：`k = floor(t / 片长 * 拼版张数 * 100)`。
 
-### 7. `GET /healthz` —— 运行状态
+**相关文件路由**：
+
+| 路由 | 内容 |
+| --- | --- |
+| `GET /videoshot/sprite.jpg` | 雪碧图第 1 张拼版（多拼版为 `sprite-1.jpg` …；超出张数 404） |
+| `GET /videoshot/pvdata.bin` | bin 截取时间表（`application/octet-stream`，uint16 小端） |
+
+**怎么生成的**：一次 `ffmpeg -i <video> -vf fps=1/5,scale=160:90 -frames:v <帧数> -q:v 6` 批量抽帧
+（循环 `-ss` 一帧一帧抽要起几百个进程，10 分钟的片子要几十秒；批量抽只要几秒），
+按 100 格一组把 tile 拼成多张拼版写入 `.cache/<视频路径+参数 的 md5>/`（`sprite.jpg` + `sprite-N.jpg` + `pvdata.bin`）；
+**第二次启动直接读缓存**。bin 时间表只由帧数决定（确定性公式），命中缓存的老目录也会补写，幂等。
+
+**没给 `--video` / ffmpeg 不存在 / 抽帧失败时**：往 stderr 打一条**带修复建议**的警告，
+`/x/player/videoshot` 与两个文件路由都返回 **404**（B 站「无快照」口径，与 B 站的 `40003 无视频` 一致），服务绝不崩。
+
+**互动视频分支（带 `?avid=av1000001` 等）**：与默认视频**完全同一套 B 站口径**——
+同一套几何常量（10×10 / 160×90 / 5s 间隔）、同一套 `buildSpriteSet` 抽帧管线、同一套 bin 格式。
+区别只在输入与缓存：输入是该 avid 目录里的本地清单（`index.m3u8` 优先，缺则 `index.mpd`），
+缓存落到 `.cache/<perVideo 缓存 key>/`（key = avid 目录 + 清单指纹 + 抽帧参数 + 时长的 md5），
+**首次请求懒抽帧**（几百毫秒到几秒），in-flight 去重防并发重复拉 ffmpeg。
+转码脚本时代的 5 列单拼版 `sprite.jpg` / data URL 文本 `preview.bin` 已废弃：脚本不再产出，
+ avid 目录里的残留文件也不再被任何接口消费（可删）。
+
+> 为什么用 404 而不是空文件：播放器把 videoshot 当**可选增强**，
+> 拿到 404 就安静地不显示预览图，不会刷一屏红色报错，其它接口照常能用。
+> B 站现网对没有快照的视频也是返回非 0 code / 404，保持一致最省事。
+
+### 6. `GET /healthz` —— 运行状态
 
 ```json
 {
@@ -632,7 +609,7 @@ ffmpeg -i source.mp4 ^
    没选中的分支节点可以继续带自己的 `question` 形成多级分支。
 
 
-### 8. `GET /` —— 自测页
+### 7. `GET /` —— 自测页
 
 原生 HTML/CSS/JS（无框架），包含：**怎么用**说明、运行环境（片长、弹幕条数与速度档分布、WS 连接数、ffmpeg 状态）、
 接口一览（逐个点开看 URL 与返回前 200 字符）、发弹幕（POST）、SSE 实时弹幕窗口、
@@ -652,9 +629,9 @@ WS 地址由 `location.host` + `/healthz` 报的 `wsPath` 拼出来，所以换�
 | --- | --- |
 | `view_points[i].from / to` | **单位秒** → `progressViewPoints[i].startTime / endTime`；宽度 = `(to-from)/duration*100` |
 | `pbp.data` + `pbp.step_sec` | 曲线：第 `i` 点横坐标 `i*step_sec` 秒，纵坐标 `data[i]`（0~1 → 高度百分比） |
-| `preview.bin` | `split("\u001F")` 后取 **`videoshot[Math.floor(当前秒 / 5) + 1]`**（下标 0 是空占位） |
-| `preview.bin` 的每一帧 | 都是可直接塞进 `<img src>` 的 jpeg data URL，不需要再解 sprite 图 |
-| `view_points[i].img_url` / `pvdata.img_url` | 都是相对路径 `/videoshot/preview.bin`（按 `dataBaseUrl + 该值` 拼）；**这个地址不是图片**，是 `\u001F` 分隔的数据文件，别拿它当 Image 源 |
+| `videoshot.data.image[]` | 雪碧图拼版数组：每张 10×10=100 格，每格 `img_x_size × img_y_size`；悬停 t 秒 → bin 时间表二分找「最后一个 ≤ t」的项 i → 帧 `i-1` → 拼版 `floor(帧/100)`、列 `帧%10`、行 `floor((帧%100)/10)`，`object-position` 负偏移裁格 |
+| `videoshot.data.pvdata` | bin 截取时间表（uint16 小端数组）：第 0 项恒为 0（占位），第 k 项 = 第 k 张截图的秒数，与 `data.index` 一一对应；**这是帧 ↔ 时间的映射**（B 站不均匀截图靠它定位） |
+| `view_points[i].img_url` | 相对路径 `/videoshot/sprite.jpg`（按 `dataBaseUrl + 该值` 拼）；指向雪碧图第一张拼版，全部拼版以 videoshot 的 `image` 数组为准 |
 | `dm/list.so` 的 `p` | 逗号切 8 段：第 1 段是**秒**，第 4 段是十进制颜色；共 1000 条 |
 | `ws://…/danmaku/ws` | QML `WebSocket`：`onTextMessage` → `JSON.parse` → `type === "danmaku"` 时按 `timeSec`/`mode`/`color`/`fontSize`/`speed` 渲染 |
 | WS 上行 `{"type":"send",…}` | 发弹幕（`timeSec` 用秒）；同一连接也会收到自己发的那条广播 |
@@ -668,8 +645,8 @@ WS 地址由 `location.host` + `/healthz` 报的 `wsPath` 拼出来，所以换�
 - **零依赖**：只 require/import 七个 `node:` 内置模块，拷到任何装了 Node（≥18）的机器上都能跑。
 - **必须 ESM**：`front/player/package.json` 是 `"type": "module"`，本目录没有自己的 `package.json`，
   所以这两个 `.js` 都是 ES Module；同时 `__dirname` 不存在，要用 `import.meta.url` 推。
-- **注释写「为什么」**：为什么用 `\u001F`、为什么两条推送通道都留着、为什么下标 0 是空占位、
-  为什么没视频时返回空文件而不是 404、为什么服务端帧不能带掩码 —— 代码里都就地写了原因，本 README 不重复。
+- **注释写「为什么」**：为什么 bin 用 uint16 小端、为什么两条推送通道都留着、为什么时间表第 0 项是占位 0、
+  为什么没视频时返回 404 而不是 500、为什么服务端帧不能带掩码 —— 代码里都就地写了原因，本 README 不重复。
 - **`seq` 自增而不是时间戳做 id**：时间戳会重复（同一毫秒发两条），而增量拉取需要一个严格单调、能比较「大于 N」的游标。
 - **1000 条弹幕在启动时生成一次**：同一次运行里多次请求 `list.so` 内容完全一致（刷新不换一批），
   `/healthz.danmakuCount` 也才能随时等于真实条数；XML 只拼一次就缓存（约 100KB，没必要每次重拼）。
@@ -682,7 +659,7 @@ WS 地址由 `location.host` + `/healthz` 报的 `wsPath` 拼出来，所以换�
   否则日后加字段必然漏掉其中一条，而漏的那条只在用另一个客户端时才暴露。
 - **抽帧结果放 `.cache`**：整个服务里唯一的重活，第二次启动必须毫秒级完成；缓存 key 由视频路径和抽帧参数算出，
   换了视频或参数就会自动重抽。
-- **抽帧是懒加载的**：第一次请求 `/videoshot/preview.bin` 才动手，并用一个共享 Promise 合并并发请求，
+- **抽帧是懒加载的**：第一次请求 `/x/player/videoshot` 或 `/videoshot/sprite.jpg` 才动手，并用一个共享 Promise 合并并发请求，
   避免几个标签页同时打开进度条时并行拉起好几个 ffmpeg。
 
 ---
@@ -716,7 +693,7 @@ WS 地址由 `location.host` + `/healthz` 报的 `wsPath` 拼出来，所以换�
 >
 > `self-test.js` 会把每一项的**实际输出片段**打印出来（HTTP 状态、响应头、返回体截断片段、
 > SSE 收到的帧、WS 的握手 accept、hello、广播 JSON、ping/pong、长轮询等待了多少秒、
-> preview.bin 的字节数和切分项数、t=0/4/5/12 → 下标 1/1/2/3 的核对结果），
+> videoshot 接口的字段、bin 时间表的字节数/首项、t=0/7/30 → 拼版+行列的核对结果），
 > 把最后的「通过 N 项 / 失败 M 项」整段贴到本小节即可。
 
 ### 待确认清单（本地跑完请逐项核对）
@@ -739,8 +716,8 @@ WS 地址由 `location.host` + `/healthz` 报的 `wsPath` 拼出来，所以换�
 | 14 | WS 双向 | 上行 `{"type":"send"}` → 收到 `{"type":"danmaku"}`（`mode` 字符串、`color` `#RRGGBB`、`timeSec` 秒）；POST 发的也会广播到 WS |
 | 15 | WS 心跳 | 自动起服务（`--ws-ping 1`）时，8 秒内能收到服务端协议层 ping 帧；连上后 `/healthz.wsClients` +1，断开回落到基线 |
 | 16 | 用 HTTP GET 打 `/danmaku/ws` | 返回 426 + 「请用 ws:// 连接」提示（不是 404，也不是静默断开） |
-| 17 | `/x/player/v2` 的 `img_url`、`/videoshot/index.json` 的 `pvdata.img_url` 与 `image[0]` | 三处都是同一个相对路径 `/videoshot/preview.bin`（不再是空串、也不是不存在的 `sprite_*.jpg`） |
-| 18 | `preview.bin`（无视频） | HTTP 200 + 0 字节（**不是 404**） |
-| 19 | `preview.bin`（带视频，首跑） | 日志显示抽帧完成，`split("\u001F")[0] === ""`，帧数 = `ceil(片长/5)` |
-| 20 | 再启动一次（同样的视频） | 日志出现「preview.bin 命中缓存」，秒级完成 |
-| 21 | `t=0/4/5/12` 秒 → 下标 | 分别是 1/1/2/3，且对应项是 jpeg 帧 |
+| 17 | `/x/player/videoshot`（无视频） | HTTP 404 + `code=-404`（B 站「无快照」口径，**不是 500 也不是 200 空数据**） |
+| 18 | `/x/player/videoshot`（带视频，首跑） | `code=0`，`data.pvdata`/`image`/`index` 齐全；每张拼版 10×10=100 格；`index=1` 时时间表长度 = 帧数+1、首项 0 |
+| 19 | `GET /videoshot/pvdata.bin` | 200 `application/octet-stream`；字节数 = 时间表长度 × 2；uint16 小端解析后与 `data.index` 一一对应、首项 0 |
+| 20 | 再启动一次（同样的视频） | 日志出现「雪碧图命中缓存」，秒级完成；老缓存目录也会补上 `pvdata.bin` |
+| 21 | 取图算法（t=0/7/30/片尾 秒） | bin 时间表二分定位帧号，换算出的拼版下标都在 `image` 数组范围内（self-test 会逐项打印） |

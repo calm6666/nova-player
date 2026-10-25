@@ -27,9 +27,12 @@
  *   GET  /danmaku/stream            SSE 实时弹幕流
  *   WS   /danmaku/ws                WebSocket 实时弹幕（手写 RFC6455，收发双向）
  *   GET  /danmaku/since?seq=N       长轮询兜底拉取
- *   GET  /videoshot/preview.bin     进度条预览图（UTF-8 文本，\u001F 分隔的 data URL）
- *   GET  /videoshot/sprite.jpg      进度条预览雪碧图（tile=NxM，可当普通图片加载）
- *   GET  /videoshot/index.json      预览元信息（pvdata{img_url,img_x_len,img_y_len,...}）
+ *   GET  /x/player/videoshot      预览图接口（B 站形状：data.{pvdata,img_x_len,img_y_len,
+ *                                   img_x_size,img_y_size,image[],index[]}；
+ *                                   带 index=1 参数时 index 给 JSON 时间表，否则空数组）
+ *   GET  /videoshot/sprite.jpg    预览雪碧图第 1 张拼版（10x10 格，多拼版为 sprite-N.jpg）
+ *   GET  /videoshot/pvdata.bin    bin 截取时间表（uint16 小端数组，帧 ↔ 时间映射，
+ *                                   第 0 项恒为 0，从第 1 项起为每张截图的秒数）
  *                                   —— 上面三条**带 ?avid=av1000052（或 ?aid=1000052）**时
  *                                   按该视频的转码目录取（互动视频每个节点一份）；
  *                                   不带参数时仍是启动参数 --video 那一个视频（老口径）。
@@ -88,7 +91,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 抽帧结果缓存目录：mock-server/.cache/<md5>/preview.bin
+// 抽帧结果缓存目录：mock-server/.cache/<md5>/sprite.jpg（+ sprite-N.jpg 多拼版）
 // 放在 mock-server 下面（而不是系统临时目录），是为了能一眼看到、也方便手动删掉重建。
 const CACHE_ROOT = path.join(__dirname, '.cache');
 
@@ -129,41 +132,80 @@ const FRAME_WIDTH = 160;
 const FRAME_HEIGHT = 90;
 const MAX_FRAMES = 10000;     // 抽帧上限，防止误传十几个小时的视频把磁盘/CPU 打满
 
-// 预览图接口路径。view_points[i].img_url、/videoshot/index.json 的 pvdata.img_url 和 image[0]、
-// 以及下面路由里的判断都用这一个常量 —— 同一个地址在四个地方各写一遍，迟早改一处漏三处。
+// 预览图接口路径。view_points[i].img_url 和下面路由里的判断都用这一个常量 ——
+// 同一个地址在多个地方各写一遍，迟早改一处漏三处。
 // 【为什么用相对路径】B 站这个字段给的是绝对 URL，但本 mock 的 image[0] 一直是相对路径，
 // 客户端按 `dataBaseUrl + 路径` 拼（Main.qml 的 dataBaseUrl 默认就是 http://127.0.0.1:9101）。
 // img_url 保持同一种写法，两边才能直接字符串比对、也不会有人拼出两个 host 叠在一起。
-const PREVIEW_PATH = '/videoshot/preview.bin';
-
-// 【为什么用 \u001F 当分隔符】
-//   0x1F 是 ASCII 的 Unit Separator，属于控制字符，在 base64 字母表（A-Za-z0-9+/=）
-//   里绝不可能出现，所以用它切分 data URL 是「无歧义」的；同时它比 JSON 数组更省体积
-//   （每帧少一对引号），解析也只要一次 split。B 站真实 preview.bin 就是这么干的，
-//   前端 front/player/src/api/preview.ts 也是按 split("\u001F") 写的，保持一致最省事。
-const UNIT_SEP = '\u001F';
-
-// 雪碧图（sprite）路径：把抽帧得到的 jpg 拼成一张 tile=NxM 的大图，
-// 客户端按 img_x_len/img_y_len/img_x_size/img_y_size 裁切定位。
-// 与 preview.bin（逐帧 data URL 列表）**同时提供**，客户端可任选一种。
 const SPRITE_PATH = '/videoshot/sprite.jpg';
-const SPRITE_X_LEN = 5;       // 雪碧图列数（每行 5 格，与 B 站 pvdata 的 img_x_len 一致）
 
-// 抽帧总数（确定性公式，不需要真的抽过帧就能算出来，供 view_points / index.json 提前报出参数）
+// bin 截取时间表（B 站 pvdata 口径）。内容是 uint16 小端数组（2 字节对齐），
+// 与 /x/player/videoshot 的 data.index JSON 数组一一对应：第 0 项恒为 0（占位），
+// 从第 1 项开始是每张截图的截取时间（秒）。B 站的截图时间按画面变化程度决定
+// （不均匀），这正是需要这份映射文件的原因；本 mock 按 FRAME_INTERVAL_SEC 等间隔
+// 抽帧，时间表是等差数列，但 bin 的二进制格式与 B 站完全一致，前端解析无需感知差异。
+const PVDATA_PATH = '/videoshot/pvdata.bin';
+const PVDATA_NAME = 'pvdata.bin'; // 缓存目录内的文件名（与 sprite.jpg 并排）
+
+// 雪碧图拼版几何，与 B 站现网一致：每张拼版固定 10 列 x 10 行 = 100 格，
+// 帧数超过 100 时产出第二张（B 站命名 <hash>.jpg / <hash>-1.jpg，这里用
+// sprite.jpg / sprite-1.jpg / sprite-2.jpg …），/x/player/videoshot 的
+// data.image 数组按顺序返回全部拼版 URL。
+const SPRITE_X_LEN = 10;      // 每张拼版列数（B 站 img_x_len，一般为 10）
+const SPRITE_Y_LEN = 10;      // 每张拼版行数（B 站 img_y_len，一般为 10）
+const SHEET_TILES = SPRITE_X_LEN * SPRITE_Y_LEN; // 每张拼版的格子总数
+
+// 【互动视频 perVideo 分支与默认视频完全同口径】雪碧图几何/抽帧间隔/拼版规则
+// 全部复用上面这套常量（10x10 多拼版 + pvdata bin），不再依赖转码脚本产出的
+// 5 列旧版 sprite.jpg / preview.bin（那两个产物已废弃，见 transcode_huaqiang.py）。
+
+// 抽帧总数（确定性公式，不需要真的抽过帧就能算出来，供 view_points / videoshot 提前报出参数）
 function previewFrameCount() {
   return Math.max(1, Math.min(MAX_FRAMES, Math.ceil(DURATION / FRAME_INTERVAL_SEC)));
 }
 
-// 雪碧图几何：行数按列数向上取整，末行不足时 tile 滤镜会自动补黑格
+// 截取时间表（B 站 index JSON / pvdata bin 口径）：长度 = 帧数 + 1，第 0 项恒为 0
+// （占位），第 k 项是第 k 张截图的秒数。等间隔抽帧 → 等差数列 (k-1) * FRAME_INTERVAL_SEC。
+// uint16 上限 65535 秒 ≈ 18.2 小时；MAX_FRAMES=10000 帧 x 5s = 50000s，不会溢出。
+function buildIndexTimes(frameCount) {
+  const count = Number.isInteger(frameCount) && frameCount > 0 ? frameCount : previewFrameCount();
+  const times = new Array(count + 1);
+  times[0] = 0;
+  for (let k = 1; k <= count; k += 1) times[k] = (k - 1) * FRAME_INTERVAL_SEC;
+  return times;
+}
+
+// 把时间表编成 B 站 pvdata 的 bin 格式：uint16 小端数组（2 字节对齐）
+function buildPvdataBuffer(times) {
+  const buf = Buffer.alloc(times.length * 2);
+  for (let i = 0; i < times.length; i += 1) buf.writeUInt16LE(Math.min(times[i], 0xffff), i * 2);
+  return buf;
+}
+
+// 雪碧图几何（B 站口径）：每张拼版固定 SPRITE_X_LEN x SPRITE_Y_LEN，
+// 拼版张数 = ceil(帧数 / 每张格数)；末张帧数不足时用尾帧补满（见 buildSprites），
+// 保证「帧下标 = floor(比例 * 张数 * 每张格数)」均匀映射永不落到黑格上。
 function spriteGeometry() {
   const count = previewFrameCount();
+  const sheetCount = Math.max(1, Math.ceil(count / SHEET_TILES));
   return {
     xLen: SPRITE_X_LEN,
-    yLen: Math.max(1, Math.ceil(count / SPRITE_X_LEN)),
+    yLen: SPRITE_Y_LEN,
     xSize: FRAME_WIDTH,
     ySize: FRAME_HEIGHT,
     count,
+    sheetCount,
   };
+}
+
+// 第 sheet 张拼版的磁盘文件名 / 对外 URL（0 → sprite.jpg，之后 sprite-1.jpg…，
+// 与 B 站 <hash>.jpg / <hash>-1.jpg 的多拼版命名一致）
+function spriteSheetName(sheet) {
+  return sheet === 0 ? 'sprite.jpg' : `sprite-${sheet}.jpg`;
+}
+
+function spriteSheetUrl(sheet) {
+  return sheet === 0 ? SPRITE_PATH : `/videoshot/sprite-${sheet}.jpg`;
 }
 
 const DM_TEXT_LIMIT = 100;    // 和 B 站一致：单条弹幕最多 100 字
@@ -276,7 +318,9 @@ hilihili 播放器测试服务（mock-server）
   GET  /danmaku/stream
   WS   /danmaku/ws
   GET  /danmaku/since?seq=N
-  GET  /videoshot/preview.bin
+  GET  /x/player/videoshot
+  GET  /videoshot/sprite.jpg       （多拼版为 /videoshot/sprite-1.jpg …）
+  GET  /videoshot/pvdata.bin       （uint16 时间表，帧 ↔ 时间映射）
 `;
 
 function parseArgs(argv) {
@@ -410,21 +454,17 @@ const dmHistory = [];              // 最近若干条弹幕，供长轮询补齐
 let danmakuSeq = 0; // 自增序号，前端靠它做 since 增量拉取
 let wsClientSeq = 0; // WS 连接编号，只用来打日志和区分广播来源（不是弹幕 id）
 
-// 预览图状态：抽帧是懒加载的（第一次请求 /videoshot/preview.bin 才动手），
-// 所以 index.json 和自测页需要这个状态来判断「是没请求过、正在抽、还是失败了」。
-const previewState = {
+// 雪碧图状态：抽帧 + 拼版是懒加载的（第一次请求 /videoshot/sprite.jpg 或
+// /x/player/videoshot 才动手），所以 /healthz 和自测页需要这个状态来判断
+// 「是没请求过、正在拼、还是失败了」。
+const spriteState = {
   status: 'idle',   // idle | ready | unavailable
   message: '',
   reason: '',
-  frameCount: 0,
-};
-
-// 雪碧图状态：与 previewState 并列，供 /healthz、/videoshot/index.json、自测页共用
-const spriteState = {
-  status: 'idle',
-  message: '',
   bytes: 0,
   file: '',
+  sheetCount: 0,    // 拼版张数（每张 SPRITE_X_LEN x SPRITE_Y_LEN 格）
+  frameCount: 0,    // 实际抽到的帧数
 };
 
 /* ---------------------------------------------------------------------------
@@ -578,11 +618,9 @@ function buildViewPoints(durationSec) {
       to,
       content: VIEW_POINT_TITLES[i],
       // 下面 4 个字段是 B 站 sprite 雪碧图参数（每格 FRAME_WIDTH x FRAME_HEIGHT）。
-      // img_url 指向真正的雪碧图 /videoshot/sprite.jpg（可直接当图片加载、按参数裁切）；
-      // img_url_frames 是并列的第二种数据源（\u001F 分隔的逐帧 data URL 列表），
-      // 客户端按能力任选一种。
+      // img_url 指向雪碧图第一张拼版 /videoshot/sprite.jpg（可直接当图片加载、按参数裁切）；
+      // 全部拼版（多张）以 /x/player/videoshot 的 data.image 数组为准。
       img_url: SPRITE_PATH,
-      img_url_frames: PREVIEW_PATH,
       img_x_len: spriteGeometry().xLen,
       img_y_len: spriteGeometry().yLen,
       img_x_size: FRAME_WIDTH,
@@ -1340,12 +1378,53 @@ function handleUpgrade(req, socket, head) {
 }
 
 /* ---------------------------------------------------------------------------
- * 12. 接口 7：进度条预览图 /videoshot/preview.bin
+ * 12. 接口 7：进度条预览雪碧图（B 站口径，/x/player/videoshot + /videoshot/sprite*.jpg）
  * ------------------------------------------------------------------------- */
 
 function statSafe(file) {
   try {
     return fs.statSync(file);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 读 JPEG 的实际像素尺寸（扫描 SOFn marker）。
+ *
+ * 【为什么命中缓存还要校验尺寸】缓存 key 由「视频 + 抽帧/拼版参数」算出，
+ * 但历史上调整过拼版布局（如 5 列 → 10 列）而 key 未纳入拼版几何，
+ * 老几何生成的 sprite.jpg 会被当成新结果命中——接口按 10x10 报参数、
+ * 图里却是 5 列，前端按接口裁切就整片错位。校验「图片实际尺寸 ===
+ * 几何公式尺寸」后，参数与内容不一致的脏缓存自动失效重抽（自愈）。
+ *
+ * @param file - JPEG 文件路径
+ * @returns { width, height }；无法解析（文件不存在 / 非 JPEG / 结构异常）返回 null
+ */
+function readJpegSize(file) {
+  try {
+    const fd = fs.openSync(file, 'r');
+    try {
+      // SOF 在 JPEG 头部附近，前 64KB 必定覆盖（tile 大图的 DHT 等表也不会把它挤到后面）
+      const head = Buffer.alloc(64 * 1024);
+      const read = fs.readSync(fd, head, 0, head.length, 0);
+      const buf = head.subarray(0, read);
+      let i = 2; // 跳过 SOI（FFD8）
+      while (i + 9 < buf.length) {
+        if (buf[i] !== 0xff) { i += 1; continue; }
+        const marker = buf[i + 1];
+        // SOS（FFDA）之后就是熵编码数据，SOF 不会出现在其后
+        if (marker === 0xda) return null;
+        // SOF0~SOF15（排除 DHT/JPG/DAC 等非 SOF marker）
+        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+          return { height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) };
+        }
+        i += 2 + buf.readUInt16BE(i + 2); // 跳过整个段
+      }
+      return null;
+    } finally {
+      fs.closeSync(fd);
+    }
   } catch {
     return null;
   }
@@ -1365,6 +1444,8 @@ function previewCacheKey() {
     FRAME_INTERVAL_SEC,
     FRAME_WIDTH,
     FRAME_HEIGHT,
+    SPRITE_X_LEN,
+    SPRITE_Y_LEN,
     DURATION,
   ].join('|');
   return crypto.createHash('md5').update(raw).digest('hex');
@@ -1397,38 +1478,75 @@ function runFfmpeg(args) {
   });
 }
 
-async function buildPreview() {
-  if (!opts.video) {
-    // 没给视频就没有帧可抽。返回空文件而不是报错：前端 getPreview() 会 split 出 ['']，
-    // 结果只是不显示预览缩略图，播放本身完全不受影响。
-    warn('未提供 --video，返回空的 preview.bin（进度条预览图不可用，其余功能正常）');
-    return Buffer.alloc(0);
+/**
+ * 抽帧 + 拼 B 站雪碧图（通用核心，默认视频与互动视频 avid 共用）。
+ *
+ * 流程：ffmpeg 每 FRAME_INTERVAL_SEC 秒抽 1 帧 → 按 SHEET_TILES（10x10 = 100 格，
+ * B 站口径）分组用 tile 滤镜拼成多张拼版 sprite.jpg / sprite-1.jpg … → 删除帧目录。
+ * 拼版参数通过 /x/player/videoshot 的 data.image 数组对外报出。
+ *
+ * 【末张不足 100 格时留空（B 站行为），不用尾帧补】
+ *   前端定位靠 bin/index 时间表二分，帧号永远不会超过实际帧数，不会落到空格上；
+ *   B 站的末张也是留空的。曾试过用尾帧把末张补满——结果末张几十格全是同一画面
+ *   （测试视频 4 帧被复制成 100 格），与 B 站行为不符，已去掉。
+ *   tile 滤镜在输入帧不足时 EOF 自动用黑格填满末张，正好就是「留空」。
+ *
+ * @param input    - ffmpeg 输入（默认视频是 mp4 文件，互动节点是 index.m3u8/index.mpd 清单）
+ * @param videoSeconds - 该视频的时长（秒），决定抽帧总数
+ * @param cacheDir - 拼版 + pvdata 的落盘目录（.cache/<key>/）
+ * @returns { geo, sheetFiles } 几何参数与拼版磁盘路径
+ */
+async function buildSpriteSet({ input, videoSeconds, cacheDir }) {
+  const count = Math.max(1, Math.min(MAX_FRAMES, Math.ceil(videoSeconds / FRAME_INTERVAL_SEC)));
+  const geo = {
+    xLen: SPRITE_X_LEN,
+    yLen: SPRITE_Y_LEN,
+    xSize: FRAME_WIDTH,
+    ySize: FRAME_HEIGHT,
+    count,
+    sheetCount: Math.max(1, Math.ceil(count / SHEET_TILES)),
+  };
+  const sheetFiles = [];
+  for (let k = 0; k < geo.sheetCount; k += 1) {
+    sheetFiles.push(path.join(cacheDir, spriteSheetName(k)));
   }
 
-  const cacheDir = path.join(CACHE_ROOT, previewCacheKey());
-  const cacheFile = path.join(cacheDir, 'preview.bin');
-  const spriteFile = path.join(cacheDir, 'sprite.jpg');
-
   // 命中缓存就直接返回：抽帧是整个服务里唯一的重活，第二次启动应该毫秒级完成。
-  // 【注意】必须 preview.bin 和 sprite.jpg 都在才算命中：preview.bin 有缓存但
-  //   雪碧图缺失（旧版本跑出的缓存 / 上次拼图失败）时如果直接 return，
-  //   getSpriteFile() 里的重试永远走不到抽帧（previewInFlight 拿到的是缓存结果），
-  //   雪碧图就死锁在 404。此时要落到下面的完整流程重新抽帧，顺带补出雪碧图。
-  try {
-    const cached = await fsp.readFile(cacheFile);
-    const spriteReady = statSafe(spriteFile);
-    if (cached.length > 0 && spriteReady && spriteReady.size > 0) {
-      log(`preview.bin 命中缓存：${cacheFile}（${cached.length} 字节）`);
-      return cached;
+  // 以「全部拼版都在 + 第一张的实际尺寸 === 几何公式尺寸」才算命中：
+  // - 只有第一张（上次中途失败）时落回完整流程重抽补齐；
+  // - 尺寸不匹配（改过拼版几何后的老缓存 / 文件损坏）时同样重抽，
+  //   避免接口按新几何报参数、图里却是老布局，前端裁切整片错位。
+  const filesExist = sheetFiles.every((file) => {
+    const st = statSafe(file);
+    return st && st.size > 0;
+  });
+  const expectedSize = {
+    width: geo.xLen * geo.xSize,
+    height: geo.yLen * geo.ySize,
+  };
+  const actualSize = filesExist ? readJpegSize(sheetFiles[0]) : null;
+  const sizeMatched = actualSize !== null
+    && actualSize.width === expectedSize.width
+    && actualSize.height === expectedSize.height;
+  if (filesExist && !sizeMatched) {
+    warn(`拼版缓存几何不匹配（期望 ${expectedSize.width}x${expectedSize.height}，`
+      + `实际 ${actualSize ? `${actualSize.width}x${actualSize.height}` : '无法解析'}），重新抽帧生成`);
+  }
+  if (filesExist && sizeMatched) {
+    // 帧数以 bin 时间表为准（bin 在生成时按实际抽到的帧数写入）：
+    // fps 滤镜实际输出可能少于计划帧数（如 12.4s 计划 3 帧实抽 2 帧），
+    // 这时 geo.count 若停留在计划值，videoshot 的 index 就会与 bin 对不上。
+    // bin 是 uint16 数组且首项恒为 0 占位：项数 = 字节数/2 = 帧数 + 1
+    const binPath = path.join(cacheDir, PVDATA_NAME);
+    const bin = await fsp.readFile(binPath).catch(() => null);
+    if (bin && bin.length >= 4 && bin.length % 2 === 0) {
+      geo.count = bin.length / 2 - 1;
+    } else {
+      // 老缓存没有 bin（或损坏）：按计划帧数补写，下次起与 index 对齐
+      await fsp.writeFile(binPath, buildPvdataBuffer(buildIndexTimes(geo.count)));
     }
-    if (cached.length > 0) {
-      log(`preview.bin 有缓存但雪碧图缺失，重新抽帧补雪碧图：${spriteFile}`);
-      // 同步雪碧图状态，避免 index.json 在补生成期间误报 ready
-      spriteState.status = 'unavailable';
-      spriteState.message = '雪碧图缓存缺失，正在补生成';
-    }
-  } catch {
-    // 缓存不存在，继续往下抽帧
+    log(`雪碧图命中缓存：${cacheDir}（${geo.sheetCount} 张拼版 / ${geo.count} 帧）`);
+    return { geo, sheetFiles };
   }
 
   const framesDir = path.join(cacheDir, 'frames');
@@ -1441,111 +1559,155 @@ async function buildPreview() {
 
   // 每 5 秒 1 帧。用一次 ffmpeg 的 fps 滤镜批量抽，而不是循环 -ss 一帧一帧抽：
   // 循环调用要起几百个进程，10 分钟的视频就要几十秒，批量抽只要几秒。
-  const frameCount = Math.max(1, Math.min(MAX_FRAMES, Math.ceil(DURATION / FRAME_INTERVAL_SEC)));
+  // -pix_fmt yuvj420p：mjpeg 的合规全范围格式，个别源是「非全范围 YUV」，
+  // 不指定时 ffmpeg 直接拒绝抽帧（转码脚本实测 av1000009 / av1000051）。
   await runFfmpeg([
     '-hide_banner',
     '-loglevel', 'error',
     '-y',
-    '-i', opts.video,
+    '-i', input,
     '-vf', `fps=1/${FRAME_INTERVAL_SEC},scale=${FRAME_WIDTH}:${FRAME_HEIGHT}`,
-    '-frames:v', String(frameCount),
+    '-frames:v', String(geo.count),
     '-an',
-    '-q:v', '6', // jpeg 质量：6 左右体积和清晰度平衡，base64 后不会太夸张
+    '-pix_fmt', 'yuvj420p',
+    '-q:v', '6', // jpeg 质量：6 左右体积和清晰度平衡
     '-f', 'image2',
     path.join(framesDir, '%06d.jpg'),
   ]);
 
   // %06d 是零填充，字典序 == 数字序，所以直接 sort() 就能保证帧顺序
-  const files = (await fsp.readdir(framesDir)).filter((name) => name.endsWith('.jpg')).sort();
-  const buffers = await Promise.all(files.map((name) => fsp.readFile(path.join(framesDir, name))));
+  let files = (await fsp.readdir(framesDir)).filter((name) => name.endsWith('.jpg')).sort();
 
-  // 【为什么下标 0 必须是空字符串占位】
-  //   前端 front/player/src/component/controls/index.ts:1410-1417 取图用的是：
-  //     const currTime = Math.floor(this.popup.currentTime / 5);
-  //     this.previewImage.src = this.videoshot[currTime + 1];
-  //   注意那个 +1 —— t=0s 时它取的是下标 1，而不是下标 0。
-  //   所以整个数组必须往后错一位，用空串占住下标 0，让
-  //     arr[0]      = ""            ← 占位，前端永远不会用到
-  //     arr[k]      = 第 5*(k-1) 秒的帧（k >= 1）
-  //   这样 floor(秒/5)+1 才正好命中那一秒所属的帧：
-  //     t=0/4 → 下标 1，t=5 → 下标 2，t=12 → 下标 3
-  //   不这么排的话，进度条上的预览图会整体错一格。
-  const parts = [''];
-  for (const buf of buffers) {
-    parts.push(`data:image/jpeg;base64,${buf.toString('base64')}`);
-  }
-
-  const text = parts.join(UNIT_SEP);
-  const out = Buffer.from(text, 'utf8');
-
-  // 雪碧图：用同一次抽帧得到的 jpg 拼一张 tile=NxM 的大图（不额外抽帧）。
-  // 必须在删除 framesDir 之前做，否则要再抽一遍视频。
-  const geo = spriteGeometry();
-  try {
+  // 短片段兜底：时长不足一个抽帧间隔（< 5s）时 fps=1/5 一帧都不输出
+  //（互动节点实测 av1000009 / av1000051 成片仅 1s 出头）。改抓首帧补位——
+  // arr[1] 本来就该是「第 0 秒那一帧」，不兜底的话这些节点预览图永远 404。
+  if (files.length === 0) {
     await runFfmpeg([
       '-hide_banner',
       '-loglevel', 'error',
       '-y',
+      '-i', input,
+      '-frames:v', '1',
+      '-vf', `scale=${FRAME_WIDTH}:${FRAME_HEIGHT}`,
+      '-an',
+      '-pix_fmt', 'yuvj420p',
+      '-q:v', '6',
+      path.join(framesDir, '000001.jpg'),
+    ]);
+    files = (await fsp.readdir(framesDir)).filter((name) => name.endsWith('.jpg')).sort();
+    if (files.length > 0) log(`${input} 时长不足 ${FRAME_INTERVAL_SEC}s，预览图改抓首帧`);
+  }
+  if (files.length === 0) {
+    throw new Error('抽帧结果为空（视频无法解码或输出被截断）');
+  }
+
+  // 末张不足 100 格就留黑格（B 站行为，见函数顶注），不做尾帧补满
+
+  // 【帧数以实际抽到的为准】fps 滤镜输出可能少于计划值（12.4s 计划 3 帧实抽 2 帧）。
+  // bin / index / 拼版张数必须全部对齐到实际帧数，否则前端二分查帧会越界：
+  //   · geo.count 回填实际值（videoshot 的 index 由它生成）；
+  //   · sheetCount / sheetFiles 按实际帧数重算——计划 101 帧（2 张）实抽 99 帧
+  //     时若仍按 2 张拼，第二张的 -start_number 101 无帧可读，ffmpeg 直接报错
+  if (files.length !== geo.count) {
+    geo.count = files.length;
+    geo.sheetCount = Math.max(1, Math.ceil(geo.count / SHEET_TILES));
+    sheetFiles.length = geo.sheetCount;
+    for (let k = 0; k < geo.sheetCount; k += 1) {
+      sheetFiles[k] = path.join(cacheDir, spriteSheetName(k));
+    }
+  }
+
+  // 按每张 SHEET_TILES 帧分组拼版：第 k 张从序号 k*100+1 开始读 100 帧，
+  // tile 滤镜输出单张大图（必须在删除 framesDir 之前做，否则要再抽一遍视频）。
+  for (let k = 0; k < geo.sheetCount; k += 1) {
+    await runFfmpeg([
+      '-hide_banner',
+      '-loglevel', 'error',
+      '-y',
+      '-start_number', String(k * SHEET_TILES + 1),
       '-i', path.join(framesDir, '%06d.jpg'),
       '-vf', `tile=${geo.xLen}x${geo.yLen}`,
       '-frames:v', '1',
       '-q:v', '6',
-      spriteFile,
+      sheetFiles[k],
     ]);
-    const spriteStat = statSafe(spriteFile);
-    if (spriteStat && spriteStat.size > 0) {
-      spriteState.status = 'ready';
-      spriteState.bytes = spriteStat.size;
-      spriteState.file = spriteFile;
-      spriteState.message = `已生成 ${geo.xLen}x${geo.yLen} 雪碧图（每格 ${geo.xSize}x${geo.ySize}，共 ${geo.xLen * geo.yLen} 格）`;
-      log(`sprite.jpg 已生成：${spriteFile}（${spriteStat.size} 字节 / ${geo.xLen}x${geo.yLen}）`);
-    } else {
-      spriteState.status = 'unavailable';
-      spriteState.message = '雪碧图生成后为空文件';
-    }
-  } catch (err) {
-    spriteState.status = 'unavailable';
-    spriteState.message = `雪碧图生成失败：${String(err.message)}`;
-    warn(spriteState.message);
   }
 
-  try {
-    await fsp.writeFile(cacheFile, out);
-    log(`preview.bin 已生成并写入缓存：${cacheFile}（${files.length} 帧 / ${out.length} 字节）`);
-    // 缓存文件已经落盘，抽出来的 jpg 就没必要留着占空间了
-    await fsp.rm(framesDir, { recursive: true, force: true });
-  } catch (err) {
-    warn(`写缓存失败（不影响本次响应）：${String(err.message)}`);
-  }
+  log(`雪碧图已生成：${sheetFiles.map((f) => path.basename(f)).join(' / ')}（${files.length} 帧）`);
 
-  return out;
+  // bin 截取时间表与拼版一起落盘（uint16 小端数组，帧数 = files.length）
+  await fsp.writeFile(path.join(cacheDir, PVDATA_NAME), buildPvdataBuffer(buildIndexTimes(files.length)));
+
+  // 拼版已落盘，抽出来的 jpg 就没必要留着占空间了
+  await fsp.rm(framesDir, { recursive: true, force: true });
+
+  return { geo, sheetFiles };
 }
 
-// 并发请求共享同一次抽帧：否则几个标签页同时打开进度条，会并行拉起好几个 ffmpeg。
-// 失败时把 promise 清空，让下一次请求还能重试，而不是把这个错误永久缓存下来。
-let previewInFlight = null;
+/** 默认视频（--video）的雪碧图构建：算缓存 key → 调通用核心 → 写全局 spriteState */
+async function buildSprites() {
+  if (!opts.video) {
+    // 没给视频就没有帧可抽。不报错：/x/player/videoshot 返回 404（无快照），
+    // 播放器只是不显示预览缩略图，播放本身完全不受影响。
+    warn('未提供 --video，雪碧图不可用（进度条预览图不可用，其余功能正常）');
+    spriteState.status = 'unavailable';
+    spriteState.message = '未提供 --video：雪碧图不可用（其余接口正常）';
+    return;
+  }
 
-function getPreviewBuffer() {
-  if (!previewInFlight) {
-    previewInFlight = buildPreview().catch((err) => {
-      previewInFlight = null;
+  const cacheDir = path.join(CACHE_ROOT, previewCacheKey());
+  const { geo, sheetFiles } = await buildSpriteSet({
+    input: opts.video,
+    videoSeconds: DURATION,
+    cacheDir,
+  });
+
+  const bytes = sheetFiles.reduce((sum, file) => {
+    const st = statSafe(file);
+    return sum + (st ? st.size : 0);
+  }, 0);
+  spriteState.status = 'ready';
+  spriteState.sheetCount = geo.sheetCount;
+  spriteState.frameCount = geo.count;
+  spriteState.file = sheetFiles[0];
+  spriteState.bytes = bytes;
+  spriteState.message = `已生成 ${geo.sheetCount} 张 ${geo.xLen}x${geo.yLen} 拼版（每格 ${geo.xSize}x${geo.ySize}）`;
+}
+
+// 并发请求共享同一次拼版：否则几个标签页同时打开进度条，会并行拉起好几个 ffmpeg。
+// 失败时把 promise 清空，让下一次请求还能重试，而不是把这个错误永久缓存下来。
+let spritesInFlight = null;
+
+function ensureSpritesBuilt() {
+  if (!spritesInFlight) {
+    spritesInFlight = buildSprites().catch((err) => {
+      spritesInFlight = null;
+      spriteState.status = 'unavailable';
+      spriteState.reason = String(err.message);
+      spriteState.message = `雪碧图生成失败：${String(err.message)}`;
       throw err;
     });
   }
-  return previewInFlight;
+  return spritesInFlight;
 }
 
-// 雪碧图取用：命中缓存直接返回；否则触发一次 buildPreview()（它内部会顺带产出 sprite.jpg）
-async function getSpriteFile() {
-  const cacheDir = path.join(CACHE_ROOT, previewCacheKey());
-  const spriteFile = path.join(cacheDir, 'sprite.jpg');
+/**
+ * 取第 sheet 张拼版的磁盘路径（首次调用会触发抽帧 + 拼版）。
+ *
+ * @param sheet - 拼版序号（0 起）
+ * @returns 文件路径；不可用（未提供视频 / ffmpeg 失败 / 序号越界）返回 null
+ */
+async function getSpriteSheetFile(sheet) {
+  if (!Number.isInteger(sheet) || sheet < 0 || sheet >= spriteGeometry().sheetCount) {
+    return null;
+  }
 
-  const cached = statSafe(spriteFile);
-  if (cached && cached.size > 0) {
-    spriteState.status = 'ready';
-    spriteState.bytes = cached.size;
-    spriteState.file = spriteFile;
-    return spriteFile;
+  const cacheDir = path.join(CACHE_ROOT, previewCacheKey());
+  const file = path.join(cacheDir, spriteSheetName(sheet));
+
+  const cached = statSafe(file);
+  if (cached && cached.size > 0 && spriteState.status === 'ready') {
+    return file;
   }
 
   if (!opts.video) {
@@ -1555,26 +1717,141 @@ async function getSpriteFile() {
   }
 
   try {
-    await getPreviewBuffer();
-  } catch (err) {
+    await ensureSpritesBuilt();
+  } catch {
     spriteState.status = 'unavailable';
-    spriteState.message = `雪碧图生成失败：${String(err.message)}`;
+    spriteState.message = spriteState.message || '雪碧图生成失败（ffmpeg 不可用或视频无法解码）';
     return null;
   }
 
-  const after = statSafe(spriteFile);
+  const after = statSafe(file);
   if (after && after.size > 0) {
-    spriteState.status = 'ready';
-    spriteState.bytes = after.size;
-    spriteState.file = spriteFile;
-    return spriteFile;
+    return file;
   }
 
-  if (spriteState.status !== 'ready') {
+  if (spriteState.status === 'ready') {
+    // 拼版总数内的合法请求却缺文件：生成中途失败，下次请求会重试
     spriteState.status = 'unavailable';
-    spriteState.message = spriteState.message || '雪碧图不可用（ffmpeg 不可用或视频无法解码）';
+    spriteState.message = `第 ${sheet} 张拼版缺失`;
   }
   return null;
+}
+
+/* ---------------------------------------------------------------------------
+ * 12b. 互动视频 perVideo 预览（B 站口径，与默认视频同一套几何/管线）
+ *
+ * 旧的 perVideo 口径直接读转码脚本产出的 5 列单拼版 sprite.jpg——与默认视频的
+ * B 站 10x10 多拼版两套几何并存，前端裁切逻辑要为它单开分支。现在改为：
+ *   · 抽帧输入 = avid 目录里的本地清单（index.m3u8 优先，缺则 index.mpd，
+ *     ffmpeg 都能直接吃，分片就在同目录）；
+ *   · 复用 buildSpriteSet 通用管线 → 10x10 多拼版 + pvdata bin，
+ *     落盘到 .cache/<perVideo 缓存 key>/；
+ *   · /x/player/videoshot、/videoshot/sprite*.jpg、/videoshot/pvdata.bin
+ *     三条路由的 perVideo 分支与默认分支形状完全一致。
+ * 转码脚本产出的 sprite.jpg / preview.bin（data URL 文本旧格式）不再被任何
+ * 接口消费，属废弃产物。
+ * ------------------------------------------------------------------------- */
+
+/* 按 avid 选抽帧输入：本地 HLS master 清单优先（ffmpeg 对 hls demuxer 支持最稳），缺则 DASH MPD */
+function avidPreviewInput(dir) {
+  for (const name of ['index.m3u8', 'index.mpd']) {
+    const file = path.join(dir, name);
+    const st = statSafe(file);
+    if (st && st.size > 0) return file;
+  }
+  return null;
+}
+
+/* perVideo 缓存 key：avid 目录 + 清单文件指纹 + 抽帧/拼版参数 + 时长，取 md5 当目录名。
+   带清单 size/mtime：转码目录被重跑（重新转码）后 key 变化，老缓存自动失效；
+   带时长：cards.json 时长索引修正后帧数跟着变，缓存也要跟着失效。 */
+function perVideoCacheKey(perVideo, videoSeconds) {
+  const manifest = path.join(perVideo.dir, 'index.m3u8');
+  const st = statSafe(manifest);
+  const raw = [
+    path.resolve(perVideo.dir),
+    st ? st.size : 0,
+    st ? Math.round(st.mtimeMs) : 0,
+    FRAME_INTERVAL_SEC,
+    FRAME_WIDTH,
+    FRAME_HEIGHT,
+    SPRITE_X_LEN,
+    SPRITE_Y_LEN,
+    Math.round(videoSeconds * 100) / 100, // 两位小数足够，避免浮点尾巴把 key 抖变
+  ].join('|');
+  return crypto.createHash('md5').update(raw).digest('hex');
+}
+
+/* perVideo 雪碧图运行状态：avid → { status, message, geo, cacheDir }。
+   与默认视频的 spriteState 同形状，但按 avid 一份（88 个节点互不干扰）。 */
+const perVideoSpriteStates = new Map();
+
+/* perVideo 抽帧 in-flight：avid → Promise，避免并发请求并行拉起多个 ffmpeg */
+const perVideoSpriteInFlight = new Map();
+
+/* 确保 avid 的拼版就绪：命中内存状态直接用；否则按缓存 key 懒构建。
+   失败时清掉 in-flight 并把状态记为 unavailable（路由层按 404 降级）。 */
+function ensurePerVideoSprites(perVideo, videoSeconds) {
+  const cached = perVideoSpriteStates.get(perVideo.avid);
+  if (cached && cached.status === 'ready') return Promise.resolve(cached);
+
+  const inFlight = perVideoSpriteInFlight.get(perVideo.avid);
+  if (inFlight) return inFlight;
+
+  const input = avidPreviewInput(perVideo.dir);
+  if (!input) {
+    perVideoSpriteStates.set(perVideo.avid, {
+      status: 'unavailable',
+      message: `avid=${perVideo.avid} 目录里没有 index.m3u8 / index.mpd，无法抽帧`,
+    });
+    return Promise.resolve(perVideoSpriteStates.get(perVideo.avid));
+  }
+
+  const cacheDir = path.join(CACHE_ROOT, perVideoCacheKey(perVideo, videoSeconds));
+  const task = buildSpriteSet({ input, videoSeconds, cacheDir })
+    .then(({ geo }) => {
+      const state = {
+        status: 'ready',
+        message: `已生成 ${geo.sheetCount} 张 ${geo.xLen}x${geo.yLen} 拼版（每格 ${geo.xSize}x${geo.ySize}）`,
+        geo,
+        cacheDir,
+      };
+      perVideoSpriteStates.set(perVideo.avid, state);
+      perVideoSpriteInFlight.delete(perVideo.avid);
+      return state;
+    })
+    .catch((err) => {
+      perVideoSpriteInFlight.delete(perVideo.avid);
+      const state = {
+        status: 'unavailable',
+        message: `avid=${perVideo.avid} 预览图生成失败：${String(err.message)}`,
+      };
+      perVideoSpriteStates.set(perVideo.avid, state);
+      return state;
+    });
+  perVideoSpriteInFlight.set(perVideo.avid, task);
+  return task;
+}
+
+/* 取 perVideo 第 sheet 张拼版的磁盘路径（未就绪返回 null，路由层 404） */
+async function getPerVideoSheetFile(avid, sheet) {
+  const state = perVideoSpriteStates.get(avid);
+  if (!state || state.status !== 'ready') return null;
+  if (!Number.isInteger(sheet) || sheet < 0 || sheet >= state.geo.sheetCount) return null;
+  const file = path.join(state.cacheDir, spriteSheetName(sheet));
+  const st = statSafe(file);
+  return st && st.size > 0 ? file : null;
+}
+
+/* 取 perVideo 已落盘的 pvdata bin 内容（未就绪返回 null） */
+async function getPerVideoPvdata(avid) {
+  const state = perVideoSpriteStates.get(avid);
+  if (!state || state.status !== 'ready') return null;
+  try {
+    return await fsp.readFile(path.join(state.cacheDir, PVDATA_NAME));
+  } catch {
+    return null;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1614,7 +1891,7 @@ async function readJsonFileFresh(file) {
 
 /*
  * G：按视频定位转码产物目录（每个 avid 一个目录，里面是 index.mpd / index.m3u8 /
- * preview.bin / sprite.jpg …）。
+ * sprite.jpg …）。
  *   avid=av1000052        → 直接用（转码脚本的目录名就是 avid）
  *   aid=1000052（+cid=…） → 目录名是 av<aid>（cid 只进日志，目录不按它分）
  * 两个都没给 / 名字不合法 / 目录不存在 → null（调用方走原来的"单视频 --video"那条路）。
@@ -2022,9 +2299,9 @@ async function handleRequest(req, res) {
         wsPath: WS_PATH,
         wsHeartbeatMs: WS_HEARTBEAT_MS,
         longPollWaiters: longPollWaiters.size,
-        preview: previewState.status,
-        previewFrames: previewState.frameCount,
         sprite: spriteState.status,
+        spriteFrames: spriteState.frameCount,
+        spriteSheets: spriteState.sheetCount,
         spriteBytes: spriteState.bytes,
         hasFfmpeg: hasBinary(FFMPEG_BIN, ['-version']),
         hasFfprobe: hasBinary(FFPROBE_BIN, ['-version']),
@@ -2245,80 +2522,41 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // ---- 7. 预览图 ----------------------------------------------------------
-  // 【G 项：带 avid / aid 时按该视频的转码目录取】
-  //   互动视频每个 avid 的目录里都有转码脚本生成的 preview.bin（+ sprite.jpg），
-  //   这里直接按 avid 提供服务；**没有生成时返回空文件**（前端切出 [''] = 一帧都没有，
-  //   是合法降级，绝不能报 500 把进度条交互打断 —— 老路径也是这个口径）。
-  if (pathname === PREVIEW_PATH && isGet) {
+  // ---- 7. 预览图雪碧图（B 站多拼版）--------------------------------------
+  // 【G 项：带 avid / aid 时按该互动节点的 B 站口径缓存取】
+  //   perVideo 与默认视频同一套 10x10 多拼版几何（见 12b 节），首次请求会
+  //   触发 ffmpeg 懒抽帧；**没有清单 / 抽帧失败时返回 404**（前端按「雪碧图
+  //   不可用」降级为不显示预览图，绝不能报 500 把进度条交互打断）。
+  const sheetMatch = isGet ? pathname.match(/^\/videoshot\/sprite(?:-(\d+))?\.jpg$/) : null;
+  if (sheetMatch) {
+    const sheet = sheetMatch[1] ? Number.parseInt(sheetMatch[1], 10) : 0;
     const perVideo = resolveVideoDir(url);
+
     if (perVideo) {
-      const file = path.join(perVideo.dir, 'preview.bin');
-      const st = statSafe(file);
-      if (st && st.size > 0) {
-        log(`GET ${PREVIEW_PATH} avid=${perVideo.avid} → ${st.size} 字节`);
-        sendText(res, 200, await fsp.readFile(file), 'text/plain; charset=utf-8');
-      } else {
-        warn(`avid=${perVideo.avid} 还没有 preview.bin（转码脚本 --preview-only 可补），返回空文件`);
-        sendText(res, 200, Buffer.alloc(0), 'text/plain; charset=utf-8');
+      const videoSeconds = await avidDurationSec(perVideo.avid);
+      const state = await ensurePerVideoSprites(perVideo, videoSeconds > 0 ? videoSeconds : 60);
+      if (state.status !== 'ready') {
+        warn(`GET ${pathname} avid=${perVideo.avid} → 404（${state.message}）`);
+        sendJson(res, 404, { code: -404, message: state.message });
+        return;
       }
-      return;
-    }
-  }
-
-  if (pathname === PREVIEW_PATH && isGet) {
-    try {
-      const buf = await getPreviewBuffer();
-      // 记下本次结果，供 /videoshot/index.json 和自测页显示状态
-      // （空 buffer = 没视频或抽帧失败，这时页面上要明确写出来，而不是给一片空白）
-      previewState.status = buf.length > 0 ? 'ready' : 'unavailable';
-      previewState.frameCount = buf.length > 0 ? buf.toString('utf8').split(UNIT_SEP).length - 1 : 0;
-      previewState.message = buf.length > 0
-        ? `已生成 ${previewState.frameCount} 帧（每 ${FRAME_INTERVAL_SEC} 秒 1 帧）`
-        : (opts.video
-          ? `抽帧失败：${previewState.reason || 'ffmpeg 不可用或视频无法解码'}`
-          : '未提供 --video：preview.bin 为空文件，进度条预览图不可用（其余接口正常）');
-      log(`GET /videoshot/preview.bin → ${buf.length} 字节`);
-      // 内容是图片 data URL，但整体按 UTF-8 文本传输，和前端 TextDecoder('utf-8') 对应
-      sendText(res, 200, buf, 'text/plain; charset=utf-8');
-    } catch (err) {
-      // ffmpeg 不存在 / 抽帧失败：打一条警告，然后返回空文件。
-      // 不能返回 500，因为前端 getPreview() 是直接 throw 的，会把进度条交互整个打断。
-      previewState.status = 'unavailable';
-      previewState.frameCount = 0;
-      previewState.reason = String(err.message);
-      previewState.message = `抽帧失败，preview.bin 返回空文件：${String(err.message)}`;
-      warn(`生成 preview.bin 失败，返回空文件：${String(err.message)}`);
-      sendText(res, 200, Buffer.alloc(0), 'text/plain; charset=utf-8');
-    }
-    return;
-  }
-
-  // ---- 7b. 雪碧图（sprite）------------------------------------------------
-  // 与 preview.bin（逐帧 data URL 列表）并列的第二种预览数据源：一张真实的图片。
-  // 【G 项】带 avid 时按该视频的转码目录取；目录里没有 sprite.jpg 就 404
-  // （前端按"雪碧图不可用"降级回 preview.bin —— index.json 的 img_url 会指回去）。
-  if (pathname === SPRITE_PATH && isGet) {
-    const perVideo = resolveVideoDir(url);
-    if (perVideo) {
-      const file = path.join(perVideo.dir, 'sprite.jpg');
-      const st = statSafe(file);
-      if (st && st.size > 0) {
-        log(`GET ${SPRITE_PATH} avid=${perVideo.avid} → ${st.size} 字节`);
+      const file = await getPerVideoSheetFile(perVideo.avid, sheet);
+      if (file) {
+        const st = statSafe(file);
+        log(`GET ${pathname} avid=${perVideo.avid} → ${st ? st.size : 0} 字节`);
         sendBinary(res, 200, await fsp.readFile(file), 'image/jpeg');
       } else {
-        warn(`avid=${perVideo.avid} 还没有 sprite.jpg（转码脚本 --preview-only 可补）`);
+        // 多拼版总数内的合法请求缺文件（生成中途失败）→ 404，下次请求重试；
+        // 越界（前端不应请求）也按 404，保持「无快照」语义
         sendJson(res, 404, {
           code: -404,
-          message: `avid=${perVideo.avid} 还没有 sprite.jpg：先跑 transcode_huaqiang.py --preview-only`,
+          message: `avid=${perVideo.avid} 第 ${sheet} 张拼版不可用`,
         });
       }
       return;
     }
-  }
 
-  if (pathname === SPRITE_PATH && isGet) {
-    const file = await getSpriteFile();
+    const file = await getSpriteSheetFile(sheet);
     if (!file) {
       sendJson(res, 404, {
         code: -404,
@@ -2328,7 +2566,7 @@ async function handleRequest(req, res) {
     }
     try {
       const buf = await fsp.readFile(file);
-      log(`GET ${SPRITE_PATH} → ${buf.length} 字节`);
+      log(`GET ${pathname} → ${buf.length} 字节`);
       sendBinary(res, 200, buf, 'image/jpeg');
     } catch (err) {
       spriteState.status = 'unavailable';
@@ -2338,138 +2576,133 @@ async function handleRequest(req, res) {
     return;
   }
 
-  // ---- 8. 预览图元信息（B 站 x/player/videoshot 形状，mock 自用）----------
-  // 同时报出两种数据源：pvdata/image/index 走雪碧图（B 站形状），
-  // frames 走 preview.bin（逐帧 data URL），客户端按能力任选。
-  //
-  // 【G 项：带 avid 时按该视频的转码目录取】
-  //   帧数从该目录的 preview.bin 数出来（\u001F 分隔的元素个数 - 1 = 帧数，arr[0] 是空占位）；
-  //   雪碧图几何照转码脚本的口径：x_len = SPRITE_X_LEN(5)、y_len = ceil(帧数/5)、
-  //   每格 FRAME_WIDTH×FRAME_HEIGHT（脚本就是这么拼的）。
-  //   **img_url**：雪碧图存在 → SPRITE_PATH + "?avid=<avid>"（前端是 `base + img_url`，
-  //   所以参数必须写在 img_url 里）；不存在 → **原样指回 PREVIEW_PATH**，播放器据此降级。
-  if (pathname === '/videoshot/index.json' && isGet) {
+  // ---- 7b. bin 截取时间表（B 站 pvdata 口径）-------------------------------
+  //   GET /videoshot/pvdata.bin → uint16 小端数组：第 0 项恒为 0（占位），
+  //   从第 1 项开始是每张截图的秒数，与 /x/player/videoshot 的 data.index 一一对应。
+  //   文件都由 buildSpriteSet 与拼版一起落盘（默认视频与互动节点同一套管线），
+  //   perVideo 命中同一份 .cache/<key>/pvdata.bin，形状与默认分支完全一致。
+  if (pathname === PVDATA_PATH && isGet) {
     const perVideo = resolveVideoDir(url);
     if (perVideo) {
-      const previewFile = path.join(perVideo.dir, 'preview.bin');
-      const spriteFile = path.join(perVideo.dir, 'sprite.jpg');
-      const previewStat = statSafe(previewFile);
-      const spriteStat = statSafe(spriteFile);
-      const spriteReady = !!(spriteStat && spriteStat.size > 0);
       const videoSeconds = await avidDurationSec(perVideo.avid);
-
-      let frameCount = 0;
-      if (previewStat && previewStat.size > 0) {
-        const text = await fsp.readFile(previewFile, 'utf8');
-        frameCount = Math.max(0, text.split(UNIT_SEP).length - 1);
+      const state = await ensurePerVideoSprites(perVideo, videoSeconds > 0 ? videoSeconds : 60);
+      if (state.status !== 'ready') {
+        sendJson(res, 404, { code: -404, message: state.message });
+        return;
       }
-      if (frameCount === 0) {
-        /* preview.bin 还没生成：按该视频时长推一个理论帧数（前端只用它画刻度） */
-        frameCount = Math.max(1, Math.ceil((videoSeconds > 0 ? videoSeconds : 60) / FRAME_INTERVAL_SEC));
+      const buf = await getPerVideoPvdata(perVideo.avid);
+      if (buf) {
+        log(`GET ${pathname} avid=${perVideo.avid} → ${buf.length} 字节`);
+        sendBinary(res, 200, buf, 'application/octet-stream');
+      } else {
+        sendJson(res, 404, { code: -404, message: `avid=${perVideo.avid} pvdata 不可用` });
       }
+      return;
+    }
+    try {
+      await ensureSpritesBuilt();
+    } catch {
+      // 抽帧抛异常（ffmpeg 缺失等）：与雪碧图同口径 404
+      sendJson(res, 404, { code: -404, message: spriteState.message || 'pvdata 不可用' });
+      return;
+    }
+    // buildSprites 在无 --video 时是 warn + return（不抛异常），所以还要看状态：
+    // 非 ready（unavailable / idle / error）一律按「无快照」404，不能 500。
+    if (spriteState.status !== 'ready') {
+      sendJson(res, 404, { code: -404, message: spriteState.message || 'pvdata 不可用' });
+      return;
+    }
+    const file = path.join(CACHE_ROOT, previewCacheKey(), PVDATA_NAME);
+    try {
+      const buf = await fsp.readFile(file);
+      log(`GET ${pathname} → ${buf.length} 字节`);
+      sendBinary(res, 200, buf, 'application/octet-stream');
+    } catch (err) {
+      sendJson(res, 500, { code: -500, message: `读取 pvdata.bin 失败：${String(err.message)}` });
+    }
+    return;
+  }
 
-      const xLen = SPRITE_X_LEN;
-      const yLen = Math.max(1, Math.ceil(frameCount / xLen));
-      const imgUrl = spriteReady
-        ? `${SPRITE_PATH}?avid=${encodeURIComponent(perVideo.avid)}`
-        : PREVIEW_PATH;   /* 原样指回 preview.bin → 播放器按"雪碧图没生成"降级 */
-
-      log(`GET /videoshot/index.json avid=${perVideo.avid} → ${frameCount} 帧`
-          + `，雪碧图${spriteReady ? '可用' : '不可用（img_url 指回 preview.bin）'}`);
-
+  // ---- 7c. 预览图接口（B 站 x/player/videoshot 形状）----------------------
+  // 与 B 站现网完全一致：
+  //   GET /x/player/videoshot?aid=&cid=&index=
+  //   → { code:0, message:'0', ttl:1, data:{ pvdata, img_x_len, img_y_len,
+  //        img_x_size, img_y_size, image: [拼版1, 拼版2, ...], index: [...] } }
+  // data.pvdata 指向 bin 截取时间表（uint16 小端数组，帧 ↔ 时间映射，B 站用它
+  // 支持按画面变化程度的不均匀截图）；带 index=1 参数时 data.index 直接给
+  // JSON 数组版时间表，不带时按 B 站口径给空数组。
+  //
+  // 【G 项：带 avid 时按该互动节点的 B 站口径缓存取】
+  //   几何与默认视频完全一致：img_x_len/img_y_len = 10x10，多拼版 image 数组，
+  //   pvdata 指向同一套管线落盘的 bin；目录里没有清单 / 抽帧失败就 404。
+  if (pathname === '/x/player/videoshot' && isGet) {
+    const wantIndex = url.searchParams.get('index') === '1';
+    const perVideo = resolveVideoDir(url);
+    if (perVideo) {
+      const videoSeconds = await avidDurationSec(perVideo.avid);
+      const state = await ensurePerVideoSprites(perVideo, videoSeconds > 0 ? videoSeconds : 60);
+      if (state.status !== 'ready') {
+        log(`GET /x/player/videoshot avid=${perVideo.avid} → 404（${state.message}）`);
+        sendJson(res, 404, { code: -404, message: state.message });
+        return;
+      }
+      const geo = state.geo;
+      const image = [];
+      for (let k = 0; k < geo.sheetCount; k += 1) {
+        // 相对路径与默认分支同写法（客户端按 dataBaseUrl + 路径拼接）
+        image.push(k === 0 ? SPRITE_PATH : `/videoshot/sprite-${k}.jpg`);
+        image[k] += `?avid=${encodeURIComponent(perVideo.avid)}`;
+      }
+      log(`GET /x/player/videoshot avid=${perVideo.avid} → ${geo.count} 帧 / ${geo.sheetCount} 张 ${geo.xLen}x${geo.yLen} 拼版`);
       sendJson(res, 200, {
         code: 0,
         message: '0',
+        ttl: 1,
         data: {
-          pvdata: {
-            duration: Math.round(videoSeconds),
-            img_x_len: xLen,
-            img_y_len: yLen,
-            img_x_size: FRAME_WIDTH,
-            img_y_size: FRAME_HEIGHT,
-            img_url: imgUrl,
-          },
-          image: [imgUrl],
-          index: Array.from({ length: frameCount }, (_, k) => k * FRAME_INTERVAL_SEC),
-          frames: {
-            url: `${PREVIEW_PATH}?avid=${encodeURIComponent(perVideo.avid)}`,
-            stepSec: FRAME_INTERVAL_SEC,
-            count: frameCount,
-          },
-          sprite: {
-            url: `${SPRITE_PATH}?avid=${encodeURIComponent(perVideo.avid)}`,
-            status: spriteReady ? 'ready' : 'unavailable',
-            bytes: spriteReady ? spriteStat.size : 0,
-            xLen,
-            yLen,
-            xSize: FRAME_WIDTH,
-            ySize: FRAME_HEIGHT,
-          },
-          mock: {
-            avid: perVideo.avid,
-            cid: perVideo.cid,
-            stepSec: FRAME_INTERVAL_SEC,
-            frameCount,
-            source: 'transcode_huaqiang.py 产出的 <avid>/preview.bin + sprite.jpg',
-            indexOf: `雪碧图切片下标 = Math.floor(秒 / ${FRAME_INTERVAL_SEC})，`
-              + `列 = 下标 % ${xLen}，行 = Math.floor(下标 / ${xLen})；`
-              + `${PREVIEW_PATH}?avid=${perVideo.avid} 按 \\u001F 切分后取 `
-              + `arr[Math.floor(秒 / ${FRAME_INTERVAL_SEC}) + 1]（arr[0] 是空占位）`,
-          },
-        },
-      });
-      return;
-    }
-  }
-
-  if (pathname === '/videoshot/index.json' && isGet) {
-    const frameCount = previewState.frameCount || previewFrameCount();
-    const geo = spriteGeometry();
-    // 雪碧图只有真的生成成功才对外声明：否则客户端会按 pvdata.img_url 去加载
-    // 一个 404 的图片，预览区整块空白（逐帧 preview.bin 反而是可用的）
-    const spriteReady = spriteState.status === 'ready';
-    sendJson(res, 200, {
-      code: 0,
-      message: '0',
-      data: {
-        pvdata: {
-          duration: Math.round(DURATION),
+          pvdata: `${PVDATA_PATH}?avid=${encodeURIComponent(perVideo.avid)}`,
           img_x_len: geo.xLen,
           img_y_len: geo.yLen,
           img_x_size: geo.xSize,
           img_y_size: geo.ySize,
-          img_url: spriteReady ? SPRITE_PATH : PREVIEW_PATH,
+          image,
+          index: wantIndex ? buildIndexTimes(geo.count) : [],
         },
-        image: [spriteReady ? SPRITE_PATH : PREVIEW_PATH],
-        index: Array.from({ length: frameCount }, (_, k) => k * FRAME_INTERVAL_SEC),
-        frames: {
-          url: PREVIEW_PATH,
-          stepSec: FRAME_INTERVAL_SEC,
-          count: frameCount,
-        },
-        sprite: {
-          url: SPRITE_PATH,
-          status: spriteState.status,
-          bytes: spriteState.bytes,
-          xLen: geo.xLen,
-          yLen: geo.yLen,
-          xSize: geo.xSize,
-          ySize: geo.ySize,
-        },
-        mock: {
-          status: previewState.status,
-          message: previewState.message || `尚未请求过 ${PREVIEW_PATH}`,
-          stepSec: FRAME_INTERVAL_SEC,
-          frameCount,
-          spriteStatus: spriteState.status,
-          spriteMessage: spriteState.message || `尚未请求过 ${SPRITE_PATH}`,
-          img_urlNote: `pvdata.img_url 与 image[0] 指向雪碧图 ${SPRITE_PATH}（可直接当图片加载，`
-            + `按 img_x_len/img_y_len/img_x_size/img_y_size 裁切）；`
-            + `逐帧 data URL 列表在 ${PREVIEW_PATH}`,
-          indexOf: `雪碧图切片下标 = Math.floor(秒 / ${FRAME_INTERVAL_SEC})，`
-            + `列 = 下标 % ${geo.xLen}，行 = Math.floor(下标 / ${geo.xLen})；`
-            + `${PREVIEW_PATH} 按 \\u001F 切分后取 arr[Math.floor(秒 / ${FRAME_INTERVAL_SEC}) + 1]（arr[0] 是空占位）`,
-        },
+      });
+      return;
+    }
+
+    const geo = spriteGeometry();
+    try {
+      await ensureSpritesBuilt();
+    } catch {
+      // ffmpeg 不存在 / 抽帧失败：按 B 站「无快照」口径 404。
+      // 不能 500——前端把 videoshot 当可选增强，失败就当没有预览图。
+      warn(`雪碧图生成失败，/x/player/videoshot 返回 404：${String(spriteState.reason || spriteState.message)}`);
+      sendJson(res, 404, { code: -404, message: spriteState.message || '雪碧图不可用' });
+      return;
+    }
+    // buildSprites 在无 --video 时是 warn + return（不抛异常），所以生成后还要
+    // 校验状态：非 ready（unavailable / idle / error）一律按「无快照」404，
+    // 否则接口会用空几何返回 200，前端拿到 image 指向 404 的拼版地址。
+    if (spriteState.status !== 'ready') {
+      sendJson(res, 404, { code: -404, message: spriteState.message || '雪碧图不可用' });
+      return;
+    }
+    const image = [];
+    for (let k = 0; k < geo.sheetCount; k += 1) image.push(spriteSheetUrl(k));
+    log(`GET /x/player/videoshot → ${geo.count} 帧 / ${geo.sheetCount} 张 ${geo.xLen}x${geo.yLen} 拼版`);
+    sendJson(res, 200, {
+      code: 0,
+      message: '0',
+      ttl: 1,
+      data: {
+        pvdata: PVDATA_PATH,
+        img_x_len: geo.xLen,
+        img_y_len: geo.yLen,
+        img_x_size: geo.xSize,
+        img_y_size: geo.ySize,
+        image,
+        index: wantIndex ? buildIndexTimes(geo.count) : [],
       },
     });
     return;
@@ -2989,7 +3222,7 @@ server.listen(opts.port, opts.host, () => {
   console.log('  hilihili 播放器测试服务（mock-server）');
   console.log(`  地址：http://${opts.host}:${server.address().port}`);
   console.log(`  时长：${DURATION}s（来源：${probed.source}）`);
-  console.log(`  视频：${opts.video || '(未提供，preview.bin 将为空文件)'}`);
+  console.log(`  视频：${opts.video || '(未提供，预览图将为 404)'}`);
   console.log(`  弹幕：${historyDanmaku.length} 条随机弹幕（/x/v1/dm/list.so）`);
   console.log(`  WS  ：ws://${opts.host}:${server.address().port}${WS_PATH}（心跳 ${WS_HEARTBEAT_MS}ms）`);
   console.log(`  缓存：${CACHE_ROOT}`);
@@ -3001,9 +3234,9 @@ server.listen(opts.port, opts.host, () => {
   console.log('    GET  /danmaku/stream');
   console.log(`    WS   ${WS_PATH}`);
   console.log('    GET  /danmaku/since?seq=N');
-  console.log('    GET  /videoshot/preview.bin');
-  console.log('    GET  /videoshot/sprite.jpg    雪碧图（tile=NxM，可当普通图片加载）');
-  console.log('    GET  /videoshot/index.json');
+  console.log('    GET  /x/player/videoshot     预览图（B 站形状：雪碧图拼版 + pvdata bin 时间表）');
+  console.log('    GET  /videoshot/sprite.jpg   雪碧图第 1 张拼版（10x10，多拼版 sprite-N.jpg）');
+  console.log('    GET  /videoshot/pvdata.bin   bin 截取时间表（uint16 小端，帧 ↔ 时间映射）');
   console.log('    （以上三条带 ?avid=av1000052 或 ?aid=1000052 → 按该视频的转码目录取）');
   console.log('    GET  /api/interactive/story?interactiveId=huaqiang');
   console.log('    GET  /api/interactive/playurl?avid=&protocol=dash&format=json');
@@ -3018,7 +3251,7 @@ server.listen(opts.port, opts.host, () => {
   // 提前探一次 ffmpeg，让「没有 ffmpeg」这件事在第一屏就暴露，
   // 而不是等前端去点进度条才发现预览图是空的
   if (opts.video && !hasBinary(FFMPEG_BIN, ['-version'])) {
-    warn(`找不到 ffmpeg（${FFMPEG_BIN}），/videoshot/preview.bin 会返回空文件；可用环境变量 FFMPEG_PATH 指定路径`);
+    warn(`找不到 ffmpeg（${FFMPEG_BIN}），预览图接口会返回 404；可用环境变量 FFMPEG_PATH 指定路径`);
   }
 });
 

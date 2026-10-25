@@ -1,4 +1,4 @@
-﻿import { defineConfig } from 'vite';
+import { defineConfig } from 'vite';
 import path from 'node:path';
 import { luminaCompile } from '../../plugins/vite-plugin-lumina-compile';
 
@@ -8,7 +8,14 @@ const at = (p: string): string => path.resolve(repoRoot, p);
 export default defineConfig({
   root: __dirname,
   publicDir: false,
-  plugins: [luminaCompile({ exclude: [/node_modules/, /\.test\./, /\.spec\./, /packages[\\/]live-player[\\/]/] })],
+  // live-player 源码必须排除编译转换：本包使用运行时 h() + 显式响应式辅助函数，
+  // 编译器会把 VNode 变量当成动态文本，生成 _reactiveText(() => vnode)，
+  // 控制栏按钮内容会退化成 [object Object]。
+  plugins: [
+    luminaCompile({
+      exclude: [/node_modules/, /\.test\./, /\.spec\./, /packages[\\/]live-player[\\/]/],
+    }),
+  ],
   resolve: {
     alias: [
       { find: /^@\/live\/(.*)/, replacement: path.resolve(repoRoot, 'packages/live-player/src/$1') },

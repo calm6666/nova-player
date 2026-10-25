@@ -25,6 +25,9 @@ export default defineConfig({
   root: __dirname,
   publicDir: false,
   plugins: [
+    // live-player 必须排除在编译转换之外：本包刻意使用运行时 h() + 显式
+    // reactive()/text() 辅助函数，编译器会把「VNode 变量」误判为动态文本，
+    // 生成 _reactiveText(() => vnode)，导致按钮内容渲染成 [object Object]。
     luminaCompile({ exclude: [/node_modules/, /\.test\./, /\.spec\./, /packages[\\/]live-player[\\/]/] }),
     dts({
       include: ['src'],
