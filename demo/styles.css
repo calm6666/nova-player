@@ -1391,16 +1391,21 @@
   color: var(--text-secondary);
 }
 
-/* 挂载点即插件样式作用域容器；页面场景覆盖绝对定位为文档流内固定尺寸舞台 */
+/* 非全屏挂载点：固定悬浮在页面右侧，不占文档流；关闭时 :empty 不占位 */
 #music-mount.demo-music-mount {
-  position: relative;
-  right: auto;
-  top: auto;
+  position: fixed;
+  right: 24px;
+  top: 96px;
   width: 420px;
-  max-width: 100%;
-  height: 760px;
-  margin: 0 auto;
+  max-width: calc(100vw - 48px);
+  height: min(760px, calc(100vh - 120px));
+  margin: 0;
+  z-index: 1000;
   background: #101014;
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+#music-mount.demo-music-mount:empty {
+  display: none;
 }
