@@ -730,9 +730,9 @@ export const RightControls = defineComponent<
     props.scene === "embedded"
       ? ["quality", "playbackrate", "volume", "full"]
       : [
+          "flac",
           "quality",
           "eplist",
-          "flac",
           "playbackrate",
           "subtitle",
           "volume",
