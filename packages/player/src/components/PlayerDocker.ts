@@ -1633,7 +1633,7 @@ export const PlayerDocker = defineComponent<
         }
         // Hi-Res：每次换源/切视频后重新探测当前流是否真实包含无损音频轨
         const refreshHiResAvailability = (): void => {
-          const player = props.player;
+          const player = resolvedPlayer;
           if (!player) return;
           hiResAvailableSignal.value =
             hiResSupported && player.hasHiResAudio();
@@ -3168,7 +3168,7 @@ export const PlayerDocker = defineComponent<
             },
             /** Hi-Res 激活态变化：真实切流音频轨，成功后同步提示文案 */
             onHiResChange: (payload: { active: boolean }) => {
-              const player = props.player;
+              const player = resolvedPlayer;
               if (!player) return;
               const applied = player.setHiResAudio(payload.active);
               if (!applied) return;
