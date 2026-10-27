@@ -225,6 +225,8 @@ export type PlayerDockerEvents = {
   videoCreated: { video: HTMLVideoElement };
   /** 用户选择了新的清晰度档位，值为档位 id（'auto' 表示自动） */
   qualityChange: string;
+  /** 用户切换 Hi-Res 无损音频 */
+  hiResChange: { active: boolean };
 
   /** 视频区域被单击（由 VideoPlayer 转发为对外的 click 事件） */
   perchClick: MouseEvent;
@@ -1613,6 +1615,32 @@ export const PlayerDocker = defineComponent<
       lifecycle,
     );
 
+    // Hi-Res：VideoPlayer 探测 / 切换后写入运行时状态，PlayerDocker 只订阅状态
+    hiResAvailableSignal.value = Boolean(
+      stateMgr?.get(PlayerStateKeyEnum.HIRES_AUDIO_AVAILABLE),
+    );
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.HIRES_AUDIO_AVAILABLE,
+      (available): void => {
+        hiResAvailableSignal.value = Boolean(available);
+      },
+      lifecycle,
+    );
+    useState(
+      stateMgr,
+      PlayerStateKeyEnum.HIRES_AUDIO_ACTIVE,
+      (active): void => {
+        tooltipsApi.updateTipKey?.(
+          "ctrl:flac",
+          active
+            ? "player.ui.tooltip.hires.disable"
+            : "player.ui.tooltip.hires.enable",
+        );
+      },
+      lifecycle,
+    );
+
     // 总时长（loadedmetadata / durationchange 双事件统一写入 DURATION 键）→
     // 控制栏与顶部进度条的时长初始化（合并原双 handler 的重复 UI 动作，幂等）
     useState(
@@ -1631,18 +1659,7 @@ export const PlayerDocker = defineComponent<
         if (readMuted()) {
           controlsApi.updateMute?.(true);
         }
-        // Hi-Res：每次换源/切视频后重新探测当前流是否真实包含无损音频轨
-        const refreshHiResAvailability = (): void => {
-          const player = resolvedPlayer;
-          if (!player) return;
-          hiResAvailableSignal.value =
-            hiResSupported && player.hasHiResAudio();
-        };
-        refreshHiResAvailability();
-        window.setTimeout(refreshHiResAvailability, 500);
-        window.setTimeout(refreshHiResAvailability, 1500);
-        // 视频加载完成即显示控制栏（与既有实现 loadedmetadata → showControls 一致；
-        // 初始加载与 load() 换源后的 loadedmetadata 都会经过此处）
+        // Hi-Res：真实音频轨探测由 VideoPlayer 写入运行时状态，此处只订阅
         showControls("video");
       },
       lifecycle,
@@ -3166,18 +3183,9 @@ export const PlayerDocker = defineComponent<
             onQualityChange: (quality: string) => {
               lifecycle.emit?.("qualityChange", quality);
             },
-            /** Hi-Res 激活态变化：真实切流音频轨，成功后同步提示文案 */
+            /** Hi-Res 激活态变化：向上暴露给 VideoPlayer，由其切流并回写状态 */
             onHiResChange: (payload: { active: boolean }) => {
-              const player = resolvedPlayer;
-              if (!player) return;
-              const applied = player.setHiResAudio(payload.active);
-              if (!applied) return;
-              tooltipsApi.updateTipKey?.(
-                "ctrl:flac",
-                payload.active
-                  ? "player.ui.tooltip.hires.disable"
-                  : "player.ui.tooltip.hires.enable",
-              );
+              lifecycle.emit?.("hiResChange", payload);
             },
             // 顶部进度条挂载完成，持有其更新 API（timeupdate / progress 时调用）
             onProgressBarMounted: (api: ProgressBarApi) => {

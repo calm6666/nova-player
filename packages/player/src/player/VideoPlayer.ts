@@ -1329,6 +1329,12 @@ export class VideoPlayer
       onQualityChange: (quality: string) => {
         void this.setQuality(quality);
       },
+      onHiResChange: (payload: { active: boolean }) => {
+        const applied = this.setHiResAudio(payload.active);
+        if (applied) {
+          this.state.set(PlayerStateKeyEnum.HIRES_AUDIO_ACTIVE, payload.active);
+        }
+      },
       /** 容器点击 / 双击转发为对外事件（PlayerEvents.click / dblclick） */
       onPerchClick: (event: MouseEvent) => {
         this.emitter.emit("click", event);
@@ -1819,6 +1825,10 @@ export class VideoPlayer
       const duration = this.videoEl?.duration || 0;
       this.store.setDuration(duration);
       this.state.set(PlayerStateKeyEnum.DURATION, duration);
+      this.state.set(
+        PlayerStateKeyEnum.HIRES_AUDIO_AVAILABLE,
+        this.hasHiResAudio(),
+      );
       this.events.emit(PlayerEventEnum.DURATION_CHANGE);
       this.callbacks.durationchange?.(duration);
     });

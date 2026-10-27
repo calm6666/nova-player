@@ -66,6 +66,10 @@ export enum PlayerStateKeyEnum {
   QUALITY_MODE = "player.qualityMode",
   /** 清晰度切换生命周期：idle | switching | switched | failed */
   QUALITY_SWITCH_STATE = "player.qualitySwitchState",
+  /** 当前流是否包含 Hi-Res / 无损音频轨 */
+  HIRES_AUDIO_AVAILABLE = "player.hiResAudioAvailable",
+  /** 当前是否已启用 Hi-Res 音频轨 */
+  HIRES_AUDIO_ACTIVE = "player.hiResAudioActive",
 
   // 播放列表
   /** 播放列表条目快照（右侧选集面板的数据源） */
@@ -222,6 +226,8 @@ export type PlayerStateMap = {
   "player.qualityMode": "none" | "static" | "adaptive";
   /** 清晰度切换生命周期 */
   "player.qualitySwitchState": "idle" | "switching" | "switched" | "failed";
+  "player.hiResAudioAvailable": boolean;
+  "player.hiResAudioActive": boolean;
   /** 播放列表条目快照（右侧选集面板数据源） */
   "player.playlist": PlayerPlaylistItem[];
   /** 当前播放项索引 */
@@ -319,6 +325,10 @@ export interface RuntimeState {
   qualityMode: "none" | "static" | "adaptive";
   /** 清晰度切换生命周期 */
   qualitySwitchState: "idle" | "switching" | "switched" | "failed";
+  /** 当前流是否包含 Hi-Res / 无损音频轨 */
+  hiResAudioAvailable: boolean;
+  /** 当前是否已启用 Hi-Res 音频轨 */
+  hiResAudioActive: boolean;
 
   // 播放列表
   /** 播放列表条目快照（右侧选集面板数据源） */
@@ -405,6 +415,8 @@ export const defaultRuntimeState: RuntimeState = {
   qualityCurrent: "auto",
   qualityMode: "none",
   qualitySwitchState: "idle",
+  hiResAudioAvailable: false,
+  hiResAudioActive: false,
   playlist: [],
   playlistIndex: 0,
   playlistLength: 0,
@@ -487,6 +499,11 @@ export function createRuntimeStateManager(
       initialState.qualityMode ?? defaultRuntimeState.qualityMode,
     [PlayerStateKeyEnum.QUALITY_SWITCH_STATE]:
       initialState.qualitySwitchState ?? defaultRuntimeState.qualitySwitchState,
+    [PlayerStateKeyEnum.HIRES_AUDIO_AVAILABLE]:
+      initialState.hiResAudioAvailable ??
+      defaultRuntimeState.hiResAudioAvailable,
+    [PlayerStateKeyEnum.HIRES_AUDIO_ACTIVE]:
+      initialState.hiResAudioActive ?? defaultRuntimeState.hiResAudioActive,
 
     // 播放列表
     [PlayerStateKeyEnum.PLAYLIST]:
