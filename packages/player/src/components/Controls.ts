@@ -118,6 +118,8 @@ export interface ControlsProps {
   backrate: number;
   /** 播放场景：embedded 时使用简化控制栏（无 pip / wide / web / 设置等） */
   scene?: PlayerScene;
+  /** 当前流是否真实包含 Hi-Res 音频轨（false 时隐藏按钮） */
+  hiRes?: boolean;
   /** 预览图提供者（progress.previewProvider 配置注入，透传给顶部进度条） */
   previewProvider?: ProgressPreviewProvider;
   /** 高能进度条数据提供者（progress.energyProvider 配置注入，异步到达后写入 PbpControls） */
@@ -717,6 +719,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
           h("div", { class: "nova-player-control-bottom-center" }),
           h(RightControls, {
             scene: props.scene,
+            hiRes: props.hiRes,
             /** 插件安装标志信号：字幕按钮按 subtitle 标志显隐（透传） */
             plugins: props.plugins,
             onFullscreen: () => lifecycle.emit?.("fullscreenToggle"),
