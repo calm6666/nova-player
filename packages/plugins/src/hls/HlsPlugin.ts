@@ -32,7 +32,7 @@ import { manifestToHls } from '../vendor/manifest-to-hls';
 import type { VideoPlayer } from '@lumina/nova';
 import { StreamPluginTypeEnum, StreamPluginEventEnum, StreamFormatEnum, AUTO_QUALITY_ID, resolveVideoCodec } from '@/types/streamPlugin';
 import { detectManifestProtocol } from '@/nova/utils/media/manifestProtocol';
-import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, MediaManifestSource, StreamQualityChangePayload } from '@/types/streamPlugin';
+import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, AudioTrackInfo, MediaManifestSource, StreamQualityChangePayload } from '@/types/streamPlugin';
 import type { PluginOptions } from '@/types/plugin';
 import { PlayerEventEnum } from '@/core/events';
 import type { PlayerEventBus } from '../../../player/src/core/plugin';
@@ -1105,6 +1105,54 @@ export class HlsPlugin implements StreamPlugin {
     if (!hls) return '';
     if (this.isAutoQuality()) return 'auto';
     return String(hls.currentLevel);
+  }
+
+  /**
+   * 获取 HLS 音频轨（备用音轨 / FLAC 等）
+   * hls.js 在清单解析后填充 audioTracks，未解析时返回空数组。
+   */
+  getAudioTracks(): AudioTrackInfo[] {
+    const hls = this.hlsPlayer;
+    if (!hls) return [];
+    const tracks = hls.audioTracks ?? [];
+    return tracks.map((track, index) => {
+      const name = track.name || `音轨 ${index + 1}`;
+      const codec = '';
+      const isHiRes = /flac|hires|hi-res|lossless|无损/i.test(
+        `${name} ${track.lang ?? ''} ${track.url ?? ''}`,
+      );
+      return {
+        id: String(index),
+        label: name,
+        language: track.lang,
+        codec,
+        isHiRes,
+      };
+    });
+  }
+
+  /** 是否存在 Hi-Res / 无损音频轨 */
+  hasHiResAudio(): boolean {
+    return this.getAudioTracks().some((track) => track.isHiRes === true);
+  }
+
+  /** 切换音频轨（hls.js audioTrack setter） */
+  setAudioTrack(id: string): boolean {
+    const hls = this.hlsPlayer;
+    if (!hls) return false;
+    const index = Number(id);
+    if (!Number.isInteger(index) || index < 0 || index >= (hls.audioTracks?.length ?? 0)) {
+      return false;
+    }
+    hls.audioTrack = index;
+    return true;
+  }
+
+  /** 当前音频轨 id */
+  getCurrentAudioTrack(): string | null {
+    const hls = this.hlsPlayer;
+    if (!hls) return null;
+    return hls.audioTrack >= 0 ? String(hls.audioTrack) : null;
   }
 
   /**

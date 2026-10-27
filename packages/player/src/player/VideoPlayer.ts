@@ -3572,6 +3572,23 @@ export class VideoPlayer
     return this.getNativeQualities();
   }
 
+  /**
+   * 当前流是否包含 Hi-Res / 无损音频轨
+   * 原生模式下无流媒体插件，恒为 false
+   */
+  hasHiResAudio(): boolean {
+    return this.streamMiddleware?.hasHiResAudio() ?? false;
+  }
+
+  /**
+   * 切换 Hi-Res 音频轨
+   * @param enabled - true 切到无损轨，false 切回普通音轨
+   * @returns 是否成功发起切换
+   */
+  setHiResAudio(enabled: boolean): boolean {
+    return this.streamMiddleware?.setHiResAudio(enabled) ?? false;
+  }
+
   /** 原生 / MP4 多变体：由 sources 映射出清晰度列表 */
   private getNativeQualities(): StreamQualityLevel[] {
     return this.sources.map((source, index) => ({

@@ -77,7 +77,7 @@ const DEFAULT_TOOLTIP_ITEMS: TooltipItem[] = [
   { name: "ctrl:next", titleKey: "player.ui.tooltip.next" },
   {
     name: "ctrl:flac",
-    titleKey: "player.ui.controls.hires",
+    titleKey: "player.ui.tooltip.hires.enable",
     badgeKey: "player.ui.tooltip.hires.vip",
   },
 ];
@@ -120,12 +120,6 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * 语言切换时随 localeSignal 自动重新翻译（无需重新 updateTip）。
      */
     const titleKeysSig = signal<Record<string, string>>({});
-
-    /** Hi-Res 按钮引用：用于监听标准 aria-label 变化并实时刷新已展示提示 */
-    let flacButtonEl: HTMLElement | null = null;
-
-    /** Hi-Res aria-label 观察器 */
-    let flacLabelObserver: MutationObserver | null = null;
 
     // ============================================
     // DOM 引用（几何测量数据源，保留）
@@ -249,14 +243,6 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * @param name - 提示项名称（Tooltip.dataName）
      */
     const openTip = (btnElement: HTMLElement | null, name: string): void => {
-      // Hi-Res：标题跟随按钮标准 aria-label（开启/关闭），不使用 data-tip-* 属性
-      if (name === "ctrl:flac" && btnElement) {
-        flacButtonEl = btnElement;
-        const label = btnElement.getAttribute("aria-label");
-        if (label) {
-          titlesSig.value = { ...titlesSig.value, [name]: label };
-        }
-      }
       const tipElement = getTipElement(name);
       if (tipElement && btnElement) {
         const { left, top } = calculateTipPosition(
@@ -350,10 +336,6 @@ export const Tooltips = defineComponent<TooltipsProps>(
               { class: "nova-player-tooltip-text" },
               () => {
                 // Hi-Res：优先读取按钮标准 aria-label（全屏切换/重挂后仍正确）
-                if (item.name === "ctrl:flac") {
-                  const label = flacButtonEl?.getAttribute("aria-label");
-                  if (label) return label;
-                }
                 // 优先级：updateTip 字面量 > updateTipKey / item.titleKey（i18n）> item.title
                 const override = titlesSig.value[item.name];
                 if (override !== undefined) return override;
@@ -385,18 +367,6 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * handleFullscreenChange / toggleWebFullscreen 中的 screen 与 updateTip 调用）
      */
     lifecycle.onMounted = (): void => {
-      flacLabelObserver = new MutationObserver((): void => {
-        if (!flacButtonEl) return;
-        const label = flacButtonEl.getAttribute("aria-label");
-        if (label && titlesSig.value["ctrl:flac"] !== label) {
-          titlesSig.value = { ...titlesSig.value, "ctrl:flac": label };
-        }
-      });
-      flacLabelObserver.observe(document.body, {
-        attributes: true,
-        attributeFilter: ["aria-label"],
-        subtree: true,
-      });
       lifecycle.emit?.("tooltipsMounted", {
         openTip,
         closeTip,
@@ -410,11 +380,7 @@ export const Tooltips = defineComponent<TooltipsProps>(
     /**
      * 组件销毁前，清空所有 DOM 引用
      */
-    lifecycle.onBeforeDestroy = (): void => {
-      flacLabelObserver?.disconnect();
-      flacLabelObserver = null;
-      flacButtonEl = null;
-    };
+    lifecycle.onBeforeDestroy = (): void => {};
 
     return h(
       "div",

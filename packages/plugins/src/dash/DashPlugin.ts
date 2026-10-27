@@ -29,7 +29,7 @@ import { manifestToDash } from '../vendor/manifest-to-dash';
 import type { VideoPlayer } from '@lumina/nova';
 import { StreamPluginTypeEnum, StreamPluginEventEnum, StreamFormatEnum, AUTO_QUALITY_ID, resolveVideoCodec } from '@/types/streamPlugin';
 import { detectManifestProtocol } from '@/nova/utils/media/manifestProtocol';
-import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, StreamQualityChangePayload } from '@/types/streamPlugin';
+import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, AudioTrackInfo, StreamQualityChangePayload } from '@/types/streamPlugin';
 import type { PluginOptions } from '@/types/plugin';
 import { PlayerEventEnum } from '@/core/events';
 import type { PlayerEventBus } from '../../../player/src/core/plugin';
@@ -938,6 +938,55 @@ export class DashPlugin implements StreamPlugin {
 
     const rep = dash.getCurrentRepresentationForType('video');
     return rep ? String(rep.index) : '';
+  }
+
+  /** 获取 DASH 音频轨（替代音轨 / FLAC 等） */
+  getAudioTracks(): AudioTrackInfo[] {
+    const dash = this.dashPlayer;
+    if (!dash) return [];
+    const tracks = dash.getTracksFor('audio');
+    return tracks.map((track, index) => {
+      const codec = track.codec ?? '';
+      const label = track.lang ? `音轨 ${track.lang}` : `音轨 ${index + 1}`;
+      return {
+        id: String(index),
+        label,
+        language: track.lang ?? undefined,
+        codec,
+        isHiRes: /flac|hires|hi-res|lossless|无损/i.test(
+          `${codec} ${track.id ?? ''} ${track.lang ?? ''}`,
+        ),
+      };
+    });
+  }
+
+  /** 是否存在 Hi-Res / 无损音频轨 */
+  hasHiResAudio(): boolean {
+    return this.getAudioTracks().some((track) => track.isHiRes === true);
+  }
+
+  /** 切换音频轨 */
+  setAudioTrack(id: string): boolean {
+    const dash = this.dashPlayer;
+    if (!dash) return false;
+    const index = Number(id);
+    const tracks = dash.getTracksFor('audio');
+    if (!Number.isInteger(index) || index < 0 || index >= tracks.length) {
+      return false;
+    }
+    dash.setCurrentTrack(tracks[index]);
+    return true;
+  }
+
+  /** 当前音频轨 id */
+  getCurrentAudioTrack(): string | null {
+    const dash = this.dashPlayer;
+    if (!dash) return null;
+    const track = dash.getCurrentTrackFor('audio');
+    if (!track) return null;
+    const tracks = dash.getTracksFor('audio');
+    const index = tracks.indexOf(track);
+    return index >= 0 ? String(index) : null;
   }
 
   /**

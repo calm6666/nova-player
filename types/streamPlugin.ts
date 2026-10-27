@@ -123,6 +123,20 @@ export interface QualityLevel {
   codecString?: string;
 }
 
+/** 音频轨信息（Hi-Res / FLAC 等替代音轨） */
+export interface AudioTrackInfo {
+  /** 音轨 id */
+  id: string;
+  /** 展示名称 */
+  label: string;
+  /** 语言 */
+  language?: string;
+  /** 编码 */
+  codec?: string;
+  /** 是否 Hi-Res / 无损音轨 */
+  isHiRes?: boolean;
+}
+
 /** 自动档（ABR）档位 id：QualityLevel.id / setQuality() / getCurrentQuality() 共用 */
 export const AUTO_QUALITY_ID = 'auto';
 
@@ -339,6 +353,18 @@ export interface StreamPlugin extends Plugin {
    * @returns 是否支持自动档；未实现时按不支持处理
    */
   supportsAutoQuality?(): boolean;
+
+  /** 获取音频轨列表（可选能力，HLS/DASH 按需实现） */
+  getAudioTracks?(): AudioTrackInfo[];
+
+  /** 切换音频轨；返回是否发起成功 */
+  setAudioTrack?(id: string): boolean;
+
+  /** 当前音频轨 id */
+  getCurrentAudioTrack?(): string | null;
+
+  /** 是否包含 Hi-Res / 无损音频轨 */
+  hasHiResAudio?(): boolean;
 
   /**
    * 应用清晰度上限/下限限制（映射到各流媒体库的原生配置）

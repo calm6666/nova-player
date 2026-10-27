@@ -84,6 +84,8 @@ export type ControlsEvents = {
   prev: undefined;
   next: undefined;
   qualityChange: string;
+  /** Hi-Res 激活态切换 */
+  hiResChange: { active: boolean };
   /** 选集面板选择某一集，值为列表下标 */
   eplistChange: number;
   subtitleToggle: boolean;
@@ -615,6 +617,11 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       lifecycle.emit?.("qualityChange", quality);
     };
 
+    /** Hi-Res 激活态变化：向上转发，由 PlayerDocker 走 updateTipKey 更新提示 */
+    const handleRightHiResChange = (payload: { active: boolean }): void => {
+      lifecycle.emit?.("hiResChange", payload);
+    };
+
     /** 选集面板选择某一集：仅透传下标，由上层接到 VideoPlayer.switchTo(index) */
     /** 字幕：开关向上转发 */
     const handleRightSubtitleToggle = (visible: boolean): void => {
@@ -724,6 +731,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             },
             onMuteToggle: () => lifecycle.emit?.("muteToggle"),
             onQualityChange: handleRightQualityChange,
+            onHiResChange: handleRightHiResChange,
             onEplistChange: handleRightEplistChange,
             onSubtitleToggle: handleRightSubtitleToggle,
             onSubtitleLangChange: handleRightSubtitleLangChange,

@@ -53,6 +53,8 @@ export type RightControlsEvents = {
   volumeChange: number;
   muteToggle: undefined;
   qualityChange: string;
+  /** Hi-Res 激活态切换（提示文案由上层 updateTipKey 同步，与全屏/画中画一致） */
+  hiResChange: { active: boolean };
   /** 选集面板选择某一集，值为列表下标（透传 EpisodesMenu 的 episodeChange） */
   eplistChange: number;
   /** 字幕开关变化 */
@@ -498,6 +500,7 @@ export const RightControls = defineComponent<
   /** Hi-Res 点击：切换激活态 */
   const onClickHiRes = (): void => {
     hiResActiveSignal.value = !hiResActiveSignal.value;
+    lifecycle.emit?.("hiResChange", { active: hiResActiveSignal.value });
   };
 
   /** 按钮类型到渲染函数的映射表，每个键对应一种控制按钮的渲染逻辑 */

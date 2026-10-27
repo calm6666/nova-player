@@ -13,6 +13,7 @@ import {
   useContext,
   useState,
   Show,
+  signal,
   t,
 } from "@/core";
 import type { TypedStateManager } from "@/core";
@@ -508,9 +509,12 @@ export const PlayerDocker = defineComponent<
   );
 
   /** 播放器容器 */
-  /** Hi-Res 无损音频能力（能力检测只做一次） */
+  /** Hi-Res 无损音频能力（浏览器能力检测只做一次） */
   const hiResSupported =
     BrowserCapabilityDetector.checkHiResAudioSupport().supported;
+
+  /** 当前流是否真实包含 Hi-Res 音频轨（换源/换视频后重新探测） */
+  const hiResAvailableSignal = signal<boolean>(false);
 
   const playerContainerRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
@@ -1627,6 +1631,14 @@ export const PlayerDocker = defineComponent<
         if (readMuted()) {
           controlsApi.updateMute?.(true);
         }
+        // Hi-Res：每次换源/切视频后重新探测当前流是否真实包含无损音频轨
+        const refreshHiResAvailability = (): void => {
+          hiResAvailableSignal.value =
+            hiResSupported && Boolean(resolvedPlayer?.hasHiResAudio?.());
+        };
+        refreshHiResAvailability();
+        window.setTimeout(refreshHiResAvailability, 500);
+        window.setTimeout(refreshHiResAvailability, 1500);
         // 视频加载完成即显示控制栏（与既有实现 loadedmetadata → showControls 一致；
         // 初始加载与 load() 换源后的 loadedmetadata 都会经过此处）
         showControls("video");
@@ -3056,7 +3068,7 @@ export const PlayerDocker = defineComponent<
             volume: readVolume(),
             backrate: readBackrate(),
             scene: embeddedMode ? "embedded" : "station",
-            hiRes: hiResSupported,
+            hiRes: hiResSupported && hiResAvailableSignal.value,
             /** 插件安装标志读取器：字幕按钮按 subtitle 标志显隐（getter 本体透传给 SubtitleMenu） */
             plugins: props.plugins,
             previewProvider: props.previewProvider,
@@ -3151,6 +3163,17 @@ export const PlayerDocker = defineComponent<
             // 清晰度切换：向上暴露给 VideoPlayer，由其转发给流媒体中间件 / 插件
             onQualityChange: (quality: string) => {
               lifecycle.emit?.("qualityChange", quality);
+            },
+            /** Hi-Res 激活态变化：真实切流音频轨，成功后同步提示文案 */
+            onHiResChange: (payload: { active: boolean }) => {
+              const applied = resolvedPlayer?.setHiResAudio?.(payload.active) ?? false;
+              if (!applied) return;
+              tooltipsApi.updateTipKey?.(
+                "ctrl:flac",
+                payload.active
+                  ? "player.ui.tooltip.hires.disable"
+                  : "player.ui.tooltip.hires.enable",
+              );
             },
             // 顶部进度条挂载完成，持有其更新 API（timeupdate / progress 时调用）
             onProgressBarMounted: (api: ProgressBarApi) => {

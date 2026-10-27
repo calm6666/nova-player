@@ -260,6 +260,32 @@ export class StreamMiddleware {
     }
   }
 
+  /** 当前流是否包含 Hi-Res / 无损音频轨 */
+  hasHiResAudio(): boolean {
+    if (this.mode === PlayerMode.STREAMING && this.activePlugin) {
+      return this.activePlugin.hasHiResAudio?.() ?? false;
+    }
+    return false;
+  }
+
+  /**
+   * 切换 Hi-Res 音频轨
+   * @param enabled - true 切到无损轨，false 切回普通音轨
+   * @returns 是否成功发起切换
+   */
+  setHiResAudio(enabled: boolean): boolean {
+    if (this.mode !== PlayerMode.STREAMING || !this.activePlugin) return false;
+    const plugin = this.activePlugin;
+    const tracks = plugin.getAudioTracks?.() ?? [];
+    if (tracks.length === 0 || !plugin.setAudioTrack) return false;
+    if (enabled) {
+      const hiRes = tracks.find((track) => track.isHiRes === true);
+      return hiRes ? plugin.setAudioTrack(hiRes.id) : false;
+    }
+    const normal = tracks.find((track) => track.isHiRes !== true) ?? tracks[0];
+    return normal ? plugin.setAudioTrack(normal.id) : false;
+  }
+
   /**
    * 设置视频编码偏好（转发给生效的流媒体插件）
    *
