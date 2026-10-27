@@ -51,7 +51,6 @@ export const LEGACY_KEY_MAP = {
   keyboard: 'interaction.keyboard',
   defaultQuality: 'quality.default',
   progressSegments: 'progress.segments',
-  'danmaku.source': 'danmaku.url',
   subtitles: 'subtitle.list',
   plugins: 'plugins.list',
   debug: 'advanced.debug',

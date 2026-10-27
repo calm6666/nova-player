@@ -1,4 +1,5 @@
 @use "./player.scss" as *;
+@use "./ui.scss" as *;
 @use "./controls.scss" as *;
 @use "./viewpointmenu.scss" as *;
 @use "./settingmenu.scss" as *;
@@ -22,7 +23,7 @@
 @use "./mini.scss" as *;
 @use "./scrollview.scss" as *;
 @use "./selection.scss" as *;
-@use "./slider.scss" as *;
+// @use "./slider.scss" as *;
 @use "./switch.scss" as *;
 @use "./icons.scss" as *;
 @use "./qualitymenu.scss" as *;

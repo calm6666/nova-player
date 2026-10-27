@@ -195,7 +195,7 @@ function renderVoteOption(
         style:
           state.votedIndex.value < 0
             ? ""
-            : (() => {
+            : ((): string => {
                 const percent = computePercent(
                   option.votes ?? 0,
                   state.totalVotes.value,

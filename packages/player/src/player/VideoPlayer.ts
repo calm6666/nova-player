@@ -53,7 +53,13 @@ import { PluginManager } from "@/nova/core/pluginManager";
 import { teardownComponentTree } from "@/nova/core/componentUnmount";
 import { createPlayerStore } from "@/nova/store";
 import type { PlayerStore } from "@/nova/store";
-import { createLogger, loggerManager, LogLevel, clearStyle, isBrowser } from "@/utils";
+import {
+  createLogger,
+  loggerManager,
+  LogLevel,
+  clearStyle,
+  isBrowser,
+} from "@/utils";
 import { isDev } from "@/core/warning";
 import {
   setLocale,
@@ -66,7 +72,7 @@ import {
 import type { Locale } from "@/core/i18n";
 import type { Signal } from "@/core/signalsCore";
 import { EventEmitter, fullscreen, pip, clamp } from "../utils";
-import type { DanmakuListProvider } from "@/types/danmaku";
+import type { DanmakuItem } from "@/types/danmaku";
 import { PlayerDocker } from "@/nova/components/PlayerDocker";
 import type { PlayerPluginFlags } from "@/nova/components/PlayerDocker";
 import { StreamMiddleware, PlayerMode } from "../utils/media/streamMiddleware";
@@ -185,9 +191,28 @@ interface PlayerDockerMountedElements {
  * 发送走 DANMAKU_SEND 事件、清空走 DANMAKU_CLEAR 事件（均在事件总线收口）。
  * 此接口仅保留数据源换源通道（provider 优先，url 兜底）。
  */
+/**
+ * 弹幕插件数据/列表 API 契约
+ *
+ * 数据全部由外部注入（插件不发起请求）；播放器便捷方法只做转发。
+ */
 interface DanmakuPluginApi {
-  /** 更换弹幕数据源（provider 优先，url 兜底；换源时清空分段缓存） */
-  load?(config: { provider?: DanmakuListProvider; url?: string }): void;
+  /** 全量替换弹幕数据 */
+  loadDanmaku?(list: readonly DanmakuItem[]): void;
+  /** 追加单条弹幕 */
+  addDanmaku?(item: DanmakuItem): void;
+  /** 更新单条弹幕 */
+  updateDanmaku?(id: DanmakuItem["id"], patch: Partial<DanmakuItem>): void;
+  /** 删除单条弹幕 */
+  removeDanmaku?(id: DanmakuItem["id"]): void;
+  /** 清空弹幕数据 */
+  clearDanmaku?(): void;
+  /** 获取弹幕数据副本 */
+  getDanmakuList?(): DanmakuItem[];
+  /** 挂载列表面板（必须显式传挂载点） */
+  mountList?(target: string | HTMLElement): void;
+  /** 卸载列表面板 */
+  unmountList?(): void;
 }
 
 /**
@@ -263,7 +288,8 @@ export class VideoPlayer
   }
 
   unregisterEndingPluginMount(mount?: SlotMount["mount"]): void {
-    if (!mount || this.endingPluginMount === mount) this.endingPluginMount = null;
+    if (!mount || this.endingPluginMount === mount)
+      this.endingPluginMount = null;
   }
 
   getEndingPluginMount(): SlotMount["mount"] | null {
@@ -579,8 +605,7 @@ export class VideoPlayer
         : (playback.pauseAfterEnd ?? persistentState.settings.pauseAfterEnd),
       skipIntroOutro: persisted
         ? persistentState.settings.skipIntroOutro
-        : (playback.skipIntroOutro ??
-          persistentState.settings.skipIntroOutro),
+        : (playback.skipIntroOutro ?? persistentState.settings.skipIntroOutro),
     };
 
     /**
@@ -1259,8 +1284,8 @@ export class VideoPlayer
       /** 音效插件 API：右键音效调节面板使用（未装插件返回 null） */
       getAudioEffect: () =>
         (this.getPluginAPI("audioEffect") as unknown as
-          | import("@/nova/components/AudioPanel").AudioPanelApi
-          | undefined) ?? null,
+          import("@/nova/components/AudioPanel").AudioPanelApi | undefined) ??
+        null,
       /** 缓冲速度数据源（字节/秒）：流媒体插件统计优先，原生由 PlayerDocker 回退采样 */
       getStreamDownloadSpeed: () => this.getStreamDownloadSpeed(),
       /**
@@ -3774,7 +3799,6 @@ export class VideoPlayer
 
     const item = this.playlist[index];
     if (item.poster !== undefined) this.setPoster(item.poster);
-    if (item.danmakuUrl !== undefined) this.setDanmakuSource(item.danmakuUrl);
     if (item.subtitleList !== undefined) {
       this.setSubtitleList(item.subtitleList);
     }
@@ -3904,17 +3928,43 @@ export class VideoPlayer
     this.state.set(PlayerStateKeyEnum.DANMAKU_SPEED, value);
     // 插件订阅 DANMAKU_SPEED 状态键自动应用；此处仅向外部广播变化事件
     this.events.emit(PlayerEventEnum.DANMAKU_SPEED_CHANGE, value);
+  } /**
+   * 全量替换弹幕数据（外部请求由调用方完成，播放器/插件不发请求）
+   *
+   * @param list - 弹幕数据列表
+   */
+  loadDanmaku(list: readonly DanmakuItem[]): void {
+    this.getDanmakuApi()?.loadDanmaku?.(list);
   }
 
-  /**
-   * 设置弹幕数据源（url 便捷通道，变化则通知插件换源）
-   *
-   * 数据获取逻辑全部由弹幕插件承担（provider 优先 / url 包装为分段 loader），
-   * 播放器不再内置 fetch，避免与插件的分段加载协议冲突。
-   */
-  setDanmakuSource(url: string): void {
-    // 数据源由弹幕插件持有；播放器只把换源请求转交插件 API
-    this.getDanmakuApi()?.load?.({ url });
+  /** 追加单条弹幕（调度器 + 列表面板同步） */
+  addDanmaku(item: DanmakuItem): void {
+    this.getDanmakuApi()?.addDanmaku?.(item);
+  }
+
+  /** 更新单条弹幕（调度器 + 列表面板同步） */
+  updateDanmaku(id: DanmakuItem["id"], patch: Partial<DanmakuItem>): void {
+    this.getDanmakuApi()?.updateDanmaku?.(id, patch);
+  }
+
+  /** 删除单条弹幕（调度器 + 列表面板同步） */
+  removeDanmaku(id: DanmakuItem["id"]): void {
+    this.getDanmakuApi()?.removeDanmaku?.(id);
+  }
+
+  /** 获取当前弹幕数据副本 */
+  getDanmakuList(): DanmakuItem[] {
+    return this.getDanmakuApi()?.getDanmakuList?.() ?? [];
+  }
+
+  /** 挂载弹幕列表面板（挂载点由调用方传入；不传不挂载） */
+  mountDanmakuList(target: string | HTMLElement): void {
+    this.getDanmakuApi()?.mountList?.(target);
+  }
+
+  /** 卸载弹幕列表面板 */
+  unmountDanmakuList(): void {
+    this.getDanmakuApi()?.unmountList?.();
   }
 
   /** 清空弹幕（插件订阅 DANMAKU_CLEAR 事件清空渲染层） */

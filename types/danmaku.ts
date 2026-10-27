@@ -58,21 +58,21 @@ export enum DanmakuArea {
 /** 渲染模式 */
 export enum RenderMode {
   /** DOM渲染 - 适合少量弹幕 */
-  DOM = 'dom',
+  DOM = "dom",
   /** Canvas渲染 - 适合大量弹幕 */
-  CANVAS = 'canvas',
+  CANVAS = "canvas",
   /** 自动模式 - 根据弹幕数量自动切换 */
-  AUTO = 'auto',
+  AUTO = "auto",
 }
 
 /** 屏幕状态 */
 export enum ScreenMode {
   /** 正常模式 */
-  NORMAL = 'normal',
+  NORMAL = "normal",
   /** 全屏模式 */
-  FULLSCREEN = 'fullscreen',
+  FULLSCREEN = "fullscreen",
   /** 网页全屏 */
-  WEB_FULLSCREEN = 'webFullscreen',
+  WEB_FULLSCREEN = "webFullscreen",
 }
 
 /** 弹幕过滤器设置 */
@@ -88,11 +88,11 @@ export interface DanmakuFilter {
 /** 弹幕位置（发送栏弹幕类型选择的字符串标识） */
 export enum DanmakuPosition {
   /** 滚动 */
-  SCROLL = 'scroll',
+  SCROLL = "scroll",
   /** 顶部 */
-  TOP = 'top',
+  TOP = "top",
   /** 底部 */
-  BOTTOM = 'bottom',
+  BOTTOM = "bottom",
 }
 
 /** 防挡遮罩配置 */
@@ -163,9 +163,16 @@ export interface DanmakuItem {
   /** 弹幕速度档位 */
   speed?: DanmakuSpeed;
   /** 发送者UID */
-  uid?: string | number;
-  /** 点赞数（Tip 操作条展示；点赞/取消点赞后由插件维护） */
+  uid?:
+    string | number; /** 点赞数（Tip 操作条展示；点赞/取消点赞后由插件维护） */
   like?: number;
+  /**
+   * 发送时间戳（Unix 毫秒）
+   *
+   * 数据源（B 站 XML 的 p[4]）或本地发送时写入；弹幕列表「发送时间」列与
+   * 历史弹幕日期筛选使用。缺省时回落为「id 为毫秒时间戳则取 id」。
+   */
+  sentAt?: number;
 }
 
 /** 弹幕配置选项（创建 DanmakuManager 的完整参数） */
@@ -295,4 +302,6 @@ export type DanmakuListProvider = (
  * 返回确认后的弹幕（通常回填服务端 id）才会上屏；抛错则不上屏并走失败回调。
  * 类型与 DanmakuCallbacks.onSend 一致，此处独立命名便于配置空间引用。
  */
-export type DanmakuSendProvider = (danmaku: DanmakuItem) => Promise<DanmakuItem>;
+export type DanmakuSendProvider = (
+  danmaku: DanmakuItem,
+) => Promise<DanmakuItem>;

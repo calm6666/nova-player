@@ -25,7 +25,7 @@ const emitted = new Set<string>();
  * - clear：清理数据和发射状态（用于 scheduler.reset）；
  * - dispose：关闭 Worker。
  */
-self.onmessage = (event: MessageEvent) => {
+self.onmessage = (event: MessageEvent): void => {
   const message = event.data as {
     type: 'add' | 'markEmitted' | 'query' | 'reset' | 'clear' | 'dispose';
     items?: WorkerItem[];

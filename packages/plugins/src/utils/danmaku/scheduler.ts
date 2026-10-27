@@ -65,14 +65,14 @@ export class DanmakuScheduler {
         });
         this.worker.onmessage = (
           event: MessageEvent<{ type: string; requestId: number; keys: string[] }>
-        ) => {
+        ): void => {
           if (event.data.type !== 'result') return;
           const resolve = this.workerRequests.get(event.data.requestId);
           if (!resolve) return;
           this.workerRequests.delete(event.data.requestId);
           resolve(event.data.keys);
         };
-        this.worker.onerror = () => {
+        this.worker.onerror = (): void => {
           this.worker?.terminate();
           this.worker = null;
           for (const resolve of this.workerRequests.values()) resolve([]);

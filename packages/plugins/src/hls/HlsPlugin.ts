@@ -63,7 +63,7 @@ function isUrlString(source: string | MediaManifestSource): source is string {
  * 类型谓词：判断源是否为 MediaManifest 对象
  * MediaManifest 具有 duration 和 video 字段
  */
-function isMediaManifest(source: string | MediaManifestSource): source is MediaManifest {
+function isMediaManifest(source: unknown): source is MediaManifest {
   return (
     typeof source === 'object' &&
     source !== null &&
@@ -643,7 +643,7 @@ export class HlsPlugin implements StreamPlugin {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      const manifest = await response.json();
+      const manifest: unknown = await response.json();
 
       if (!isMediaManifest(manifest)) {
         throw new Error('JSON 格式不是有效的 MediaManifest（缺少 duration 或 video 字段）');

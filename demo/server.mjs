@@ -23,7 +23,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import * as sass from 'sass';
 import { createServer as createViteServer } from 'vite';
 
 /**
@@ -36,9 +35,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * 服务器端口号
- * 与 vite.config.ts 中的 server.port 保持一致
+ * 默认与 vite.config.ts 中的 server.port 保持一致，可用 SSR_PORT 覆盖（便于并行调试）
  */
-const PORT = 5174;
+const PORT = Number(process.env.SSR_PORT) || 5174;
 
 async function createServer() {
   /**
@@ -88,115 +87,56 @@ async function createServer() {
 
   /**
    * ============================================
-   * CSS 收集函数（SSR 关键部分）
+   * SSR CSS 收集（SSR 关键部分）
    * ============================================
-   * 在 SSR 模式下，CSS/SCSS 的 import 会被 Vite 忽略（返回空模块）
-   * 导致首屏 HTML 中缺少 CSS，造成 FOUC（Flash of Unstyled Content）
-   *
-   * 此函数在 SSR 渲染后遍历 Vite 模块依赖图，收集所有 CSS/SCSS 模块的内容，
-   * 注入到 HTML 的 <head> 中作为 <style> 标签，确保首屏即带样式。
-   *
-   * 工作原理：
-   * 1. 从入口模块开始遍历 moduleGraph
-   * 2. 找到所有 .css/.scss/.less 模块
-   * 3. 用 vite.transformRequest 获取模块的转换结果
-   *    Vite 将 SCSS 编译为 CSS，然后包装在 JS 代码中：
-   *    const __vite__css = "...actual CSS...";
-   * 4. 从 JS 包装中提取原始 CSS 字符串
-   * 5. 合并所有 CSS，注入为 <style> 标签
+   * SSR 下 CSS import 会被 Vite 忽略，首屏会 FOUC，所以要把编译后的 CSS
+   * 内联进 HTML。这里必须走 Vite 的客户端 CSS 转换，而不是直接 sass.compile：
+   * 只有经过 Vite，SCSS 里的 url(@/assets/xxx) 才会被改写为浏览器可访问的
+   * /@fs/... 地址。直接 Sass 编译会留下裸 @/ 路径，浏览器按相对路径请求
+   * 得到 /@/assets/xxx，必然 404。
    */
-  async function collectSSRCss(entryUrl) {
-    const cssChunks = [];
-    const visited = new Set();
+  const PLAYER_STYLE_URL = '@/styles/style.scss';
 
-    /**
-     * 从 Vite transformRequest 的 JS 包装中提取 CSS 字符串
-     * Vite 生成的 JS 代码格式：
-     *   const __vite__css = ".player{color:red;...}";
-     * 或使用反引号/单引号
-     */
-    function extractCss(jsCode) {
-      const marker = jsCode.match(/__vite__css\s*=\s*/);
-      if (!marker) return null;
-      const start = marker.index + marker[0].length;
-      const quote = jsCode[start];
-      if (quote !== '"' && quote !== "'" && quote !== "`") return null;
-      let escaped = false;
-      let i = start + 1;
-      for (; i < jsCode.length; i++) {
-        const ch = jsCode[i];
-        if (escaped) { escaped = false; continue; }
-        if (ch === "\\") { escaped = true; continue; }
-        if (ch === quote) { i += 1; break; }
-      }
-      const literal = jsCode.slice(start, i);
-      if (quote === '"') {
-        try { return JSON.parse(literal); } catch {}
-      }
-      return literal
-        .slice(1, -1)
-        .replace(/\\n/g, "\n")
-        .replace(/\\t/g, "\t")
-        .replace(/\\"/g, '"')
-        .replace(/\\'/g, "'")
-        .replace(/\\\\/g, "\\");
+  /**
+   * 从 Vite transformRequest 的 JS 包装中提取 CSS 字符串
+   * Vite 生成的 JS 代码格式：const __vite__css = "...actual CSS...";
+   */
+  function extractCssLiteral(jsCode) {
+    const marker = jsCode.match(/__vite__css\s*=\s*/);
+    if (!marker) return null;
+    const start = marker.index + marker[0].length;
+    const quote = jsCode[start];
+    if (quote !== '"' && quote !== "'" && quote !== "`") return null;
+    let escaped = false;
+    let i = start + 1;
+    for (; i < jsCode.length; i++) {
+      const ch = jsCode[i];
+      if (escaped) { escaped = false; continue; }
+      if (ch === "\\") { escaped = true; continue; }
+      if (ch === quote) { i += 1; break; }
     }
-    /**
-     * 递归遍历模块依赖图
-     * Vite 5 中 SSR 模块通过 ssrModuleGraph 管理
-     * 每个模块的 importedModules 包含其导入的所有模块（含 CSS）
-     */
-    async function traverse(mod) {
-      if (!mod || visited.has(mod.url)) return;
-      visited.add(mod.url);
-
-      // 检查是否为 CSS/SCSS/LESS 模块
-      const isCss = /\.(css|scss|less|styl|sass)($|\?)/.test(mod.url);
-      if (isCss) {
-        try {
-          /**
-           * 获取 Vite 转换后的模块内容
-           * 注意：使用 transformRequest（非 SSR 模式）获取 CSS
-           * 因为 SSR 模式下 CSS 会被忽略，需要用客户端转换获取实际 CSS
-           */
-          const result = await vite.transformRequest(mod.url);
-          if (result && result.code) {
-            const css = extractCss(result.code);
-            if (css) {
-              cssChunks.push(`/* ${mod.url} */`);
-              cssChunks.push(css);
-            }
-          }
-        } catch (e) {
-          console.warn('[SSR CSS] Failed to collect:', mod.url, e.message);
-        }
-      }
-
-      // 递归遍历所有导入的模块
-      for (const imported of mod.importedModules) {
-        await traverse(imported);
-      }
+    const literal = jsCode.slice(start, i);
+    if (quote === '"') {
+      try { return JSON.parse(literal); } catch { return null; }
     }
+    return literal
+      .slice(1, -1)
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      .replace(/\\\\/g, "\\");
+  }
 
-    /**
-     * 从 SSR 模块图中获取入口模块
-     * Vite 5: getModuleByUrl(url, ssr) 第二个参数为 true 表示 SSR 模块图
-     */
-    const entryModule = await vite.moduleGraph.getModuleByUrl(entryUrl, true);
-    if (!entryModule) {
-      console.warn('[SSR CSS] Entry module not found in SSR module graph:', entryUrl);
-      return '';
-    }
-
-    await traverse(entryModule);
-
-    if (cssChunks.length === 0) {
-      console.warn('[SSR CSS] No CSS modules found in dependency graph');
-    } else {
-      console.log('[SSR CSS] Collected', cssChunks.length / 2, 'CSS chunks');
-    }
-
-    return cssChunks.join('\n');
+  async function compilePlayerCss() {
+    const resolved = await vite.pluginContainer.resolveId(PLAYER_STYLE_URL, undefined, {
+      ssr: false,
+    });
+    if (!resolved) throw new Error(`无法解析样式入口: ${PLAYER_STYLE_URL}`);
+    const result = await vite.transformRequest(resolved.id, { ssr: false });
+    const css = result?.code ? extractCssLiteral(result.code) : null;
+    if (!css) throw new Error(`样式转换结果中未找到 CSS: ${PLAYER_STYLE_URL}`);
+    return css;
   }
 
   /**
@@ -254,16 +194,13 @@ async function createServer() {
        * 注意：必须在 render() 之后调用，因为 ssrLoadModule 加载入口模块时
        * 才会建立完整的模块依赖图（包括 VideoPlayer → index.scss 等）
        */
-      // 直接用 Sass 编译播放器样式，避免从 Vite CSS 模块字符串里截取导致嵌套样式丢失
+      // 必须经 Vite 转换，url(@/assets/...) 才会被改写为 /@fs/... 可访问地址
       let ssrCss = '';
       try {
-        ssrCss = sass.compile(
-          path.resolve(__dirname, '../packages/player/src/styles/style.scss'),
-          { style: 'expanded' },
-        ).css;
+        ssrCss = await compilePlayerCss();
         console.log('[SSR CSS] compiled player style:', ssrCss.length, 'bytes');
       } catch (err) {
-        console.warn('[SSR CSS] sass compile failed:', err?.message ?? err);
+        console.warn('[SSR CSS] compile failed:', err?.message ?? err);
       }
 
       /**
@@ -285,7 +222,7 @@ async function createServer() {
        */
       let html = template.replace('<!--ssr-outlet-->', appHtml);
       html = html.replace('<!--ssr-meta-outlet-->', metaTags);
-      html = html.replace('<!--ssr-css-outlet-->', ssrCss ? '<style data-ssr-css>' + ssrCss + '</style>' : '');
+      html = html.replace('<!--ssr-css-outlet-->', ssrCss ? '<style data-ssr-nova-css>' + ssrCss + '</style>' : '');
 
       /**
        * 2f. 发送完整的 HTML 给浏览器

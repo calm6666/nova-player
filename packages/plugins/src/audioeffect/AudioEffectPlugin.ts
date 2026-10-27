@@ -39,6 +39,18 @@ import type {
 
 const logger = createLogger('AudioEffectPlugin');
 
+/**
+ * 页面是否已经发生过用户手势。
+ * 无手势时创建 AudioContext 会触发 Chrome 自动播放策略告警，
+ * 因此初次水合只能等到 play 或用户交互后再建图。
+ */
+function hasUserActivation(): boolean {
+  const activation = (
+    navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }
+  ).userActivation;
+  return activation?.hasBeenActive ?? false;
+}
+
 // ============================================
 // 类型定义
 // ============================================
@@ -117,8 +129,14 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
   private readonly hiresDecoder: HiResAudioDecoder;
   /** 当前 Hi-Res 解码播放源 */
   private hiresSource: AudioBufferSourceNode | null = null;
-  /** video 的 play 事件回调 —— 每次播放时确保 AudioContext 恢复 running */
+  /** 当前音量均衡模式（建图前收到的设置需在初始化后补应用） */
+  private loudnessMode: number | null = null;
+  /** video 的 play 事件回调 —— 首次播放时按需建图，之后确保 AudioContext 恢复 running */
   private readonly handlePlayResume = (): void => {
+    if (!this.audioCtx) {
+      this.initAudio();
+      return;
+    }
     this.tryResume();
   };
 
@@ -141,7 +159,13 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
     const unsub = this.eventBus.on(PlayerEventEnum.MOUNTED, (data): void => {
       if (data.video instanceof HTMLVideoElement) {
         this.video = data.video;
-        this.initAudio();
+        // play 监听常驻：首次播放时按需建图，后续播放负责 resume
+        this.video.addEventListener('play', this.handlePlayResume);
+        // 已有用户手势（如播放器重建由按钮触发）才可以立即建图，
+        // 否则 AudioContext 会在未授权状态启动并触发浏览器告警
+        if (hasUserActivation()) {
+          this.initAudio();
+        }
       }
     });
     this.unsubscribers.push(unsub);
@@ -190,12 +214,12 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
       );
       // gain → destination 的连接由 EffectChain.init 负责，避免重复 connect
       this.effectChain.setVolume(this.initialVolume);
-      // 接管后 video 的音频全部改道进 Web Audio 图。但浏览器 autoplay 策略下，
-      // 无用户手势时 AudioContext 处于 suspended —— 表现为所有源（mp4/hls/dash）
-      // 全部无声，且 Chrome 对 suspended 图中被接管的媒体元素会冻结帧推进
-      // （暂停后再播放画面卡死）。修复：订阅 video 的 play 事件（用户点击播放时
-      // 文档已有 sticky activation），每次播放都确保 ctx 处于 running
-      this.video.addEventListener('play', this.handlePlayResume);
+      // 建图前收到的音量均衡设置在这里补应用（挂载期偏好恢复早于首次播放）
+      if (this.loudnessMode !== null) {
+        this.effectChain.setLoudness(this.loudnessMode);
+      }
+      // 接管后 video 的音频全部改道进 Web Audio 图。play 监听在 MOUNTED 时已挂上，
+      // 由它负责首次建图与后续 resume，这里只需尝试恢复当前上下文
       this.tryResume();
       logger.info('音效链初始化成功');
     } catch (err) {
@@ -268,6 +292,7 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
 
   /** 设置音量均衡模式（0 关闭 / 1 标准 / 2 高动态），转发效果链处理 */
   setLoudness(mode: number): void {
+    this.loudnessMode = mode;
     this.effectChain?.setLoudness(mode);
   }
 
@@ -303,6 +328,7 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
 
   /** 播放已解码的 Hi-Res 音频缓冲（接入当前音效总 gain） */
   playHiResAudio(decoded: HiResDecodedAudio, offset = 0): void {
+    if (!this.audioCtx) this.initAudio();
     const ctx = this.audioCtx;
     if (!ctx) {
       logger.warn('AudioContext 未初始化，无法播放 Hi-Res 音频');

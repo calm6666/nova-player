@@ -214,7 +214,7 @@ function fillHoles(mask: Float32Array, w: number, h: number, threshold: number):
   // 从边界 flood-fill，标记「外部背景」
   const outside = new Uint8Array(w * h);
   const stack: number[] = [];
-  const push = (i: number) => {
+  const push = (i: number): void => {
     if (!outside[i] && isPerson[i] === 0) {
       outside[i] = 1;
       stack.push(i);
@@ -418,7 +418,7 @@ async function handleSegment(
   }
 }
 
-workerScope.onmessage = (event: MessageEvent<SegmentationWorkerRequest>) => {
+workerScope.onmessage = (event: MessageEvent<SegmentationWorkerRequest>): void => {
   const msg = event.data;
   switch (msg.type) {
     case 'init':

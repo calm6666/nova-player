@@ -308,6 +308,7 @@ export class SherpaAsrEngine implements AsrEngine {
   ): Promise<WasmModuleInstance> {
     const source = await fetchScript(loaderUrl);
     // 求值器：执行源码（顶层 var Module = 工厂）并返回 Module
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const evaluateLoader = new Function(`${source}\nreturn Module;`);
     const loaderCandidate: unknown = evaluateLoader();
     if (!isWasmLoaderFn(loaderCandidate)) {
@@ -334,6 +335,7 @@ export class SherpaAsrEngine implements AsrEngine {
   ): Promise<CreateOnlineRecognizerFn> {
     const source = await fetchScript(wrapperUrl);
     // 求值器：执行源码（顶层函数声明）并返回 createOnlineRecognizer
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
     const evaluateWrapper = new Function(
       `${source}\nreturn createOnlineRecognizer;`,
     );

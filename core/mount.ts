@@ -1055,7 +1055,7 @@ function applyVModel(el: Element, sig: unknown): (() => void) | undefined {
       const effectDispose = effect(() => {
         input.checked = Boolean(sig.value);
       });
-      const handler = () => {
+      const handler = (): void => {
         sig.value = input.checked;
       };
       input.addEventListener("change", handler);
@@ -1070,7 +1070,7 @@ function applyVModel(el: Element, sig: unknown): (() => void) | undefined {
       const effectDispose = effect(() => {
         input.checked = input.value === String(sig.value);
       });
-      const handler = () => {
+      const handler = (): void => {
         sig.value = input.value;
       };
       input.addEventListener("change", handler);
@@ -1084,7 +1084,7 @@ function applyVModel(el: Element, sig: unknown): (() => void) | undefined {
     const effectDispose = effect(() => {
       input.value = String(sig.value);
     });
-    const handler = () => {
+    const handler = (): void => {
       sig.value = input.value;
     };
     input.addEventListener("input", handler);
@@ -1100,7 +1100,7 @@ function applyVModel(el: Element, sig: unknown): (() => void) | undefined {
     const effectDispose = effect(() => {
       textarea.value = String(sig.value);
     });
-    const handler = () => {
+    const handler = (): void => {
       sig.value = textarea.value;
     };
     textarea.addEventListener("input", handler);
@@ -1116,7 +1116,7 @@ function applyVModel(el: Element, sig: unknown): (() => void) | undefined {
     const effectDispose = effect(() => {
       select.value = String(sig.value);
     });
-    const handler = () => {
+    const handler = (): void => {
       sig.value = select.value;
     };
     select.addEventListener("change", handler);

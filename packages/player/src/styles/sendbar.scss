@@ -251,6 +251,32 @@
   background: var(--nova-player-dmsend-input-bg, #f4f4f4);
   color: #999;
   flex-grow: 1;
+
+  .nova-player-dm-wrap {
+    -webkit-box-flex: 1;
+    -ms-flex-positive: 1;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    flex-grow: 1;
+    left: 0;
+    line-height: 28px;
+    overflow: hidden;
+    padding: 0 10px;
+    text-overflow: ellipsis;
+    top: 0;
+    white-space: nowrap;
+    z-index: 13;
+
+    a {
+      color: #00a1d6;
+      color: var(--nova-player-primary-color, #00a1d6);
+      padding: 0 4px;
+    }
+  }
+
+  .nova-player-dm-wrap {
+    padding: 0 0 0 6px;
+  }
 }
 
 .nova-player-video-inputbar-wrap {
@@ -332,28 +358,6 @@
   display: block;
 }
 
-.nova-player-dm-wrap {
-  -webkit-box-flex: 1;
-  -ms-flex-positive: 1;
-  -webkit-box-sizing: border-box;
-  box-sizing: border-box;
-  flex-grow: 1;
-  left: 0;
-  line-height: 28px;
-  overflow: hidden;
-  padding: 0 10px;
-  text-overflow: ellipsis;
-  top: 0;
-  white-space: nowrap;
-  z-index: 13;
-
-  a {
-    color: #00a1d6;
-    color: var(--nova-player-primary-color, #00a1d6);
-    padding: 0 4px;
-  }
-}
-
 .nova-player-dm-input {
   -webkit-box-flex: 1;
   -ms-flex-positive: 1;
@@ -395,10 +399,6 @@
   &::placeholder {
     color: var(--nova-player-dmsend-input-font, #212121);
   }
-}
-
-.nova-player-dm-wrap {
-  padding: 0 0 0 6px;
 }
 
 .nova-player-dm-btn-send {

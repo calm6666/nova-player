@@ -70,11 +70,13 @@ export function isReactivePropGetter(value: unknown): value is () => unknown {
 const reactivePropsHandler: ProxyHandler<Record<string, unknown>> = {
   get(target, key) {
     // Reflect.get 同时兼容 string / symbol 键（如展开时的内部协议访问）
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const value = Reflect.get(target, key);
     if (isReactivePropGetter(value)) {
       const resolved = value();
       return isSignalRef(resolved) ? resolved.value : resolved;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return isSignalRef(value) ? value.value : value;
   },
 };

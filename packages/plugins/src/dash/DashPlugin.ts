@@ -29,7 +29,7 @@ import { manifestToDash } from '../vendor/manifest-to-dash';
 import type { VideoPlayer } from '@lumina/nova';
 import { StreamPluginTypeEnum, StreamPluginEventEnum, StreamFormatEnum, AUTO_QUALITY_ID, resolveVideoCodec } from '@/types/streamPlugin';
 import { detectManifestProtocol } from '@/nova/utils/media/manifestProtocol';
-import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, MediaManifestSource, StreamQualityChangePayload } from '@/types/streamPlugin';
+import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, StreamQualityChangePayload } from '@/types/streamPlugin';
 import type { PluginOptions } from '@/types/plugin';
 import { PlayerEventEnum } from '@/core/events';
 import type { PlayerEventBus } from '../../../player/src/core/plugin';
@@ -49,7 +49,7 @@ const QUALITY_LABEL_SUFFIX: Record<number, string> = {
  * 类型谓词：判断源是否为 MediaManifest 对象
  * MediaManifest 具有 duration 和 video 字段
  */
-function isMediaManifest(source: string | MediaManifestSource): source is MediaManifest {
+function isMediaManifest(source: unknown): source is MediaManifest {
   return (
     typeof source === 'object' &&
     source !== null &&
@@ -505,7 +505,7 @@ export class DashPlugin implements StreamPlugin {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      const manifest = await response.json();
+      const manifest: unknown = await response.json();
 
       if (!isMediaManifest(manifest)) {
         throw new Error('JSON 格式不是有效的 MediaManifest（缺少 duration 或 video 字段）');

@@ -166,7 +166,7 @@ export class DOMEngine {
   ): void {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => {
+    img.onload = (): void => {
       this.maskImage = img;
       this.maskOriginalWidth = originalWidth || img.naturalWidth || img.width;
       this.maskOriginalHeight =
@@ -175,7 +175,7 @@ export class DOMEngine {
       this.lastMaskParams = null;
       this.applyMask();
     };
-    img.onerror = () => {
+    img.onerror = (): void => {
       // 静默处理错误
     };
     img.src = url;
@@ -771,7 +771,7 @@ export class DOMEngine {
     item.element.classList.add("danmaku-x-roll");
 
     // 监听动画结束
-    const onAnimationEnd = () => {
+    const onAnimationEnd = (): void => {
       this.removeDanmaku(item.renderId);
     };
     item.element.addEventListener("animationend", onAnimationEnd);
@@ -816,7 +816,7 @@ export class DOMEngine {
     item.element.classList.add("danmaku-x-center");
 
     // 监听动画结束
-    const onAnimationEnd = () => {
+    const onAnimationEnd = (): void => {
       this.removeDanmaku(item.renderId);
     };
     item.element.addEventListener("animationend", onAnimationEnd);
@@ -1206,7 +1206,7 @@ export class DOMEngine {
 
     let lastTimeKey = -1;
 
-    const updateMask = async () => {
+    const updateMask = async (): Promise<void> => {
       if (!config.maskLoader) {
         return;
       }

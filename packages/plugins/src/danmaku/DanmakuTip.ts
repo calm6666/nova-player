@@ -262,7 +262,7 @@ export class DanmakuTip {
     // 点赞点击：切换点赞态（+1 / -1）、切换图标填充形态、同步弹幕文字
     // 前置的点赞图标（挂/摘 danmaku-x-liked 类，初始渲染 like>0 同一
     // 机制）并外抛回调
-    const handleLikeClick = (e: Event) => {
+    const handleLikeClick = (e: Event): void => {
       e.stopPropagation();
       const item = this.currentItem;
       if (!item) return;

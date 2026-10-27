@@ -239,7 +239,7 @@ export function Switch(props: Record<string, unknown>): VNode {
   // 分离 Match 子节点和 fallback
   // Match VNode 的 __flow.type === 'show'（Match 组件设置）
   const matches: Array<{ when: () => boolean; children: VNodeChild[] }> = [];
-  let fallback: VNodeChild[] = [];
+  const fallback: VNodeChild[] = [];
   for (const child of children) {
     if (
       typeof child !== "string" &&

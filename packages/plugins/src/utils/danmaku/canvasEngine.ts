@@ -206,7 +206,7 @@ export class CanvasEngine {
   ): void {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => {
+    img.onload = (): void => {
       this.maskImage = img;
       // 保存原始尺寸，如果没有提供则使用图片实际尺寸
       this.maskOriginalWidth = originalWidth || img.naturalWidth || img.width;
@@ -219,7 +219,7 @@ export class CanvasEngine {
       this.maskDrawParams = null;
       this.createMaskCanvas();
     };
-    img.onerror = () => {
+    img.onerror = (): void => {
       // 静默处理错误
     };
     img.src = url;
@@ -1194,7 +1194,7 @@ export class CanvasEngine {
     const updateInterval = config.updateInterval || 1000;
     let lastTimeKey = -1;
 
-    const updateMask = async () => {
+    const updateMask = async (): Promise<void> => {
       if (!config.maskLoader) {
         return;
       }

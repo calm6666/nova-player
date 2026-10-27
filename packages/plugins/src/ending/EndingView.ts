@@ -1866,7 +1866,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       closeEndWrap,
       showShareWrap,
       closeShareWrap,
-      isCountdownActive: () => countdownActive,
+      isCountdownActive: (): boolean => countdownActive,
     };
     props.onEndingMounted?.(api);
     lifecycle.emit?.("endingMounted", {
@@ -1874,7 +1874,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       closeEndWrap,
       showShareWrap,
       closeShareWrap,
-      isCountdownActive: () => countdownActive,
+      isCountdownActive: (): boolean => countdownActive,
     } satisfies EndingApi);
   };
 

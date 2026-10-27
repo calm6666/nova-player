@@ -965,6 +965,16 @@
 /* ============================================
  * 弹幕列表面板（mock 拉取 + 本地发送）
  * ============================================ */
+.danmaku-wrap {
+  min-height: 44px;
+  background: var(--graph_bg_regular);
+  background: var(--graph_bg_regular);
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+
+}
 
 /* 列表容器：条目过多时出竖向滚动（限高 320px） */
 .danmaku-list {

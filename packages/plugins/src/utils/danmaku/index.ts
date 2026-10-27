@@ -303,7 +303,7 @@ export class DanmakuManager {
     this.resizeObserver.observe(this.container);
 
     // 全屏事件必须直接通知弹幕管理器，不能只依赖 ResizeObserver。
-    this.fullscreenHandler = () => {
+    this.fullscreenHandler = (): void => {
       const mode = document.fullscreenElement ? "fullscreen" : "normal";
       this.switchScreenMode(mode);
     };

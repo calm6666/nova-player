@@ -125,7 +125,7 @@ const ThemeSwitcher = defineComponent<
   const themeIconRef = useTemplateRef<HTMLElement>(lifecycle, "themeIconRef");
   const themeLabelRef = useTemplateRef<HTMLElement>(lifecycle, "themeLabelRef");
 
-  lifecycle.onMounted = () => {
+  lifecycle.onMounted = (): void => {
     appEventBus.emit("ACTION_LOG", {
       action: "ThemeSwitcher: onMounted",
       timestamp: Date.now(),
@@ -158,7 +158,7 @@ const ThemeSwitcher = defineComponent<
     );
   };
 
-  const handleToggle = () => {
+  const handleToggle = (): void => {
     const currentTheme = appState.get("app.theme") ?? "dark";
     const newTheme = currentTheme === "dark" ? "light" : "dark";
     appState.set("app.theme", newTheme);
@@ -424,7 +424,7 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         { class: "source-card-title" },
         "弹幕列表（mock 拉取 + 本地发送）",
       ),
-      h("ul", { id: "danmaku-list", class: "danmaku-list" }),
+      h("div", { id: "danmaku-list", class: "danmaku-wrap" }),
     ),
     // 插件 API 演示：调用 player 公开方法 / 插件运行时 API
     // （按钮 id 由 SSR 输出，entry-client.ts 水合后绑定事件）
@@ -1059,7 +1059,7 @@ const App = defineComponent((_props, lifecycle) => {
     "--font-size": "14px",
   });
 
-  lifecycle.onMounted = () => {
+  lifecycle.onMounted = (): void => {
     appEventBus.emit("ACTION_LOG", {
       action: "App: onMounted (水合完成)",
       timestamp: Date.now(),

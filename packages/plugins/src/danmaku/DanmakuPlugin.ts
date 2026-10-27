@@ -8,8 +8,9 @@
  *   在插件内部完成面板数值 → 引擎参数的转换（见「数值转换表」注释）
  * - 发送链路通道：订阅 DANMAKU_SEND 提交事件，发送时从状态读取
  *   弹幕颜色 / 弹幕模式组装完整弹幕，经 onSend 确认后上屏
- * - 数据获取通道：优先接线 danmaku.provider（外部实现分段拉取），
- *   无 provider 时将 danmaku.url 包装为「一次性全量拉取 + 时间窗过滤」的 loader
+ * - 数据通道：插件不发起任何网络请求。弹幕数据全部由外部经
+ *   DanmakuPluginAPI 传入（loadDanmaku / addDanmaku / updateDanmaku /
+ *   removeDanmaku / clearDanmaku），插件负责渲染与列表面板同步。
  *
  * 渲染引擎（DanmakuManager）自带 video 事件绑定（play/pause/seeking/timeupdate）、
  * ResizeObserver 与 fullscreenchange 监听，插件不再重复订阅播放器事件。
@@ -27,20 +28,18 @@
  *   })
  * ]
  *
- * 数据源配置（推荐 provider，与 progress.previewProvider 同一模式）：
- * new VideoPlayer({
- *   danmaku: {
- *     provider: (startTime, endTime) => fetchDanmaku(startTime, endTime),
- *     // 或 url: '/api/danmaku.json'（一次性拉取 JSON 数组）
- *   }
- * })
+ * 数据注入（外部负责请求，插件只消费数据）：
+ * player.loadDanmaku(list);            // 播放器便捷 API
+ * player.mountDanmakuList("#danmaku-list"); // 列表面板（必须显式传挂载点）
+ *
+ * 数据链路：loadDanmaku 替换全网数据并重置调度器；addDanmaku/updateDanmaku/
+ * removeDanmaku/clearDanmaku 同时同步渲染调度器与列表面板，保证画面与列表一致。
  */
 
 import type { Plugin, PluginOptions } from "@/types/plugin";
 import type { DanmakuCallbacks } from "@/types/callbacks";
 import type {
   DanmakuItem,
-  DanmakuListProvider,
   DanmakuSpeed,
   DanmakuFontSize,
   DanmakuArea,
@@ -56,6 +55,12 @@ import { PlayerStateKeyEnum } from "../../../player/src/store/runtimeState";
 import { DanmakuManager } from "../utils/danmaku";
 import { DanmakuTip } from "./DanmakuTip";
 import { injectPluginStyle } from "../utils/injectStyle";
+import {
+  mountDanmakuListView,
+  type DanmakuListViewHandle,
+} from "./DanmakuList/DanmakuList";
+import type { DanmakuListHandlers, DanmakuListRow } from "./DanmakuList/types";
+import danmakuListStyle from "./DanmakuList/DanmakuList.scss?inline";
 // 防挡分割器仅类型引用（运行时经 applyMaskEnabled 内动态 import 懒加载，
 // 编译期被完全擦除，不产生静态依赖 → 未开启防挡时 chunk 不进主包）
 import type { DanmakuMaskSegmenter } from "../utils/danmakuMask";
@@ -65,6 +70,16 @@ import danmakuCss from "./danmaku.scss?inline";
 // ============================================
 // 类型定义
 // ============================================
+
+/** 弹幕列表面板配置 */
+export interface DanmakuListConfig {
+  /** 是否登录态（举报 / 查看历史弹幕 / 同步屏蔽列表） */
+  loggedIn?: boolean;
+  /** 面板整体高度 px（默认 380） */
+  height?: number;
+  /** 历史弹幕可点日期（yyyy-MM-dd）；不传时按弹幕发送日期推导 */
+  historyDates?: readonly string[];
+}
 
 /** 弹幕插件配置 */
 export interface DanmakuPluginConfig {
@@ -79,30 +94,17 @@ export interface DanmakuPluginConfig {
    * - 'auto'：弹幕量超过阈值（200 条）时自动切换 Canvas
    */
   renderer?: RenderMode;
-  /** 弹幕数据源（由插件自己持有，播放器配置不再提供 danmaku 入口） */
-  source?: DanmakuSourceConfig;
+  /** 弹幕列表面板配置（挂载 / 登录态 / 历史日期） */
+  list?: DanmakuListConfig;
   /** 智能防挡数据源（外部 provider） */
   mask?: {
     provider?: MaskLoader;
   };
 }
 
-/** 弹幕数据源配置（provider 优先，url 兜底） */
-export interface DanmakuSourceConfig {
-  /** 弹幕列表提供者（分段拉取，外部实现数据获取逻辑） */
-  provider?: DanmakuListProvider;
-  /** 弹幕数据源 URL（JSON 数组，一次性全量拉取后按时间窗过滤） */
-  url?: string;
-}
-
 // ============================================
 // 运行时类型谓词（替代 as 断言的收窄方案）
 // ============================================
-
-/** 类型谓词：非空普通对象（与 playerStore.isNonNullObject 同一模式） */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** 类型谓词：合法的弹幕类型枚举值 */
 function isDanmakuTypeValue(value: unknown): value is DanmakuType {
@@ -111,16 +113,6 @@ function isDanmakuTypeValue(value: unknown): value is DanmakuType {
     value === DanmakuType.TOP ||
     value === DanmakuType.BOTTOM ||
     value === DanmakuType.ADVANCED
-  );
-}
-
-/** 类型谓词：校验单条弹幕数据结构（url 通道拉取的 JSON 逐条校验） */
-function isDanmakuItem(value: unknown): value is DanmakuItem {
-  if (!isPlainObject(value)) return false;
-  return (
-    typeof value.text === "string" &&
-    typeof value.time === "number" &&
-    isDanmakuTypeValue(value.type)
   );
 }
 
@@ -173,10 +165,22 @@ function danmakuModeToType(mode: number): DanmakuType {
 export interface DanmakuPluginAPI extends Plugin {
   /** 获取 DanmakuManager 实例 */
   getManager(): DanmakuManager | null;
-  /** 加载弹幕列表（一次性注入，无 provider/url 时的手动数据通道） */
-  loadDanmaku(list: DanmakuItem[]): void;
-  /** 更换弹幕数据源（provider 优先，url 兜底；换源时清空分段缓存） */
-  load(config: DanmakuSourceConfig): void;
+  /** 全量替换弹幕数据（重置调度器并同步列表面板） */
+  loadDanmaku(list: readonly DanmakuItem[]): void;
+  /** 追加单条弹幕（调度器 + 列表面板同步） */
+  addDanmaku(item: DanmakuItem): void;
+  /** 更新单条弹幕（按 id 合并字段，调度器 + 列表面板同步） */
+  updateDanmaku(id: DanmakuItem["id"], patch: Partial<DanmakuItem>): void;
+  /** 删除单条弹幕（调度器 + 列表面板同步） */
+  removeDanmaku(id: DanmakuItem["id"]): void;
+  /** 清空弹幕数据与渲染层 */
+  clearDanmaku(): void;
+  /** 获取当前弹幕数据副本 */
+  getDanmakuList(): DanmakuItem[];
+  /** 挂载列表面板（必须显式传入挂载点；不传不挂载） */
+  mountList(target: string | HTMLElement): void;
+  /** 卸载列表面板 */
+  unmountList(): void;
   /** 设置弹幕可见性 */
   setVisible(visible: boolean): void;
   /** 发送弹幕（内部读取状态中的颜色/模式组装，经 onSend 确认后上屏） */
@@ -240,13 +244,16 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   private tip: DanmakuTip | null = null;
   private callbacks: DanmakuCallbacks;
   /** 弹幕渲染方式（'dom' 默认 / 'canvas' / 'auto'），创建引擎时传入 */
-  private renderer: RenderMode;
-  /** 插件自持的数据源（播放器不再提供 danmaku 配置入口） */
-  private source?: DanmakuSourceConfig;
+  private renderer: RenderMode; /** 列表面板配置（登录态 / 高度 / 历史日期） */
+  private listConfig?: DanmakuListConfig;
   /** 插件自持的智能防挡 provider */
   private maskProvider?: MaskLoader;
   private player: VideoPlayer | null = null;
   private video: HTMLVideoElement | null = null;
+  private danmakuList: DanmakuItem[] = [];
+  private listHandle: DanmakuListViewHandle | null = null;
+  /** 列表挂载容器（卸载时移除 .danmaku-wrap 样式作用域类） */
+  private listContainer: HTMLElement | null = null;
   /**
    * 本地语义分割器（智能防挡运行时，仅类型引用——模块经动态 import
    * 懒加载，type-only import 会被编译器完全擦除，不产生静态依赖，
@@ -264,7 +271,7 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     this.callbacks = config?.callbacks ?? {};
     this.options = config?.options;
     this.renderer = config?.renderer ?? RenderMode.DOM;
-    this.source = config?.source;
+    this.listConfig = config?.list;
     this.maskProvider = config?.mask?.provider;
   }
 
@@ -298,27 +305,25 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
         video,
         // 渲染方式由插件配置决定（默认 DOM，可选 canvas / auto）
         renderMode: this.renderer,
-      });
-      // 挂载即同步当前状态值（覆盖播放器构造期写入的初始配置）
+      }); // 挂载即同步当前状态值（覆盖播放器构造期写入的初始配置）
       this.applyInitialSettings();
       this.subscribeStateKeys();
-      this.wireDataSource();
 
       // 悬停操作条 Tip（原版行为：悬停 300ms 展示，展示期间该弹幕挂 danmaku-x-paused 暂停）
       // 操作回调转发到插件 callbacks 通道；撤回额外从画面移除该弹幕
       this.tip = new DanmakuTip(containerEl, {
-        onLike: (danmaku, liked) => {
+        onLike: (danmaku, liked): void => {
           this.callbacks.onDanmakuLike?.(danmaku, liked);
         },
-        onCopy: (danmaku) => {
+        onCopy: (danmaku): void => {
           this.callbacks.onDanmakuCopy?.(danmaku);
         },
-        onRecall: (danmaku) => {
+        onRecall: (danmaku): void => {
           this.callbacks.onDanmakuRecall?.(danmaku);
           // 撤回上屏：从渲染引擎移除该弹幕（渲染项含 renderId）
           this.manager?.removeDanmaku(danmaku.renderId);
         },
-        onReport: (danmaku) => {
+        onReport: (danmaku): void => {
           this.callbacks.onDanmakuReport?.(danmaku);
         },
       });
@@ -339,10 +344,9 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     });
     this.unsubscribers.push(unsubSend);
 
-    // 订阅 DANMAKU_CLEAR 事件：清空当前渲染的弹幕
-    // （换源场景由 load() 负责，本事件只清空渲染层并允许当前窗口重新发射）
+    // 订阅 DANMAKU_CLEAR 事件：清空当前渲染的弹幕    // （列表数据与调度器同步清空，保证画面和列表面板一致）
     const unsubClear = events.on(PlayerEventEnum.DANMAKU_CLEAR, (): void => {
-      this.manager?.clear();
+      this.clearDanmaku();
     });
     this.unsubscribers.push(unsubClear);
   }
@@ -369,6 +373,8 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     // 销毁悬停操作条（清理定时器并移除覆盖层）
     this.tip?.destroy();
     this.tip = null;
+    this.unmountList();
+    this.danmakuList = [];
 
     this.player = null;
     this.video = null;
@@ -395,7 +401,9 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     const state = this.player?.state;
     if (!state || !this.manager) return;
 
-    this.manager.setVisible(state.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true);
+    this.manager.setVisible(
+      state.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true,
+    );
     this.manager.setOpacity(state.get(PlayerStateKeyEnum.DANMAKU_OPACITY) ?? 1);
     this.manager.setSpeedMultiplier(
       state.get(PlayerStateKeyEnum.DANMAKU_SPEED) ?? 1,
@@ -541,96 +549,83 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   }
 
   // ============================================
-  // 数据源接线（provider 优先 + url 兜底）
+  // 数据同步（外部注入 → 调度器 + 列表面板）
   // ============================================
 
-  /** 挂载时接线插件自持的数据源（provider 优先于 url） */
-  private wireDataSource(): void {
-    const danmakuConfig = this.source;
-    if (!danmakuConfig || !this.manager) return;
+  /** 数据变化后重置调度器并整表装载（保证画面与列表数据一致） */
+  private syncScheduler(): void {
+    const manager = this.manager;
+    if (!manager) return;
+    manager.resetDataSource();
+    if (this.danmakuList.length > 0) {
+      manager.loadDanmaku([...this.danmakuList]);
+    }
+  }
 
-    if (danmakuConfig.provider) {
-      this.manager.setDataSource(
-        this.wrapProvider(danmakuConfig.provider),
-      );
+  /** 数据变化后刷新列表面板 */
+  private syncView(): void {
+    this.refreshList();
+  }
+
+  /** 全量替换弹幕数据（外部数据注入通道；调度器与列表面板同步） */
+  loadDanmaku(list: readonly DanmakuItem[]): void {
+    this.danmakuList = [...list].sort((a, b) => a.time - b.time);
+    this.syncScheduler();
+    this.syncView();
+    this.eventBus?.emit(PlayerEventEnum.DANMAKU_LOADED, {
+      count: this.danmakuList.length,
+    });
+  }
+
+  /** 追加单条弹幕（调度器与列表面板同步） */
+  addDanmaku(item: DanmakuItem): void {
+    if (
+      this.danmakuList.some((entry) => String(entry.id) === String(item.id))
+    ) {
       return;
     }
-    if (danmakuConfig.url) {
-      this.manager.setDataSource(this.createUrlLoader(danmakuConfig.url));
-    }
-    // 既无 provider 也无 url：保持无数据源状态，
-    // 外部可经 loadDanmaku()（一次性注入）或 load()（换源）提供数据
+    this.danmakuList = [...this.danmakuList, item].sort(
+      (a, b) => a.time - b.time,
+    );
+    this.manager?.addDanmaku(item);
+    this.syncView();
   }
 
-  /**
-   * 将外部 provider 包装为调度器 loader 协议
-   *
-   * provider 允许同步返回 / 异步返回 / 返回 null（该时间窗无弹幕），
-   * 统一归一为 Promise<DanmakuItem[]>。
-   */
-  private wrapProvider(
-    provider: DanmakuListProvider,
-  ): (startTime: number, endTime: number) => Promise<DanmakuItem[]> {
-    return async (startTime: number, endTime: number): Promise<DanmakuItem[]> => {
-      // await 对非 Promise 值直接透传，同步/异步返回统一在此收窄
-      const list = await provider(startTime, endTime);
-      return list ?? [];
-    };
+  /** 更新单条弹幕（按 id 合并字段；调度器与列表面板同步） */
+  updateDanmaku(id: DanmakuItem["id"], patch: Partial<DanmakuItem>): void {
+    let changed = false;
+    this.danmakuList = this.danmakuList.map((item) => {
+      if (String(item.id) !== String(id)) return item;
+      changed = true;
+      return { ...item, ...patch, id: item.id };
+    });
+    if (!changed) return;
+    this.syncScheduler();
+    this.syncView();
   }
 
-  /**
-   * 将 url 包装为「一次性全量拉取 + 时间窗过滤」的 loader
-   *
-   * 调度器按 30 秒分段调用 loader：首次调用拉取整表并缓存到内存，
-   * 后续分段请求按 [startTime, endTime) 过滤缓存，避免重复网络请求。
-   */
-  private createUrlLoader(
-    url: string,
-  ): (startTime: number, endTime: number) => Promise<DanmakuItem[]> {
-    let cachedList: DanmakuItem[] | null = null;
-    let fetchPromise: Promise<DanmakuItem[]> | null = null;
-
-    const loadAll = (): Promise<DanmakuItem[]> => {
-      if (cachedList) return Promise.resolve(cachedList);
-      if (!fetchPromise) {
-        fetchPromise = this.fetchDanmakuList(url).then((list) => {
-          cachedList = list;
-          return list;
-        });
-      }
-      return fetchPromise;
-    };
-
-    return async (startTime: number, endTime: number): Promise<DanmakuItem[]> => {
-      const list = await loadAll();
-      return list.filter(
-        (item) => item.time >= startTime && item.time < endTime,
-      );
-    };
+  /** 删除单条弹幕（调度器与列表面板同步） */
+  removeDanmaku(id: DanmakuItem["id"]): void {
+    const next = this.danmakuList.filter(
+      (item) => String(item.id) !== String(id),
+    );
+    if (next.length === this.danmakuList.length) return;
+    this.danmakuList = next;
+    this.syncScheduler();
+    this.syncView();
   }
 
-  /**
-   * 拉取弹幕数据源（JSON 数组），逐条做运行时结构校验
-   *
-   * 弹幕属于增强功能，拉取失败静默处理为空列表，不影响视频播放。
-   */
-  private async fetchDanmakuList(url: string): Promise<DanmakuItem[]> {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return [];
-      const data: unknown = await res.json();
-      if (!Array.isArray(data)) return [];
-      const list = data.filter(isDanmakuItem);
-      // 拉取完成：向外部广播 danmakuLoaded（保留播放器既有事件语义）
-      this.eventBus?.emit(PlayerEventEnum.DANMAKU_LOADED, {
-        count: list.length,
-        url,
-      });
-      return list;
-    } catch {
-      // 网络异常 / JSON 解析失败：静默降级为空列表
-      return [];
-    }
+  /** 清空弹幕数据与渲染层 */
+  clearDanmaku(): void {
+    this.danmakuList = [];
+    this.manager?.clear();
+    this.manager?.resetDataSource();
+    this.syncView();
+  }
+
+  /** 获取当前弹幕数据副本 */
+  getDanmakuList(): DanmakuItem[] {
+    return [...this.danmakuList];
   }
 
   // ============================================
@@ -665,6 +660,8 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
       type: options?.type ?? danmakuModeToType(mode),
       color: options?.color ?? color,
       uid: options?.uid ?? 1,
+      // 发送时间戳：列表「发送时间」列 / 历史弹幕日期筛选使用
+      sentAt: options?.sentAt ?? Date.now(),
     };
     if (options?.fontSize !== undefined) danmaku.fontSize = options.fontSize;
     if (options?.userId !== undefined) danmaku.userId = options.userId;
@@ -681,6 +678,8 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
       try {
         const confirmed = await sendProvider(danmaku);
         manager.sendDanmaku(confirmed.text, confirmed);
+        // 数据来源同步：发送成功的弹幕追加进列表面板
+        this.appendToList(confirmed);
         this.callbacks.onSendSuccess?.(confirmed);
         // 服务器确认成功：向播放器总线广播 DANMAKU_SENT
         this.eventBus?.emit(PlayerEventEnum.DANMAKU_SENT, {
@@ -700,6 +699,8 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     // 同步触发 onSendSuccess——本地直发同样是「发送成功」，外部
     // （如弹幕列表面板）依赖该回调把本地弹幕汇入列表
     manager.sendDanmaku(danmaku.text, danmaku);
+    // 数据来源同步：本地直发的弹幕追加进列表面板
+    this.appendToList(danmaku);
     this.callbacks.onSendSuccess?.(danmaku);
     this.eventBus?.emit(PlayerEventEnum.DANMAKU_SENT, {
       text: danmaku.text,
@@ -714,37 +715,96 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     return this.manager;
   }
 
-  /** 加载弹幕列表（批量注入，调度器内部按分段缓存） */
-  loadDanmaku(list: DanmakuItem[]): void {
-    if (!this.manager || list.length === 0) return;
-    this.manager.loadDanmaku(list);
-    this.callbacks.onIncrementalUpdate?.(
-      list,
-      this.manager.getStats().scheduler.totalLoaded,
-    );
+  /** 动态更新列表；不传 list 时刷新当前数据 */
+  updateList(list?: DanmakuItem[]): void {
+    if (list) this.danmakuList = [...list];
+    this.refreshList();
   }
 
-  /** 更换弹幕数据源（provider 优先，url 兜底；换源时清空分段缓存） */
-  load(config: DanmakuSourceConfig): void {
-    const manager = this.manager;
-    if (!manager) return;
+  /** 获取当前弹幕列表副本 */
+  getList(): DanmakuItem[] {
+    return [...this.danmakuList];
+  } /**
+   * 挂载弹幕列表
+   *
+   * 挂载点由调用方显式传入（选择器或元素）；不传 / 找不到则不挂载，
+   * 插件不内置默认容器，避免在播放器 DOM 内隐式创建列表。
+   */
+  mountList(target: string | HTMLElement): void {
+    if (typeof document === "undefined") return;
+    const el =
+      typeof target === "string" ? document.querySelector(target) : target;
+    if (!(el instanceof HTMLElement)) return;
+    // 样式随插件分发：列表私有样式（ui-* 公共样式在播放器样式包内）
+    injectPluginStyle("danmaku-list", danmakuListStyle);
+    // 样式作用域类由挂载方追加（组件不额外包 DOM）
+    el.classList.add("danmaku-wrap");
+    this.listContainer = el;
+    this.listHandle?.dispose();
+    this.listHandle = mountDanmakuListView(el, this.danmakuList, {
+      loggedIn: this.listConfig?.loggedIn ?? true,
+      height: this.listConfig?.height,
+      historyDates: this.listConfig?.historyDates,
+      handlers: this.buildListHandlers(),
+    });
+  }
 
-    const danmakuConfig = this.source;
-    // provider 优先：入参 provider → 插件 source provider 依次取值
-    const provider = config.provider ?? danmakuConfig?.provider;
-    // 配置了 provider 时忽略 url 变化（url 仅作占位）
-    const url = provider ? undefined : (config.url ?? danmakuConfig?.url);
+  /** 卸载弹幕列表 */
+  unmountList(): void {
+    this.listHandle?.dispose();
+    this.listHandle = null;
+    // 移除挂载时追加的样式作用域类，容器交还调用方
+    this.listContainer?.classList.remove("danmaku-wrap");
+    this.listContainer = null;
+  }
 
-    // 换源先重置：清空旧数据源的分段缓存，避免旧视频弹幕残留
-    manager.resetDataSource();
+  /** 列表视图交互 → 插件行为接线（UI 逻辑不写在插件里） */
+  private buildListHandlers(): DanmakuListHandlers {
+    return {
+      // 点击弹幕行：跳转到该弹幕出现时间
+      onSeek: (seconds: number): void => {
+        this.seek(seconds);
+      },
+      // 举报：回查原始弹幕后转发插件回调
+      onReport: (row: DanmakuListRow): void => {
+        const item = this.danmakuList.find(
+          (entry) => String(entry.id) === String(row.id),
+        );
+        if (item) this.callbacks.onDanmakuReport?.(item);
+      },
+      // 高级弹幕：测试效果直接上屏预览，发送走统一发送链路
+      onAdvSubmit: (form, kind): void => {
+        if (kind === "send") {
+          this.send(form.text);
+          return;
+        }
+        const preview: Partial<DanmakuItem> = {
+          color: form.color,
+          type: DanmakuType.ADVANCED,
+        };
+        const size = Number(form.size);
+        if (Number.isFinite(size) && size > 0) preview.fontSize = size;
+        this.manager?.sendDanmaku(form.text, preview);
+      },
+    };
+  }
 
-    if (provider) {
-      manager.setDataSource(this.wrapProvider(provider));
+  /** 刷新列表视图数据 */
+  private refreshList(): void {
+    this.listHandle?.setList(this.danmakuList);
+  }
+
+  /** 追加单条弹幕进列表（发送成功通道使用） */
+  private appendToList(item: DanmakuItem): void {
+    if (
+      this.danmakuList.some((entry) => String(entry.id) === String(item.id))
+    ) {
       return;
     }
-    if (url) {
-      manager.setDataSource(this.createUrlLoader(url));
-    }
+    this.danmakuList = [...this.danmakuList, item].sort(
+      (a, b) => a.time - b.time,
+    );
+    this.refreshList();
   }
 
   /** 设置弹幕可见性 */
@@ -755,16 +815,13 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   /** 发送弹幕（与 DANMAKU_SEND 事件同一链路） */
   send(text: string, options?: Partial<DanmakuItem>): void {
     void this.handleSend(text, options);
-  }
-
-  /** 批量发送弹幕 */
+  } /** 批量发送弹幕（逐条走 addDanmaku：调度器 + 列表面板同步） */
   sendBatch(danmakus: DanmakuItem[]): void {
-    if (!this.manager || danmakus.length === 0) return;
-    this.manager.loadDanmaku(danmakus);
-    this.callbacks.onIncrementalUpdate?.(
-      danmakus,
-      this.manager.getStats().scheduler.totalLoaded,
-    );
+    if (danmakus.length === 0) return;
+    for (const danmaku of danmakus) {
+      this.addDanmaku(danmaku);
+      this.manager?.addDanmaku(danmaku);
+    }
   }
 
   /** 继续弹幕动画 */

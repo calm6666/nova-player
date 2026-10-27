@@ -185,9 +185,9 @@ export class DanmakuMaskSegmenter {
     this.worker = new Worker(new URL('./segmentationWorker.ts', import.meta.url), {
       type: 'module',
     });
-    this.worker.onmessage = (event: MessageEvent<SegmentationWorkerResponse>) =>
+    this.worker.onmessage = (event: MessageEvent<SegmentationWorkerResponse>): void =>
       this.onMessage(event.data);
-    this.worker.onerror = (event: ErrorEvent) => {
+    this.worker.onerror = (event: ErrorEvent): void => {
       const message = event.message || '分割 Worker 异常';
       if (!this.ready && this.rejectReady) this.rejectReady(new Error(message));
     };

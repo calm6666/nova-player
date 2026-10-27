@@ -7,7 +7,7 @@
  */
 
 // SSR 已把播放器 CSS 注入 HTML；只有纯客户端页面才由客户端注入样式
-if (!document.querySelector("style[data-ssr-css]")) {
+if (!document.querySelector("style[data-ssr-nova-css]")) {
   await import("@/styles/style.scss");
 }
 import { hydrate, mount } from "@/core";
@@ -57,7 +57,11 @@ import type {
   CardType,
 } from "@/lumina/plugins/interaction";
 import type { AiSubtitleEntry, RemoteSubtitleTrack } from "@/types/subtitle";
-import type { DanmakuItem, DanmakuFilter } from "@/types/danmaku";
+import type {
+  DanmakuItem,
+  DanmakuFilter,
+  MaskLoaderResult,
+} from "@/types/danmaku";
 import {
   DanmakuType,
   RenderMode,
@@ -72,6 +76,7 @@ import type {
   PlayerSource,
   ProgressSegment,
   DisplayMode,
+  ProgressPreviewProvider,
 } from "@/types";
 // PlayMode 为运行时枚举（设置播放模式轮换用），须按值导入
 import { PlayMode } from "@/types";
@@ -179,7 +184,8 @@ async function fetchDanmakuList(): Promise<DanmakuItem[]> {
       const parts = raw.split(",");
       const time = Number(parts[0]);
       // 内容为空或时间非法（缺字段/NaN/负数）的条目直接跳过
-      if (!text || !Number.isFinite(time) || time < 0) return;
+      if (!text || !Number.isFinite(time) || time < 0) return; // p[4]：发送时间戳（Unix 秒）；非法值不写入，列表回落到「--」
+      const sentAtSeconds = Number(parts[4]);
       const item: DanmakuItem = {
         id: `mock-${index}`,
         text,
@@ -188,6 +194,9 @@ async function fetchDanmakuList(): Promise<DanmakuItem[]> {
         color: decimalColorToHex(Number(parts[3])),
         uid: parts[6] ?? "",
       };
+      if (Number.isFinite(sentAtSeconds) && sentAtSeconds > 0) {
+        item.sentAt = sentAtSeconds * 1000;
+      }
       list.push(item);
     });
     return list;
@@ -198,84 +207,21 @@ async function fetchDanmakuList(): Promise<DanmakuItem[]> {
 }
 
 // ============================================
-// 弹幕列表面板（mock 拉取 + 本地发送）
+// 弹幕列表面板（B 站三面板，经 DanmakuPlugin 的 list 配置挂载）
 // ============================================
 
 /**
- * 弹幕列表面板数据源
+ * 弹幕列表面板数据源（provider 查询底表）
  *
- * rebuildPlayer 时由 mock 拉取结果整体替换，
- * 本地发送的弹幕经 onSendSuccess 回调追加进来；
- * 同时作为播放器 danmaku.provider 的查询底表（已发射弹幕由
- * 调度器 markEmitted 集合去重，本地条目混入不会二次发射）。
+ * rebuildPlayer 时由 mock 拉取结果整体替换，本地发送的弹幕经
+ * onSendSuccess 回调沉淀进来；同时作为弹幕 provider 的时间窗查询底表
+ * （已发射弹幕由调度器 markEmitted 集合去重，本地条目混入不会二次发射）。
+ *
+ * 面板展示数据无需手动维护：mock 拉取经 loadDanmaku 手动装填通道汇入、
+ * 播放推进经 provider 分段拉取通道汇入、本地发送经插件内部接线追加
+ * （own 标记 + 本地发送时间），三条通道全部按 dmid 去重。
  */
 let danmakuPanelList: DanmakuItem[] = [];
-
-/** 秒 → mm:ss 时间点文本（小时级视频按 h:mm:ss 展开） */
-function formatDanmakuTime(time: number): string {
-  const total = Math.max(0, Math.floor(time));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const seconds = total % 60;
-  const mm = String(minutes).padStart(2, "0");
-  const ss = String(seconds).padStart(2, "0");
-  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
-}
-
-/**
- * 全量重建弹幕列表面板
- *
- * 列表结构：时间徽标 + 弹幕内容（本人弹幕额外挂「我」徽标），
- * 按 time 升序排列；mock 数据天然有序，本地发送经 sort 维持顺序。
- */
-function renderDanmakuList(): void {
-  const list = document.getElementById("danmaku-list");
-  if (!list) return;
-  list.innerHTML = "";
-  if (danmakuPanelList.length === 0) {
-    const empty = document.createElement("li");
-    empty.className = "danmaku-empty";
-    empty.textContent = "暂无弹幕";
-    list.appendChild(empty);
-    return;
-  }
-  danmakuPanelList.forEach((item) => {
-    const li = document.createElement("li");
-    li.className = "danmaku-item";
-
-    const time = document.createElement("span");
-    time.className = "danmaku-item-time";
-    time.textContent = formatDanmakuTime(item.time);
-
-    const text = document.createElement("span");
-    text.className = "danmaku-item-text";
-    text.textContent = item.text;
-
-    li.appendChild(time);
-    li.appendChild(text);
-
-    // 本人弹幕徽标（uid=1 与引擎 danmaku-x-self 白框同一判定）
-    if (item.uid === 1 || item.uid === "1") {
-      const self = document.createElement("span");
-      self.className = "danmaku-item-self";
-      self.textContent = "我";
-      li.appendChild(self);
-    }
-
-    list.appendChild(li);
-  });
-}
-
-/**
- * 追加弹幕到列表面板（本地发送成功回调入口）
- *
- * 插入后按 time 重排序并全量重建（发送为低频操作，全量重建开销可忽略）。
- */
-function appendDanmakuToList(item: DanmakuItem): void {
-  danmakuPanelList.push(item);
-  danmakuPanelList.sort((a, b) => a.time - b.time);
-  renderDanmakuList();
-}
 
 // ============================================
 // 分段进度条列表面板（mock 拉取 + 运行时编辑）
@@ -810,8 +756,11 @@ if (root) {
     DEMO_SSR_PLAYER_CONFIG.progress = {
       ...(DEMO_SSR_PLAYER_CONFIG.progress ?? {}),
       segments: initialSegments,
-      energyProvider: () => initialEnergy,
-      previewProvider: (time: number, duration: number) => {
+      energyProvider: (): EnergyProgressData | null => initialEnergy,
+      previewProvider: (
+        time: number,
+        duration: number,
+      ): ReturnType<ProgressPreviewProvider> => {
         ensurePreviewLoaded();
         return previewProviderHandle.provider(time, duration);
       },
@@ -1289,23 +1238,23 @@ const makeInteractionConfig = (): InteractionPluginConfig => {
     data: interactionSnapshot,
   };
   if (interactionMode === "edit") {
-    config.onPositionChange = (event) =>
+    config.onPositionChange = (event): void =>
       logAction(
         `位置变更 (onPositionChange): ${event.type}#${event.index} → top ${event.top}% / left ${event.left}%`,
       );
     return config;
   }
-  config.onLike = () => logAction("交互回调 (onLike): 点赞");
-  config.onCoin = () => logAction("交互回调 (onCoin): 投币");
-  config.onCollect = () => logAction("交互回调 (onCollect): 收藏");
-  config.onFollow = () => logAction("交互回调 (onFollow): 关注");
-  config.onLinkClick = (link) =>
+  config.onLike = (): void => logAction("交互回调 (onLike): 点赞");
+  config.onCoin = (): void => logAction("交互回调 (onCoin): 投币");
+  config.onCollect = (): void => logAction("交互回调 (onCollect): 收藏");
+  config.onFollow = (): void => logAction("交互回调 (onFollow): 关注");
+  config.onLinkClick = (link): void =>
     logAction(`交互回调 (onLinkClick): ${link.linkContent ?? "(无文案)"}`);
-  config.onVoteSelect = (voteIndex, optionIndex) =>
+  config.onVoteSelect = (voteIndex, optionIndex): void =>
     logAction(`交互回调 (onVoteSelect): 投票#${voteIndex} 选项#${optionIndex}`);
-  config.onScoreSelect = (scoreIndex, value) =>
+  config.onScoreSelect = (scoreIndex, value): void =>
     logAction(`交互回调 (onScoreSelect): 评分#${scoreIndex} 值 ${value}`);
-  config.onCardClose = (type, index) =>
+  config.onCardClose = (type, index): void =>
     logAction(`交互回调 (onCardClose): ${type}#${index}`);
   return config;
 };
@@ -1470,7 +1419,7 @@ async function playHuaqiangInteractive(): Promise<void> {
       startNodeId: story.startNodeId,
       autoPlay: true,
       resolveVideo: resolveHuaqiangVideo,
-      onOptionSelect: (nodeId, index) => {
+      onOptionSelect: (nodeId, index): void => {
         const node = story.nodes[nodeId];
         logAction(
           `互动分支选择: ${node?.title ?? nodeId} → ${story.nodes[node.question?.options[index]?.targetNodeId ?? ""]?.title ?? "?"}`,
@@ -1600,19 +1549,17 @@ function collectPlugins(
   const list: Plugin[] = [
     createTopPlugin(source),
     createEndingPlugin(source),
-    // 弹幕插件：Tip 操作回调接线 + 本地发送汇入页面弹幕列表
-    // （onSendSuccess 对本地直发与服务端确认两条链路均触发）
+    // 弹幕插件：Tip 操作回调接线 + 本地发送沉淀进 provider 底表
+    // （onSendSuccess 对本地直发与服务端确认两条链路均触发；
+    //  列表面板条目由插件数据通道自动汇入，无需手动维护）
     DanmakuPlugin({
-      source: {
-        // 弹幕数据由插件自己持有，播放器不再提供 danmaku 配置入口
-        provider: (startTime, endTime) =>
-          danmakuPanelList.filter(
-            (item) => item.time >= startTime && item.time < endTime,
-          ),
-      },
+      // 弹幕数据不在插件内请求：由 demo 拉取后经 loadDanmaku API 注入
       callbacks: {
         onSendSuccess: (danmaku) => {
-          appendDanmakuToList(danmaku);
+          // 本人弹幕沉淀进底表（provider 时间窗查询 + 播放器重建后重装）；
+          // 列表面板条目由插件内部接线自动追加（own 标记 + 本地发送时间）
+          danmakuPanelList.push(danmaku);
+          danmakuPanelList.sort((a, b) => a.time - b.time);
           logAction(`弹幕发送成功: ${danmaku.text}`);
         },
         onDanmakuLike: (danmaku, liked) => {
@@ -1676,7 +1623,10 @@ function collectPlugins(
     list.unshift(createHlsPlugin({ autoplay: false }));
   } else if (protocol === "dash" || (!protocol && /\.mpd(\?|$)/i.test(text))) {
     list.unshift(createDashPlugin({ autoplay: false }));
-  } else if (!protocol && (/\.json(\?|$)/i.test(text) || typeof source !== "string")) {
+  } else if (
+    !protocol &&
+    (/\.json(\?|$)/i.test(text) || typeof source !== "string")
+  ) {
     list.unshift(createDashPlugin({ autoplay: false }));
     list.unshift(createHlsPlugin({ autoplay: false }));
   }
@@ -1864,9 +1814,9 @@ async function rebuildPlayer(
     fetchDanmakuList(),
   ]);
 
-  // mock 弹幕汇入页面弹幕列表面板（本地发送的经 onSendSuccess 追加）
+  // mock 弹幕沉淀进底表（列表面板经 feedDanmakuPanel 的 loadDanmaku
+  // 通道整表汇入；本地发送的经 onSendSuccess 回调追加）
   danmakuPanelList = danmakuList;
-  renderDanmakuList();
 
   // 预览图默认关闭：不请求 /videoshot/*（避免触发浏览器下载与 IDM 弹窗）
 
@@ -1879,10 +1829,10 @@ async function rebuildPlayer(
         ? "/test-dash-segmentbase.json"
         : undefined;
   const urlSrc = queryParams.get("src") ?? publicManifest;
-  let parsedUrlSrc: typeof MEDIA_LIST[number]["src"] | undefined;
+  let parsedUrlSrc: (typeof MEDIA_LIST)[number]["src"] | undefined;
   if (urlSrc) {
     try {
-      parsedUrlSrc = JSON.parse(urlSrc) as typeof MEDIA_LIST[number]["src"];
+      parsedUrlSrc = JSON.parse(urlSrc) as (typeof MEDIA_LIST)[number]["src"];
     } catch {
       parsedUrlSrc = urlSrc;
     }
@@ -1945,10 +1895,7 @@ async function rebuildPlayer(
       },
     },
     plugins: {
-      list: collectPlugins(
-        current ? current.src : undefined,
-        protocol,
-      ),
+      list: collectPlugins(current ? current.src : undefined, protocol),
     },
     advanced: {
       debug: false,
@@ -1984,12 +1931,9 @@ async function rebuildPlayer(
         applyProgressData();
         setTimeout(applyProgressData, 500);
       });
-      attachAllPlayerEvents(existing);
-      setTimeout(() => {
-        existing
-          .getPluginAPI<DanmakuPluginAPI>("danmaku")
-          ?.loadDanmaku(danmakuPanelList);
-      }, 300);
+      attachAllPlayerEvents(existing); // 弹幕数据 + 列表面板：外部拉取后经播放器 API 注入（插件不发请求）
+      existing.loadDanmaku(danmakuPanelList);
+      existing.mountDanmakuList("#danmaku-list");
       (window as unknown as { player: VideoPlayer }).player = existing;
       if (targetIndex > 0) {
         void existing.switchTo(targetIndex).catch(() => undefined);
@@ -2001,15 +1945,13 @@ async function rebuildPlayer(
       next.mount(wrapper as HTMLElement);
       next.progress.setSegments(config.progress?.segments ?? []);
       next.progress.setEnergy(energy);
-      attachAllPlayerEvents(next);
-      setTimeout(() => {
-        next
-          .getPluginAPI<DanmakuPluginAPI>("danmaku")
-          ?.loadDanmaku(danmakuPanelList);
-      }, 300);
+      attachAllPlayerEvents(next); // 弹幕数据 + 列表面板：外部拉取后经播放器 API 注入（插件不发请求）
+      next.loadDanmaku(danmakuPanelList);
+      next.mountDanmakuList("#danmaku-list");
       for (const [otherId] of LOCALE_BUTTONS) {
         const other = document.getElementById(otherId);
-        if (other) other.classList.toggle("active", otherId === "btn-locale-zh");
+        if (other)
+          other.classList.toggle("active", otherId === "btn-locale-zh");
       }
       (window as unknown as { player: VideoPlayer }).player = next;
       if (targetIndex > 0) {
@@ -2107,7 +2049,7 @@ function handleJsonFile(event: Event): void {
   const file = target.files?.item(0);
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = (): void => {
     const text = typeof reader.result === "string" ? reader.result : "";
     const source = parseSource(text);
     if (!source) {
@@ -2120,7 +2062,7 @@ function handleJsonFile(event: Event): void {
     }
     addSource(source, file.name);
   };
-  reader.onerror = () => {
+  reader.onerror = (): void => {
     appEventBus.emit("ACTION_LOG", {
       action: "JSON 文件读取失败: " + file.name,
       timestamp: Date.now(),
@@ -2411,7 +2353,7 @@ wireDemoButton("btn-dm-mask", () => {
       ? {
           enabled: true,
           updateInterval: 1000,
-          maskLoader: async () => {
+          maskLoader: async (): Promise<MaskLoaderResult | null> => {
             // 生成 640x360 遮罩：四周黑色（可显示弹幕）、中央透明（避让区）
             const canvas = document.createElement("canvas");
             canvas.width = 640;
@@ -2558,18 +2500,12 @@ wireDemoButton("btn-dm-resize", () => {
   logAction("danmaku.resize(): 弹幕布局已重算");
 });
 
-// 运行期重装弹幕数据源：底表为页面弹幕列表面板数据
-// （等价于 rebuildPlayer 里 config.danmaku.provider 的运行期版本）
+// 运行期重装弹幕数据：外部数据经 loadDanmaku 注入（插件不发请求）
 wireDemoButton("btn-dm-load", () => {
-  const api = getDanmakuApi();
-  if (!api) return;
-  api.load({
-    provider: (startTime, endTime) =>
-      danmakuPanelList.filter(
-        (item) => item.time >= startTime && item.time < endTime,
-      ),
-  });
-  logAction("danmaku.load({ provider }): 运行期重装弹幕数据源");
+  const player = currentPlayer();
+  if (!player) return;
+  player.loadDanmaku(danmakuPanelList);
+  logAction("loadDanmaku(): 运行期重装弹幕数据");
 });
 
 // 直接装填弹幕列表（loadDanmaku 全量入调度器）
@@ -3445,8 +3381,9 @@ wireDemoButton("btn-api-dmspeed", () => {
 wireDemoButton("btn-api-dmsource", () => {
   const player = currentPlayer();
   if (!player) return;
-  player.setDanmakuSource(`${MOCK_SERVER_BASE}/x/v1/dm/list.so?oid=1`);
-  logAction("setDanmakuSource(mock 弹幕接口): 数据源已切换");
+  player.loadDanmaku(danmakuPanelList);
+  player.mountDanmakuList("#danmaku-list");
+  logAction("loadDanmaku + mountDanmakuList: 数据注入 + 列表挂载");
 });
 
 wireDemoButton("btn-api-dmclear", () => {
@@ -4755,20 +4692,45 @@ function installPluginDemoControls(): void {
   panel.style.cssText =
     "position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:rgba(20,20,28,.92);border:1px solid rgba(255,255,255,.14);border-radius:8px;font:12px/1.4 sans-serif;color:#ddd";
   const buttons: Array<[string, () => void]> = [
-    ["普通 Top", () => applyTopStyle("default")],
-    ["电视剧 Top", () => applyTopStyle("tv")],
-    ["音乐 Top", () => applyTopStyle("music")],
-    ["标准片尾", () => applyEndingStyle("standard")],
-    ["OGV 片尾", () => applyEndingStyle("ogv")],
-    ["互动尾页", () => applyEndingStyle("interactive")],
-    ["外链暂停页", () => applyScene("embedded")],
-    ["外链尾页", () => applyScene("embedded", true)],
-    ["站内场景", () => applyScene("station")],
-    ["更新标题", () => updateDemoTitle("动态更新标题 " + Date.now())],
-    ["卸载 Top 插件", () => playerInstance?.uninstallPlugin("top")],
-    ["重装 Top 插件", () => playerInstance?.use(createTopPlugin())],
-    ["卸载 Ending 插件", () => playerInstance?.uninstallPlugin("ending")],
-    ["重装 Ending 插件", () => playerInstance?.use(createEndingPlugin())],
+    ["普通 Top", (): void => applyTopStyle("default")],
+    ["电视剧 Top", (): void => applyTopStyle("tv")],
+    ["音乐 Top", (): void => applyTopStyle("music")],
+    ["标准片尾", (): void => applyEndingStyle("standard")],
+    ["OGV 片尾", (): void => applyEndingStyle("ogv")],
+    ["互动尾页", (): void => applyEndingStyle("interactive")],
+    [
+      "外链暂停页",
+      (): void => {
+        applyScene("embedded");
+      },
+    ],
+    [
+      "外链尾页",
+      (): void => {
+        applyScene("embedded", true);
+      },
+    ],
+    [
+      "站内场景",
+      (): void => {
+        applyScene("station");
+      },
+    ],
+    ["更新标题", (): void => updateDemoTitle("动态更新标题 " + Date.now())],
+    ["卸载 Top 插件", (): void => playerInstance?.uninstallPlugin("top")],
+    [
+      "重装 Top 插件",
+      (): void => {
+        playerInstance?.use(createTopPlugin());
+      },
+    ],
+    ["卸载 Ending 插件", (): void => playerInstance?.uninstallPlugin("ending")],
+    [
+      "重装 Ending 插件",
+      (): void => {
+        playerInstance?.use(createEndingPlugin());
+      },
+    ],
   ];
   for (const [label, onClick] of buttons) {
     const button = document.createElement("button");

@@ -197,7 +197,7 @@ export type VNodeChild = VNode | string;
  */
 export interface FlowData {
   /** 控制流类型 */
-  type: 'for' | 'show' | 'switch' | 'dynamic';
+  type: "for" | "show" | "switch" | "dynamic";
 
   // ===== For 专用字段 =====
   /** 列表数据 getter（返回当前数组） */
@@ -465,7 +465,7 @@ import type { LogLevel } from "@/utils";
 import type { MediaManifestSource, QualityLevel } from "@/types/streamPlugin";
 // 弹幕 Provider 契约（纯类型，零运行时依赖）
 import type {
-  DanmakuListProvider,
+  DanmakuItem,
   DanmakuSendProvider,
   MaskLoader,
 } from "@/types/danmaku";
@@ -496,18 +496,21 @@ export type {
  */
 type OptionalOf<V> = undefined extends V ? undefined : never;
 
-type DeepPartialValue<V> = NonNullable<V> extends (...args: never[]) => unknown
-  ? V
-  : NonNullable<V> extends readonly (infer U)[]
-    ? OptionalOf<V> | U[]
-    : string extends keyof NonNullable<V>
-      ? V
-      : NonNullable<V> extends object
-        ? | OptionalOf<V>
-          | {
-              [K in keyof NonNullable<V>]?: DeepPartialValue<NonNullable<V>[K]>;
-            }
-        : V;
+type DeepPartialValue<V> =
+  NonNullable<V> extends (...args: never[]) => unknown
+    ? V
+    : NonNullable<V> extends readonly (infer U)[]
+      ? OptionalOf<V> | U[]
+      : string extends keyof NonNullable<V>
+        ? V
+        : NonNullable<V> extends object
+          ? | OptionalOf<V>
+            | {
+                [K in keyof NonNullable<V>]?: DeepPartialValue<
+                  NonNullable<V>[K]
+                >;
+              }
+          : V;
 
 /**
  * 深层可选类型
@@ -531,7 +534,7 @@ export type PlayerSource = string | ProgressiveVariant[] | MediaManifestSource;
  * - `auto`：自适应（HLS/DASH 走 ABR；MP4 取默认档）
  * - `manual`：用户显式指定档位
  */
-export type QualityMode = 'auto' | 'manual';
+export type QualityMode = "auto" | "manual";
 
 /**
  * 画面显示模式
@@ -540,7 +543,7 @@ export type QualityMode = 'auto' | 'manual';
  * - `wide`：宽屏
  * - `mini`：迷你播放器
  */
-export type DisplayMode = 'normal' | 'web' | 'wide' | 'mini';
+export type DisplayMode = "normal" | "web" | "wide" | "mini";
 
 /**
  * 播放列表条目
@@ -556,10 +559,7 @@ export interface MediaItem {
   /** 条目封面图 */
   poster?: string;
   /** 起播时间（秒） */
-  startTime?: number;
-  /** 该条目的弹幕地址 */
-  danmakuUrl?: string;
-  /** 该条目的字幕轨道列表 */
+  startTime?: number; /** 该条目的字幕轨道列表 */
   subtitleList?: SubtitleConfig[];
 }
 
@@ -589,7 +589,7 @@ export interface PlaybackConfig {
   /** 跳过头尾（自动跳过片头 / 片尾断点） */
   skipIntroOutro?: boolean;
   /** 预加载策略 */
-  preload?: 'none' | 'metadata' | 'auto';
+  preload?: "none" | "metadata" | "auto";
   /** 移动端内联播放 */
   playsinline?: boolean;
   /** 起播时间（秒），续播场景 */
@@ -884,22 +884,7 @@ export interface ProgressConfig {
  */
 export interface DanmakuConfigSpace {
   /** 是否启用弹幕能力 */
-  enabled?: boolean;
-  /**
-   * 弹幕数据提供者（推荐，与 progress.previewProvider 同一模式）
-   *
-   * 数据获取逻辑（接口请求 / 本地过滤 / 分片缓存）由外部实现，
-   * 播放器按 30 秒时间窗分段调用；配置了 provider 时优先于 url。
-   */
-  provider?: DanmakuListProvider;
-  /**
-   * 弹幕数据源 URL（便捷通道）
-   *
-   * 指向 JSON 数组（DanmakuItem[]）；播放器内部将其包装为一次性拉取的 provider，
-   * 与 provider 同时配置时以 provider 为准。
-   */
-  url?: string;
-  /**
+  enabled?: boolean; /**
    * 弹幕发送确认提供者（服务端确认模式）
    *
    * 配置后：面板提交 → 外部确认（服务器校验/落库）→ 返回确认弹幕才上屏；
@@ -1087,7 +1072,7 @@ export interface LegacyPlayerConfig {
   /** 播放模式 */
   playMode?: PlayMode;
   /** 预加载策略 */
-  preload?: 'none' | 'metadata' | 'auto';
+  preload?: "none" | "metadata" | "auto";
   /** 移动端内联播放 */
   playsinline?: boolean;
   /** 控制条配置（旧键名之一） */
@@ -1330,10 +1315,14 @@ export interface PlayerEvents extends Record<string, (...args: any[]) => void> {
   /** 清晰度列表就绪 / 变化 */
   qualityListChange: (payload: {
     qualities: QualityLevel[];
-    mode: 'none' | 'static' | 'adaptive';
+    mode: "none" | "static" | "adaptive";
   }) => void;
   /** 清晰度切换已请求（切换中） */
-  qualityChangeRequested: (payload: { from: string; to: string; label?: string }) => void;
+  qualityChangeRequested: (payload: {
+    from: string;
+    to: string;
+    label?: string;
+  }) => void;
   /** 清晰度切换成功 */
   qualityChangeRendered: (payload: {
     from: string;
@@ -1342,9 +1331,13 @@ export interface PlayerEvents extends Record<string, (...args: any[]) => void> {
     elapsed: number;
   }) => void;
   /** 清晰度切换失败 */
-  qualityChangeFailed: (payload: { from: string; to: string; reason: string }) => void;
+  qualityChangeFailed: (payload: {
+    from: string;
+    to: string;
+    reason: string;
+  }) => void;
   /** 清晰度模式变化 */
-  qualityModeChange: (payload: { mode: 'auto' | 'manual' }) => void;
+  qualityModeChange: (payload: { mode: "auto" | "manual" }) => void;
 
   // 画面模式
   /** 网页全屏状态变化 */
@@ -1373,7 +1366,10 @@ export interface PlayerEvents extends Record<string, (...args: any[]) => void> {
   /** 弹幕速度变化 */
   danmakuSpeedChange: (speed: number) => void;
   /** 请求发送弹幕 */
-  danmakuSend: (payload: { text: string; options?: Record<string, unknown> }) => void;
+  danmakuSend: (payload: {
+    text: string;
+    options?: Record<string, unknown>;
+  }) => void;
   /** 弹幕发送成功 */
   danmakuSent: (payload: Record<string, unknown>) => void;
   /** 弹幕清空 */
@@ -1400,7 +1396,10 @@ export interface PlayerEvents extends Record<string, (...args: any[]) => void> {
    *   - 'ready'：AI 字幕已就绪
    *   - 'error'：AI 字幕加载失败
    */
-  subtitleListChange: (payload: { count: number; status?: 'loading' | 'ready' | 'error' }) => void;
+  subtitleListChange: (payload: {
+    count: number;
+    status?: "loading" | "ready" | "error";
+  }) => void;
 
   // 播放列表 / 多 P
   /** 当前播放条目变化 */
@@ -1429,9 +1428,15 @@ export interface PlayerEvents extends Record<string, (...args: any[]) => void> {
   /** 互动：外链点击 */
   interactionLinkClick: () => void;
   /** 互动：投票选择 */
-  interactionVoteSelect: (payload: { voteIndex: number; optionIndex: number }) => void;
+  interactionVoteSelect: (payload: {
+    voteIndex: number;
+    optionIndex: number;
+  }) => void;
   /** 互动：评分选择 */
-  interactionScoreSelect: (payload: { scoreIndex: number; value: number }) => void;
+  interactionScoreSelect: (payload: {
+    scoreIndex: number;
+    value: number;
+  }) => void;
   /** 互动：卡片关闭 */
   interactionCardClose: (payload: { type: string; index: number }) => void;
   /** 互动：卡片位置变化 */
@@ -1773,7 +1778,7 @@ export interface PlayerMethods {
   /** 获取可用档位列表 */
   getQualities(): QualityLevel[];
   /** 获取清晰度能力类型 */
-  getQualityMode(): 'none' | 'static' | 'adaptive';
+  getQualityMode(): "none" | "static" | "adaptive";
   /** 设置清晰度模式（自动 / 手动） */
   setQualityMode(mode: QualityMode): void;
   /** 应用清晰度上下限 */
@@ -1808,9 +1813,22 @@ export interface PlayerMethods {
   /** 设置弹幕不透明度 */
   setDanmakuOpacity(opacity: number): void;
   /** 设置弹幕速度倍率 */
-  setDanmakuSpeed(speed: number): void;
-  /** 设置弹幕数据源 */
-  setDanmakuSource(url: string): void;
+  setDanmakuSpeed(
+    speed: number,
+  ): void; /** 全量替换弹幕数据（外部请求后注入；播放器/插件不发请求） */
+  loadDanmaku(list: readonly DanmakuItem[]): void;
+  /** 追加单条弹幕 */
+  addDanmaku(item: DanmakuItem): void;
+  /** 更新单条弹幕 */
+  updateDanmaku(id: DanmakuItem["id"], patch: Partial<DanmakuItem>): void;
+  /** 删除单条弹幕 */
+  removeDanmaku(id: DanmakuItem["id"]): void;
+  /** 获取弹幕数据副本 */
+  getDanmakuList(): DanmakuItem[];
+  /** 挂载弹幕列表面板（必须显式传挂载点） */
+  mountDanmakuList(target: string | HTMLElement): void;
+  /** 卸载弹幕列表面板 */
+  unmountDanmakuList(): void;
   /** 清空弹幕 */
   clearDanmaku(): void;
   /** 发送弹幕 */
@@ -1882,9 +1900,15 @@ export interface PlayerMethods {
 
   // ===== 事件订阅 =====
   /** 注册事件监听，返回取消订阅函数 */
-  on<K extends keyof PlayerEvents>(event: K, callback: PlayerEvents[K]): () => void;
+  on<K extends keyof PlayerEvents>(
+    event: K,
+    callback: PlayerEvents[K],
+  ): () => void;
   /** 注册只触发一次的监听，返回取消订阅函数 */
-  once<K extends keyof PlayerEvents>(event: K, callback: PlayerEvents[K]): () => void;
+  once<K extends keyof PlayerEvents>(
+    event: K,
+    callback: PlayerEvents[K],
+  ): () => void;
   /** 移除事件监听 */
   off<K extends keyof PlayerEvents>(event: K, callback: PlayerEvents[K]): void;
 }

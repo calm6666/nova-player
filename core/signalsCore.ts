@@ -53,11 +53,11 @@ type Node = {
 	_rollbackNode?: Node;
 };
 
-function startBatch() {
+function startBatch(): void {
 	batchDepth++;
 }
 
-function endBatch() {
+function endBatch(): void {
 	if (batchDepth > 1) {
 		batchDepth--;
 		return;
@@ -174,7 +174,7 @@ let batchSnapshots: BatchSnapshot | undefined = undefined;
 // 读取走快速路径（跳过逐依赖比对）
 let globalVersion = 0;
 
-function recordBatchSnapshot(source: Signal) {
+function recordBatchSnapshot(source: Signal): void {
 	// 仅在用户可见的 batch 回调执行期间捕获写入，effect 刷新阶段不捕获
 	if (batchDepth === 0 || batchIteration !== 0) {
 		return;
@@ -191,7 +191,7 @@ function recordBatchSnapshot(source: Signal) {
 	}
 }
 
-function reconcileBatchSnapshots() {
+function reconcileBatchSnapshots(): void {
 	let snapshots = batchSnapshots;
 	batchSnapshots = undefined;
 
@@ -305,8 +305,8 @@ function addDependency(signal: Signal): Node | undefined {
 // 文件后面存在同名函数实现，需忽略 TypeScript 的重复声明告警：
 // 类型先用 declare class 声明，实现则延后用 ES5 风格的原型方式完成，
 // 以便精确控制转译产物的体积。
-// @ts-ignore: "Cannot redeclare exported variable 'Signal'."
-declare class Signal<T = any> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare class Signal<T = unknown> {
 	/** @internal */
 	_value: unknown;
 
@@ -361,7 +361,7 @@ declare class Signal<T = any> {
 	set value(value: T);
 }
 
-export interface SignalOptions<T = any> {
+export interface SignalOptions<T = unknown> {
 	watched?: (this: Signal<T>) => void;
 	unwatched?: (this: Signal<T>) => void;
 	name?: string;
@@ -371,8 +371,7 @@ export interface SignalOptions<T = any> {
 // 前面已声明同名 class，这里需忽略 TypeScript 的重复声明告警：
 // 上面声明的 class 在此用 ES5 风格的原型方式实现，
 // 以便精确控制转译产物的体积。
-// @ts-ignore: "Cannot redeclare exported variable 'Signal'."
-function Signal(this: Signal, value?: unknown, options?: SignalOptions) {
+function Signal(this: Signal, value?: unknown, options?: SignalOptions): void {
 	this._value = value;
 	this._version = 0;
 	this._node = undefined;
@@ -385,11 +384,11 @@ function Signal(this: Signal, value?: unknown, options?: SignalOptions) {
 
 Signal.prototype.brand = BRAND_SYMBOL;
 
-Signal.prototype._refresh = function () {
+Signal.prototype._refresh = function (): boolean {
 	return true;
 };
 
-Signal.prototype._subscribe = function (node) {
+Signal.prototype._subscribe = function (node): void {
 	const targets = this._targets;
 	if (targets !== node && node._prevTarget === undefined) {
 		node._nextTarget = targets;
@@ -405,7 +404,7 @@ Signal.prototype._subscribe = function (node) {
 	}
 };
 
-Signal.prototype._unsubscribe = function (node) {
+Signal.prototype._unsubscribe = function (node): void {
 	// 仅当信号还存在订阅者时才执行退订收尾
 	if (this._targets !== undefined) {
 		const prev = node._prevTarget;
@@ -431,9 +430,11 @@ Signal.prototype._unsubscribe = function (node) {
 	}
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 Signal.prototype.subscribe = function (fn) {
 	return effect(
 		() => {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			const value = this.value;
 			untracked(() => fn(value));
 		},
@@ -441,19 +442,26 @@ Signal.prototype.subscribe = function (fn) {
 	);
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 Signal.prototype.valueOf = function () {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 	return this.value;
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 Signal.prototype.toString = function () {
 	return this.value + "";
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 Signal.prototype.toJSON = function () {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 	return this.value;
 };
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 Signal.prototype.peek = function () {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 	return untracked(() => this.value);
 };
 
@@ -532,7 +540,7 @@ function needsToRecompute(target: Computed | Effect): boolean {
 	return false;
 }
 
-function prepareSources(target: Computed | Effect) {
+function prepareSources(target: Computed | Effect): void {
 	/**
 	 * 1. 把现有全部依赖节点标记为可复用（version: -1）
 	 * 2. 若节点正被其它上下文使用，记录回滚节点
@@ -564,7 +572,7 @@ function prepareSources(target: Computed | Effect) {
 	}
 }
 
-function cleanupSources(target: Computed | Effect) {
+function cleanupSources(target: Computed | Effect): void {
 	let node = target._sources;
 	let head: Node | undefined = undefined;
 
@@ -619,7 +627,7 @@ function cleanupSources(target: Computed | Effect) {
 /**
  * 计算信号（computed signal）的基类（类型声明）。
  */
-declare class Computed<T = any> extends Signal<T> {
+declare class Computed<T = unknown> extends Signal<T> {
 	_fn: () => T;
 	_sources?: Node;
 	_globalVersion: number;
@@ -632,7 +640,7 @@ declare class Computed<T = any> extends Signal<T> {
 }
 
 /** @internal */
-function Computed(this: Computed, fn: () => unknown, options?: SignalOptions) {
+function Computed(this: Computed, fn: () => unknown, options?: SignalOptions): void {
 	Signal.call(this, undefined, options);
 
 	this._fn = fn;
@@ -643,7 +651,7 @@ function Computed(this: Computed, fn: () => unknown, options?: SignalOptions) {
 
 Computed.prototype = new Signal() as Computed;
 
-Computed.prototype._refresh = function () {
+Computed.prototype._refresh = function (): boolean {
 	this._flags &= ~NOTIFIED;
 
 	if (this._flags & RUNNING) {
@@ -674,7 +682,9 @@ Computed.prototype._refresh = function () {
 	const prevContext = evalContext;
 	try {
 		prepareSources(this);
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		evalContext = this;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const value = this._fn();
 		if (
 			this._flags & HAS_ERROR ||
@@ -696,7 +706,7 @@ Computed.prototype._refresh = function () {
 	return true;
 };
 
-Computed.prototype._subscribe = function (node) {
+Computed.prototype._subscribe = function (node: Node): void {
 	if (this._targets === undefined) {
 		this._flags |= OUTDATED | TRACKING;
 
@@ -712,7 +722,7 @@ Computed.prototype._subscribe = function (node) {
 	Signal.prototype._subscribe.call(this, node);
 };
 
-Computed.prototype._unsubscribe = function (node) {
+Computed.prototype._unsubscribe = function (node: Node): void {
 	// 仅当该 computed 信号还存在订阅者时才执行退订收尾
 	if (this._targets !== undefined) {
 		Signal.prototype._unsubscribe.call(this, node);
@@ -733,7 +743,7 @@ Computed.prototype._unsubscribe = function (node) {
 	}
 };
 
-Computed.prototype._notify = function () {
+Computed.prototype._notify = function (): void {
 	if (!(this._flags & NOTIFIED)) {
 		this._flags |= OUTDATED | NOTIFIED;
 
@@ -767,7 +777,7 @@ Object.defineProperty(Computed.prototype, "value", {
 /**
  * 只读信号接口（computed 的返回类型）。
  */
-interface ReadonlySignal<T = any> {
+interface ReadonlySignal<T = unknown> {
 	readonly value: T;
 	peek(): T;
 
@@ -798,7 +808,7 @@ function computed<T>(
 
 //#region 副作用 Effect
 
-function cleanupEffect(effect: Effect) {
+function cleanupEffect(effect: Effect): void {
 	const cleanup = effect._cleanup;
 	effect._cleanup = undefined;
 
@@ -822,7 +832,7 @@ function cleanupEffect(effect: Effect) {
 	}
 }
 
-function disposeEffect(effect: Effect) {
+function disposeEffect(effect: Effect): void {
 	for (
 		let node = effect._sources;
 		node !== undefined;
@@ -836,7 +846,7 @@ function disposeEffect(effect: Effect) {
 	cleanupEffect(effect);
 }
 
-function endEffect(this: Effect, prevContext?: Computed | Effect) {
+function endEffect(this: Effect, prevContext?: Computed | Effect): void {
 	if (evalContext !== this) {
 		throw new Error("Out-of-order effect");
 	}
@@ -890,7 +900,7 @@ export interface EffectOptions {
 }
 
 /** @internal */
-function Effect(this: Effect, fn: EffectFn, options?: EffectOptions) {
+function Effect(this: Effect, fn: EffectFn, options?: EffectOptions): void {
 	this._fn = fn;
 	this._cleanup = undefined;
 	this._sources = undefined;
@@ -903,7 +913,7 @@ function Effect(this: Effect, fn: EffectFn, options?: EffectOptions) {
 	}
 }
 
-Effect.prototype._callback = function () {
+Effect.prototype._callback = function (): void {
 	const finish = this._start();
 	try {
 		if (this._flags & DISPOSED) return;
@@ -918,7 +928,7 @@ Effect.prototype._callback = function () {
 	}
 };
 
-Effect.prototype._start = function () {
+Effect.prototype._start = function (): () => void {
 	if (this._flags & RUNNING) {
 		throw new Error("Cycle detected");
 	}
@@ -929,19 +939,21 @@ Effect.prototype._start = function () {
 
 	/*@__INLINE__**/ startBatch();
 	const prevContext = evalContext;
+	// eslint-disable-next-line @typescript-eslint/no-this-alias
 	evalContext = this;
 	return endEffect.bind(this, prevContext);
 };
 
-Effect.prototype._notify = function () {
+Effect.prototype._notify = function (): void {
 	if (!(this._flags & NOTIFIED)) {
 		this._flags |= NOTIFIED;
 		this._nextBatchedEffect = batchedEffect;
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		batchedEffect = this;
 	}
 };
 
-Effect.prototype._dispose = function () {
+Effect.prototype._dispose = function (): void {
 	this._flags |= DISPOSED;
 
 	if (!(this._flags & RUNNING)) {
@@ -949,7 +961,7 @@ Effect.prototype._dispose = function () {
 	}
 };
 
-Effect.prototype.dispose = function () {
+Effect.prototype.dispose = function (): void {
 	this._dispose();
 };
 /**
@@ -974,7 +986,7 @@ function effect(fn: EffectFn, options?: EffectOptions): DisposeFn {
 	// 返回 bind 后的函数而非 `() => effect._dispose()` 这类包装器：
 	// bind 函数的性能与之相当，但内存占用小得多
 	const dispose = effect._dispose.bind(effect);
-	(dispose as any)[Symbol.dispose] = dispose;
+	(dispose as DisposeFn)[Symbol.dispose] = dispose;
 	return dispose as DisposeFn;
 }
 
@@ -998,7 +1010,7 @@ function action<TArgs extends unknown[], TReturn>(
 type ValidateModel<TModel> = {
 	[Key in keyof TModel]: TModel[Key] extends ReadonlySignal<unknown>
 		? TModel[Key]
-		: TModel[Key] extends (...args: any[]) => any
+		: TModel[Key] extends (...args: unknown[]) => unknown
 			? TModel[Key]
 			: TModel[Key] extends object
 				? ValidateModel<TModel[Key]>
@@ -1007,10 +1019,10 @@ type ValidateModel<TModel> = {
 
 export type Model<TModel> = ValidateModel<TModel> & DisposableLike;
 
-export type ModelFactory<TModel, TFactoryArgs extends any[] = []> = (
+export type ModelFactory<TModel, TFactoryArgs extends unknown[] = []> = (
 	...args: TFactoryArgs
 ) => ValidateModel<TModel>;
-export type ModelConstructor<TModel, TFactoryArgs extends any[] = []> = new (
+export type ModelConstructor<TModel, TFactoryArgs extends unknown[] = []> = new (
 	...args: TFactoryArgs
 ) => Model<TModel>;
 
@@ -1039,7 +1051,7 @@ export type ModelConstructor<TModel, TFactoryArgs extends any[] = []> = new (
  */
 interface InternalModelConstructor<
 	TModel,
-	TFactoryArgs extends any[],
+	TFactoryArgs extends unknown[],
 > extends ModelConstructor<TModel, TFactoryArgs> {
 	(...args: TFactoryArgs): Model<TModel>;
 }
@@ -1051,7 +1063,7 @@ function startCapturingEffects(): () => Effect[] | undefined {
 	capturedEffects = [];
 
 	return function stopCapturingEffects() {
-		let modelEffects = capturedEffects;
+		const modelEffects = capturedEffects;
 		if (capturedEffects && prevCapturedEffects) {
 			prevCapturedEffects = prevCapturedEffects.concat(capturedEffects);
 		}
@@ -1062,7 +1074,7 @@ function startCapturingEffects(): () => Effect[] | undefined {
 	};
 }
 
-const wrapInAction = (value: Record<string, unknown>) => {
+const wrapInAction = (value: Record<string, unknown>): void => {
 	for (const key in value) {
 		const val = value[key];
 		if (typeof val === "function") {
@@ -1075,7 +1087,7 @@ const wrapInAction = (value: Record<string, unknown>) => {
 	}
 };
 
-function createModel<TModel, TFactoryArgs extends any[] = []>(
+function createModel<TModel, TFactoryArgs extends unknown[] = []>(
 	modelFactory: ModelFactory<TModel, TFactoryArgs>
 ): ModelConstructor<TModel, TFactoryArgs> {
 	return function SignalModel(...args: TFactoryArgs): Model<TModel> {
