@@ -503,7 +503,8 @@ export const RightControls = defineComponent<
         "div",
         {
           class: "nova-player-ctrl-btn nova-player-ctrl-flac",
-          title: t("player.ui.controls.hires"),
+          role: "button",
+          "aria-label": t("player.ui.controls.hires"),
           ref: (el: unknown): void => {
             if (el instanceof HTMLElement) buttonEl = el;
           },
