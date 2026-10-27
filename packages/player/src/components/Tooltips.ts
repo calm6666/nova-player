@@ -121,6 +121,12 @@ export const Tooltips = defineComponent<TooltipsProps>(
      */
     const titleKeysSig = signal<Record<string, string>>({});
 
+    /** Hi-Res 按钮引用：用于监听标准 aria-label 变化并实时刷新已展示提示 */
+    let flacButtonEl: HTMLElement | null = null;
+
+    /** Hi-Res aria-label 观察器 */
+    let flacLabelObserver: MutationObserver | null = null;
+
     // ============================================
     // DOM 引用（几何测量数据源，保留）
     // ============================================
@@ -245,6 +251,7 @@ export const Tooltips = defineComponent<TooltipsProps>(
     const openTip = (btnElement: HTMLElement | null, name: string): void => {
       // Hi-Res：标题跟随按钮标准 aria-label（开启/关闭），不使用 data-tip-* 属性
       if (name === "ctrl:flac" && btnElement) {
+        flacButtonEl = btnElement;
         const label = btnElement.getAttribute("aria-label");
         if (label) {
           titlesSig.value = { ...titlesSig.value, [name]: label };
@@ -373,6 +380,18 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * handleFullscreenChange / toggleWebFullscreen 中的 screen 与 updateTip 调用）
      */
     lifecycle.onMounted = (): void => {
+      flacLabelObserver = new MutationObserver((): void => {
+        if (!flacButtonEl) return;
+        const label = flacButtonEl.getAttribute("aria-label");
+        if (label && titlesSig.value["ctrl:flac"] !== label) {
+          titlesSig.value = { ...titlesSig.value, "ctrl:flac": label };
+        }
+      });
+      flacLabelObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["aria-label"],
+        subtree: true,
+      });
       lifecycle.emit?.("tooltipsMounted", {
         openTip,
         closeTip,
@@ -386,7 +405,11 @@ export const Tooltips = defineComponent<TooltipsProps>(
     /**
      * 组件销毁前，清空所有 DOM 引用
      */
-    lifecycle.onBeforeDestroy = (): void => {};
+    lifecycle.onBeforeDestroy = (): void => {
+      flacLabelObserver?.disconnect();
+      flacLabelObserver = null;
+      flacButtonEl = null;
+    };
 
     return h(
       "div",
