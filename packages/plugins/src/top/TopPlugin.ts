@@ -34,6 +34,8 @@ interface TopPluginHost {
   registerTopPluginMount(mount: SlotMount["mount"]): void;
   unregisterTopPluginMount(mount?: SlotMount["mount"]): void;
   refreshTop?(): void;
+  /** 是否已安装指定插件（音乐模式 gating 用） */
+  hasPlugin?(name: string): boolean;
 }
 
 class TopPluginClass implements Plugin {
@@ -57,9 +59,19 @@ class TopPluginClass implements Plugin {
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
       const viewProps = (ctx as TopPluginMountContext | null)?.props;
+      /**
+       * 音乐模式 gating：只有安装了音乐插件（默认名 music）时才允许
+       * 进入音乐 Top 形态；未安装时即使调用方传入 music 也回落普通 Top。
+       *
+       * 数据优先级沿用原合并语义：插件 config.data 优先于播放器透传的 viewProps。
+       */
+      const musicInstalled = this.player?.hasPlugin?.("music") ?? false;
+      const requestedMusic =
+        this.config.data?.music ?? viewProps?.music ?? false;
       const vnode = h(TopView, {
         ...viewProps,
         ...this.config.data,
+        music: requestedMusic && musicInstalled,
         host: container,
       });
       mount(vnode, container);

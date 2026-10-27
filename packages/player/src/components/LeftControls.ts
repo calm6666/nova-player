@@ -366,7 +366,7 @@ export const LeftControls = defineComponent<
    * Show 的 when getter 读取 playlistLengthSignal/playlistIndexSignal/prevConfigSignal，
    * 任意 signal 变化时自动重新评估条件，mount/destroy 切换按钮（不重渲染）
    */
-  const prevButtonVNode = () =>
+  const prevButtonVNode = (): VNode =>
     h(
       "div",
       {
@@ -390,7 +390,7 @@ export const LeftControls = defineComponent<
     );
 
   /** 下一个按钮的 VNode 模板（同上，由 Show 控制流决定显隐） */
-  const nextButtonVNode = () =>
+  const nextButtonVNode = (): VNode =>
     h(
       "div",
       {

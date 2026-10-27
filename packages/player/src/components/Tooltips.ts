@@ -35,6 +35,24 @@ export interface TooltipItem {
    * 语言切换时自动重新翻译。
    */
   titleKey?: string;
+  /**
+   * 插槽模式：标题渲染为一行 inline-flex 插槽，可在标题右侧追加徽标
+   * （B 站 Hi-Res 提示的「大会员 / 限免中」标签即这种形态）。
+   * 打开提示时会同步读取触发按钮的 data-tip-title-key / data-tip-badge-key，
+   * 因此同一提示项可按按钮当前状态显示不同文案与徽标。
+   */
+  slotMode?: boolean;
+  /** 插槽内容容器类名（slotMode 时生效），缺省 nova-player-tooltip-slot */
+  slotClass?: string;
+  /** 徽标 i18n key（slotMode 时渲染在标题右侧，可被 data-tip-badge-key 覆盖） */
+  badgeKey?: string;
+  /** 徽标容器类名（slotMode 时生效），缺省 nova-player-tooltip-badge */
+  badgeClass?: string;
+  /**
+   * TopCenter 提示与目标按钮之间的垂直间距
+   * （全屏 / 网页全屏取 full，其余取 normal；缺省沿用 32 / 23）
+   */
+  gap?: { normal: number; full: number };
 }
 
 /**
@@ -71,6 +89,19 @@ const DEFAULT_TOOLTIP_ITEMS: TooltipItem[] = [
   { name: "ctrl:webscreen", titleKey: "player.ui.tooltip.webscreen.enter" },
   { name: "ctrl:pip", titleKey: "player.ui.tooltip.pip.enter" },
   { name: "ctrl:fullscreen", titleKey: "player.ui.tooltip.fullscreen.enter" },
+  {
+    // Hi-Res 无损音质：slotMode + 固定白字黑底提示，文案/徽标由按钮
+    // data-tip-title-key / data-tip-badge-key 在打开时同步（激活时切换
+    // 「开启 / 关闭」，无 VIP 时徽标显示「限免中」）。
+    // 间距按 B 站线上：非全屏 19px，全屏 / 网页全屏 28px。
+    name: "ctrl:flac",
+    titleKey: "player.ui.tooltip.hires.enable",
+    badgeKey: "player.ui.tooltip.hires.vip",
+    slotMode: true,
+    slotClass: "nova-player-ctrl-flac-tooltip",
+    badgeClass: "nova-player-ctrl-flac-tooltip-icon",
+    gap: { normal: 19, full: 28 },
+  },
   { name: "ctrl:prev", titleKey: "player.ui.tooltip.prev" },
   { name: "ctrl:next", titleKey: "player.ui.tooltip.next" },
 ];
@@ -114,6 +145,13 @@ export const Tooltips = defineComponent<TooltipsProps>(
      */
     const titleKeysSig = signal<Record<string, string>>({});
 
+    /**
+     * 提示项徽标 i18n key 覆盖表（slotMode 提示用）
+     * 打开提示时从触发按钮的 data-tip-badge-key 写入，
+     * 渲染 getter 内经 t(key) 求值，语言切换自动跟随。
+     */
+    const badgeKeysSig = signal<Record<string, string>>({});
+
     // ============================================
     // DOM 引用（几何测量数据源，保留）
     // ============================================
@@ -123,6 +161,12 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * 通过 name 索引每个提示项的 DOM 元素引用（openTip 测量尺寸用）
      */
     const itemRefMap: Record<string, Signal<HTMLDivElement | null>> = {};
+
+    /**
+     * 当前打开中的 slotMode 提示项 → 触发按钮
+     * 用于在按钮状态变化（data-tip-* 属性变化）时同步已展示的提示内容
+     */
+    const slotTargets: Record<string, HTMLElement> = {};
 
     /** 提示项数组，未传入时使用默认提示项 */
     const items = props.items ?? DEFAULT_TOOLTIP_ITEMS;
@@ -134,6 +178,14 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * 仅在 openTip 几何计算时读取（非渲染数据），保留普通变量
      */
     let screen: "normal" | "full" | "web" = props.screen ?? "normal";
+
+    /**
+     * slotMode 提示内容同步观察器
+     * 提示展示期间监听按钮 data-tip-title-key / data-tip-badge-key 变化
+     * （如 Hi-Res 激活态切换），已展示的提示文案随按钮状态即时更新。
+     * 仅在浏览器环境、组件挂载后创建，销毁时断开。
+     */
+    let contentObserver: MutationObserver | null = null;
 
     /**
      * 更新屏幕模式（对应既有实现的 tooltips.screen 赋值）
@@ -154,31 +206,37 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * calculateTipPosition 一致，坐标系为视口坐标，样式为 position: fixed）
      * @param btnElement - 触发提示的按钮元素
      * @param tipElement - 提示项元素
-     * @param name - 提示项名称（决定上下偏移规则）
+     * @param item - 提示项定义（决定上下偏移规则与可选间距）
      */
     const calculateTipPosition = (
       btnElement: HTMLElement,
       tipElement: HTMLElement,
-      name: string,
+      item: TooltipItem,
     ): { left: number; top: number } => {
       const tipClient = tipElement.getBoundingClientRect();
       const btnClient = btnElement.getBoundingClientRect();
-      /** 水平方向：提示框中心对齐按钮中心 */
+      /** 水平方向：提示框中心对齐按钮中心（TopCenter） */
       let left = btnClient.left - (tipClient.width / 2 - btnClient.width / 2);
       let top = 0;
 
-      if (name === "feedback-btn") {
+      if (item.name === "feedback-btn") {
         // 反馈按钮在顶栏，提示显示在按钮下方
         top = btnClient.top + btnClient.height + 10;
-      } else if (name === "danmaku_switch") {
+      } else if (item.name === "danmaku_switch") {
         // 弹幕开关提示显示在按钮上方 8px
         top = btnClient.top - 8 - tipClient.height;
       } else {
         // 其余按钮：全屏 / 网页全屏下偏移更大
-        top =
-          screen === "full" || screen === "web"
-            ? btnClient.top - 32 - tipClient.height
-            : btnClient.top - 23 - tipClient.height;
+        // （提示项可声明 gap 覆盖默认的 32 / 23，如 Hi-Res 线上为 28 / 19）
+        const isFullView = screen === "full" || screen === "web";
+        const gap = item.gap
+          ? isFullView
+            ? item.gap.full
+            : item.gap.normal
+          : isFullView
+            ? 32
+            : 23;
+        top = btnClient.top - gap - tipClient.height;
       }
 
       // 水平方向夹紧到播放器容器内（左右各留 12px）
@@ -226,25 +284,62 @@ export const Tooltips = defineComponent<TooltipsProps>(
       const next = { ...activePositionsSig.value };
       delete next[name];
       activePositionsSig.value = next;
+      delete slotTargets[name];
+    };
+
+    /**
+     * 同步 slotMode 提示项的标题 / 徽标 key
+     *
+     * 数据源为触发按钮的 data-tip-title-key / data-tip-badge-key：
+     * 打开提示时调用一次；提示已展示期间按钮状态变化时由 MutationObserver
+     * 再次调用，保证「激活态切换后提示文案」即时更新（无需重新悬停）。
+     * @param name - 提示项名称
+     */
+    const syncSlotContent = (name: string): void => {
+      const item = items.find((entry) => entry.name === name);
+      const target = slotTargets[name];
+      if (!item?.slotMode || !target) return;
+      const titleKey = target.dataset.tipTitleKey;
+      const badgeKey = target.dataset.tipBadgeKey;
+      if (
+        titleKey !== undefined &&
+        titleKeysSig.value[name] !== titleKey
+      ) {
+        titleKeysSig.value = { ...titleKeysSig.value, [name]: titleKey };
+      }
+      if (
+        badgeKey !== undefined &&
+        badgeKeysSig.value[name] !== badgeKey
+      ) {
+        badgeKeysSig.value = { ...badgeKeysSig.value, [name]: badgeKey };
+      }
     };
 
     /**
      * 打开指定名称的提示项（与既有实现的 openTip 一致）：
      * 依据按钮元素实时计算位置后显示
      * （getBoundingClientRect 布局测量保留命令式——读取操作不修改 DOM）
+     *
+     * slotMode 提示项会先同步触发按钮上的动态内容：
+     * data-tip-title-key / data-tip-badge-key 写入标题与徽标的覆盖表，
+     * 这样同一提示项（如 Hi-Res）能随按钮状态显示不同文案。
      * @param btnElement - 触发提示的按钮元素
      * @param name - 提示项名称（Tooltip.dataName）
      */
     const openTip = (btnElement: HTMLElement | null, name: string): void => {
       const tipElement = getTipElement(name);
-      if (tipElement && btnElement) {
-        const { left, top } = calculateTipPosition(
-          btnElement,
-          tipElement,
-          name,
-        );
-        showTooltip(name, { left: Math.floor(left), top: Math.floor(top) });
+      if (!tipElement || !btnElement) return;
+      const item = items.find((entry) => entry.name === name);
+      if (item?.slotMode) {
+        slotTargets[name] = btnElement;
+        syncSlotContent(name);
       }
+      const { left, top } = calculateTipPosition(
+        btnElement,
+        tipElement,
+        item ?? { name },
+      );
+      showTooltip(name, { left: Math.floor(left), top: Math.floor(top) });
     };
 
     /**
@@ -288,12 +383,67 @@ export const Tooltips = defineComponent<TooltipsProps>(
     // ============================================
 
     /**
+     * 解析提示项标题文本
+     * 优先级：updateTip 字面量 > updateTipKey / item.titleKey（i18n）> item.title
+     * （在响应式文本 getter 内调用，t() 读取 localeSignal 自动跟随语言切换）
+     * @param item - 提示项定义
+     */
+    const resolveTipTitle = (item: TooltipItem): string => {
+      const override = titlesSig.value[item.name];
+      if (override !== undefined) return override;
+      const key = titleKeysSig.value[item.name] ?? item.titleKey;
+      if (key !== undefined) return t(key);
+      return item.title ?? item.name;
+    };
+
+    /**
+     * 解析提示项徽标文本（slotMode 提示用）
+     * 优先级：data-tip-badge-key 覆盖 > item.badgeKey；无 key 时返回空串
+     * @param item - 提示项定义
+     */
+    const resolveTipBadge = (item: TooltipItem): string => {
+      const key = badgeKeysSig.value[item.name] ?? item.badgeKey;
+      return key === undefined ? "" : t(key);
+    };
+
+    /**
+     * 渲染提示标题容器
+     * 普通项保持与既有实现完全一致的单文本节点；
+     * slotMode 项渲染为 inline-flex 插槽 + 右侧徽标（Hi-Res 提示形态）。
+     * @param item - 提示项定义
+     */
+    const renderTitle = (item: TooltipItem): VNode => {
+      if (!item.slotMode) {
+        return h(
+          "div",
+          { class: "nova-player-tooltip-title" },
+          () => resolveTipTitle(item),
+        );
+      }
+      return h(
+        "div",
+        { class: "nova-player-tooltip-title" },
+        h(
+          "span",
+          { class: item.slotClass ?? "nova-player-tooltip-slot" },
+          () => resolveTipTitle(item),
+          h(
+            "span",
+            { class: item.badgeClass ?? "nova-player-tooltip-badge" },
+            () => resolveTipBadge(item),
+          ),
+        ),
+      );
+    };
+
+    /**
      * 渲染所有提示项
      *
      * style 内读取 activePositionsSig.value：编译期提取到 __reactiveAttrs，
      * mount 时注册 effect，信号变化（openTip/closeTip/hideAll）时自动
      * 重新应用对应提示项的 transform/visibility/opacity/left/top。
-     * 标题文本使用显式 getter 协议（titlesSig），updateTip 精准更新文本节点。
+     * 标题文本使用显式 getter 协议（titlesSig / titleKeysSig），
+     * updateTip / openTip 时精准更新文本节点。
      */
     const renderTooltipItems = (): VNode[] => {
       return items.map((item: TooltipItem) => {
@@ -321,19 +471,7 @@ export const Tooltips = defineComponent<TooltipsProps>(
             },
             ref: refObj,
           },
-          h(
-            "div",
-            { class: "nova-player-tooltip-title" },
-            () => {
-              // 优先级：updateTip 字面量 > updateTipKey / item.titleKey（i18n）> item.title
-              const override = titlesSig.value[item.name];
-              if (override !== undefined) return override;
-              const key =
-                titleKeysSig.value[item.name] ?? item.titleKey;
-              if (key !== undefined) return t(key);
-              return item.title ?? item.name;
-            },
-          ),
+          renderTitle(item),
         );
       });
     };
@@ -348,6 +486,18 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * handleFullscreenChange / toggleWebFullscreen 中的 screen 与 updateTip 调用）
      */
     lifecycle.onMounted = (): void => {
+      // slotMode 提示展示期间，按钮 data-tip-* 变化（如 Hi-Res 激活态切换）
+      // 时同步已展示文案；只观察这两个属性，避免控制栏高频 class/style 变化触达回调
+      if (typeof MutationObserver !== "undefined") {
+        contentObserver = new MutationObserver(() => {
+          Object.keys(slotTargets).forEach((name) => syncSlotContent(name));
+        });
+        contentObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["data-tip-title-key", "data-tip-badge-key"],
+          subtree: true,
+        });
+      }
       lifecycle.emit?.("tooltipsMounted", {
         openTip,
         closeTip,
@@ -359,9 +509,15 @@ export const Tooltips = defineComponent<TooltipsProps>(
     };
 
     /**
-     * 组件销毁前，清空所有 DOM 引用
+     * 组件销毁前，断开 slotMode 内容观察器并清空 DOM 引用
      */
-    lifecycle.onBeforeDestroy = (): void => {};
+    lifecycle.onBeforeDestroy = (): void => {
+      contentObserver?.disconnect();
+      contentObserver = null;
+      Object.keys(slotTargets).forEach((name) => {
+        delete slotTargets[name];
+      });
+    };
 
     return h(
       "div",

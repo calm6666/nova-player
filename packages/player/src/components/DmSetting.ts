@@ -476,10 +476,10 @@ export const DmSetting = defineComponent<DmSettingProps, DmSettingEvents>(
         sliderApis.speed?.(speed);
       }
       lifecycle.emit?.("dmSettingMounted", {
-        setOpacity: (value: number) => sliderApis.opacity?.(value),
-        setArea: (value: number) => sliderApis.area?.(value),
-        setFontsize: (value: number) => sliderApis.fontsize?.(value),
-        setSpeed: (value: number) => sliderApis.speed?.(value),
+        setOpacity: (value: number): void => sliderApis.opacity?.(value),
+        setArea: (value: number): void => sliderApis.area?.(value),
+        setFontsize: (value: number): void => sliderApis.fontsize?.(value),
+        setSpeed: (value: number): void => sliderApis.speed?.(value),
         resetPage,
       } satisfies DmSettingApi);
     };

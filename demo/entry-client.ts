@@ -26,6 +26,12 @@ import { VideoPlayer } from "@/nova/player";
 import { createHlsPlugin } from "@/lumina/plugins/hls";
 import { createDashPlugin } from "@/lumina/plugins/dash";
 import { TopPlugin, EndingPlugin } from "@/lumina/plugins/index";
+import { MusicPlugin } from "@/lumina/plugins/music";
+import {
+  mockMusicDetail,
+  mockVideoList,
+  mockRecommendList,
+} from "@/lumina/plugins/music";
 import { DanmakuPlugin } from "@/lumina/plugins/danmaku";
 import type { DanmakuPluginAPI } from "@/lumina/plugins/danmaku";
 import { InteractionPlugin } from "@/lumina/plugins/interaction";
@@ -1468,10 +1474,42 @@ function createTopPlugin(source?: PlayerSource): Plugin {
       title:
         (source as unknown as { title?: string } | undefined)?.title ??
         "Lumina Demo",
-      musicTitle: "发现《雨爱》",
+      musicTitle: "发现《晚风信笺》",
       followed: false,
       upName: "模拟 UP 主",
       avatar: demoPic("UP", "#00b4d8", "#1a1a2e"),
+    },
+  });
+}
+
+/**
+ * 音乐插件（音乐详情面板）
+ *
+ * - 非全屏：挂载到 demo 页面 #music-mount（外部传入的挂载点）；
+ * - 全屏 / 网页全屏：插件自动切到播放器内 `.nova-player-dialog-wrap`
+ *   后一个位置（`.nova-player-music-wrap`，由插件维护）。
+ * - 数据走 demo 注入的 mock 快照（MusicPlugin config.data）。
+ */
+function createMusicPlugin(): Plugin {
+  return MusicPlugin({
+    id: "music",
+    musicId: mockMusicDetail.music_id,
+    data: {
+      detail: mockMusicDetail,
+      videoList: mockVideoList,
+      recommendList: mockRecommendList,
+    },
+    target: "#music-mount",
+    pcCallback: {
+      onJump: (type: number): void => {
+        logAction(`音乐面板跳转回调 onJump(${type})`);
+      },
+      onClose: (): void => {
+        logAction("音乐面板关闭回调 pcCallback.onClose");
+      },
+    },
+    onClose: (): void => {
+      logAction("音乐面板关闭 onClose");
     },
   });
 }
@@ -1548,6 +1586,8 @@ function collectPlugins(
   const list: Plugin[] = [
     createTopPlugin(source),
     createEndingPlugin(source),
+    // 音乐插件：非全屏挂到页面 #music-mount，全屏 / 网页全屏自动挂进播放器
+    createMusicPlugin(),
     // 弹幕插件：Tip 操作回调接线 + 本地发送沉淀进列表底表
     // （onSendSuccess 对本地直发与服务端确认两条链路均触发；
     //  列表面板条目由插件数据 API 自动同步，无需手动维护）

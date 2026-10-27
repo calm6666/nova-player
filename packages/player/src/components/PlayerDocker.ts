@@ -64,6 +64,7 @@ import { PlayerState } from "@/types";
 import type {
   DisplayMode,
   PlayerConfig,
+  PlayerEndingStyle,
   ProgressSegment,
   VNode,
 } from "@/types";
@@ -606,8 +607,10 @@ export const PlayerDocker = defineComponent<
     return (
       createSlotMount(readUi()?.top) ??
       (pluginMount
-        ? (container: HTMLElement, ctx?: SlotContext | null) =>
-            pluginMount(container, ctx ?? slotContext)
+        ? (
+            container: HTMLElement,
+            ctx?: SlotContext | null,
+          ): void | (() => void) => pluginMount(container, ctx ?? slotContext)
         : null)
     );
   };
@@ -617,8 +620,10 @@ export const PlayerDocker = defineComponent<
     return (
       createSlotMount(readUi()?.ending) ??
       (pluginMount
-        ? (container: HTMLElement, ctx?: SlotContext | null) =>
-            pluginMount(container, ctx ?? slotContext)
+        ? (
+            container: HTMLElement,
+            ctx?: SlotContext | null,
+          ): void | (() => void) => pluginMount(container, ctx ?? slotContext)
         : null)
     );
   };
@@ -981,7 +986,7 @@ export const PlayerDocker = defineComponent<
           loadingApi.hide?.();
 
           /** 从当前视频源 URL 提取出错主机名（解析失败返回 undefined） */
-          const host = (() => {
+          const host = ((): string | undefined => {
             try {
               const url =
                 videoRef.value?.currentSrc || videoRef.value?.src || "";
@@ -2677,16 +2682,32 @@ export const PlayerDocker = defineComponent<
    * 渲染播放器主容器
    */
 
-  const readUi = () =>
+  const readUi = (): PlayerConfig["ui"] =>
     (resolvedPlayer?.props ?? configStore?.get() ?? props.config)?.ui;
 
   const readTopStyle = (): "default" | "tv" | "music" =>
     readUi()?.topStyle ??
     ((readUi()?.endingStyle ?? endingStyle) === "ogv" ? "tv" : "default");
-  const readEndingStyle = () => readUi()?.endingStyle ?? endingStyle;
+  const readEndingStyle = (): PlayerEndingStyle =>
+    readUi()?.endingStyle ?? endingStyle;
 
-  /** 插件视图数据（挂载时构造，避免提前引用未初始化函数） */
-  const buildTopProps = () => ({
+  /**
+   * 音乐插件是否已安装
+   *
+   * Top 音乐模式只有安装在音乐插件时才允许显示：
+   * 未安装音乐插件时即使 ui.topStyle 配成 music 也回落到普通 Top，
+   * 避免出现没有音乐数据来源的空音乐顶栏。
+   */
+  const hasMusicPlugin = (): boolean =>
+    resolvedPlayer?.hasPlugin("music") ?? false;
+
+  /**
+   * 构造 Top 插件挂载 props
+   *
+   * 字段契约由 Top 插件消费（通过 SlotContext 透传），播放器侧无需感知
+   * 其具体 Props 类型；此处以 Record 显式标注返回类型，避免隐式 any 推断。
+   */
+  const buildTopProps = (): Record<string, unknown> => ({
     title:
       (embeddedMode
         ? (embeddedConfig?.title ?? readUi()?.title)
@@ -2695,24 +2716,24 @@ export const PlayerDocker = defineComponent<
     upName: embeddedConfig?.up?.name ?? readUi()?.up?.name,
     embedded: embeddedMode,
     tv: readTopStyle() === "tv",
-    music: readTopStyle() === "music",
+    music: readTopStyle() === "music" && hasMusicPlugin(),
     musicTitle: readUi()?.musicTitle,
     followed: Boolean(embeddedConfig?.up?.followed ?? readUi()?.up?.followed),
     likeCount: embeddedConfig?.stats?.like,
     commentCount: embeddedConfig?.stats?.comment,
-    onFollowClick: () => {
+    onFollowClick: (): void => {
       lifecycle.emit?.("follow");
     },
-    onLikeClick: () => {
+    onLikeClick: (): void => {
       lifecycle.emit?.("like");
     },
-    onCommentClick: () => {
+    onCommentClick: (): void => {
       lifecycle.emit?.("comment");
     },
-    onShareClick: () => {
+    onShareClick: (): void => {
       lifecycle.emit?.("share");
     },
-    onMoreClick: () => {
+    onMoreClick: (): void => {
       lifecycle.emit?.("more");
     },
     // 问题反馈图标的悬停提示（既有实现的
@@ -2720,7 +2741,13 @@ export const PlayerDocker = defineComponent<
     onShowTooltip: handleShowTooltip,
     onHideTooltip: handleHideTooltip,
   });
-  const buildEndingProps = () => ({
+  /**
+   * 构造 Ending 插件挂载 props
+   *
+   * 字段契约由 Ending 插件消费（通过 SlotContext 透传），此处显式标注
+   * Record 返回类型，避免隐式 any 推断。
+   */
+  const buildEndingProps = (): Record<string, unknown> => ({
     variant: embeddedMode
       ? "embedded"
       : readEndingStyle() === "ogv"
@@ -2754,38 +2781,38 @@ export const PlayerDocker = defineComponent<
           : readUi()?.related,
     autoNext: embeddedMode
       ? false
-      : () =>
+      : (): boolean =>
           (stateMgr?.get(PlayerStateKeyEnum.PLAYLIST_LENGTH) ?? 0) > 1 &&
           !(props.config?.playback?.pauseAfterEnd ?? false),
-    onRestart: () => {
+    onRestart: (): void => {
       seekTo(0);
       void videoRef.value?.play();
     },
-    onLike: () => {
+    onLike: (): void => {
       lifecycle.emit?.("like");
     },
-    onCoin: () => {
+    onCoin: (): void => {
       lifecycle.emit?.("coin");
     },
-    onCollect: () => {
+    onCollect: (): void => {
       lifecycle.emit?.("favorite");
     },
-    onFollow: () => {
+    onFollow: (): void => {
       lifecycle.emit?.("follow");
     },
-    onAutoNext: () => {
+    onAutoNext: (): void => {
       lifecycle.emit?.("next");
     },
-    onRelatedClick: (item: { url?: string }) => {
+    onRelatedClick: (item: { url?: string }): void => {
       if (item.url) openEmbeddedUrl(item.url);
     },
-    onEnterSite: () => {
+    onEnterSite: (): void => {
       openEmbeddedUrl(embeddedConfig?.enterUrl);
     },
-    onDownloadApp: () => {
+    onDownloadApp: (): void => {
       openEmbeddedUrl(embeddedConfig?.downloadUrl);
     },
-    onEndingMounted: (api: EndingApi) => {
+    onEndingMounted: (api: EndingApi): void => {
       Object.assign(endingApi, api);
     },
   });

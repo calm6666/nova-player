@@ -1,0 +1,7 @@
+# hls.js 为第三方 git 子模块，自带独立的 ESLint 配置与依赖；
+# 根仓库未安装其 eslint 插件（prettier/import/no-for-of-loops），
+# 且其源码不在根 tsconfig 的 project 内，因此根 lint 不纳入该子模块。
+packages/plugins/hls/
+# 播放器包内的 vite 环境声明不在根 tsconfig 的 include 内，
+# 由 packages/player 自身类型检查覆盖，根 lint 跳过。
+packages/player/vite-env.d.ts

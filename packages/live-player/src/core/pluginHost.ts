@@ -21,6 +21,7 @@ import { PlayerStateKeyEnum } from '@/nova/store/runtimeState';
 import {
   StreamFormatEnum,
   StreamPluginEventEnum,
+  StreamPluginTypeEnum,
 } from '@/types/streamPlugin';
 import type { QualityLevel, StreamPlugin } from '@/types/streamPlugin';
 import type {
@@ -369,9 +370,9 @@ export class LivePluginHost {
   /** 当前生效插件类型（用于信息面板播放内核文案）。 */
   getPlayerKind(): 'hls' | 'flv' | 'dash' | 'native' {
     const type = this.activeStream?.type;
-    if (type === 'hls') return 'hls';
-    if (type === 'flv') return 'flv';
-    if (type === 'dash') return 'dash';
+    if (type === StreamPluginTypeEnum.HLS) return 'hls';
+    if (type === StreamPluginTypeEnum.FLV) return 'flv';
+    if (type === StreamPluginTypeEnum.DASH) return 'dash';
     return 'native';
   }
 

@@ -47,6 +47,11 @@ import { isBrowser } from "@/utils";
 import { ComponentEventEnum } from "@/core/events";
 import { LeftControls } from "./LeftControls";
 import { RightControls } from "./RightControls";
+import type {
+  HiResAuthState,
+  HiResClickPayload,
+  HiResGuideRequest,
+} from "./RightControls";
 import { TopControls } from "./TopControls";
 import { PbpControls } from "./PbpControls";
 import { ShadowProgressArea } from "./ShadowProgressArea";
@@ -102,6 +107,12 @@ export type ControlsEvents = {
   bilingualChange: boolean;
   settingChange: { key: string; value: boolean | string | number };
   moreSettingClick: undefined;
+  /** Hi-Res 切换（有权限时发出，携带目标音质 id） */
+  hiResClick: HiResClickPayload;
+  /** Hi-Res 未登录，需要唤起快捷登录 */
+  hiResLoginRequired: undefined;
+  /** Hi-Res 无会员权限，需要唤起会员引导 */
+  hiResGuide: HiResGuideRequest;
   showTooltip: Tooltip;
   hideTooltip: Tooltip;
   progressChange: number;
@@ -116,6 +127,12 @@ export interface ControlsProps {
   backrate: number;
   /** 播放场景：embedded 时使用简化控制栏（无 pip / wide / web / 设置等） */
   scene?: PlayerScene;
+  /** 是否显示 Hi-Res 无损音质按钮（播放器 Hi-Res 能力检测后传入） */
+  hiRes?: boolean;
+  /** Hi-Res 用户鉴权快照（透传 RightControls；缺省视为已登录且具备权限） */
+  hiResAuth?: HiResAuthState;
+  /** Hi-Res 初始激活态（透传 RightControls） */
+  hiResActive?: boolean;
   /** 预览图提供者（progress.previewProvider 配置注入，透传给顶部进度条） */
   previewProvider?: ProgressPreviewProvider;
   /** 高能进度条数据提供者（progress.energyProvider 配置注入，异步到达后写入 PbpControls） */
@@ -298,6 +315,8 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       { element: null, name: "wide", dataName: "ctrl:widescreen" },
       { element: null, name: "web", dataName: "ctrl:webscreen" },
       { element: null, name: "full", dataName: "ctrl:fullscreen" },
+      // Hi-Res：文案 / 徽标随按钮状态变化，内容由按钮 data-tip-* 提供
+      { element: null, name: "flac", dataName: "ctrl:flac" },
     ];
 
     /** 提示按钮延迟显示的定时器 */
@@ -311,6 +330,7 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       wide: ".nova-player-ctrl-btn.nova-player-ctrl-wide",
       web: ".nova-player-ctrl-btn.nova-player-ctrl-web",
       full: ".nova-player-ctrl-btn.nova-player-ctrl-full",
+      flac: ".nova-player-ctrl-btn.nova-player-ctrl-flac",
     };
 
     /** 当前悬停中的提示按钮（委托去重：按钮内部子元素间移动不重复触发） */
@@ -708,6 +728,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
           h("div", { class: "nova-player-control-bottom-center" }),
           h(RightControls, {
             scene: props.scene,
+            /** Hi-Res 按钮显隐 / 鉴权 / 初始激活态透传 */
+            hiRes: props.hiRes,
+            hiResAuth: props.hiResAuth,
+            hiResActive: props.hiResActive,
             /** 插件安装标志信号：字幕按钮按 subtitle 标志显隐（透传） */
             plugins: props.plugins,
             onFullscreen: () => lifecycle.emit?.("fullscreenToggle"),
@@ -729,6 +753,12 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             onBilingualChange: handleRightBilingualChange,
             onSettingChange: handleRightSettingChange,
             onMoreSettingClick: () => lifecycle.emit?.("moreSettingClick"),
+            /** Hi-Res 交互事件向上转发（宿主接入登录 / 会员引导 / FLAC 切换） */
+            onHiResClick: (payload: HiResClickPayload) =>
+              lifecycle.emit?.("hiResClick", payload),
+            onHiResLoginRequired: () => lifecycle.emit?.("hiResLoginRequired"),
+            onHiResGuide: (payload: HiResGuideRequest) =>
+              lifecycle.emit?.("hiResGuide", payload),
           }),
         ),
         // 底部影子进度条（控制栏隐藏时常驻下沿，与顶部进度条同几何同数据源）

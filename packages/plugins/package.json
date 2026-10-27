@@ -39,6 +39,10 @@
       "import": "./dist/ending.js",
       "types": "./dist/ending.d.ts"
     },
+    "./music": {
+      "import": "./dist/music.js",
+      "types": "./dist/music.d.ts"
+    },
     "./audioeffect": {
       "import": "./dist/audioeffect.js",
       "types": "./dist/audioeffect.d.ts"

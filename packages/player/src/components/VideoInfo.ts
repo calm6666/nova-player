@@ -181,7 +181,10 @@ export const VideoInfo = defineComponent<VideoInfoProps>(
      * @param initialData - 初始数据
      * @returns 该信息项的 data Signal
      */
-    const getItemDataSignal = (title: string, initialData: string) => {
+    const getItemDataSignal = (
+      title: string,
+      initialData: string,
+    ): Signal<string> => {
       let sig = itemDataSignals.get(title);
       if (!sig) {
         sig = signal<string>(initialData);

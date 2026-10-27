@@ -261,6 +261,21 @@ function normalizePlaylist(props: PlayerConfig): MediaItem[] {
 }
 
 /**
+ * Array.isArray 的 unknown[] 类型守卫
+ *
+ * 内置 Array.isArray 的类型谓词是 `any[]`，会把元素访问推断为 any
+ * （触发 no-unsafe-* 规则）；这里收窄为 unknown[]，由后续谓词逐项校验。
+ */
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+/** 渐进式清晰度变体类型守卫（对象且含 url 字段，与既有判定一致） */
+function isProgressiveVariantItem(value: unknown): value is ProgressiveVariant {
+  return typeof value === "object" && value !== null && "url" in value;
+}
+
+/**
  * 视频播放器类
  * 实现 ComponentInstance 接口，可作为组件使用
  */
@@ -1225,21 +1240,21 @@ export class VideoPlayer
     if (typeof src === "string") {
       this.manifestSource = null;
       this.sources = [{ url: src, label: "默认" }];
-    } else if (Array.isArray(src) && src.length > 0) {
+    } else if (isUnknownArray(src) && src.length > 0) {
       this.manifestSource = null;
-      if (typeof src[0] === "string") {
-        const urlArray = src.filter(
+      const candidates: unknown[] = src;
+      if (typeof candidates[0] === "string") {
+        const urlArray = candidates.filter(
           (item): item is string => typeof item === "string",
         );
-        this.sources = urlArray.map((url, index) => ({
-          url,
-          label: index === 0 ? "默认" : `备用${index}`,
-        }));
-      } else {
-        const variants = src.filter(
-          (item): item is ProgressiveVariant =>
-            typeof item === "object" && "url" in item,
+        this.sources = urlArray.map(
+          (url: string, index: number): ProgressiveVariant => ({
+            url,
+            label: index === 0 ? "默认" : `备用${index}`,
+          }),
         );
+      } else {
+        const variants = candidates.filter(isProgressiveVariantItem);
         variants.forEach((variant) => {
           if (isDev() && !variant.height && !variant.label) {
             logger.error(
@@ -2035,9 +2050,14 @@ export class VideoPlayer
     if (typeof source === "string") {
       return { url: source, format: this.detectStreamFormat(source) };
     }
-    if (Array.isArray(source)) {
-      const first = source[0];
-      const url = typeof first === "string" ? first : (first?.url ?? "");
+    if (isUnknownArray(source)) {
+      const first: unknown = source[0];
+      const url =
+        typeof first === "string"
+          ? first
+          : isProgressiveVariantItem(first)
+            ? first.url
+            : "";
       return { url, format: this.detectStreamFormat(url) };
     }
     return {
@@ -3266,7 +3286,7 @@ export class VideoPlayer
     const area = this.videoAreaEl;
     if (!video || !wrap || !area) return;
 
-    const clear = () => {
+    const clear = (): void => {
       clearStyle(wrap, ["width", "height"]);
       clearStyle(video, "object-fit");
     };

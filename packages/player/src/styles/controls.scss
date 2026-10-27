@@ -715,4 +715,11 @@
 .nova-player-ctrl-flac {
   margin-right: 20px;
   width: 99px;
+
+  // 激活态（FLAC 音质开启）：图标填充主色，与 B 站线上
+  // .bpx-player-ctrl-flac.bpx-state-active .bpx-common-svg-icon 一致
+  &.state-active .nova-player-ctrl-btn-icon > .common-svg-icon {
+    fill: #00a1d6;
+    fill: var(--nova-player-primary-color, #00a1d6);
+  }
 }

@@ -41,7 +41,58 @@ import pipHoverAnimationData from "../assets/lottie-icon/pip-hover-animation.jso
 import pipExitHoverAnimationData from "../assets/lottie-icon/pip-exit-hover-animation.json";
 
 /**
- * RightControls 组件 Props 接口
+ * Hi-Res 用户鉴权快照
+ *
+ * 与 B 站线上 userStore 的判定字段一一对应：
+ * - 未登录 → 点击走登录引导
+ * - 非限免（withoutVip=false）且非 UP 主 / 超管 → 点击走会员引导
+ * - withoutVip（限免中）/ UP 主 / 超管 → 允许切换 FLAC
+ *
+ * 项目暂无账号/会员体系，由宿主通过该快照注入；缺省视为已登录且具备权限，
+ * 保持 Hi-Res 按钮原有的可点语义。
+ */
+export interface HiResAuthState {
+  /** 是否已登录（缺省 true） */
+  loggedIn?: boolean;
+  /** 是否处于免 VIP 限时免费状态（tooltip 徽标显示「限免中」） */
+  withoutVip?: boolean;
+  /** 是否为 UP 主 */
+  upOwner?: boolean;
+  /** 是否为超级管理员 */
+  superUser?: boolean;
+}
+
+/**
+ * Hi-Res 会员引导参数（与 B 站线上 requestSuperGuide 入参对齐）
+ * 项目暂无对应接口，按钮只向外发出该请求，由宿主接入真实引导流程。
+ */
+export interface HiResGuideRequest {
+  /** 引导副标题 i18n key（线上文案「立即解锁Hi-Res无损音质」） */
+  subtitleKey: string;
+  /** 业务 appId（线上 10） */
+  appId: number;
+  /** 业务子标识（线上 ugcWav） */
+  appSubId: string;
+  /** 音质标识（线上 wav） */
+  quality: "wav";
+  /** 音质 qn（线上 FLAC） */
+  qn: "FLAC";
+}
+
+/**
+ * Hi-Res 切换结果
+ * 项目暂无音频音质切换 API，active 变化与目标音质 id 一起上抛，
+ * 由宿主接入真实 FLAC 切换逻辑。
+ */
+export interface HiResClickPayload {
+  /** 切换后的激活态 */
+  active: boolean;
+  /** 目标音质 id：激活为 FLAC，关闭回到 Default */
+  quality: "FLAC" | "Default";
+}
+
+/**
+ * RightControls 组件事件接口
  */
 export type RightControlsEvents = {
   fullscreen: undefined;
@@ -66,6 +117,12 @@ export type RightControlsEvents = {
   settingChange: { key: string; value: boolean | string | number };
   moreSettingClick: undefined;
   rightControlsMounted: undefined;
+  /** Hi-Res 切换（仅在有权限时发出，携带目标音质 id） */
+  hiResClick: HiResClickPayload;
+  /** Hi-Res 未登录，需要唤起快捷登录 */
+  hiResLoginRequired: undefined;
+  /** Hi-Res 无会员权限，需要唤起会员引导 */
+  hiResGuide: HiResGuideRequest;
 };
 
 export interface RightControlsProps {
@@ -73,6 +130,10 @@ export interface RightControlsProps {
   scene?: "station" | "embedded";
   /** 是否显示 Hi-Res 无损音质标识（播放器能力检测后传入） */
   hiRes?: boolean;
+  /** Hi-Res 用户鉴权快照（缺省视为已登录且具备权限） */
+  hiResAuth?: HiResAuthState;
+  /** Hi-Res 初始激活态（当前音质是否为 FLAC） */
+  hiResActive?: boolean;
   /**
    * 插件安装标志读取器（getter 形态，Controls 透传）：
    * 字幕按钮按 subtitle 标志显隐，未装 subtitle 插件时整体不显示
@@ -130,6 +191,70 @@ export const RightControls = defineComponent<
   const wideConfigSignal = signal<boolean>(true);
   const webConfigSignal = signal<boolean>(true);
   const fullscreenConfigSignal = signal<boolean>(true);
+
+  // ============================================
+  // Hi-Res 无损音质（激活态 / 鉴权 / 动态提示文案）
+  // ============================================
+
+  /** Hi-Res 激活态（当前音质为 FLAC 时为 true，驱动 state-active 类） */
+  const hiResActiveSignal = signal<boolean>(props.hiResActive === true);
+
+  /**
+   * 提示标题 i18n key：激活时「关闭Hi-Res无损音质」，未激活时「开启Hi-Res无损音质」
+   * 作为按钮 data-tip-title-key 输出，由 Tooltips 打开提示时同步（不固化翻译）
+   */
+  const hiResTitleKey = computed<string>(() =>
+    hiResActiveSignal.value
+      ? "player.ui.tooltip.hires.disable"
+      : "player.ui.tooltip.hires.enable",
+  );
+
+  /**
+   * 提示徽标 i18n key：无 VIP（限免中）显示「限免中」，否则「大会员」
+   * 作为按钮 data-tip-badge-key 输出
+   */
+  const hiResBadgeKey = computed<string>(() =>
+    props.hiResAuth?.withoutVip === true
+      ? "player.ui.tooltip.hires.trial"
+      : "player.ui.tooltip.hires.vip",
+  );
+
+  /**
+   * Hi-Res 按钮点击（顺序与 B 站线上一致）：
+   * 1. 未登录 → 上抛 hiResLoginRequired（宿主接入快捷登录）
+   * 2. 无 VIP / UP / 超管 → 上抛 hiResGuide（宿主接入会员引导）
+   * 3. 有权限 → 切换激活态并上抛 hiResClick（携带目标音质 id）
+   *
+   * 项目暂无账号 / 会员 / 音质切换接口，这里只做按钮自身的状态流转与事件占位，
+   * 不发起任何硬编码请求。
+   */
+  const onClickHiRes = (): void => {
+    const auth = props.hiResAuth;
+    if (auth?.loggedIn === false) {
+      lifecycle.emit?.("hiResLoginRequired");
+      return;
+    }
+    const entitled =
+      auth === undefined ||
+      auth.withoutVip === true ||
+      auth.upOwner === true ||
+      auth.superUser === true;
+    if (!entitled) {
+      lifecycle.emit?.("hiResGuide", {
+        subtitleKey: "player.ui.tooltip.hires.unlock",
+        appId: 10,
+        appSubId: "ugcWav",
+        quality: "wav",
+        qn: "FLAC",
+      });
+      return;
+    }
+    hiResActiveSignal.value = !hiResActiveSignal.value;
+    lifecycle.emit?.("hiResClick", {
+      active: hiResActiveSignal.value,
+      quality: hiResActiveSignal.value ? "FLAC" : "Default",
+    });
+  };
 
   // ============================================
   // 控件开关 → 显隐（ui.controls.*）
@@ -350,7 +475,7 @@ export const RightControls = defineComponent<
 
   /** 状态值 → 目标槽位（激活态用退出图标） */
   function resolveSlot(isActive: unknown): number {
-    return Boolean(isActive) ? 1 : 0;
+    return isActive ? 1 : 0;
   }
 
   /**
@@ -492,16 +617,24 @@ export const RightControls = defineComponent<
 
   /** 按钮类型到渲染函数的映射表，每个键对应一种控制按钮的渲染逻辑 */
   const bottomRightRenderers: Record<string, () => VNode | null> = {
-    /** 渲染 Hi-Res 无损音质标识 */
+    /** 渲染 Hi-Res 无损音质按钮（hover tooltip 由 Controls 委托、Tooltips 渲染） */
     flac: () => {
       if (props.hiRes === false) return null;
       return h(
         "div",
         {
-          class: "nova-player-ctrl-btn nova-player-ctrl-flac",
-          role: "img",
-          "aria-label": t("player.ui.controls.hires"),
-          title: t("player.ui.controls.hires"),
+          class: [
+            "nova-player-ctrl-btn nova-player-ctrl-flac",
+            // 激活态：类名与同排 pip/wide/web 一致，样式见 controls.scss
+            { "state-active": hiResActiveSignal.value },
+          ],
+          role: "button",
+          "aria-label": t(hiResTitleKey.value),
+          "aria-pressed": hiResActiveSignal.value ? "true" : "false",
+          // 动态提示文案 / 徽标：Tooltips.openTip 时读取（不固化翻译，语言切换自动跟随）
+          "data-tip-title-key": hiResTitleKey.value,
+          "data-tip-badge-key": hiResBadgeKey.value,
+          onClick: onClickHiRes,
         },
         h(
           "div",

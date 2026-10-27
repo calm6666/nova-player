@@ -112,3 +112,16 @@ export { TopPlugin } from './top';
 export type { TopPluginConfig } from './top';
 export { EndingPlugin } from './ending';
 export type { EndingPluginConfig } from './ending';
+
+// 导出 Music 插件（音乐详情面板）
+export { MusicPlugin, createMusicPlugin } from './music';
+export type {
+  MusicPluginConfig,
+  MusicPluginAPI,
+  MusicPluginTarget,
+  MusicDetail,
+  MusicPluginData,
+  MusicVideoItem,
+  RecommendItem,
+  Singer,
+} from './music';

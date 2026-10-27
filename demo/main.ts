@@ -346,6 +346,25 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         "销毁播放器",
       ),
     ),
+    // 音乐插件 · 非全屏外部挂载点（由 demo 传入 MusicPlugin config.target）
+    // 容器同时带 .nova-player-music-wrap：插件样式作用域基于该容器类名
+    h(
+      "section",
+      {
+        class: "source-card music-demo-section",
+      },
+      h("h3", { class: "source-card-title" }, "音乐插件 · 非全屏外部挂载"),
+      h(
+        "p",
+        { class: "music-demo-hint" },
+        "非全屏：面板挂载在本页 #music-mount（.nova-player-music-wrap）；",
+        "全屏 / 网页全屏：自动切回播放器内 .nova-player-dialog-wrap 后一个位置。",
+      ),
+      h("div", {
+        id: "music-mount",
+        class: "nova-player-music-wrap demo-music-mount",
+      }),
+    ),
     h(
       "section",
       {

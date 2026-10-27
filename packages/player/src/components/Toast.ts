@@ -13,7 +13,7 @@ import { h, defineComponent, signal, t, For } from "@/core";
 import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
 import type { AnimationFrameID } from "@/utils/rafTimeout";
 import { Close } from "@/nova/components/icons";
-import type { ComponentLifecycle } from "@/types";
+import type { ComponentLifecycle, VNode } from "@/types";
 
 /** 单条 Toast 配置 */
 export interface ToastOptions {
@@ -177,7 +177,7 @@ export const Toast = defineComponent<ToastProps>(
       removeTimers.clear();
     };
 
-    const renderRow = (item: ToastRecord) =>
+    const renderRow = (item: ToastRecord): VNode =>
       h(
         "div",
         {

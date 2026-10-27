@@ -44,6 +44,7 @@ export default defineConfig({
         flv: resolve(__dirname, 'src/flv/index.ts'),
         top: resolve(__dirname, 'src/top/index.ts'),
         ending: resolve(__dirname, 'src/ending/index.ts'),
+        music: resolve(__dirname, 'src/music/index.ts'),
         audioeffect: resolve(__dirname, 'src/audioeffect/index.ts'),
         interaction: resolve(__dirname, 'src/interaction/index.ts'),
         'interactive-video': resolve(
