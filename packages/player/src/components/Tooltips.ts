@@ -73,6 +73,7 @@ const DEFAULT_TOOLTIP_ITEMS: TooltipItem[] = [
   { name: "ctrl:fullscreen", titleKey: "player.ui.tooltip.fullscreen.enter" },
   { name: "ctrl:prev", titleKey: "player.ui.tooltip.prev" },
   { name: "ctrl:next", titleKey: "player.ui.tooltip.next" },
+  { name: "ctrl:flac", titleKey: "player.ui.controls.hires" },
 ];
 
 /**

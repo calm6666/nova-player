@@ -495,13 +495,22 @@ export const RightControls = defineComponent<
     /** 渲染 Hi-Res 无损音质标识 */
     flac: () => {
       if (props.hiRes === false) return null;
+      /** 当前按钮（仅用于点击后切换自身激活类，不参与其它控件渲染） */
+      let buttonEl: HTMLElement | null = null;
+      /** 本地激活态（不写入全局 signal，避免触发整条控制栏重渲染） */
+      let active = false;
       return h(
         "div",
         {
           class: "nova-player-ctrl-btn nova-player-ctrl-flac",
-          role: "img",
-          "aria-label": t("player.ui.controls.hires"),
           title: t("player.ui.controls.hires"),
+          ref: (el: unknown): void => {
+            if (el instanceof HTMLElement) buttonEl = el;
+          },
+          onClick: (): void => {
+            active = !active;
+            buttonEl?.classList.toggle("state-active", active);
+          },
         },
         h(
           "div",
