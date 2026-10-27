@@ -84,6 +84,7 @@ export {
   signal,
   Fragment,
   For,
+  onEffect,
   t,
 } from '@/core';
 export { Plus, Issue } from '@/nova/components/icons';

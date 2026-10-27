@@ -81,6 +81,10 @@ export interface TopProps {
   onMusicClick?: () => void;
   /** 插件挂载时的根容器（.nova-player-top-wrap） */
   host?: HTMLElement | null;
+  /** 是否全屏 */
+  fullscreen?: boolean;
+  /** 是否网页全屏 */
+  webFullscreen?: boolean;
   /** 问题反馈点击回调 */
   onIssueClick?: () => void;
   /** 关注按钮点击回调 */
@@ -245,7 +249,11 @@ export const Top = defineComponent<TopProps>(
             "div",
             {
               class: "nova-player-top-left-title",
-              style: { display: "none", fontSize: "20px" },
+              style: {
+                display:
+                  props.fullscreen || props.webFullscreen ? "" : "none",
+                fontSize: "20px",
+              },
             },
             props.title ?? "",
           ),

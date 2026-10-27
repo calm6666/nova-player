@@ -63,6 +63,7 @@ class TopPluginClass implements Plugin {
   install(player: Parameters<Plugin["install"]>[0]): void {
     this.player = player as unknown as TopPluginHost;
     injectPluginStyle("top", topCss);
+
     const custom = this.config.mount;
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
