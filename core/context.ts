@@ -24,6 +24,7 @@
  */
 
 import type { VNode } from "@/types";
+import { isSignalRef } from "./templateRef";
 
 /**
  * Context 对象
@@ -34,6 +35,16 @@ export interface Context<T> {
   readonly id: symbol;
   /** 默认值，当没有 Provider 时使用 */
   readonly defaultValue: T;
+  /**
+   * 是否响应式上下文
+   *
+   * 为 true 时 Provider 的 value 可以是「取值函数」（() => T），
+   * useContext 返回惰性 Proxy：每次读取字段都重新求值并解包 Signal，
+   * 在 effect / 响应式 getter 中读取即自动建立依赖（值变化精准更新 DOM）。
+   */
+  readonly reactive?: boolean;
+  /** 响应式上下文的默认取值函数（无 Provider 时使用） */
+  readonly resolve?: () => T;
 }
 
 /**
@@ -83,6 +94,82 @@ export function createContext<T>(defaultValue: T): Context<T> {
 }
 
 /**
+ * 创建响应式 Context
+ *
+ * 与 createContext 的区别：Provider 传入的值可以是取值函数
+ * `() => T`（内部可读取 signal），useContext 返回惰性 Proxy，
+ * 字段读取发生在 effect 中时自动追踪依赖，实现「上下文值变化 → 精准更新」。
+ *
+ * 约束：响应式上下文的 T 必须是对象（Proxy 无法代理原始值）；
+ * 原始值场景请使用 createContext 或在对象中包一层字段。
+ *
+ * @param resolve - 默认取值函数（无 Provider 时使用）
+ * @param defaultValue - 可选默认值（不传时用 resolve() 求值一次）
+ * @returns 响应式 Context 对象
+ *
+ * @example
+ * const ConfigContext = createReactiveContext<ControlsConfig>(() => defaultControlConfig);
+ * provide([{ contextId: ConfigContext.id, value: () => store.config }], () => h(Child, {}));
+ * // Child: const config = useContext(ConfigContext); h('span', {}, () => config.title)
+ */
+export function createReactiveContext<T extends object>(
+  resolve: () => T,
+  defaultValue?: T,
+): Context<T> {
+  return {
+    id: Symbol("lumina.context"),
+    reactive: true,
+    resolve,
+    defaultValue: defaultValue ?? resolve(),
+  };
+}
+
+/** 响应式上下文 Proxy 的 get trap：每次读取都重新求值并解包 Signal */
+function reactiveContextHandler<T extends object>(
+  read: () => T,
+): ProxyHandler<object> {
+  const source = (): T => read();
+  return {
+    get(_target, key): unknown {
+      const value = Reflect.get(source(), key);
+      // 字段为 Signal 时自动解包，效果与 reactiveProps 一致
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return isSignalRef(value) ? value.value : value;
+    },
+    has(_target, key): boolean {
+      return Reflect.has(source(), key);
+    },
+    ownKeys(): ArrayLike<string | symbol> {
+      return Reflect.ownKeys(source());
+    },
+    getOwnPropertyDescriptor(_target, key): PropertyDescriptor | undefined {
+      const descriptor = Reflect.getOwnPropertyDescriptor(source(), key);
+      return descriptor === undefined
+        ? undefined
+        : { ...descriptor, configurable: true };
+    },
+  };
+}
+
+/**
+ * 把响应式上下文值包装为惰性 Proxy
+ *
+ * @param raw - Provider 原始值（取值函数或对象）
+ * @param fallback - 无 Provider 时的默认取值函数
+ */
+function wrapReactiveContext<T extends object>(
+  raw: unknown,
+  fallback: () => T,
+): T {
+  const read = (): T => {
+    if (typeof raw === "function") return (raw as () => T)();
+    if (raw !== undefined) return raw as T;
+    return fallback();
+  };
+  return new Proxy({}, reactiveContextHandler(read)) as T;
+}
+
+/**
  * 从当前 VNode 向上查找最近的 Provider 值
  * 遍历 VNode 链上的 __providers，找到匹配 contextId 的值
  * 如果 __parent 链上未找到，则查找全局 Provider 栈（由 provide() 函数维护）
@@ -97,6 +184,20 @@ export function createContext<T>(defaultValue: T): Context<T> {
  * }
  */
 export function useContext<T>(context: Context<T>): T {
+  const raw = findContextValue(context);
+  if (context.reactive) {
+    // 响应式上下文：惰性 Proxy（对象字段读取时求值 + 解包 Signal）
+    const fallback = context.resolve ?? ((): T => context.defaultValue);
+    return wrapReactiveContext<T & object>(
+      raw,
+      fallback as () => T & object,
+    ) as T;
+  }
+  return raw ?? context.defaultValue;
+}
+
+/** 查找 Provider 原始值（沿 VNode 链 + 全局 Provider 栈） */
+function findContextValue<T>(context: Context<T>): T | undefined {
   const currentVNode = __currentVNode;
   if (currentVNode) {
     let vnode: VNode | undefined = currentVNode;
@@ -118,8 +219,7 @@ export function useContext<T>(context: Context<T>): T {
    * h(Child, ...) 在 h('div', ...) 之前求值，此时 div 的 __providers 还未设置。
    * provide() 函数在子组件求值前将 providers 推入栈，求值后弹出，
    * 这样 useContext 可以在 __parent 链查找失败后，从栈中找到 Provider。
-   */
-  for (let i = __providerStack.length - 1; i >= 0; i--) {
+   */ for (let i = __providerStack.length - 1; i >= 0; i--) {
     const providers = __providerStack[i];
     const entry = findProvider<T>(providers, context.id);
     if (entry !== undefined) {
@@ -127,7 +227,7 @@ export function useContext<T>(context: Context<T>): T {
     }
   }
 
-  return context.defaultValue;
+  return undefined;
 }
 
 function findProvider<T>(

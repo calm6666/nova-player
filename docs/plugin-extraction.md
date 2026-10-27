@@ -255,7 +255,7 @@ interface SurfaceSlotContext extends SlotContext {
 
 约束：
 
-- slot 函数只在挂载/变体切换时解析一次，不做细粒度响应式；
+- slot 函数在挂载 / 变体切换时解析一次；返回的 VNode 内部可用 Signal / 响应式表达式做细粒度更新，结构性替换通过 `setConfig` 重建
 - 需要动态更新的开发者在自己的 VNode 内使用播放器事件或 `player` 实例；
 - 核心不把可写 state 暴露给 slot，避免插件绕过播放时序。
 

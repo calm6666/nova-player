@@ -506,10 +506,18 @@ export class VideoPlayer
   } | null = null;
 
   /** bindVideoEvents 注册的全部监听器（destroy 时统一摘除） */
-  private videoListeners: Array<{ type: string; handler: EventListener }> = [];
-
-  /** 视频事件是否已绑定（防止 onMounted / hydrate 重复绑定） */
+  private videoListeners: Array<{ type: string; handler: EventListener }> =
+    []; /** 视频事件是否已绑定（防止 onMounted / hydrate 重复绑定） */
   private videoEventsBound = false;
+
+  /**
+   * 控件配置（响应式上下文数据源）
+   *
+   * ConfigContext 的 Provider 传取值函数读取本信号，
+   * 消费组件在响应式表达式中读取 ctx.xxx 时自动追踪配置变化。
+   */
+  private controlsReactive =
+    signal<typeof defaultControlConfig>(defaultControlConfig);
 
   /**
    * 构造函数
@@ -520,8 +528,9 @@ export class VideoPlayer
     /**
      * 先归一化（兼容旧扁平写法），再深合并默认值。
      * 嵌套命名空间只覆盖用户显式提供的字段，同层其余默认值保留。
-     */
-    this.props = mergePlayerConfig(defaultConfig, normalizeConfig(config));
+     */ this.props = mergePlayerConfig(defaultConfig, normalizeConfig(config));
+    this.controlsReactive.value =
+      this.props.ui?.controls ?? defaultControlConfig;
 
     /** 片头 / 片尾跳过断点（外部数据源提供；无数据时不渲染标记、不自动跳过） */
     this.skipPoints = this.props.progress?.skipPoints ?? null;
@@ -1056,6 +1065,7 @@ export class VideoPlayer
       shadowPermanent: this.props.progress?.shadowPermanent === true,
     };
     this.props.ui = { ...(this.props.ui ?? {}), controls };
+    this.controlsReactive.value = controls;
   }
 
   // ============================================
@@ -1461,7 +1471,7 @@ export class VideoPlayer
         { contextId: PlayerContext.id, value: this },
         {
           contextId: ConfigContext.id,
-          value: this.props.ui?.controls ?? defaultControlConfig,
+          value: () => this.controlsReactive.value,
         },
         { contextId: ConfigStoreContext.id, value: this.configStore },
       ],
@@ -2439,6 +2449,7 @@ export class VideoPlayer
     const prev = this.props;
     const next = mergePlayerConfig(prev, partial);
     this.props = next;
+    this.controlsReactive.value = next.ui?.controls ?? defaultControlConfig;
 
     // 持久化配置即时生效（setConfig({storage:{enabled:false}}) 立即停用读写）
     configureStorage(next.storage);

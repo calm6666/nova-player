@@ -216,10 +216,9 @@ async function fetchDanmakuList(): Promise<DanmakuItem[]> {
  * rebuildPlayer 时由 mock 拉取结果整体替换，本地发送的弹幕经
  * onSendSuccess 回调沉淀进来；同时作为弹幕 provider 的时间窗查询底表
  * （已发射弹幕由调度器 markEmitted 集合去重，本地条目混入不会二次发射）。
- *
- * 面板展示数据无需手动维护：mock 拉取经 loadDanmaku 手动装填通道汇入、
- * 播放推进经 provider 分段拉取通道汇入、本地发送经插件内部接线追加
- * （own 标记 + 本地发送时间），三条通道全部按 dmid 去重。
+ * * 面板展示数据无需手动维护：mock 拉取经播放器 loadDanmaku 通道汇入、
+ * 本地发送经插件内部接线追加（own 标记 + 本地发送时间），
+ * 渲染调度与列表面板由插件数据 API 统一同步。
  */
 let danmakuPanelList: DanmakuItem[] = [];
 
@@ -1549,15 +1548,15 @@ function collectPlugins(
   const list: Plugin[] = [
     createTopPlugin(source),
     createEndingPlugin(source),
-    // 弹幕插件：Tip 操作回调接线 + 本地发送沉淀进 provider 底表
+    // 弹幕插件：Tip 操作回调接线 + 本地发送沉淀进列表底表
     // （onSendSuccess 对本地直发与服务端确认两条链路均触发；
-    //  列表面板条目由插件数据通道自动汇入，无需手动维护）
+    //  列表面板条目由插件数据 API 自动同步，无需手动维护）
     DanmakuPlugin({
       // 弹幕数据不在插件内请求：由 demo 拉取后经 loadDanmaku API 注入
       callbacks: {
         onSendSuccess: (danmaku) => {
-          // 本人弹幕沉淀进底表（provider 时间窗查询 + 播放器重建后重装）；
-          // 列表面板条目由插件内部接线自动追加（own 标记 + 本地发送时间）
+          // 本人弹幕沉淀进底表（播放器重建后用 loadDanmaku 重装）；
+          // 列表面板条目由插件数据 API 自动同步（own 标记 + 本地发送时间）
           danmakuPanelList.push(danmaku);
           danmakuPanelList.sort((a, b) => a.time - b.time);
           logAction(`弹幕发送成功: ${danmaku.text}`);

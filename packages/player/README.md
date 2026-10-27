@@ -107,7 +107,9 @@ player.isWideScreen();        // 读取当前宽屏状态
 | `toggleWideScreen` / `setWideScreen` / `isWideScreen` | | 宽屏（状态 + 回调，布局由外部容器决定） |
 | `setDisplayMode` | | 显示模式（`wide` 仅广播事件，布局由外部容器决定） |
 | `setDanmakuVisible` / `getDanmakuVisible` / `toggleDanmaku` | | 弹幕显隐 |
-| `setDanmakuOpacity` / `setDanmakuSpeed` / `setDanmakuSource` / `clearDanmaku` / `sendDanmaku` | | 弹幕 API |
+| `setDanmakuOpacity` / `setDanmakuSpeed` / `clearDanmaku` / `sendDanmaku` | | 弹幕设置 / 发送 API |
+| `loadDanmaku` / `addDanmaku` / `updateDanmaku` / `removeDanmaku` / `getDanmakuList` | | 弹幕数据 API（外部注入，插件不请求） |
+| `mountDanmakuList` / `unmountDanmakuList` | | 弹幕列表面板挂载（显式传挂载点） |
 | `setSubtitleVisible` / `getSubtitleVisible` / `toggleSubtitle` / `setSubtitleLang` / `setSubtitleList` | | 字幕 API |
 | `use` / `uninstallPlugin` / `getPlugin<T>` / `getPluginAPI<T>` | | 插件管理 |
 | `getConfig` / `setConfig` | | 配置读写（`setConfig` 支持深层可选） |

@@ -59,9 +59,8 @@ type TraverseVisitor = {
 
 type TraverseFn = (ast: t.File, visitor: TraverseVisitor) => void;
 
-const traverse: TraverseFn = (
-  (_traverse as unknown as { default?: unknown }).default || _traverse
-) as unknown as TraverseFn;
+const traverse: TraverseFn = ((_traverse as unknown as { default?: unknown })
+  .default || _traverse) as unknown as TraverseFn;
 
 /**
  * 框架模块来源检测
@@ -199,7 +198,9 @@ export function transformCode(
   // 注入内部函数导入（按实际使用按需注入）
   if (ctx.usedInternalFns.length > 0) {
     const importNames = ctx.usedInternalFns.sort().join(", ");
-    s.prepend(`import { ${importNames} } from '${ctx.internalImportSource}';\n`);
+    s.prepend(
+      `import { ${importNames} } from '${ctx.internalImportSource}';\n`,
+    );
   }
 
   // 注入静态提升声明（先 prepend 声明再 prepend import，import 保持在最前）
@@ -344,20 +345,28 @@ function isInsideAttrsOfHCall(path: BabelPath): boolean {
       t.isFunctionDeclaration(child);
     if (!crossedFunction && !childIsFn) {
       if (parent.isObjectProperty()) {
-        if ((parent.node as t.ObjectProperty).value === child) unsafeValuePosition = true;
+        if ((parent.node as t.ObjectProperty).value === child)
+          unsafeValuePosition = true;
       } else if (parent.isArrayExpression()) {
-        if ((parent.node as t.ArrayExpression).elements.indexOf(child as t.Expression) !== -1) {
+        if (
+          (parent.node as t.ArrayExpression).elements.indexOf(
+            child as t.Expression,
+          ) !== -1
+        ) {
           unsafeValuePosition = true;
         }
       } else if (parent.isSpreadElement()) {
-        if ((parent.node as t.SpreadElement).argument === child) unsafeValuePosition = true;
+        if ((parent.node as t.SpreadElement).argument === child)
+          unsafeValuePosition = true;
       }
     }
 
     if (
       parent.isCallExpression() &&
       isFrameworkHCall(parent) &&
-      ((parent.node as t.CallExpression).arguments as t.Node[]).indexOf(child) === 1
+      ((parent.node as t.CallExpression).arguments as t.Node[]).indexOf(
+        child,
+      ) === 1
     ) {
       return unsafeValuePosition;
     }
@@ -387,7 +396,9 @@ function hasAttrsAncestor(path: BabelPath): boolean {
     if (
       parent.isCallExpression() &&
       isFrameworkHCall(parent) &&
-      ((parent.node as t.CallExpression).arguments as t.Node[]).indexOf(child) === 1
+      ((parent.node as t.CallExpression).arguments as t.Node[]).indexOf(
+        child,
+      ) === 1
     ) {
       return true;
     }
@@ -502,7 +513,8 @@ function getReactiveChildCode(
 function mayYieldVNode(node: t.Node, path: BabelPath): boolean {
   if (t.isConditionalExpression(node)) {
     return (
-      mayYieldVNode(node.consequent, path) || mayYieldVNode(node.alternate, path)
+      mayYieldVNode(node.consequent, path) ||
+      mayYieldVNode(node.alternate, path)
     );
   }
   if (t.isLogicalExpression(node)) {
@@ -651,7 +663,10 @@ function hasHoistedAncestor(
 ): boolean {
   let parent: BabelPath | null = path.parentPath;
   while (parent) {
-    if (parent.isCallExpression() && hoistTargets.has(parent.node as t.CallExpression)) {
+    if (
+      parent.isCallExpression() &&
+      hoistTargets.has(parent.node as t.CallExpression)
+    ) {
       return true;
     }
     parent = parent.parentPath;
@@ -680,7 +695,9 @@ function genStaticExpr(node: t.Node, ctx: TransformContext): string {
     return `-${node.argument.value}`;
   }
   if (t.isTemplateLiteral(node) && node.expressions.length === 0) {
-    return JSON.stringify(node.quasis[0].value.cooked ?? node.quasis[0].value.raw);
+    return JSON.stringify(
+      node.quasis[0].value.cooked ?? node.quasis[0].value.raw,
+    );
   }
   if (t.isArrayExpression(node)) {
     return `[${node.elements
@@ -693,7 +710,8 @@ function genStaticExpr(node: t.Node, ctx: TransformContext): string {
       if (!t.isObjectProperty(prop) || prop.computed) continue;
       let key: string;
       if (t.isIdentifier(prop.key)) key = prop.key.name;
-      else if (t.isStringLiteral(prop.key)) key = JSON.stringify(prop.key.value);
+      else if (t.isStringLiteral(prop.key))
+        key = JSON.stringify(prop.key.value);
       else if (t.isNumericLiteral(prop.key)) key = String(prop.key.value);
       else continue;
       parts.push(`${key}: ${genStaticExpr(prop.value, ctx)}`);
@@ -775,7 +793,9 @@ function hoistStaticCall(
   }
 
   // VNode 回退路径：共享常量 + 使用点克隆（多次渲染会互相覆盖 el，必须克隆）
-  ctx.hoistedDecls.push(`const ${hoistedName} = ${genStaticHCall(node, ctx)};\n`);
+  ctx.hoistedDecls.push(
+    `const ${hoistedName} = ${genStaticHCall(node, ctx)};\n`,
+  );
   markUsed(ctx, "_cloneHoisted");
   s.overwrite(node.start!, node.end!, `_cloneHoisted(${hoistedName})`);
   return true;
@@ -1006,7 +1026,10 @@ function staticClassValue(node: t.Node): string {
 }
 
 /** class 对象项处理：truthy 值的键名收集（镜像 normalizeClass 对象分支） */
-function appendTruthyObjectKeys(obj: t.ObjectExpression, parts: string[]): void {
+function appendTruthyObjectKeys(
+  obj: t.ObjectExpression,
+  parts: string[],
+): void {
   for (const prop of obj.properties) {
     if (!t.isObjectProperty(prop) || prop.computed) continue;
     const key = staticPropKeyName(prop);
@@ -1032,22 +1055,30 @@ function staticStyleAttr(node: t.Node): string | null {
     if (t.isNullLiteral(valueNode)) return true;
     if (t.isBooleanLiteral(valueNode)) {
       if (!valueNode.value) return true;
-      entries.push({ prop: key.startsWith("--") ? key : camelToKebabCase(key), value: "true" });
+      entries.push({
+        prop: key.startsWith("--") ? key : camelToKebabCase(key),
+        value: "true",
+      });
       return true;
     }
     const strVal = staticScalarToString(valueNode);
     if (strVal === null) return false; // 对象/数组值无法静态判定 → 整棵回退
     if (strVal === "") return true; // 镜像：空值剔除
-    entries.push({ prop: key.startsWith("--") ? key : camelToKebabCase(key), value: strVal });
+    entries.push({
+      prop: key.startsWith("--") ? key : camelToKebabCase(key),
+      value: strVal,
+    });
     return true;
   };
 
-  if (t.isStringLiteral(node) || (t.isTemplateLiteral(node) && node.expressions.length === 0)) {
+  if (
+    t.isStringLiteral(node) ||
+    (t.isTemplateLiteral(node) && node.expressions.length === 0)
+  ) {
     // 解析字符串样式（镜像 parseStyleString + normalizeStyleValue）
-    const raw =
-      t.isStringLiteral(node)
-        ? node.value
-        : node.quasis[0].value.cooked ?? node.quasis[0].value.raw;
+    const raw = t.isStringLiteral(node)
+      ? node.value
+      : (node.quasis[0].value.cooked ?? node.quasis[0].value.raw);
     for (const decl of raw.split(";")) {
       const trimmed = decl.trim();
       if (!trimmed) continue;
@@ -1156,7 +1187,9 @@ function genStaticChildHtml(
   // 文本：转义后输出（镜像 renderToString 的 escapeHtml）
   if (t.isStringLiteral(node)) return escapeHtmlText(node.value);
   if (t.isTemplateLiteral(node) && node.expressions.length === 0) {
-    return escapeHtmlText(node.quasis[0].value.cooked ?? node.quasis[0].value.raw);
+    return escapeHtmlText(
+      node.quasis[0].value.cooked ?? node.quasis[0].value.raw,
+    );
   }
   // 数字：String(n) 输出
   if (t.isNumericLiteral(node)) return String(node.value);
@@ -1345,7 +1378,9 @@ function transformHCall(
       s.overwrite(node.callee.start!, node.callee.end!, "_createSvgEl");
       markUsed(ctx, "_createSvgEl");
       // ★ L12：静态 attrs 单独提升（仅 hoistStatic；失败则回退属性预分类）
-      if (!(ctx.hoistStatic && hoistStaticAttrs(node, s, ctx, hoistTargets, tag))) {
+      if (!(
+        ctx.hoistStatic && hoistStaticAttrs(node, s, ctx, hoistTargets, tag)
+      )) {
         if (ctx.compileAttrs && args.length >= 2) {
           rewriteAttrs(node, s);
         }
@@ -1359,7 +1394,9 @@ function transformHCall(
     s.overwrite(node.callee.start!, node.callee.end!, "_createEl");
     markUsed(ctx, "_createEl");
     // ★ L12：静态 attrs 单独提升（仅 hoistStatic；失败则回退属性预分类）
-    if (!(ctx.hoistStatic && hoistStaticAttrs(node, s, ctx, hoistTargets, tag))) {
+    if (!(
+      ctx.hoistStatic && hoistStaticAttrs(node, s, ctx, hoistTargets, tag)
+    )) {
       if (ctx.compileAttrs && args.length >= 2) {
         rewriteAttrs(node, s);
       }
@@ -1451,7 +1488,9 @@ function containsIdentifier(node: t.Node): boolean {
   if (t.isBooleanLiteral(node)) return false;
   if (t.isNullLiteral(node)) return false;
   if (t.isObjectExpression(node)) {
-    return node.properties.some((p) => containsIdentifier(p as unknown as t.Node));
+    return node.properties.some((p) =>
+      containsIdentifier(p as unknown as t.Node),
+    );
   }
   if (t.isObjectProperty(node)) {
     return (
@@ -1723,9 +1762,11 @@ function canUseCompPure(attrsArg: t.Node | undefined): boolean {
   for (const prop of attrsArg.properties) {
     if (!t.isObjectProperty(prop) || prop.computed) return false;
     if (t.isIdentifier(prop.key)) {
-      if (prop.key.name === "ref" || prop.key.name === "__providers") return false;
+      if (prop.key.name === "ref" || prop.key.name === "__providers")
+        return false;
     } else if (t.isStringLiteral(prop.key)) {
-      if (prop.key.value === "ref" || prop.key.value === "__providers") return false;
+      if (prop.key.value === "ref" || prop.key.value === "__providers")
+        return false;
     } else {
       // 数字键等其它形态：保守不启用
       return false;
@@ -1751,6 +1792,19 @@ function canUseCompPure(attrsArg: t.Node | undefined): boolean {
  *   3. 静态值（字面量/纯对象/纯数组）
  *   4. 内部字段（ref / children / __providers / key）
  */
+/**
+ * 判断表达式是否为 useContext() 调用
+ *
+ * 响应式上下文在 setup 期返回惰性 Proxy，若再包一层 _rp thunk，
+ * effect 阶段会脱离 Provider 组件作用域重新调用 useContext。
+ * 因此作为组件 prop 时原样透传 Proxy，由子组件按需读取。
+ */
+function isUseContextCall(node: t.Node): boolean {
+  if (!t.isCallExpression(node)) return false;
+  const callee = node.callee;
+  return t.isIdentifier(callee) && callee.name === "useContext";
+}
+
 function rewriteCompAttrs(
   node: t.CallExpression,
   s: MagicString,
@@ -1803,8 +1857,13 @@ function rewriteCompAttrs(
     const isFnValue =
       t.isArrowFunctionExpression(prop.value) ||
       t.isFunctionExpression(prop.value);
-
-    if (isEvent || isInternal || isFnValue || isStaticValue(prop.value)) {
+    if (
+      isEvent ||
+      isInternal ||
+      isFnValue ||
+      isStaticValue(prop.value) ||
+      isUseContextCall(prop.value)
+    ) {
       parts.push(`${keyStr}: ${valueCode}`);
     } else {
       // 动态 prop 表达式 → _rp thunk
@@ -1886,10 +1945,7 @@ function markComponentType(
  *
  * 仅当父类 Component 来自框架模块时标记（binding 校验）
  */
-function markClassComponent(
-  path: BabelPath,
-  s: MagicString,
-): boolean {
+function markClassComponent(path: BabelPath, s: MagicString): boolean {
   const node = path.node;
   if (!t.isClassDeclaration(node)) return false;
 

@@ -11,7 +11,7 @@ import type { SubtitleTrackInfo } from "@/types/subtitle";
 
 import { createTypedStateManager } from "@/core/state";
 import type { TypedStateManager } from "@/core/state";
-import { createContext } from "@/core/context";
+import { createContext, createReactiveContext } from "@/core/context";
 import type { ControlsConfig } from "@/nova/types";
 
 export type { TypedStateManager };
@@ -598,4 +598,12 @@ import { defaultControlConfig } from "@/nova/config/defaultConfig";
 
 export { defaultControlConfig };
 
-export const ConfigContext = createContext<ControlsConfig>(defaultControlConfig);
+/**
+ * 控件配置上下文（响应式）
+ *
+ * Provider 传取值函数（() => ControlsConfig），消费组件在 effect /
+ * 响应式 getter 中读取字段时自动追踪，配置变更精准更新相关 DOM。
+ */
+export const ConfigContext = createReactiveContext<ControlsConfig>(
+  () => defaultControlConfig,
+);

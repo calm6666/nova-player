@@ -79,9 +79,9 @@ describe("DanmakuList 视图", () => {
     expect(rows[2].getAttribute("data-index")).toBe("2");
     // li 与行容器、文本、操作按钮均带 data-index（与源组件 DOM 一致）
     expect(rows[0].parentElement?.getAttribute("data-index")).toBe("0");
-    expect(rows[0].querySelector(".dm-info-dm")?.getAttribute("data-index")).toBe(
-      "0",
-    );
+    expect(
+      rows[0].querySelector(".dm-info-dm")?.getAttribute("data-index"),
+    ).toBe("0");
     // 回归：文本节点不得出现函数源码
     expect(container.innerHTML).not.toContain("=>");
   });
@@ -104,7 +104,10 @@ describe("DanmakuList 视图", () => {
     expect(list.style.height).toBe("24000px");
     expect(list.classList.contains("nova-player-long-list-virtual")).toBe(true);
     const firstRow = rows[0].parentElement as HTMLElement;
-    expect(firstRow.style.position === "absolute" || getComputedStyle(firstRow).position).toBeTruthy();
+    expect(
+      firstRow.style.position === "absolute" ||
+        getComputedStyle(firstRow).position,
+    ).toBeTruthy();
     // 首行显示第 0 条
     expect(rows[0].querySelector(".dm-info-time")?.textContent).toBe("00:00");
   });
@@ -138,15 +141,13 @@ describe("DanmakuList 视图", () => {
     const rowCount = container.querySelectorAll(".dm-info-row").length;
     expect(firstRow).not.toBeNull();
 
-    container
-      .querySelector(".ui-long-list-wrap")
-      ?.dispatchEvent(
-        new WheelEvent("wheel", {
-          deltaY: 600,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
+    container.querySelector(".ui-long-list-wrap")?.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: 600,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
 
     // 窗口槽位数量不变、首行仍是同一个 DOM 节点（不重建行）
     expect(container.querySelectorAll(".dm-info-row").length).toBe(rowCount);
@@ -279,13 +280,19 @@ describe("DanmakuList 视图", () => {
       container.querySelector(".nova-player-block-number")?.textContent,
     ).toBe("1");
     expect(
-      container.querySelector(".nova-player-block-list-line .nova-player-block-list-state")?.textContent,
+      container.querySelector(
+        ".nova-player-block-list-line .nova-player-block-list-state",
+      )?.textContent,
     ).toBe("开启");
     container
-      .querySelector(".nova-player-block-list-line .nova-player-block-list-state")
+      .querySelector(
+        ".nova-player-block-list-line .nova-player-block-list-state",
+      )
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(
-      container.querySelector(".nova-player-block-list-line .nova-player-block-list-state")?.textContent,
+      container.querySelector(
+        ".nova-player-block-list-line .nova-player-block-list-state",
+      )?.textContent,
     ).toBe("关闭");
     expectCleanText();
 
