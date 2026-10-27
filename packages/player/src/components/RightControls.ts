@@ -81,6 +81,11 @@ export interface RightControlsProps {
 }
 
 /**
+ * Hi-Res 激活态（模块级：全屏/网页全屏重挂组件时保持，不随控制栏重建丢失）
+ */
+const hiResActiveSignal = signal<boolean>(false);
+
+/**
  * RightControls 组件 - 使用 defineComponent 创建独立组件
  */
 export const RightControls = defineComponent<
@@ -489,9 +494,6 @@ export const RightControls = defineComponent<
   // ============================================
   // 底部右侧按钮渲染器映射表
   // ============================================
-
-  /** Hi-Res 激活态（点击切换，驱动 state-active 与 aria-label） */
-  const hiResActiveSignal = signal<boolean>(false);
 
   /** Hi-Res 点击：切换激活态 */
   const onClickHiRes = (): void => {

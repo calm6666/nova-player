@@ -349,6 +349,11 @@ export const Tooltips = defineComponent<TooltipsProps>(
               "span",
               { class: "nova-player-tooltip-text" },
               () => {
+                // Hi-Res：优先读取按钮标准 aria-label（全屏切换/重挂后仍正确）
+                if (item.name === "ctrl:flac") {
+                  const label = flacButtonEl?.getAttribute("aria-label");
+                  if (label) return label;
+                }
                 // 优先级：updateTip 字面量 > updateTipKey / item.titleKey（i18n）> item.title
                 const override = titlesSig.value[item.name];
                 if (override !== undefined) return override;
