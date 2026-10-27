@@ -35,6 +35,8 @@ export interface TooltipItem {
    * 语言切换时自动重新翻译。
    */
   titleKey?: string;
+  /** 徽标 i18n key（如 Hi-Res 的「大会员」） */
+  badgeKey?: string;
 }
 
 /**
@@ -73,7 +75,11 @@ const DEFAULT_TOOLTIP_ITEMS: TooltipItem[] = [
   { name: "ctrl:fullscreen", titleKey: "player.ui.tooltip.fullscreen.enter" },
   { name: "ctrl:prev", titleKey: "player.ui.tooltip.prev" },
   { name: "ctrl:next", titleKey: "player.ui.tooltip.next" },
-  { name: "ctrl:flac", titleKey: "player.ui.controls.hires" },
+  {
+    name: "ctrl:flac",
+    titleKey: "player.ui.controls.hires",
+    badgeKey: "player.ui.tooltip.hires.vip",
+  },
 ];
 
 /**
@@ -237,6 +243,13 @@ export const Tooltips = defineComponent<TooltipsProps>(
      * @param name - 提示项名称（Tooltip.dataName）
      */
     const openTip = (btnElement: HTMLElement | null, name: string): void => {
+      // Hi-Res：标题跟随按钮标准 aria-label（开启/关闭），不使用 data-tip-* 属性
+      if (name === "ctrl:flac" && btnElement) {
+        const label = btnElement.getAttribute("aria-label");
+        if (label) {
+          titlesSig.value = { ...titlesSig.value, [name]: label };
+        }
+      }
       const tipElement = getTipElement(name);
       if (tipElement && btnElement) {
         const { left, top } = calculateTipPosition(
@@ -325,15 +338,26 @@ export const Tooltips = defineComponent<TooltipsProps>(
           h(
             "div",
             { class: "nova-player-tooltip-title" },
-            () => {
-              // 优先级：updateTip 字面量 > updateTipKey / item.titleKey（i18n）> item.title
-              const override = titlesSig.value[item.name];
-              if (override !== undefined) return override;
-              const key =
-                titleKeysSig.value[item.name] ?? item.titleKey;
-              if (key !== undefined) return t(key);
-              return item.title ?? item.name;
-            },
+            h(
+              "span",
+              { class: "nova-player-tooltip-text" },
+              () => {
+                // 优先级：updateTip 字面量 > updateTipKey / item.titleKey（i18n）> item.title
+                const override = titlesSig.value[item.name];
+                if (override !== undefined) return override;
+                const key =
+                  titleKeysSig.value[item.name] ?? item.titleKey;
+                if (key !== undefined) return t(key);
+                return item.title ?? item.name;
+              },
+            ),
+            item.badgeKey
+              ? h(
+                  "span",
+                  { class: "nova-player-tooltip-badge" },
+                  () => t(item.badgeKey ?? ""),
+                )
+              : null,
           ),
         );
       });

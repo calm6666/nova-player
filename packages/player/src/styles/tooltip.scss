@@ -95,3 +95,17 @@
   opacity: 1;
   visibility: visible;
 }
+
+/** Hi-Res tooltip 会员徽标（不改变其它提示项布局） */
+.nova-player-tooltip-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 8px;
+  background: #fb7299;
+  color: #fff;
+  font-size: 12px;
+  vertical-align: 1px;
+}

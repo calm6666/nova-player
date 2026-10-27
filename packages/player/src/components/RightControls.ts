@@ -490,28 +490,33 @@ export const RightControls = defineComponent<
   // 底部右侧按钮渲染器映射表
   // ============================================
 
+  /** Hi-Res 激活态（点击切换，驱动 state-active 与 aria-label） */
+  const hiResActiveSignal = signal<boolean>(false);
+
+  /** Hi-Res 点击：切换激活态 */
+  const onClickHiRes = (): void => {
+    hiResActiveSignal.value = !hiResActiveSignal.value;
+  };
+
   /** 按钮类型到渲染函数的映射表，每个键对应一种控制按钮的渲染逻辑 */
   const bottomRightRenderers: Record<string, () => VNode | null> = {
-    /** 渲染 Hi-Res 无损音质标识 */
+    /** 渲染 Hi-Res 无损音质按钮 */
     flac: () => {
       if (props.hiRes === false) return null;
-      /** 当前按钮（仅用于点击后切换自身激活类，不参与其它控件渲染） */
-      let buttonEl: HTMLElement | null = null;
-      /** 本地激活态（不写入全局 signal，避免触发整条控制栏重渲染） */
-      let active = false;
       return h(
         "div",
         {
-          class: "nova-player-ctrl-btn nova-player-ctrl-flac",
+          class: [
+            "nova-player-ctrl-btn nova-player-ctrl-flac",
+            { "state-active": hiResActiveSignal.value },
+          ],
           role: "button",
-          "aria-label": t("player.ui.controls.hires"),
-          ref: (el: unknown): void => {
-            if (el instanceof HTMLElement) buttonEl = el;
-          },
-          onClick: (): void => {
-            active = !active;
-            buttonEl?.classList.toggle("state-active", active);
-          },
+          "aria-label": t(
+            hiResActiveSignal.value
+              ? "player.ui.tooltip.hires.disable"
+              : "player.ui.tooltip.hires.enable",
+          ),
+          onClick: onClickHiRes,
         },
         h(
           "div",
