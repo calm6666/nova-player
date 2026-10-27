@@ -1633,8 +1633,10 @@ export const PlayerDocker = defineComponent<
         }
         // Hi-Res：每次换源/切视频后重新探测当前流是否真实包含无损音频轨
         const refreshHiResAvailability = (): void => {
+          const player = resolvedPlayer;
+          if (!player) return;
           hiResAvailableSignal.value =
-            hiResSupported && (resolvedPlayer?.hasHiResAudio() ?? false);
+            hiResSupported && player.hasHiResAudio();
         };
         refreshHiResAvailability();
         window.setTimeout(refreshHiResAvailability, 500);
@@ -3166,8 +3168,9 @@ export const PlayerDocker = defineComponent<
             },
             /** Hi-Res 激活态变化：真实切流音频轨，成功后同步提示文案 */
             onHiResChange: (payload: { active: boolean }) => {
-              const applied =
-                resolvedPlayer?.setHiResAudio(payload.active) ?? false;
+              const player = resolvedPlayer;
+              if (!player) return;
+              const applied = player.setHiResAudio(payload.active);
               if (!applied) return;
               tooltipsApi.updateTipKey?.(
                 "ctrl:flac",
