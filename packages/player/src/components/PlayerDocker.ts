@@ -395,6 +395,26 @@ export interface QualitySnapshot {
   mode: "none" | "static" | "adaptive";
 }
 
+/** Hi-Res 音频能力播放器接口（运行时能力收窄，避免调用未解析类型上的方法） */
+interface HiResAudioCapablePlayer {
+  hasHiResAudio(): boolean;
+  setHiResAudio(enabled: boolean): boolean;
+}
+
+/**
+ * 运行时收窄播放器是否具备 Hi-Res 音频切换能力
+ */
+function isHiResAudioCapablePlayer(
+  value: unknown,
+): value is HiResAudioCapablePlayer {
+  if (typeof value !== "object" || value === null) return false;
+  if (!("hasHiResAudio" in value) || !("setHiResAudio" in value)) return false;
+  return (
+    typeof value.hasHiResAudio === "function" &&
+    typeof value.setHiResAudio === "function"
+  );
+}
+
 export interface PlayerDockerProps {
   /** 所属播放器实例（用于插件视图动态刷新，不参与 DOM 渲染） */
   player?: VideoPlayer;
@@ -1633,8 +1653,11 @@ export const PlayerDocker = defineComponent<
         }
         // Hi-Res：每次换源/切视频后重新探测当前流是否真实包含无损音频轨
         const refreshHiResAvailability = (): void => {
+          const player: unknown = resolvedPlayer;
           hiResAvailableSignal.value =
-            hiResSupported && Boolean(resolvedPlayer?.hasHiResAudio?.());
+            hiResSupported &&
+            isHiResAudioCapablePlayer(player) &&
+            player.hasHiResAudio();
         };
         refreshHiResAvailability();
         window.setTimeout(refreshHiResAvailability, 500);
@@ -3166,7 +3189,9 @@ export const PlayerDocker = defineComponent<
             },
             /** Hi-Res 激活态变化：真实切流音频轨，成功后同步提示文案 */
             onHiResChange: (payload: { active: boolean }) => {
-              const applied = resolvedPlayer?.setHiResAudio?.(payload.active) ?? false;
+              const player: unknown = resolvedPlayer;
+              if (!isHiResAudioCapablePlayer(player)) return;
+              const applied = player.setHiResAudio(payload.active);
               if (!applied) return;
               tooltipsApi.updateTipKey?.(
                 "ctrl:flac",
