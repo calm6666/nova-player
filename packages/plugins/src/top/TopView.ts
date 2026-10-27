@@ -245,7 +245,7 @@ export const Top = defineComponent<TopProps>(
             "div",
             {
               class: "nova-player-top-left-title",
-              style: { display: "none", fontSize: "20px" },
+              style: { fontSize: "20px" },
             },
             props.title ?? "",
           ),
