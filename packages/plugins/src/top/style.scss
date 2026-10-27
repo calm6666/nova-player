@@ -20,6 +20,12 @@
   display: none;
 }
 
+/* 全屏 / 网页全屏：非电视剧 Top 显示标题（音乐 Top 初始 inline display:none） */
+.nova-player-container[data-screen="full"] .nova-player-top-left-title,
+.nova-player-container[data-screen="web"] .nova-player-top-left-title {
+  display: block !important;
+}
+
 @media screen and (min-width: 750px) {
   .nova-player-container[data-screen="full"] .nova-player-top-left,
   .nova-player-container[data-screen="web"] .nova-player-top-left {
