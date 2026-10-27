@@ -77,6 +77,8 @@ export interface TopProps {
   music?: boolean;
   /** 音乐模式跑马灯文案 */
   musicTitle?: string;
+  /** 点击 Top 音乐条打开音乐插件面板 */
+  onMusicClick?: () => void;
   /** 插件挂载时的根容器（.nova-player-top-wrap） */
   host?: HTMLElement | null;
   /** 问题反馈点击回调 */
@@ -280,7 +282,11 @@ export const Top = defineComponent<TopProps>(
             { class: "nova-player-top-left-music" },
             h(
               "div",
-              { class: "nova-player-music" },
+              {
+                class: "nova-player-music",
+                /** 点击 Top 音乐条打开音乐面板（面板默认关闭） */
+                onClick: (): void => props.onMusicClick?.(),
+              },
               h(
                 "span",
                 { class: "nova-player-music-icon" },

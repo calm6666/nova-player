@@ -34,40 +34,6 @@
     opacity 0.3s linear;
 }
 
-/* ============================================
- * Hi-Res 无损音质 hover 提示（slotMode）
- * 与 B 站线上 .bpx-player-ctrl-flac-tooltip[-icon] 对齐：
- * 标题与「大会员 / 限免中」徽标同一行垂直居中，徽标为粉色胶囊
- * ============================================ */
-.nova-player-ctrl-flac-tooltip {
-  -webkit-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
-  display: -webkit-inline-box;
-  display: -ms-inline-flexbox;
-  display: inline-flex;
-  white-space: nowrap;
-}
-
-.nova-player-ctrl-flac-tooltip-icon {
-  background-color: #fb7299;
-  background-color: rgb(251, 114, 153);
-  border-radius: 31px;
-  color: #fff;
-  -ms-flex-negative: 0;
-  flex-shrink: 0;
-  height: 16px;
-  line-height: 16px;
-  margin-left: 6px;
-  text-align: center;
-  width: 46px;
-
-  // 无徽标 key 时（slotMode 通用兜底）不占位
-  &:empty {
-    display: none;
-  }
-}
-
 .top-in {
   -webkit-transform: translate(0, -20px);
   -moz-transform: translate(0, -20px);

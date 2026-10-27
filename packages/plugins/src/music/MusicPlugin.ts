@@ -133,7 +133,7 @@ class MusicPluginClass implements Plugin, MusicPluginAPI {
     this.name = config.id ?? "music";
     this.description = `Music plugin: ${this.name}`;
     this.musicId = config.musicId ?? "29668340001";
-    this.opened = config.open ?? true;
+    this.opened = config.open ?? false;
   }
 
   // ============================================

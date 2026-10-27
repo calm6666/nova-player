@@ -148,7 +148,18 @@ const MusicHeader = defineComponent<MusicHeaderProps>(
           ),
         ),
       ),
-      h("div", { class: "nova-music-close", onClick: handleClose }, h(CloseIcon)),
+      h(
+        "div",
+        {
+          class: "nova-music-close",
+          onClick: (event: Event): void => {
+            /** 阻止冒泡到面板/外层的关闭或拖拽处理，确保点击图标必定关闭 */
+            event.stopPropagation();
+            handleClose();
+          },
+        },
+        h(CloseIcon),
+      ),
     );
   },
 );

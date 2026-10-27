@@ -125,6 +125,7 @@ afterEach(() => {
 describe("MusicPlugin 挂载 / 卸载", () => {
   it("非全屏：挂载到外部 target，卸载后清空", async () => {
     const plugin = MusicPlugin({
+      open: true,
       musicId: mockMusicDetail.music_id,
       data: {
         detail: mockMusicDetail,
@@ -167,6 +168,7 @@ describe("MusicPlugin 挂载 / 卸载", () => {
   it("全屏：挂载到播放器 dialog-wrap 后一个位置，使用深色窄栏形态", async () => {
     fake.fullscreen = true;
     const plugin = MusicPlugin({
+      open: true,
       musicId: mockMusicDetail.music_id,
       data: { detail: mockMusicDetail },
       target: "#music-mount",
@@ -191,6 +193,7 @@ describe("MusicPlugin 挂载 / 卸载", () => {
   it("关闭按钮：卸载面板并回调宿主 onClose", () => {
     let closed = false;
     const plugin = MusicPlugin({
+      open: true,
       musicId: mockMusicDetail.music_id,
       data: {
         detail: mockMusicDetail,
@@ -217,6 +220,7 @@ describe("MusicPlugin 挂载 / 卸载", () => {
 describe("MusicPlugin 双模式切换", () => {
   it("全屏状态变化时在页面挂载点与播放器内之间切换", async () => {
     const plugin = MusicPlugin({
+      open: true,
       musicId: mockMusicDetail.music_id,
       data: { detail: mockMusicDetail },
       target: "#music-mount",
@@ -244,6 +248,7 @@ describe("MusicPlugin 双模式切换", () => {
 
   it("未配置 target 时非全屏不挂载任何面板", async () => {
     const plugin = MusicPlugin({
+      open: true,
       musicId: mockMusicDetail.music_id,
       data: { detail: mockMusicDetail },
     });
@@ -315,6 +320,67 @@ describe("Top 音乐模式依赖音乐插件", () => {
     document.body.appendChild(container);
     registered(container, { props: { music: true } });
     expect(container.querySelector(".nova-player-music")).toBeNull();
+    plugin.uninstall?.();
+  });
+});
+
+describe("MusicPlugin 默认关闭 / 点击 Top 打开", () => {
+  it("默认不挂载，open 后挂载，close 后卸载", () => {
+    const plugin = MusicPlugin({
+      musicId: mockMusicDetail.music_id,
+      data: { detail: mockMusicDetail },
+      target: "#music-mount",
+    });
+    plugin.install?.(asPlayer(fake));
+    expect(externalTarget.querySelector("#musicApp")).toBeNull();
+
+    plugin.open?.();
+    expect(externalTarget.querySelector("#musicApp")).not.toBeNull();
+
+    plugin.close?.();
+    expect(externalTarget.querySelector("#musicApp")).toBeNull();
+    plugin.uninstall?.();
+  });
+
+  it("点击 Top 音乐条调用音乐插件 open", () => {
+    let openCalls = 0;
+    let mounted: ((container: HTMLElement, ctx: unknown) => void) | null = null;
+    const musicApi = {
+      isOpen: (): boolean => false,
+      open: (): void => {
+        openCalls += 1;
+      },
+    };
+    const host = {
+      registerTopPluginMount(fn: (container: HTMLElement, ctx: unknown) => void): void {
+        mounted = fn;
+      },
+      unregisterTopPluginMount(): void {
+        mounted = null;
+      },
+      refreshTop(): void {
+        // noop
+      },
+      hasPlugin(name: string): boolean {
+        return name === "music";
+      },
+      getPlugin(name: string): typeof musicApi | undefined {
+        return name === "music" ? musicApi : undefined;
+      },
+    };
+
+    const plugin = TopPlugin({ data: { music: true, musicTitle: "发现《晚风信笺》" } });
+    plugin.install?.(host as unknown as VideoPlayer);
+    const container = document.createElement("div");
+    container.className = "nova-player-top-wrap";
+    document.body.appendChild(container);
+    expect(mounted).not.toBeNull();
+    mounted?.(container, { props: { music: true } });
+
+    const musicBar = container.querySelector<HTMLElement>(".nova-player-music");
+    expect(musicBar).not.toBeNull();
+    musicBar?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(openCalls).toBe(1);
     plugin.uninstall?.();
   });
 });

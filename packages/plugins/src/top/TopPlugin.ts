@@ -30,12 +30,20 @@ export interface TopPluginConfig {
   mount?: SlotMount["mount"];
 }
 
+/** 音乐插件最小可调用接口（避免 top 包反向依赖 music 实现） */
+interface MusicPluginLike {
+  open?(): void;
+  isOpen?(): boolean;
+}
+
 interface TopPluginHost {
   registerTopPluginMount(mount: SlotMount["mount"]): void;
   unregisterTopPluginMount(mount?: SlotMount["mount"]): void;
   refreshTop?(): void;
   /** 是否已安装指定插件（音乐模式 gating 用） */
   hasPlugin?(name: string): boolean;
+  /** 获取已安装插件实例（Top 音乐条打开面板用） */
+  getPlugin?(name: string): MusicPluginLike | undefined;
 }
 
 class TopPluginClass implements Plugin {
@@ -73,6 +81,12 @@ class TopPluginClass implements Plugin {
         ...this.config.data,
         music: requestedMusic && musicInstalled,
         host: container,
+        /** 点击 Top 音乐条：音乐面板默认关闭，只有这里主动 open */
+        onMusicClick: (): void => {
+          const music = this.player?.getPlugin?.("music");
+          if (!music || music.isOpen?.()) return;
+          music.open?.();
+        },
       });
       mount(vnode, container);
       return () => destroy(vnode);
