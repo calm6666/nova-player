@@ -1829,7 +1829,6 @@ export const PlayerDocker = defineComponent<
         "ctrl:webscreen",
         "player.ui.tooltip.webscreen.enter",
       );
-      resolvedPlayer?.refreshTop();
     } else {
       playerDockerRef.value.classList.add("mode-webscreen");
       document.body.classList.add("webscreen-fix");
@@ -1841,7 +1840,6 @@ export const PlayerDocker = defineComponent<
         "ctrl:webscreen",
         "player.ui.tooltip.webscreen.exit",
       );
-      resolvedPlayer?.refreshTop();
     }
   };
 
@@ -2170,8 +2168,6 @@ export const PlayerDocker = defineComponent<
         "ctrl:fullscreen",
         "player.ui.tooltip.fullscreen.exit",
       );
-      // 全屏状态变化：重挂 Top 视图，让标题 display 按最新状态渲染
-      resolvedPlayer?.refreshTop();
     } else {
       // 退出浏览器全屏：若仍处于网页全屏，data-screen 必须回到 "web" 而不是 "normal"，
       // 否则网页全屏相关的样式与可见性规则（如「选集」按钮）会失效
@@ -2192,8 +2188,6 @@ export const PlayerDocker = defineComponent<
         "ctrl:fullscreen",
         "player.ui.tooltip.fullscreen.enter",
       );
-      // 退出全屏：重挂 Top 视图，恢复非全屏标题显隐
-      resolvedPlayer?.refreshTop();
     }
   };
 
@@ -2736,9 +2730,6 @@ export const PlayerDocker = defineComponent<
     tv: readTopStyle() === "tv",
     music: readTopStyle() === "music" && hasMusicPlugin(),
     musicTitle: readUi()?.musicTitle,
-    fullscreen: stateMgr?.get(PlayerStateKeyEnum.IS_FULLSCREEN) ?? false,
-    webFullscreen:
-      stateMgr?.get(PlayerStateKeyEnum.IS_WEB_FULLSCREEN) ?? false,
     followed: Boolean(embeddedConfig?.up?.followed ?? readUi()?.up?.followed),
     likeCount: embeddedConfig?.stats?.like,
     commentCount: embeddedConfig?.stats?.comment,

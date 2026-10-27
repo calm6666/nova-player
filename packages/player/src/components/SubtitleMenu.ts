@@ -964,7 +964,8 @@ export const SubtitleMenu = defineComponent<
         class: [
           "nova-player-ctrl-subtitle-language-item",
           {
-            "nova-player-state-active": visible.value && id === currentLang.value,
+            "nova-player-state-active":
+              visible.value && id === currentLang.value,
           },
         ],
         "data-lan": id,
@@ -1121,8 +1122,7 @@ export const SubtitleMenu = defineComponent<
                         "nova-player-ctrl-subtitle-select-item",
                         {
                           "nova-player-state-active":
-                            item.value ===
-                            options.resolveValue(styleSig.value),
+                            item.value === options.resolveValue(styleSig.value),
                         },
                       ],
                       "data-value": item.value,
@@ -1255,7 +1255,6 @@ export const SubtitleMenu = defineComponent<
       },
       role: "button",
       "aria-label": t("player.ui.subtitle.label"),
-      tabindex: "0",
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
     },
@@ -1301,10 +1300,7 @@ export const SubtitleMenu = defineComponent<
           "div",
           // 第 2 页激活时 ui-area 滑出（state-show-right）
           {
-            class: [
-              "ui-area",
-              { "state-show-right": pageSig.value === 1 },
-            ],
+            class: ["ui-area", { "state-show-right": pageSig.value === 1 }],
           },
           h(
             "div",
@@ -1670,7 +1666,8 @@ export const SubtitleMenu = defineComponent<
                           h(
                             "span",
                             {
-                              class: "nova-player-ctrl-subtitle-opacity-percent",
+                              class:
+                                "nova-player-ctrl-subtitle-opacity-percent",
                             },
                             // 百分比文案：显式 getter 协议（styleSig 依赖）
                             () =>

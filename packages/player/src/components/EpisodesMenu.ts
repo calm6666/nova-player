@@ -216,7 +216,7 @@ export const EpisodesMenu = defineComponent<
   // 生命周期钩子
   // ============================================
 
-    useComponentUnmount(lifecycle, clearTimers);
+  useComponentUnmount(lifecycle, clearTimers);
 
   // ============================================
   // 主渲染函数
@@ -237,7 +237,6 @@ export const EpisodesMenu = defineComponent<
       "aria-label": t("player.ui.controls.episodes"),
       // 配置显隐：display 单一来源（父层 ui.controls.episodes 经 visible prop 传入）
       style: { display: configVisibleSignal.value ? "" : "none" },
-      tabindex: "0",
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
       onKeydown: handleKeydown,

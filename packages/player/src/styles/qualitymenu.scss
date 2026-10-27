@@ -6,11 +6,6 @@
   font-size: 12px;
   width: auto;
   margin-right: 10px;
-
-  /* 非收起态常驻淡入类：类移除后重新添加（从收起恢复可见）时动画自动重播 */
-  &.state-fade-in {
-    animation: nova-player-quality-fade-in 0.2s ease;
-  }
 }
 .nova-player-ctrl-quality-result {
   cursor: pointer;
@@ -190,14 +185,4 @@ svg {
 .nova-player-ctrl-quality-bubble {
   bottom: 50px;
   position: absolute;
-}
-/* 清晰度按钮首次显示 / 从收起恢复可见时的淡入动画（替代旧的一次性 JS opacity/transition） */
-@keyframes nova-player-quality-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
 }

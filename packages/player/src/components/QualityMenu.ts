@@ -118,20 +118,6 @@ export type QualityMenuEvents = {
 /**
  * QualityMenu 组件 - 使用 defineComponent 创建独立组件
  *
- * 响应式迁移：
- *   - 清晰度列表渲染从 createItem + replaceChildren 改为 For 组件（key-based 精准更新）
- *   - 选中态 / 自动档激活态从手动 forEach + classList.toggle 改为响应式 class
- *   - 顶部清晰度名 / 自动徽标显隐从 textContent + style.display 改为 _reactiveText + 响应式 style
- *   - 运行时状态订阅从 useState 命令式包装改为 useReactiveState + computed
- *   - 面板 hover 显隐由 shownSignal 响应式驱动根节点 state-show 类，
- *     hover 定时器（rafTimeout）仅负责延迟时序并写信号
- *   - 配置显隐由 visible prop 传入（支持 Signal 形态，props 惰性代理读取穿透建立依赖），
- *     display 为本组件根节点响应式 style 单一来源，
- *     消除旧的 RightControls querySelector 直写 display（两边写 display 打架）
- *   - 按钮尺寸收起（列表 ≤ 1 项时不占位）由 collapsedSignal 响应式驱动
- *     根节点 visibility/width/marginRight（空串经 setProperty 清除内联）
- *   - 首次淡入从一次性 JS 动画（opacity/transition 手写）改为 CSS animation：
- *     state-fade-in 类随非收起态常驻，类移除后重新添加即自动重播（见 qualitymenu.scss）
  */
 export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
   (props, lifecycle) => {
@@ -202,9 +188,6 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
 
     /**
      * 响应式信号：按钮尺寸收起态（列表 ≤ 1 项时整体不占位）
-     * 驱动根节点 visibility/width/marginRight（__reactiveAttrs 响应式 style），
-     * 替代旧的 btnRef.style 命令式写法；收起时 state-fade-in 类一并移除，
-     * 恢复可见时类重新添加自动重播 CSS 淡入
      */
     const collapsedSignal = signal<boolean>(false);
 
@@ -305,7 +288,8 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
       }
 
       const rawVideoHeight = videoHeightSignal.value;
-      const videoHeight = typeof rawVideoHeight === "number" ? rawVideoHeight : 0;
+      const videoHeight =
+        typeof rawVideoHeight === "number" ? rawVideoHeight : 0;
       if (videoHeight > 0) {
         const concrete = concreteListSignal.value;
         const sized = concrete.filter((item) => (item.height ?? 0) > 0);
@@ -526,8 +510,6 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
       // 列表 DOM 由 For 精准更新，选中态 / 文案 / 徽标由响应式信号自动同步，无需手动刷新
 
       // 按钮尺寸收起：只有 1 项时整体不占位（写信号即可，
-      // visibility/width/marginRight 由根节点响应式 style 自动同步，
-      // 空串经 setProperty 清除内联；从收起恢复时 state-fade-in 类重新添加自动重播淡入）
       collapsedSignal.value = nextMenuItems.length <= 1;
     };
 
@@ -659,19 +641,13 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
     return h(
       "div",
       {
-        // 展开态类名由 shownSignal 响应式驱动（__reactiveAttrs + normalizeClass）；
-        // 非收起态常驻 state-fade-in：类移除后重新添加时 CSS 淡入自动重播（见 qualitymenu.scss）
         class: [
           "nova-player-ctrl-btn",
           "nova-player-ctrl-quality",
           { "state-show": shownSignal.value },
-          { "state-fade-in": !collapsedSignal.value },
         ],
         role: "button",
         "aria-label": t("player.ui.controls.quality"),
-        tabindex: 0,
-        // 配置显隐（display 单一来源：父层 ui.controls.quality 经 visible prop 传入）+
-        // 档位收起态（visibility/width/marginRight 收 0 不占位；空串经 setProperty 清除内联）
         style: {
           display: configVisibleSignal.value ? "" : "none",
           visibility: collapsedSignal.value ? "hidden" : "",
