@@ -21,7 +21,9 @@
     "build": "vite build && node ../../scripts/minify-dist.mjs dist",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "check:selectors": "node scripts/check-duplicate-selectors.mjs",
-    "smoke": "node scripts/cdp-smoke.mjs"
+    "smoke": "node scripts/cdp-smoke.mjs",
+    "lint": "node ../../scripts/lint.mjs src --ext .ts",
+    "lint:fix": "node ../../scripts/lint.mjs src --ext .ts --fix"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

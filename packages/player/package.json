@@ -21,8 +21,9 @@
     "dev": "vite",
     "build": "tsc && vite build && vite build --mode lib-cdn && sass src/styles/style.scss dist/style.css --no-source-map --style=compressed",
     "preview": "vite preview",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "lint": "node ../../scripts/lint.mjs src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "lint:fix": "node ../../scripts/lint.mjs src --ext .ts --fix"
   },
   "keywords": [
     "video-player",

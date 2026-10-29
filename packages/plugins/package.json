@@ -63,8 +63,9 @@
     "dev": "vite",
     "build": "tsc && vite build && node ../../scripts/minify-dist.mjs dist",
     "preview": "vite preview",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "lint": "node ../../scripts/lint.mjs src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "lint:fix": "node ../../scripts/lint.mjs src --ext .ts --fix"
   },
   "keywords": [
     "video-player",
