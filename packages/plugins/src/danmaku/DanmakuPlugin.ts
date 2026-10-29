@@ -51,7 +51,7 @@ import { DanmakuType, ScreenMode, RenderMode } from "@/types/danmaku";
 import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
 import type { PlayerEventBus } from "../../../player/src/core/plugin";
 import { PlayerEventEnum } from "@/core/events";
-import { PlayerStateKeyEnum } from "../../../player/src/store/runtimeState";
+import { PlayerStateKeyEnum } from "@lumina/nova";
 import { DanmakuManager } from "../utils/danmaku";
 import { DanmakuTip } from "./DanmakuTip";
 import { injectPluginStyle } from "../utils/injectStyle";

@@ -71,6 +71,11 @@ export type {
   ManifestProtocolProfile,
 } from '@/nova/utils/media/manifestProtocol';
 
+// 导出运行态常量与能力探测（插件构建以 @lumina/nova 为 external，
+// 必须经公开出口引用，否则 rollup 会把 player 内部模块打进插件 dist）
+export { PlayerStateKeyEnum } from '@/nova/store/runtimeState';
+export { BrowserCapabilityDetector } from '@/nova/utils/browserCapabilityDetector';
+
 // 导出插槽类型（插件 / 配置共用）
 export type { SlotContent, SlotMount, SlotContext } from './types/slots';
 

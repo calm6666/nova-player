@@ -22,7 +22,7 @@ import {
   type VNode,
   type VideoPlayer,
 } from "@lumina/nova";
-import { PlayerStateKeyEnum } from "@/nova/store/runtimeState";
+import { PlayerStateKeyEnum } from "@lumina/nova";
 import { MusicView } from "./MusicView";
 import { injectPluginStyle } from "../utils/injectStyle";
 import {

@@ -33,7 +33,7 @@ import { PlayerEventEnum } from '@/core/events';
 import type { PlayerEventBus } from '../../../player/src/core/plugin';
 import { createStreamPluginEventBus } from '../stream/streamEventBus';
 import type { StreamPluginEventBus } from '../stream/streamEventBus';
-import { BrowserCapabilityDetector } from '@/nova/utils/browserCapabilityDetector';
+import { BrowserCapabilityDetector } from '@lumina/nova';
 import { createLogger } from '@/utils';
 
 const logger = createLogger('FlvPlugin');

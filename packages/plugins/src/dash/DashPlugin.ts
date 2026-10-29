@@ -28,14 +28,13 @@ import type { MediaManifest } from '../vendor/types';
 import { manifestToDash } from '../vendor/manifest-to-dash';
 import type { VideoPlayer } from '@lumina/nova';
 import { StreamPluginTypeEnum, StreamPluginEventEnum, StreamFormatEnum, AUTO_QUALITY_ID, resolveVideoCodec } from '@/types/streamPlugin';
-import { detectManifestProtocol } from '@/nova/utils/media/manifestProtocol';
+import { BrowserCapabilityDetector, detectManifestProtocol } from '@lumina/nova';
 import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, AudioTrackInfo, StreamQualityChangePayload } from '@/types/streamPlugin';
 import type { PluginOptions } from '@/types/plugin';
 import { PlayerEventEnum } from '@/core/events';
 import type { PlayerEventBus } from '../../../player/src/core/plugin';
 import { createStreamPluginEventBus } from '../stream/streamEventBus';
 import type { StreamPluginEventBus } from '../stream/streamEventBus';
-import { BrowserCapabilityDetector } from '@/nova/utils/browserCapabilityDetector';
 import { createLogger } from '@/utils';
 
 const logger = createLogger('DashPlugin');
