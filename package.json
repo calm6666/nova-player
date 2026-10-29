@@ -15,8 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint packages --ext .ts",
-    "lint:fix": "eslint packages --ext .ts --fix",
+    "lint": "node scripts/lint.mjs packages --ext .ts",
+    "lint:fix": "node scripts/lint.mjs packages --ext .ts --fix",
     "demo:ssr": "node demo/server.mjs",
     "demo:csr": "vite --config demo/vite.config.ts --port 5175 --open"
   },
