@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "types": ["node"],
+    "outDir": "packages/player/dist/framework"
+  },
+  "include": [
+    "vite-env.d.ts",
+    "core/**/*",
+    "types/**/*",
+    "error/**/*",
+    "events/**/*",
+    "utils/**/*"
+  ],
+  "exclude": ["core/locales"]
+}

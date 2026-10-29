@@ -76,6 +76,11 @@ export type {
 export { PlayerStateKeyEnum } from '@/nova/store/runtimeState';
 export { BrowserCapabilityDetector } from '@/nova/utils/browserCapabilityDetector';
 
+// 导出插件 / 直播播放器 d.ts 引用的内部类型（dist 声明改写后统一走公开出口）
+export type { RuntimeStateManager } from '@/nova/store/runtimeState';
+export type { PluginManager } from '@/nova/core/pluginManager';
+export type { PlayerEventBus } from '@/nova/core/plugin';
+
 // 导出插槽类型（插件 / 配置共用）
 export type { SlotContent, SlotMount, SlotContext } from './types/slots';
 
