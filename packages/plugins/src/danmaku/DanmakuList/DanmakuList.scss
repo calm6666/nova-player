@@ -2,55 +2,7 @@
  * ============================================
  * 弹幕列表面板样式（DanmakuList）
  * ============================================
- * 移植自源仓库 Solid 组件 index.scss（仅类名前缀按项目约定重命名）：
- * - bpx-xx 改为 nova-xx（CSS 变量 --bpx-xx 改为 --nova-xx）
- * - bui-xx 改为 ui-xx，bscroll-xx 改为 nscroll-xx
- *
- * 组织方式：
- * - 公共 ui-xx / nscroll-xx 控件样式统一放 packages/player/src/styles/ui.scss，
- *   本文件只保留「弹幕列表私有」样式（.nova-player-* / .dm-info-* 及其
- *   对 ui-xx 的上下文覆盖）；
- * - 全部规则嵌套在样式作用域 .danmaku-wrap 下（插件挂载时给容器追加），
- *   组件本身不额外包 DOM；
- * - 主题变量取源页面亮色主题实测值，脱离 B 站页面也保持相同配色。
- *
- * 公开契约：挂载容器 .danmaku-wrap > 组件根 .nova-docker.nova-docker-minor。
  */
-
-.danmaku-wrap {
-  --nova-aux-content-bg: #ffffff;
-  --nova-fn-hover-color: #00aeec;
-  --nova-fn-color: #00aeec;
-  --nova-primary-color: #00aeec;
-  --nova-aux-content-font1: #18191c;
-  --nova-aux-float-border: #f1f2f3;
-  --nova-aux-float-bg: #ffffff;
-  --nova-aux-float-hover-bg: #9499a0;
-  --nova-aux-content-font3: #61666d;
-  --nova-aux-footer-font: #61666d;
-  --nova-aux-line-border: #e3e5e7;
-  --nova-aux-content-font2: #61666d;
-  --nova-aux-content-font5: #9499a0;
-  --nova-dmsend-hint-icon: #9499a0;
-  --nova-aux-footer-bg: #f1f2f3;
-  --nova-aux-footer-font-hover: #18191c;
-  --nova-aux-button-disabled-bg: #f6f7f8;
-  --nova-aux-button-bg: #f1f2f3;
-  --nova-aux-input-border: #e3e5e7;
-  --nova-aux-header-bg: #f1f2f3;
-  --nova-box-shadow: #f1f2f3;
-  --nova-aux-block-icon: #9499a0;
-  --nova-aux-float-icon: #61666d;
-  --nova-aux-content-font4: #9499a0;
-  --nova-aux-header-icon: #61666d;
-  --nova-aux-header-font: #18191c;
-  --nova-ui-font-size: 12px;
-  min-height: 44px;
-  background: var(--graph_bg_regular);
-  border-radius: 6px;
-  box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial,
-    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   /* ---- 面板根（容器内唯一根节点，等价源 .bpx-docker） ---- */
   .nova-docker {
     -webkit-box-sizing: content-box;
@@ -58,6 +10,33 @@
     font-size: 12px;
     font-style: normal;
     line-height: 1;
+    --nova-aux-content-bg: #ffffff;
+    --nova-fn-hover-color: #00aeec;
+    --nova-fn-color: #00aeec;
+    --nova-primary-color: #00aeec;
+    --nova-aux-content-font1: #18191c;
+    --nova-aux-float-border: #f1f2f3;
+    --nova-aux-float-bg: #ffffff;
+    --nova-aux-float-hover-bg: #9499a0;
+    --nova-aux-content-font3: #61666d;
+    --nova-aux-footer-font: #61666d;
+    --nova-aux-line-border: #e3e5e7;
+    --nova-aux-content-font2: #61666d;
+    --nova-aux-content-font5: #9499a0;
+    --nova-dmsend-hint-icon: #9499a0;
+    --nova-aux-footer-bg: #f1f2f3;
+    --nova-aux-footer-font-hover: #18191c;
+    --nova-aux-button-disabled-bg: #f6f7f8;
+    --nova-aux-button-bg: #f1f2f3;
+    --nova-aux-input-border: #e3e5e7;
+    --nova-aux-header-bg: #f1f2f3;
+    --nova-box-shadow: #f1f2f3;
+    --nova-aux-block-icon: #9499a0;
+    --nova-aux-float-icon: #61666d;
+    --nova-aux-content-font4: #9499a0;
+    --nova-aux-header-icon: #61666d;
+    --nova-aux-header-font: #18191c;
+    --nova-ui-font-size: 12px;
 
     &.nova-docker-minor {
       position: relative;
@@ -84,6 +63,22 @@
     position: relative;
     vertical-align: top;
     width: 100%;
+    svg {
+      display: inline;
+      vertical-align: baseline;
+      width: 100%;
+      height: 100%;
+    }
+    .nova-player-adv-danmaku {
+      background-color: var(--nova-aux-content-bg,#fff);
+      width: 100%;
+      display: none;
+      height: 100%;
+      * {
+        background-color: var(--nova-aux-content-bg,#fff);
+        color: var(--nova-aux-content-font1,#222);
+      }
+    }
     .nova-player-bscrollbar {
       position: relative;
       .nscroll-vertical-scrollbar {
@@ -201,16 +196,7 @@
         }
       }
     }
-    .nova-player-adv-danmaku {
-      background-color: var(--nova-aux-content-bg,#fff);
-      width: 100%;
-      display: none;
-      height: 100%;
-      * {
-        background-color: var(--nova-aux-content-bg,#fff);
-        color: var(--nova-aux-content-font1,#222);
-      }
-    }
+    
     .nova-player-setting {
       background-color: var(--nova-aux-content-bg,#fff);
       width: 100%;
@@ -1297,12 +1283,6 @@
     font-size: inherit;
     color: inherit;
   }
-  svg {
-    display: inline;
-    vertical-align: baseline;
-    width: 100%;
-    height: 100%;
-  }
   .nova-player-adv-danmaku-panel {
     &:hover {
       .nscroll-vertical-scrollbar {
@@ -2136,28 +2116,38 @@
     }
   }
   .ui-collapse {
-    .ui-collapse-header {
+      .ui-collapse-header {
+    background: var(--nova-aux-header-bg, #f4f4f4);
+    border-radius: 2px;
+    box-sizing: border-box;
+    color: var(--nova-aux-header-font, #222);
+    cursor: pointer;
+    height: 100%;
+    position: relative;
+    width: 100%;
       .ui-collapse-arrow {
+
         .ui-collapse-arrow-text {
-          .arrow-icon {
-            fill: var(--nova-aux-header-icon,#757575);
-            height: 16px;
-            transform: rotate(-90deg);
-            transition: transform 0.3s, -webkit-transform 0.3s;
-            width: 16px;
-          }
+          display: inline-flex;
+          font-size: var(--nova-ui-font-size, 12px);
+        }
+        .arrow-icon {
+          fill: var(--nova-aux-header-icon,#757575);
+          height: 16px;
+          transform: rotate(-90deg);
+          transition: transform 0.3s, -webkit-transform 0.3s;
+          width: 16px;
         }
       }
     }
     .ui-collapse-wrap-folded {
       .ui-collapse-header {
-        .ui-collapse-arrow {
+
           .ui-collapse-arrow-text {
             .arrow-icon {
               transform: rotate(90deg);
             }
           }
-        }
       }
     }
   }
@@ -2221,11 +2211,9 @@
   }
   .ui-dropdown {
     .ui-dropdown-display {
-      .ui-dropdown-icon {
         .nova-common-svg-icon {
           vertical-align: top;
         }
-      }
     }
   }
   /* ---- 响应式：宽屏下折叠头字号 16px（源页面实测） ---- */
@@ -2234,4 +2222,3 @@
     font-size: 16px;
     }
   }
-}

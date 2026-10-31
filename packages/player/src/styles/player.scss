@@ -180,17 +180,6 @@ img {
     width: 100%;
   }
 }
-
-.nova-player-docker {
-  -webkit-box-sizing: content-box;
-  box-sizing: content-box;
-  -webkit-box-sizing: initial;
-  box-sizing: initial;
-  font-size: 12px;
-  font-style: normal;
-  line-height: 1;
-}
-
 .nova-player-container[data-ctrl-hidden="true"] .nova-player-control-bottom,
 .nova-player-container[data-ctrl-hidden="true"] .nova-player-control-mask {
   opacity: 0;

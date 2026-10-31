@@ -1,29 +1,6 @@
 /**
  * ============================================
  * 弹幕列表面板视图（DanmakuList）
- * ============================================
- * 职责：把源仓库 Solid 组件 DanmakuList 完整移植为播放器自研 Lumina 实现，
- * 作为弹幕插件的列表 UI（插件只负责挂载与数据同步，UI 全部收敛在此）。
- *
- * 写法与现有 player / plugins 组件保持一致：
- * - defineComponent + h 渲染，signal / For / Show / onEffect 驱动更新；
- * - 动态 class/style/aria 等属性直接写表达式（如
- *   class: ["base", { "state-on": signal.value }]），由编译插件提取为
- *   由编译插件自动提取为响应式属性，挂载时注册 effect 精准更新 DOM；
- * - 动态文本直接写表达式或 t(...) 子节点，编译插件包装为响应式文本节点；
- * - 列表全量渲染（1000+ 条一次挂载），滚动仅更新容器 transform 与滚动条，
- *   不做虚拟窗口 diff，避免滚动时行 DOM 反复重建；
- * - 挂载 / 卸载由 mount / destroy 完成，不引入任何第三方组件运行时。
- *
- * DOM 结构与源组件一致（仅类名前缀按项目约定重命名）：
- * - 根 .nova-docker.nova-docker-minor > .nova-player-auxiliary
- * - 折叠面板 .ui-collapse：header（标题 / 下拉菜单）+ body（三面板）
- * - LIST 面板：排序头 + 弹幕列表（自绘 nscroll 滚动条）+ 查看历史弹幕
- * - BLOCK 面板：屏蔽列表开关 / 同步 / 添加屏蔽词 / tab / 屏蔽词列表
- * - ADV 面板：高级弹幕表单（颜色 / 字号 / 字体 / 旋转 / 坐标 / 正文 / 发送）
- * - 三面板共用 .ui-* 公共控件样式（packages/player/src/styles/ui.scss），
- *   面板私有样式在本目录 DanmakuList.scss。
- *
  * 样式作用域：挂载容器由插件追加 .danmaku-wrap，本组件不额外包 DOM。
  */
 
@@ -2880,7 +2857,6 @@ export const DanmakuList = defineComponent<DanmakuListProps>(
       "div",
       {
         "data-injector": "nova",
-        "data-revision": "1",
         class: `nova-docker nova-docker-minor${
           isLoggedIn() ? " danmaku-wrap-login" : ""
         }`,
@@ -2891,6 +2867,7 @@ export const DanmakuList = defineComponent<DanmakuListProps>(
           class: `nova-player-auxiliary${
             isLoggedIn() ? "" : " nova-player-unlogin"
           }`,
+          "data-revision": "1",
         },
         h(
           "div",
