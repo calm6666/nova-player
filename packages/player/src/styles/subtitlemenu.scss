@@ -257,7 +257,7 @@
   }
 
   .nova-player-ctrl-subtitle-language-unlogin-content {
-    background-color: var(--bpx-fn-color, #00aeec);
+    background-color: var(--nova-fn-color, #00aeec);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
@@ -364,15 +364,15 @@
     .nova-player-ctrl-subtitle-switch-input:checked
       + .nova-player-ctrl-subtitle-switch-label
       .nova-player-ctrl-subtitle-switch-body {
-      background: var(--bpx-fn-color, #00aeec);
+      background: var(--nova-fn-color, #00aeec);
     }
 
     .nova-player-ctrl-subtitle-switch-input:checked
       + .nova-player-ctrl-subtitle-switch-label
       .nova-player-ctrl-subtitle-switch-body
       .nova-player-ctrl-subtitle-switch-dot {
-      color: var(--bpx-fn-color, #00aeec);
-      fill: var(--bpx-fn-color, #00aeec);
+      color: var(--nova-fn-color, #00aeec);
+      fill: var(--nova-fn-color, #00aeec);
       left: 100%;
       margin-left: -18px;
     }
@@ -802,7 +802,7 @@
   }
 
   .nova-player-ctrl-subtitle-slider-bar {
-    background: var(--bpx-fn-color, #00aeec);
+    background: var(--nova-fn-color, #00aeec);
     bottom: 0;
     left: 0;
     position: absolute;
@@ -821,7 +821,7 @@
 
   .nova-player-ctrl-subtitle-slider-thumb-dot {
     align-items: center;
-    background-color: var(--bpx-fn-color, #00aeec);
+    background-color: var(--nova-fn-color, #00aeec);
     border-radius: 50%;
     display: flex;
     height: 12px;
@@ -986,8 +986,8 @@
 
   .nova-player-ctrl-subtitle-reset:hover
     .nova-player-ctrl-subtitle-button-area {
-    border-color: var(--bpx-fn-color, #00aeec);
-    color: var(--bpx-fn-color, #00aeec);
+    border-color: var(--nova-fn-color, #00aeec);
+    color: var(--nova-fn-color, #00aeec);
   }
 }
 // 实时识别状态点呼吸动画（下载中 / 识别中共用）

@@ -49,7 +49,7 @@
           font-size: 12px;
         }
         &.active {
-          background: var(--bpx-fn-color, #00a1d6);
+          background: var(--nova-fn-color, #00a1d6);
         }
         &:first-child {
           margin-right: 10px;
@@ -90,17 +90,17 @@
 
     .selection-span.active {
       background: #00a1d6;
-      background: var(--bpx-fn-color, #00a1d6);
+      background: var(--nova-fn-color, #00a1d6);
       color: #fff;
     }
 
     .selection-span:hover,
     .selection-span.active {
       fill: #00a1d6;
-      fill: var(--bpx-fn-color, #00a1d6);
+      fill: var(--nova-fn-color, #00a1d6);
       background: transparent;
       color: #00a1d6;
-      color: var(--bpx-fn-color, #00a1d6);
+      color: var(--nova-fn-color, #00a1d6);
     }
     .color-input-warp {
       display: flex;

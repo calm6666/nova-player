@@ -1,19 +1,19 @@
 .nova-player-docker {
-  /* 通用 UI 变量：统一 --bpx 前缀，只保留实际使用的定义 */
-  --bpx-fn-color: #00aeec;
-  --bpx-fn-hover-color: #00aeec;
-  --bpx-aux-content-font1: #18191c;
-  --bpx-aux-content-font2: #61666d;
-  --bpx-aux-line-border: #e3e5e7;
-  --bpx-aux-float-border: #f1f2f3;
-  --bpx-aux-float-bg: #ffffff;
-  --bpx-aux-float-hover-bg: #9499a0;
-  --bpx-aux-float-icon: #61666d;
-  --bpx-aux-button-bg: #f1f2f3;
-  --bpx-aux-header-bg: #f1f2f3;
-  --bpx-aux-header-font: #18191c;
-  --bpx-aux-header-icon: #61666d;
-  --bpx-ui-font-size: 12px;
+  /* 通用 UI 变量：统一 --nova 前缀，只保留实际使用的定义 */
+  --nova-fn-color: #00aeec;
+  --nova-fn-hover-color: #00aeec;
+  --nova-aux-content-font1: #18191c;
+  --nova-aux-content-font2: #61666d;
+  --nova-aux-line-border: #e3e5e7;
+  --nova-aux-float-border: #f1f2f3;
+  --nova-aux-float-bg: #ffffff;
+  --nova-aux-float-hover-bg: #9499a0;
+  --nova-aux-float-icon: #61666d;
+  --nova-aux-button-bg: #f1f2f3;
+  --nova-aux-header-bg: #f1f2f3;
+  --nova-aux-header-font: #18191c;
+  --nova-aux-header-icon: #61666d;
+  --nova-ui-font-size: 12px;
 }
 
 
@@ -62,7 +62,7 @@
 }
 
 .ui-select .ui-select-quality-menu .ui-select-item.ui-select-item-active {
-  color: var(--bpx-fn-color, #00a1d6);
+  color: var(--nova-fn-color, #00a1d6);
 }
 
 .ui-select .ui-select-quality-menu .ui-select-result {
@@ -100,8 +100,8 @@
 }
 
 .ui-tabs .ui-tabs-header .ui-tabs-header-item.ui-tabs-header-item-active {
-  border-bottom: 1px solid var(--bpx-fn-color, #00a1d6);
-  color: var(--bpx-fn-color, #00a1d6);
+  border-bottom: 1px solid var(--nova-fn-color, #00a1d6);
+  color: var(--nova-fn-color, #00a1d6);
 }
 
 .ui-tabs-body .ui-tabs-body-item {
@@ -113,7 +113,7 @@
 }
 
 .ui-dropdown .ui-dropdown-items .ui-dropdown-item {
-  color: var(--bpx-aux-content-font1, #222);
+  color: var(--nova-aux-content-font1, #222);
   cursor: pointer;
   font-size: 14px;
   font-weight: 400;
@@ -128,21 +128,21 @@
 }
 
 .ui-button .ui-area.ui-button-gray, .ui-button .ui-area.ui-button-large, .ui-button .ui-area.ui-button-small {
-  background-color: var(--bpx-aux-button-bg, #e5e9ef);
-  color: var(--bpx-aux-content-font1, #222);
+  background-color: var(--nova-aux-button-bg, #e5e9ef);
+  color: var(--nova-aux-content-font1, #222);
 }
 
 .ui-button .ui-area.ui-button-gray:hover, .ui-button .ui-area.ui-button-large:hover, .ui-button .ui-area.ui-button-small:hover {
-  background-color: var(--bpx-fn-color, #00a1d6);
+  background-color: var(--nova-fn-color, #00a1d6);
   color: rgb(255, 255, 255);
 }
 
 .ui-button .ui-area.ui-button-text {
-  color: var(--bpx-fn-color, #00a1d6);
+  color: var(--nova-fn-color, #00a1d6);
 }
 
 .ui-button .ui-area.ui-button-text:hover {
-  color: var(--bpx-fn-hover-color, #00b5e5);
+  color: var(--nova-fn-hover-color, #00b5e5);
 }
 
 .ui-button .ui-area.ui-disabled {
@@ -278,7 +278,7 @@
 
     &.active {
       background: #00a1d6;
-      background: var(--bpx-fn-color, #00a1d6);
+      background: var(--nova-fn-color, #00a1d6);
     }
   }
 }
@@ -290,7 +290,7 @@
 .ui-slider {
   cursor: pointer;
   height: 12px;
-  height: var(--bpx-ui-font-size, 12px);
+  height: var(--nova-ui-font-size, 12px);
 
   .ui-track {
     -webkit-box-align: center;
@@ -315,7 +315,7 @@
 
       .ui-bar {
         background: #00a1d6;
-        background: var(--bpx-fn-color, #00a1d6);
+        background: var(--nova-fn-color, #00a1d6);
         bottom: 0;
         left: 0;
         position: absolute;
@@ -334,20 +334,20 @@
         -ms-flex-align: center;
         align-items: center;
         background-color: #00a1d6;
-        background-color: var(--bpx-fn-color, #00a1d6);
+        background-color: var(--nova-fn-color, #00a1d6);
         border-radius: 50%;
         display: -webkit-box;
         display: -ms-flexbox;
         display: flex;
         height: 12px;
-        height: var(--bpx-ui-font-size, 12px);
+        height: var(--nova-ui-font-size, 12px);
         -webkit-transform: translateZ(0);
         transform: translateZ(0);
         -webkit-transition: all 0.2s;
         transition: all 0.2s;
         vertical-align: middle;
         width: 12px;
-        width: var(--bpx-ui-font-size, 12px);
+        width: var(--nova-ui-font-size, 12px);
       }
     }
   }
@@ -382,7 +382,7 @@
 .ui-dialog-title {
   font-size: 14px;
   line-height: 40px;
-  color: var(--bpx-aux-content-font1, #18191c);
+  color: var(--nova-aux-content-font1, #18191c);
 }
 
 .ui-dialog-body {
@@ -396,28 +396,28 @@
   width: 16px;
   height: 16px;
   line-height: normal;
-  color: var(--bpx-aux-content-font2, #61666d);
-  fill: var(--bpx-aux-content-font2, #61666d);
+  color: var(--nova-aux-content-font2, #61666d);
+  fill: var(--nova-aux-content-font2, #61666d);
   cursor: pointer;
 }
 
 .ui-switch:hover {
   .ui-switch-name {
-    color: var(--bpx-fn-color, #00a1d6);
+    color: var(--nova-fn-color, #00a1d6);
   }
 }
 
 .ui-switch {
   .ui-switch-input:checked + .ui-switch-label {
     .ui-switch-body {
-      background: var(--bpx-fn-color, #00a1d6);
+      background: var(--nova-fn-color, #00a1d6);
     }
   }
 }
 
 .ui-switch .ui-switch-input:checked + .ui-switch-label .ui-switch-body .ui-switch-dot {
-  fill: var(--bpx-fn-color, #00a1d6);
-  color: var(--bpx-fn-color, #00a1d6);
+  fill: var(--nova-fn-color, #00a1d6);
+  color: var(--nova-fn-color, #00a1d6);
   left: 100%;
   margin-left: -18px;
 }
@@ -490,10 +490,10 @@
   }
 
   .ui-collapse-header {
-    background: var(--bpx-aux-header-bg, #f4f4f4);
+    background: var(--nova-aux-header-bg, #f4f4f4);
     border-radius: 2px;
     box-sizing: border-box;
-    color: var(--bpx-aux-header-font, #222);
+    color: var(--nova-aux-header-font, #222);
     cursor: pointer;
     height: 100%;
     position: relative;
@@ -518,7 +518,7 @@
   }
 
   .ui-collapse-arrow-text .arrow-icon {
-    fill: var(--bpx-aux-header-icon, #757575);
+    fill: var(--nova-aux-header-icon, #757575);
     height: 16px;
     transform: rotate(-90deg);
     transition:
@@ -530,7 +530,7 @@
   .ui-collapse-header .ui-collapse-arrow {
     .ui-collapse-arrow-text {
       display: inline-flex;
-      font-size: var(--bpx-ui-font-size, 12px);
+      font-size: var(--nova-ui-font-size, 12px);
     }
   }
 
@@ -572,7 +572,7 @@
   }
 
   .ui-checkbox-input:checked + .ui-checkbox-label .ui-checkbox-icon svg {
-    fill: var(--bpx-fn-color, #00a1d6);
+    fill: var(--nova-fn-color, #00a1d6);
   }
 
   .ui-checkbox-input:checked + .ui-checkbox-label .ui-checkbox-icon-default {
@@ -593,9 +593,9 @@
   }
 
   .ui-checkbox-name {
-    color: var(--bpx-aux-content-font1, #222);
-    font-size: var(--bpx-ui-font-size, 12px);
-    line-height: var(--bpx-ui-font-size, 12px);
+    color: var(--nova-aux-content-font1, #222);
+    font-size: var(--nova-ui-font-size, 12px);
+    line-height: var(--nova-ui-font-size, 12px);
     position: relative;
     transform: translateZ(0px);
     transition: 0.2s;
@@ -659,11 +659,11 @@
   }
 
   &.ui-disabled:hover .ui-checkbox-name {
-    color: var(--bpx-fn-color, #00a1d6);
+    color: var(--nova-fn-color, #00a1d6);
   }
 
   &.ui-disabled:hover .ui-checkbox-icon svg {
-    fill: var(--bpx-fn-color, #00a1d6);
+    fill: var(--nova-fn-color, #00a1d6);
   }
 }
 
@@ -688,7 +688,7 @@
     border: 1px solid silver;
     border-radius: 2px;
     box-sizing: border-box;
-    font-size: var(--bpx-ui-font-size, 12px);
+    font-size: var(--nova-ui-font-size, 12px);
     height: 100%;
     outline: none;
     padding: 4px 7px;
@@ -791,7 +791,7 @@
   }
 
   .ui-select-quality-menu .ui-select-item.ui-select-item-active {
-    color: var(--bpx-fn-color, #00a1d6);
+    color: var(--nova-fn-color, #00a1d6);
   }
 
   .ui-select-quality-menu .ui-select-result {
@@ -823,7 +823,7 @@
     border: 1px solid silver;
     border-radius: 2px;
     box-sizing: border-box;
-    font-size: var(--bpx-ui-font-size, 12px);
+    font-size: var(--nova-ui-font-size, 12px);
     width: 100%;
   }
 
@@ -883,7 +883,7 @@
   }
 
   .ui-select-item:hover {
-    background: var(--bpx-aux-button-bg, #e5e9ef);
+    background: var(--nova-aux-button-bg, #e5e9ef);
   }
 
   .ui-select-item.ui-select-item-disabled {
@@ -1050,15 +1050,15 @@
 .ui-tabs {
   .ui-tabs-header {
     .ui-tabs-header-item {
-      color: var(--bpx-aux-content-font1, #222);
+      color: var(--nova-aux-content-font1, #222);
       cursor: pointer;
-      font-size: var(--bpx-ui-font-size, 12px);
+      font-size: var(--nova-ui-font-size, 12px);
       margin-right: 20px;
       text-align: center;
 
       .ui-tabs-header-item.ui-tabs-header-item-active {
-        border-bottom: 1px solid var(--bpx-fn-color, #00a1d6);
-        color: var(--bpx-fn-color, #00a1d6);
+        border-bottom: 1px solid var(--nova-fn-color, #00a1d6);
+        color: var(--nova-fn-color, #00a1d6);
       }
     }
   }
@@ -1085,8 +1085,8 @@
   white-space: nowrap;
 
   .ui-dropdown-items {
-    background-color: var(--bpx-aux-float-bg, #fff);
-    border: 1px solid var(--bpx-aux-float-border, #e5e9ef);
+    background-color: var(--nova-aux-float-bg, #fff);
+    border: 1px solid var(--nova-aux-float-border, #e5e9ef);
     border-radius: 4px;
     box-shadow: rgba(0, 0, 0, 0.14) 0px 2px 4px 0px;
     display: none;
@@ -1098,7 +1098,7 @@
   }
 
   .ui-dropdown-wrap {
-    fill: var(--bpx-aux-header-icon, #757575);
+    fill: var(--nova-aux-header-icon, #757575);
 
     &.ui-no-event {
       pointer-events: none;
@@ -1111,7 +1111,7 @@
     }
 
     .ui-dropdown-icon {
-      fill: var(--bpx-fn-color, #00a1d6);
+      fill: var(--nova-fn-color, #00a1d6);
     }
   }
 
@@ -1131,11 +1131,11 @@
     }
 
     .ui-dropdown-icon:hover {
-      fill: var(--bpx-fn-color, #00a1d6);
+      fill: var(--nova-fn-color, #00a1d6);
     }
 
     .ui-dropdown-item {
-      color: var(--bpx-aux-content-font1, #222);
+      color: var(--nova-aux-content-font1, #222);
       cursor: pointer;
       font-size: 14px;
       font-weight: 400;
@@ -1163,11 +1163,11 @@
     }
 
     .ui-dropdown-item:hover {
-      color: var(--bpx-fn-color, #00a1d6);
+      color: var(--nova-fn-color, #00a1d6);
     }
 
     .ui-dropdown-item:hover::before {
-      background-color: var(--bpx-aux-float-hover-bg, #000);
+      background-color: var(--nova-aux-float-hover-bg, #000);
     }
 
     .ui-dropdown-item.ui-hide {
@@ -1181,7 +1181,7 @@
 
     .ui-dropdown-item.ui-disabled:hover {
       background-color: rgb(244, 244, 244);
-      color: var(--bpx-aux-content-font1, #222);
+      color: var(--nova-aux-content-font1, #222);
     }
   }
 }
@@ -1196,7 +1196,7 @@
     border-radius: 2px;
     box-sizing: border-box;
     color: inherit;
-    font-size: var(--bpx-ui-font-size, 12px);
+    font-size: var(--nova-ui-font-size, 12px);
     justify-content: center;
     min-width: 68px;
     outline: none;
@@ -1211,8 +1211,8 @@
     }
 
     &.ui-button-transparent:hover {
-      border-color: var(--bpx-fn-color, #00a1d6);
-      color: var(--bpx-fn-color, #00a1d6);
+      border-color: var(--nova-fn-color, #00a1d6);
+      color: var(--nova-fn-color, #00a1d6);
     }
 
     &.ui-button-border {
@@ -1222,8 +1222,8 @@
     }
 
     &.ui-button-border:hover {
-      border-color: var(--bpx-fn-color, #00a1d6);
-      color: var(--bpx-fn-color, #00a1d6);
+      border-color: var(--nova-fn-color, #00a1d6);
+      color: var(--nova-fn-color, #00a1d6);
     }
 
     &.ui-button-white {
@@ -1233,13 +1233,13 @@
     }
 
     &.ui-button-white:hover {
-      border-color: var(--bpx-fn-color, #00a1d6);
-      color: var(--bpx-fn-color, #00a1d6);
+      border-color: var(--nova-fn-color, #00a1d6);
+      color: var(--nova-fn-color, #00a1d6);
     }
 
     &.ui-button-small {
-      background-color: var(--bpx-aux-button-bg, #e5e9ef);
-      color: var(--bpx-aux-content-font1, #222);
+      background-color: var(--nova-aux-button-bg, #e5e9ef);
+      color: var(--nova-aux-content-font1, #222);
     }
 
     &.ui-button-gray2 {
@@ -1261,12 +1261,12 @@
       border-width: 1px;
       border-style: solid;
       border-image: none;
-      border-color: var(--bpx-fn-color, #00a1d6);
-      color: var(--bpx-fn-color, #00a1d6);
+      border-color: var(--nova-fn-color, #00a1d6);
+      color: var(--nova-fn-color, #00a1d6);
     }
 
     &.ui-button-blue2:hover {
-      background-color: var(--bpx-fn-color, #00a1d6);
+      background-color: var(--nova-fn-color, #00a1d6);
       color: rgb(255, 255, 255);
     }
 
@@ -1275,17 +1275,17 @@
     & .ui-button &.ui-button-gray:hover,
     &.ui-button-large:hover,
     &.ui-button-small:hover {
-      background-color: var(--bpx-fn-color, #00a1d6);
+      background-color: var(--nova-fn-color, #00a1d6);
       color: rgb(255, 255, 255);
     }
 
     &.ui-button-blue:hover {
-      background-color: var(--bpx-fn-hover-color, #00b5e5);
+      background-color: var(--nova-fn-hover-color, #00b5e5);
     }
 
     &.ui-button-blue,
     &.ui-button-gray3:hover {
-      background-color: var(--bpx-fn-color, #00a1d6);
+      background-color: var(--nova-fn-color, #00a1d6);
       color: rgb(255, 255, 255);
     }
 
@@ -1299,11 +1299,11 @@
     }
 
     .ui-button-text {
-      color: var(--bpx-fn-color, #00a1d6);
+      color: var(--nova-fn-color, #00a1d6);
     }
 
     .ui-button-text:hover {
-      color: var(--bpx-fn-hover-color, #00b5e5);
+      color: var(--nova-fn-hover-color, #00b5e5);
     }
 
     .ui-disabled {
@@ -1324,9 +1324,9 @@
 }
 
 .ui-dialog {
-  fill: var(--bpx-aux-float-icon, #6d757a);
-  background: var(--bpx-aux-float-bg, #fff);
-  border: 1px solid var(--bpx-aux-float-border, #e5e9ef);
+  fill: var(--nova-aux-float-icon, #6d757a);
+  background: var(--nova-aux-float-bg, #fff);
+  border: 1px solid var(--nova-aux-float-border, #e5e9ef);
   border-radius: 4px;
   box-shadow: rgba(0, 0, 0, 0.14) 0px 2px 4px 0px;
   color: rgb(109, 117, 122);
@@ -1335,8 +1335,8 @@
   text-align: center;
 
   .ui-dialog-title {
-    border-bottom: 1px solid var(--bpx-aux-line-border, #e5e9ef);
-    color: var(--bpx-aux-content-font1, #222);
+    border-bottom: 1px solid var(--nova-aux-line-border, #e5e9ef);
+    color: var(--nova-aux-content-font1, #222);
     font-size: 15px;
     height: 36px;
     line-height: 36px;

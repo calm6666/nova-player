@@ -577,7 +577,7 @@
 
         .slider-bar {
           background: #00a1d6;
-          background: var(--bpx-fn-color, #00a1d6);
+          background: var(--nova-fn-color, #00a1d6);
           bottom: 0;
           left: 0;
           position: absolute;
@@ -598,20 +598,20 @@
           -ms-flex-align: center;
           align-items: center;
           background-color: #00a1d6;
-          background-color: var(--bpx-fn-color, #00a1d6);
+          background-color: var(--nova-fn-color, #00a1d6);
           border-radius: 50%;
           display: -webkit-box;
           display: -ms-flexbox;
           display: flex;
           height: 12px;
-          height: var(--bpx-ui-font-size, 12px);
+          height: var(--nova-ui-font-size, 12px);
           -webkit-transform: translateZ(0);
           transform: translateZ(0);
           -webkit-transition: all 0.2s;
           transition: all 0.2s;
           vertical-align: middle;
           width: 12px;
-          width: var(--bpx-ui-font-size, 12px);
+          width: var(--nova-ui-font-size, 12px);
           cursor: pointer;
         }
       }
