@@ -192,14 +192,14 @@
           &.nova-player-block-filter-type-selected {
             .nova-player-block-filter-image {
               color: #00a1d6;
-              color: var(--nova-player-fn-color, #00a1d6);
+              color: var(--bpx-fn-color, #00a1d6);
               fill: #00a1d6;
-              fill: var(--nova-player-fn-color, #00a1d6);
+              fill: var(--bpx-fn-color, #00a1d6);
             }
 
             .nova-player-block-filter-label {
               color: #00a1d6;
-              color: var(--nova-player-fn-color, #00a1d6);
+              color: var(--bpx-fn-color, #00a1d6);
             }
           }
 
@@ -429,9 +429,9 @@
 
       &:hover {
         color: #00a1d6;
-        color: var(--nova-player-fn-color, #00a1d6);
+        color: var(--bpx-fn-color, #00a1d6);
         fill: #00a1d6;
-        fill: var(--nova-player-fn-color, #00a1d6);
+        fill: var(--bpx-fn-color, #00a1d6);
       }
     }
   }
@@ -482,9 +482,9 @@
 
       &:hover {
         color: #00a1d6;
-        color: var(--nova-player-fn-color, #00a1d6);
+        color: var(--bpx-fn-color, #00a1d6);
         fill: #00a1d6;
-        fill: var(--nova-player-fn-color, #00a1d6);
+        fill: var(--bpx-fn-color, #00a1d6);
       }
     }
 
