@@ -132,6 +132,7 @@ pnpm demo
 | `ui.related`                  | `EndingRelatedItem[]`                                   | `undefined`            | 否（挂载期读取）                | 站内标准片尾的相关推荐                                |
 | `ui.up`                       | `EndingUpInfo`                                          | `undefined`            | 否（挂载期读取）                | 站内标准片尾的 UP 头像 / 昵称 / 关注态                |
 | `ui.share`                    | `ShareInfo`                                             | `undefined`            | 否（挂载期读取）                | 片尾分享面板：视频地址 / 嵌入代码 / 二维码图片        |
+| `ui.disableBoxShadow`         | `boolean`                                               | `false`                | 是（`setBoxShadowDisabled`）    | 添加 `state-disable-box-shadow` 类名禁用容器阴影      |
 | `ui.controls`                 | `ControlsConfig`                                        | `defaultControlConfig` | 否                              | 控件开关（见下）                                      |
 | `ui.slots`                    | `ControlSlotItem[]`                                     | `undefined`            | 否                              | 控制栏插槽（见 §7）                                   |
 | `interaction.keyboard`        | `boolean \| KeyboardStepConfig`                         | `true`                 | 否                              | 快捷键开关或步长配置                                  |
@@ -343,6 +344,27 @@ player.isWideScreen();
 | `on`        | `<K extends keyof PlayerEvents>(event: K, cb: PlayerEvents[K]) => () => void` | 订阅，返回取消函数       |
 | `once`      | `<K extends keyof PlayerEvents>(event: K, cb: PlayerEvents[K]) => () => void` | 只触发一次               |
 | `off`       | `<K extends keyof PlayerEvents>(event: K, cb: PlayerEvents[K]) => void`       | 取消订阅                 |
+
+### 4.12 容器阴影
+
+在 `.nova-player-container` 上添加 / 移除 `state-disable-box-shadow` 类名：添加后禁用容器外阴影（`box-shadow: none`），移除后恢复默认阴影。
+
+| 方法                   | 签名                            | 说明                                                        |
+| ---------------------- | ------------------------------- | ----------------------------------------------------------- |
+| `setBoxShadowDisabled` | `(disabled: boolean) => void`   | 设置是否禁用容器阴影，同时写回配置                          |
+| `isBoxShadowDisabled`  | `() => boolean`                 | 是否已禁用容器阴影                                          |
+
+```ts
+// 初始配置禁用阴影
+new VideoPlayer({ ui: { disableBoxShadow: true } });
+
+// 运行时切换
+player.setBoxShadowDisabled(true); // 禁用阴影
+player.isBoxShadowDisabled(); // → true
+
+// 等价的 setConfig 写法
+player.setConfig({ ui: { disableBoxShadow: false } }); // 开启阴影
+```
 
 ---
 

@@ -2858,8 +2858,13 @@ export const PlayerDocker = defineComponent<
     h(
       "div",
       {
+        /**
+         * state-disable-box-shadow（禁用容器阴影）不在此硬编码：
+         * 由 VideoPlayer 按 ui.disableBoxShadow 配置在挂载后添加 / 移除，
+         * 运行时随 setBoxShadowDisabled / setConfig 动态切换
+         */
         class: [
-          "nova-player-container state-paused state-no-cursor state-disable-box-shadow",
+          "nova-player-container state-paused state-no-cursor",
           { "is-embedded": embeddedMode },
         ],
         "data-angle": "d3d11",

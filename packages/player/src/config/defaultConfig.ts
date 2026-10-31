@@ -63,6 +63,8 @@ const defaultConfig: PlayerConfig = {
     title: "Nova Player",
     scene: "station",
     endingStyle: "standard",
+    // 容器阴影开关：false = 不添加 state-disable-box-shadow 类名（显示阴影）
+    disableBoxShadow: false,
     controls: defaultControlConfig,
   },
 

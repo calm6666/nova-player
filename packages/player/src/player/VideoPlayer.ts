@@ -1541,6 +1541,9 @@ export class VideoPlayer
         // 应用已合并的播放偏好到媒体元素（音量/静音/倍速，持久化优先合并的最终值）
         this.applyPlaybackToMedia();
 
+        // 应用容器阴影开关（ui.disableBoxShadow → state-disable-box-shadow 类名）
+        this.applyBoxShadowDisabled(this.props.ui?.disableBoxShadow === true);
+
         /**
          * 恢复画面比例 / 镜像 / 循环（持久化优先）：
          * 需要挂载后的视频元素才能应用，故在 MOUNTED 回调恢复
@@ -2516,6 +2519,9 @@ export class VideoPlayer
     if (next.ui?.title !== prev.ui?.title) {
       this.applyTitle(next.ui?.title ?? "");
     }
+    if (next.ui?.disableBoxShadow !== prev.ui?.disableBoxShadow) {
+      this.applyBoxShadowDisabled(next.ui?.disableBoxShadow === true);
+    }
     if (partial.playlist !== undefined) {
       this.playlist = normalizePlaylist(next);
       this.currentIndex = clamp(
@@ -2615,6 +2621,20 @@ export class VideoPlayer
     }
     const el = this.containerEl.querySelector(".nova-player-container");
     return el instanceof HTMLElement ? el : this.containerEl;
+  }
+
+  /**
+   * 应用容器阴影开关
+   *
+   * 通过在 .nova-player-container 上添加 / 移除 state-disable-box-shadow
+   * 类名实现：添加后禁用外阴影，移除后恢复默认阴影。
+   * @param disabled - 是否禁用阴影
+   */
+  private applyBoxShadowDisabled(disabled: boolean): void {
+    this.getPlayerContainerEl()?.classList.toggle(
+      "state-disable-box-shadow",
+      disabled,
+    );
   }
 
   // ============================================
@@ -2983,6 +3003,24 @@ export class VideoPlayer
   /** 是否处于宽屏状态 */
   isWideScreen(): boolean {
     return this.state.get(PlayerStateKeyEnum.IS_WIDE_SCREEN) ?? false;
+  }
+
+  /**
+   * 设置是否禁用容器阴影
+   *
+   * 通过在 .nova-player-container 上添加 / 移除 state-disable-box-shadow
+   * 类名实现：添加后禁用外阴影，移除后恢复默认阴影。
+   * 同时写回配置（getConfig 可读到最新值），挂载前调用会在挂载时生效。
+   * @param disabled - 是否禁用阴影
+   */
+  setBoxShadowDisabled(disabled: boolean): void {
+    this.props.ui = { ...(this.props.ui ?? {}), disableBoxShadow: disabled };
+    this.applyBoxShadowDisabled(disabled);
+  }
+
+  /** 是否已禁用容器阴影 */
+  isBoxShadowDisabled(): boolean {
+    return this.props.ui?.disableBoxShadow === true;
   }
 
   /**

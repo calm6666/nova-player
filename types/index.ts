@@ -686,6 +686,13 @@ export interface UiConfig {
    * - embedded：外链 / iframe 嵌入播放器，简化控制栏 + 整页式片尾 + 进入站内入口
    */
   scene?: PlayerScene;
+  /**
+   * 是否在 .nova-player-container 上添加 state-disable-box-shadow 类名
+   *
+   * 添加后禁用容器外阴影（box-shadow: none），移除后恢复默认阴影。
+   * 默认 false（显示阴影）；运行时可通过 setBoxShadowDisabled 切换。
+   */
+  disableBoxShadow?: boolean;
   /** 片尾形态（默认 standard；电视剧 / 番剧使用 ogv） */
   endingStyle?: PlayerEndingStyle;
   /** Top 形态：default（普通）/ tv（电视剧）/ music（音乐） */
@@ -1762,6 +1769,17 @@ export interface PlayerMethods {
   setWideScreen(isWide: boolean): void;
   /** 是否处于宽屏状态 */
   isWideScreen(): boolean;
+  /**
+   * 设置是否禁用容器阴影
+   *
+   * 通过在 .nova-player-container 上添加 / 移除 state-disable-box-shadow
+   * 类名实现：添加后禁用外阴影，移除后恢复默认阴影。
+   * 同时写回配置，`getConfig` 可读到最新值。
+   * @param disabled - 是否禁用阴影
+   */
+  setBoxShadowDisabled(disabled: boolean): void;
+  /** 是否已禁用容器阴影 */
+  isBoxShadowDisabled(): boolean;
   /**
    * 设置显示模式（normal / web / mini 会改播放器内部布局；
    * `wide` 只更新宽屏状态并广播 `wideScreenChange`，布局交给外部容器）
