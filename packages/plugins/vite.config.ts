@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import { resolve } from 'path';
+import { luminaCompile } from '../../plugins/vite-plugin-lumina-compile';
 
 /** 生产构建统一压缩/混淆策略 */
 const terserOptions = {
@@ -18,7 +19,41 @@ const terserOptions = {
 };
 
 export default defineConfig({
+  /**
+   * 库产物使用相对 base：
+   * Worker 入口（弹幕调度 / 智能防挡分割）会以 `new URL(..., import.meta.url)` 形式
+   * 留在 dist 中，绝对 base 会生成 `/assets/xxx.js`，消费方无法按包内路径解析；
+   * 相对 base 生成「相对当前模块」的路径，dist 自包含，任何 bundler 都能接着打包。
+   */
+  base: './',
   plugins: [
+    /**
+     * 编译期 h() 改写（与播放器包一致）：
+     * 把响应式属性包装成 __reactiveAttrs、响应式文本包装成 _reactiveText。
+     * 缺了它，组件里 `class: `xxx${signal.value}`` 这类写法会在挂载时求值一次，
+     * 展开/折叠、菜单开关等状态就不再响应（插件本身是响应式写法）。
+     */
+    luminaCompile(),
+    {
+      /**
+       * i18n 必须与 @lumina/nova 共用同一个实例：插件 dist 若自带一份
+       * core/i18n，应用注册的语言包（VideoPlayer 的 i18n.messages）插件读不到，
+       * 弹幕列表面板就只能显示 i18n key。
+       * 这里把 core 内部的 ./i18n 导入重定向到 shared/novaI18n（t 来自 nova）。
+       */
+      name: 'nova-shared-i18n',
+      enforce: 'pre',
+      resolveId(source, importer) {
+        if (!importer) return null;
+        const normalized = importer.replace(/\\/g, '/');
+        const shim = resolve(__dirname, 'src/shared/novaI18n.ts').replace(/\\/g, '/');
+        if (normalized === shim) return null;
+        const fromCore = normalized.includes('/nova-player/core/');
+        if (fromCore && (source === './i18n' || source === '../i18n')) return shim;
+        if (source === '@/core/i18n') return shim;
+        return null;
+      },
+    },
     dts({
       // 根 vite-env.d.ts 声明了 *.png / *.scss?inline / *?url 等资源模块，
       // 不挂进 include 的话 dts 内部 tsc 解析资源导入会报 TS2307（构建噪音）

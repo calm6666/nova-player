@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && vite build --mode lib-cdn && sass src/styles/style.scss dist/style.css --no-source-map --style=compressed && node ../../scripts/patch-dts.mjs packages/player",
+    "build": "tsc && vite build && vite build --mode lib-cdn && sass src/styles/style.scss dist/style.css --no-source-map --style=compressed && node ../../scripts/patch-style-assets.mjs packages/player && node ../../scripts/patch-dts.mjs packages/player",
     "preview": "vite preview",
     "lint": "node ../../scripts/lint.mjs src --ext .ts",
     "typecheck": "tsc --noEmit",
