@@ -2949,11 +2949,14 @@ export function mountDanmakuListView(
   /** 响应式数据源（插件 updateList 写它，视图自动更新） */
   const rowsSignal = signal<DanmakuListRow[]>(toListRows(list));
 
+  /** 响应式高度源（插件 setListHeight 写它，panelHeight 派生自动重算） */
+  const heightSignal = signal<number | undefined>(options?.height);
+
   /** 视图 VNode（dispose 时 destroy） */
   const vnode = h(DanmakuList, {
     rows: rowsSignal,
     loggedIn: options?.loggedIn ?? false,
-    height: options?.height,
+    height: heightSignal,
     historyDates: options?.historyDates,
     handlers: options?.handlers,
   });
@@ -2963,6 +2966,9 @@ export function mountDanmakuListView(
   return {
     setList(next: readonly PlayerDanmakuItem[]): void {
       rowsSignal.value = toListRows(next);
+    },
+    setHeight(height: number): void {
+      heightSignal.value = height;
     },
     dispose(): void {
       destroy(vnode);

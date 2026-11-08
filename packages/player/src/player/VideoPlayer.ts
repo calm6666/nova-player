@@ -688,7 +688,8 @@ export class VideoPlayer
         errorCode: 0,
         errorMessage: "",
         isWebFullscreen: false,
-        isWideScreen: false,
+        /** 宽屏：持久化读回（bpx_player_profile.iswide 同款，下次加载恢复宽屏布局） */
+        isWideScreen: this.store.getPersistentState().isWideScreen ?? false,
         displayMode: "normal",
         isMinPlayer: false,
         qualityCurrent: qualityInit,
@@ -2341,8 +2342,15 @@ export class VideoPlayer
    * @returns 当前播放器实例
    */
   use(plugin: Plugin): VideoPlayer {
-    // SSR 环境只做数据侧初始化，插件 install 可能挂载 DOM / 读取 window
-    if (!isBrowser()) return this;
+    /**
+     * SSR 环境只同步安装标志（renderToString 依赖 pluginFlags 决定
+     * Show 图层与弹幕发送栏是否直出）；插件 install 可能挂载 DOM /
+     * 读取 window，留待客户端 hydrate 后执行
+     */
+    if (!isBrowser()) {
+      this.syncPluginFlags(plugin.name, true);
+      return this;
+    }
     if (!this.pluginManager) {
       logger.error("插件管理器未初始化");
       return this;
@@ -2995,6 +3003,9 @@ export class VideoPlayer
    */
   setWideScreen(isWide: boolean): void {
     this.state.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, isWide);
+    // 持久化（store 三路同步同款）：下次加载构造期读回，页面首屏脚本与
+    // 组件初值经 nova_player_profile.isWideScreen 恢复宽屏布局
+    this.store.setIsWideScreen(isWide);
     this.events.emit(PlayerEventEnum.WIDE_SCREEN_CHANGE, {
       isWideScreen: isWide,
     });
@@ -3097,17 +3108,15 @@ export class VideoPlayer
    * 宽屏（wide）是例外：布局由播放器外部容器决定，播放器只更新宽屏状态
    * 并广播 `wideScreenChange`，不写 `data-screen`、不改变播放器 DOM 布局，
    * 因此 `mode === 'wide'` 直接走 setWideScreen(true) 后返回。
-   * 从宽屏切换到其它模式时先广播退出宽屏（外部容器据此还原）。
+   * normal / web / mini 与宽屏相互独立（宽屏是持久化的页面布局偏好，
+   * 滚动出视野自动进迷你等瞬态切换不得丢失宽屏），不代为退出宽屏；
+   * 退出宽屏只经宽屏按钮 / toggleWideScreen / setWideScreen(false)。
    * @param mode - normal | web | wide | mini
    */
   setDisplayMode(mode: DisplayMode): void {
     if (mode === "wide") {
       this.setWideScreen(true);
       return;
-    }
-    // 退出宽屏：先对外广播，外部容器负责还原布局
-    if (this.isWideScreen()) {
-      this.setWideScreen(false);
     }
 
     this.state.set(PlayerStateKeyEnum.DISPLAY_MODE, mode);

@@ -142,16 +142,8 @@
     // ---------- 播放 / 暂停：居中覆盖 ----------
     &.state-paused {
       .nova-player-state-wrap {
-        bottom: auto;
         cursor: pointer;
-        height: 50px;
-        left: 50%;
-        margin: -25px 0 0 -25px;
         pointer-events: none;
-        position: absolute;
-        right: auto;
-        top: 50%;
-        width: 50px;
         z-index: 54;
       }
 
@@ -162,6 +154,10 @@
         display: block;
         filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
         height: 50px;
+        left: 50%;
+        margin: -25px 0 0 -25px;
+        position: absolute;
+        top: 50%;
         width: 50px;
       }
     }

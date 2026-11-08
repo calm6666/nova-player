@@ -15,6 +15,13 @@ import type { ComponentLifecycle, VNode } from "@/types";
 import { isBrowser } from "@/utils";
 import type { AnimationItem, LottiePlayer } from "lottie-web";
 
+// 浏览器端模块求值即预载 lottie-web：与播放器其余产物并行下载，
+// 避免等首个图标挂载后才串行拉取（控制栏图标每次垫底出现的根因）；
+// 后续 loadLottie 里的动态导入命中同一模块缓存，立即完成
+if (isBrowser()) {
+  void import("lottie-web");
+}
+
 // ============================================
 // 序列播放类型
 // ============================================
@@ -31,10 +38,16 @@ export type AnimationSlotCompleteAction = "next" | "stop" | "loop";
  * 序列播放中的单个动画槽位
  */
 export interface AnimationSlot {
-  /** 动画 JSON 数据，与 path 二选一 */
+  /** 动画 JSON 数据，与 path / loadAnimationData 三选一 */
   animationData?: Record<string, unknown>;
-  /** 动画 JSON 文件 URL，与 animationData 二选一 */
+  /** 动画 JSON 文件 URL，与 animationData / loadAnimationData 三选一 */
   path?: string;
+  /**
+   * 动画 JSON 懒加载器，与 animationData / path 三选一
+   * 大体积动画（悬停动画等）拆离主包：挂载后并行拉取，数据就绪前展示回退内容；
+   * 取回的数据会回填 animationData 缓存，后续切换槽位不再重复加载
+   */
+  loadAnimationData?: () => Promise<Record<string, unknown>>;
   /** 是否自动播放，默认 true */
   autoplay?: boolean;
   /** 起始帧索引，设置后动画从该帧开始播放（autoplay 为 true 时）或停在该帧（autoplay 为 false 时） */
@@ -93,10 +106,15 @@ export interface LottieIconProps {
   name: string;
 
   // === 单动画模式 ===
-  /** 动画 JSON 数据，与 path 二选一 */
+  /** 动画 JSON 数据，与 path / loadAnimationData 三选一 */
   animationData?: Record<string, unknown>;
-  /** 动画 JSON 文件 URL，与 animationData 二选一 */
+  /** 动画 JSON 文件 URL，与 animationData / loadAnimationData 三选一 */
   path?: string;
+  /**
+   * 动画 JSON 懒加载器，与 animationData / path 三选一
+   * 大体积动画拆离主包：挂载后异步取数，数据就绪前展示回退内容
+   */
+  loadAnimationData?: () => Promise<Record<string, unknown>>;
   /** 是否自动播放，默认 true */
   autoplay?: boolean;
   /** 是否循环播放，默认 true */
@@ -163,6 +181,8 @@ export const LottieIcon = defineComponent<LottieIconProps, LottieIconApi>(
       animationData,
       /** 动画 URL 路径 */
       path,
+      /** 动画 JSON 懒加载器（大体积动画拆离主包） */
+      loadAnimationData,
       /** 是否自动播放，默认 true */
       autoplay = true,
       /** 是否循环播放，默认 true */
@@ -388,9 +408,22 @@ export const LottieIcon = defineComponent<LottieIconProps, LottieIconApi>(
         const lottieMod: { default: LottiePlayer } = await import("lottie-web");
         lottieModule = lottieMod.default;
 
+        // 序列模式：先并行取齐各槽位的懒加载数据（回填 animationData 缓存），
+        // 全部就绪后再清空回退内容渲染；取数失败进入回退模式
+        if (sequence && sequence.length > 0) {
+          await Promise.all(
+            sequence.map(async (slot) => {
+              if (slot.animationData || slot.path || !slot.loadAnimationData) {
+                return;
+              }
+              slot.animationData = await slot.loadAnimationData();
+            }),
+          );
+        }
+
         if (!containerRef.value) return;
 
-        // lottie 加载成功，清空回退内容后渲染动画
+        // lottie 与动画数据均就绪，清空回退内容后渲染动画
         containerRef.value.replaceChildren();
 
         // 序列模式
@@ -401,9 +434,13 @@ export const LottieIcon = defineComponent<LottieIconProps, LottieIconApi>(
           return;
         }
 
-        // 单动画模式
+        // 单动画模式：懒加载器取数（缓存到局部变量，仅首次需要）
+        let singleData = animationData;
+        if (!singleData && !path && loadAnimationData) {
+          singleData = await loadAnimationData();
+        }
         animationItem = createAnimation(
-          animationData,
+          singleData,
           path,
           containerRef.value,
           autoplay,
@@ -415,7 +452,7 @@ export const LottieIcon = defineComponent<LottieIconProps, LottieIconApi>(
         // 通知父组件：动画实例已创建
         onReady?.();
       } catch {
-        // lottie-web 加载失败，进入回退模式
+        // lottie-web 或懒加载动画数据加载失败，进入回退模式
         isFallbackMode = true;
         lifecycle.emit?.("loadError", name);
       }

@@ -181,6 +181,8 @@ export interface DanmakuPluginAPI extends Plugin {
   mountList(target: string | HTMLElement): void;
   /** 卸载列表面板 */
   unmountList(): void;
+  /** 运行时更新列表面板高度（页面宽屏 / resize 场景；未挂载列表时仅记录配置） */
+  setListHeight(height: number): void;
   /** 设置弹幕可见性 */
   setVisible(visible: boolean): void;
   /** 发送弹幕（内部读取状态中的颜色/模式组装，经 onSend 确认后上屏） */
@@ -756,6 +758,12 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     // 移除挂载时追加的样式作用域类，容器交还调用方
     this.listContainer?.classList.remove("danmaku-wrap");
     this.listContainer = null;
+  }
+
+  /** 运行时更新列表面板高度（宽屏 / resize 场景；未挂载列表时仅记录配置） */
+  setListHeight(height: number): void {
+    this.listConfig = { ...this.listConfig, height };
+    this.listHandle?.setHeight(height);
   }
 
   /** 列表视图交互 → 插件行为接线（UI 逻辑不写在插件里） */

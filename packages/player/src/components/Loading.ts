@@ -18,7 +18,7 @@ import type { ComponentLifecycle } from "@/types";
  * 加载组件 Props 接口
  */
 export interface LoadingProps {
-  /** 是否显示加载状态（仅作初值快照；原实现初始渲染不带 state-loading 类，此字段不参与初值） */
+  /** 是否显示加载状态（参与初值：true 时首屏渲染即带 state-loading 类） */
   loading?: boolean;
   /** 加载提示文本（仅作初值快照，运行时由 setText 更新） */
   text?: string;
@@ -35,11 +35,11 @@ export const Loading = defineComponent<LoadingProps>(
 
     /**
      * 是否显示加载面板
-     * 初值语义与原实现严格一致：原实现初始渲染不带 state-loading 类
-     * （面板 scss 默认 display:none），仅外部调用 show() 后可见；
-     * props.loading === false 分支的 hide() 是无操作，故初值恒为 false
+     * 初值由 props.loading 决定（SSR / 挂载配置 ui.initialLoading 透传）：
+     * true 时首屏渲染即带 state-loading 类（初始加载遮罩直出可见），
+     * 此后显隐完全由外部 show()/hide() 接管
      */
-    const visibleSig = signal<boolean>(false);
+    const visibleSig = signal<boolean>(props.loading === true);
 
     /** 加载提示文本（初值取 props 一次性快照，替代原 onMounted 的 textContent 写入） */
     const textSig = signal<string>(props.text ?? "");

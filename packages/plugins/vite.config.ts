@@ -68,6 +68,14 @@ export default defineConfig({
       entryRoot: 'src',
     }),
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // 与 player/live-player 一致：走 modern compiler API，消除 sass legacy-js-api 弃用警告
+        api: 'modern-compiler',
+      },
+    },
+  },
   build: {
     lib: {
       entry: {

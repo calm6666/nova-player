@@ -71,6 +71,21 @@ input[type="radio"] {
   box-sizing: border-box;
   padding: 0;
 }
+input {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
 
 img {
   vertical-align: middle;
@@ -198,7 +213,7 @@ img {
 .nova-player-container[data-screen="full"],
 .nova-player-container[data-screen="web"] {
   .nova-player-video-area {
-    .nova-player-state-wrap {
+    .nova-player-state-wrap .nova-player-state-play {
       bottom: 100px;
     }
   }

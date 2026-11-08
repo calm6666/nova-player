@@ -74,8 +74,8 @@ $eplist-scrollbar-width: 6px;
         overflow-y: auto;
         overscroll-behavior: contain;
         padding: 0;
-        scrollbar-color: hsla(0, 0%, 100%, 0.3) transparent;
-        scrollbar-width: thin;
+        // scrollbar-color: hsla(0, 0%, 100%, 0.3) transparent;
+        // scrollbar-width: thin;
 
         .nova-player-ctrl-eplist-multi-menu-item {
           align-items: center;

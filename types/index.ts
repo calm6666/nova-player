@@ -693,6 +693,15 @@ export interface UiConfig {
    * 默认 false（显示阴影）；运行时可通过 setBoxShadowDisabled 切换。
    */
   disableBoxShadow?: boolean;
+  /**
+   * 初始加载遮罩是否随首屏直出显示（LoadingPanel 初值）
+   *
+   * true 时 SSR 直出与挂载渲染的 LoadingPanel 立即可见，覆盖
+   * 「水合完成 → 流媒体插件接管 load() 广播 LOAD_START」之间的空窗，
+   * 由 LOADED_METADATA / CAN_PLAY / ABORT / ERROR 统一收口隐藏。
+   * 默认 false（保持既有行为：仅 LOAD_START 后显示）。
+   */
+  initialLoading?: boolean;
   /** 片尾形态（默认 standard；电视剧 / 番剧使用 ogv） */
   endingStyle?: PlayerEndingStyle;
   /** Top 形态：default（普通）/ tv（电视剧）/ music（音乐） */
@@ -1129,6 +1138,8 @@ export interface ControlsConfig {
   wideScreen?: boolean;
   /** 网页全屏按钮 */
   webFullscreen?: boolean;
+  /** 弹幕发送栏（embedded 场景默认显示；显式 false 强制关闭，如互动编辑器） */
+  danmakuSend?: boolean;
   /** 进度条分段（运行时从配置透传给控制条） */
   progressSegments?: ProgressSegment[];
   /** 分段进度条常驻展开开关（仅多段时生效） */

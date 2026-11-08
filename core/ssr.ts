@@ -174,12 +174,34 @@ export function renderToString(
   }
 
   /**
-   * 控制流节点：SSR 不输出任何占位（控制流内容在客户端渲染），
+   * 控制流节点：SSR 默认不输出任何占位（控制流内容在客户端渲染），
    * 客户端 hydrateNode 遇到 __flow 时在当前位置插入不可见的空 Text 锚点，
    * 再以该锚点调用 initFor/initShow 等动态渲染子树
    * （水合端保留对旧版 <!--flow--> 注释占位的兼容）
+   *
+   * Show 显隐为真且首个子节点为原生元素时例外：直接输出 children（无任何
+   * 标记），弹幕发送栏等首屏关键 UI 随 SSR 直出。水合端按同一条件 + 标签
+   * 名校验采纳已有 DOM（见 mount.ts 的 isShowSSRRendered），两端条件必须
+   * 保持对称；首个子节点为控制流 / 组件时输出可能为空或形态不定，
+   * 维持客户端渲染，避免水合端误采纳后续兄弟节点
    */
   if (vnode.__flow !== undefined) {
+    const flow = vnode.__flow;
+    const firstChild = flow.children?.[0];
+    if (
+      flow.type === "show" &&
+      flow.when &&
+      flow.when() &&
+      firstChild !== undefined &&
+      firstChild !== null &&
+      typeof firstChild !== "string" &&
+      typeof firstChild.tag === "string" &&
+      firstChild.tag.toLowerCase() !== "fragment"
+    ) {
+      return (flow.children ?? [])
+        .map((child) => renderToString(child))
+        .join("");
+    }
     return "";
   }
 

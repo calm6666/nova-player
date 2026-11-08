@@ -1887,8 +1887,14 @@ export const PlayerDocker = defineComponent<
    */
   const toggleWide = (): void => {
     const next = !(stateMgr?.get(PlayerStateKeyEnum.IS_WIDE_SCREEN) ?? false);
-    stateMgr?.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, next);
+    if (resolvedPlayer) {
+      // 统一走 player.setWideScreen：状态写入 + 持久化（nova_player_profile.iswide）
+      // + 事件广播单点同步，避免旁路状态导致持久化遗漏
+      resolvedPlayer.setWideScreen(next);
+      return;
+    }
     syncWideTooltip(next);
+    stateMgr?.set(PlayerStateKeyEnum.IS_WIDE_SCREEN, next);
     props.events?.emit(PlayerEventEnum.WIDE_SCREEN_CHANGE, {
       isWideScreen: next,
     });
@@ -3027,8 +3033,11 @@ export const PlayerDocker = defineComponent<
               toastApi.removeToast = api.removeToast;
             },
           }),
-          // 加载遮罩（清晰度切换中）
+          // 加载遮罩（初始加载：ui.initialLoading 决定首屏直出即显示，
+          // 覆盖水合/挂载到 LOAD_START 之间的空窗；清晰度切换等场景由 show/hide 接管）
           h(Loading, {
+            loading: props.config?.ui?.initialLoading === true,
+            text: t("player.ui.loading.text"),
             onLoadingMounted: (api: LoadingAPI) => {
               loadingApi.show = api.show;
               loadingApi.hide = api.hide;
@@ -3216,10 +3225,16 @@ export const PlayerDocker = defineComponent<
         // 发送区域（弹幕输入栏，既有实现+ sendbar 挂载方式：
         // .nova-player-sending-area > .nova-player-sending-bar。
         // 按需渲染：未装 danmaku 插件时整个发送区域不挂载——
-        // 连容器一起省掉，避免空 sending-area 撑高播放器底部布局）
+        // 连容器一起省掉，避免空 sending-area 撑高播放器底部布局；
+        // controls.danmakuSend = false 时强制关闭（互动编辑器等借用
+        // embedded 场景但不需要弹幕输入的形态）
         h(
           Show,
-          { when: (): boolean => hasPlugin("danmaku") || embeddedMode },
+          {
+            when: (): boolean =>
+              props.config?.ui?.controls?.danmakuSend !== false &&
+              (hasPlugin("danmaku") || embeddedMode),
+          },
           h(
             "div",
             {

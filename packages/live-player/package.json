@@ -17,7 +17,8 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite build --watch",
+    "demo": "vite",
     "build": "vite build && node ../../scripts/minify-dist.mjs dist && node ../../scripts/patch-dts.mjs packages/live-player",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "check:selectors": "node scripts/check-duplicate-selectors.mjs",

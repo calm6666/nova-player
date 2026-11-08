@@ -41,12 +41,8 @@
   user-select: none;
   -webkit-user-drag: none;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-  scrollbar-width: none;
+  // scrollbar-width: none;
   -ms-overflow-style: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 .nova-player-hotkey-panel-content {
   padding: 0 20px;
@@ -55,7 +51,7 @@
     font-size: 12px;
     height: 24px;
     line-height: 24px;
-    min-width: 390px;
+    // min-width: 390px;
     text-align: center;
 
     .nova-player-hotkey-panel-content-name {

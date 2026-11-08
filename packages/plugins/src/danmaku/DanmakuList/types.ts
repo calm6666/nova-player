@@ -178,6 +178,8 @@ export interface DanmakuListProps {
 export interface DanmakuListViewHandle {
   /** 动态替换列表数据（播放器弹幕 → 展示行由视图内部完成） */
   setList(list: readonly PlayerDanmakuItem[]): void;
+  /** 动态更新面板整体高度（px；页面宽屏 / resize 等场景运行时调用） */
+  setHeight(height: number): void;
   /** 卸载视图并释放节点 */
   dispose(): void;
 }

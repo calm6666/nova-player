@@ -33,12 +33,35 @@ import type { EpisodeOption } from "./EpisodesMenu";
 import { LottieIcon, type LottieIconApi } from "./LottieIcon";
 import { HiRes } from "./icons";
 import fullscreenAnimationData from "../assets/lottie-icon/fullscreen-animation.json";
-import webFullscreenAnimationData from "../assets/lottie-icon/web-fullscreen-animation.json";
-import webExitFullscreenAnimationData from "../assets/lottie-icon/web-exit-fullscreen-animation.json";
-import wideHoverAnimationData from "../assets/lottie-icon/wide-hover-animation.json";
-import wideExitHoverAnimationData from "../assets/lottie-icon/wide-exit-hover-animation.json";
-import pipHoverAnimationData from "../assets/lottie-icon/pip-hover-animation.json";
-import pipExitHoverAnimationData from "../assets/lottie-icon/pip-exit-hover-animation.json";
+
+/**
+ * 动画 JSON 懒加载器类型（对应 LottieIcon 槽位的 loadAnimationData）
+ */
+type AnimationDataLoader = () => Promise<Record<string, unknown>>;
+
+/**
+ * 大体积悬停动画 JSON（合计 ~730KB）聚合加载：
+ * 6 个动画 JSON 聚合在 icon-animations 单一模块中，仅产生 1 个
+ * chunk / 1 个网络请求，全部数据同批就绪、图标同时渲染，不再逐个出现；
+ * Promise 在模块求值时即发起（与 lottie-web 预载并行），数据在
+ * Promise 上缓存，后续悬停/状态切换不再重复加载
+ */
+const iconAnimationsPromise = import("./icon-animations").then(
+  (m) => m.iconAnimations,
+);
+
+const loadWebFullscreenData: AnimationDataLoader = () =>
+  iconAnimationsPromise.then((data) => data.webFullscreen);
+const loadWebExitFullscreenData: AnimationDataLoader = () =>
+  iconAnimationsPromise.then((data) => data.webExitFullscreen);
+const loadWideHoverData: AnimationDataLoader = () =>
+  iconAnimationsPromise.then((data) => data.wideHover);
+const loadWideExitHoverData: AnimationDataLoader = () =>
+  iconAnimationsPromise.then((data) => data.wideExitHover);
+const loadPipHoverData: AnimationDataLoader = () =>
+  iconAnimationsPromise.then((data) => data.pipHover);
+const loadPipExitHoverData: AnimationDataLoader = () =>
+  iconAnimationsPromise.then((data) => data.pipExitHover);
 
 /**
  * RightControls 组件 Props 接口
@@ -614,12 +637,12 @@ export const RightControls = defineComponent<
             name: "pip",
             sequence: [
               {
-                animationData: pipHoverAnimationData,
+                loadAnimationData: loadPipHoverData,
                 complete: "stop",
                 autoplay: false,
               },
               {
-                animationData: pipExitHoverAnimationData,
+                loadAnimationData: loadPipExitHoverData,
                 complete: "stop",
                 autoplay: false,
               },
@@ -657,12 +680,12 @@ export const RightControls = defineComponent<
             name: "wide",
             sequence: [
               {
-                animationData: wideHoverAnimationData,
+                loadAnimationData: loadWideHoverData,
                 complete: "stop",
                 autoplay: false,
               },
               {
-                animationData: wideExitHoverAnimationData,
+                loadAnimationData: loadWideExitHoverData,
                 complete: "stop",
                 autoplay: false,
               },
@@ -698,12 +721,12 @@ export const RightControls = defineComponent<
             name: "webFullscreen",
             sequence: [
               {
-                animationData: webFullscreenAnimationData,
+                loadAnimationData: loadWebFullscreenData,
                 complete: "stop",
                 autoplay: false,
               },
               {
-                animationData: webExitFullscreenAnimationData,
+                loadAnimationData: loadWebExitFullscreenData,
                 complete: "stop",
                 autoplay: false,
               },

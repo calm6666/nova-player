@@ -1,5 +1,19 @@
+// 覆盖层几何恒定：wrap 始终铺满 video-area（absolute inset 0），
+// 暂停按钮 / 缓冲提示只在 wrap 内部定位与显隐。
+// 若 wrap 在「角落 64x64」与「全屏缓冲」之间切换尺寸，会触发整块
+// 视频区的 layout shift（实测两次 0.6），故把几何固定在 wrap 上。
 .nova-player-state-wrap {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+  left: 0;
   pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 48;
 
   .nova-player-state-buff-icon,
   .nova-player-state-buff-text,
@@ -11,26 +25,6 @@
 .nova-player-container {
   &.state-buff {
     .nova-player-state-wrap {
-      -webkit-box-pack: center;
-      -ms-flex-pack: center;
-      -webkit-box-align: center;
-      -ms-flex-align: center;
-      -webkit-box-orient: vertical;
-      -webkit-box-direction: normal;
-      align-items: center;
-      display: -webkit-box;
-      display: -ms-flexbox;
-      display: flex;
-      -ms-flex-direction: column;
-      flex-direction: column;
-      height: 100%;
-      justify-content: center;
-      left: 0;
-      position: absolute;
-      top: 0;
-      width: 100%;
-      z-index: 48;
-
       .nova-player-state-buff-icon {
         display: block;
         height: 24px;
@@ -54,22 +48,16 @@
   }
   &.state-paused {
     .nova-player-state-wrap {
-      bottom: 62px;
       cursor: pointer;
-      pointer-events: none;
-      position: absolute;
-      right: 34px;
-      z-index: 48;
 
       .nova-player-state-play {
         background: url(@/assets/images/play.svg) 50% no-repeat;
+        bottom: 62px;
         display: block;
         height: 64px;
+        position: absolute;
+        right: 34px;
         width: 64px;
-      }
-
-      .nova-player-state-play {
-        display: block;
       }
 
       .nova-player-mini-warp {

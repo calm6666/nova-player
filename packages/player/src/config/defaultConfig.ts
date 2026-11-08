@@ -65,6 +65,9 @@ const defaultConfig: PlayerConfig = {
     endingStyle: "standard",
     // 容器阴影开关：false = 不添加 state-disable-box-shadow 类名（显示阴影）
     disableBoxShadow: false,
+    // 初始加载遮罩初值：true 时 SSR 直出 / 挂载渲染即显示 LoadingPanel，
+    // 覆盖水合完成到 LOAD_START 之间的加载空窗（LOAD_START 后由事件接管）
+    initialLoading: false,
     controls: defaultControlConfig,
   },
 

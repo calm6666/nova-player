@@ -2240,8 +2240,10 @@ wireDemoButton("btn-display-wide", () => {
 wireDemoButton("btn-display-normal", () => {
   const player = currentPlayer();
   if (!player) return;
+  // 显示模式与宽屏相互独立：从宽屏回普通模式需显式退出宽屏
+  player.setWideScreen(false);
   player.setDisplayMode("normal");
-  logAction('调用 setDisplayMode("normal")');
+  logAction('调用 setWideScreen(false) + setDisplayMode("normal")');
 });
 
 // i18n 状态查询：getLocale() 与 getLocaleSignal().value 当前值对照
@@ -3163,6 +3165,8 @@ wireDemoButton("btn-api-displaymode", () => {
   if (!player) return;
   apiDisplayModeIdx = (apiDisplayModeIdx + 1) % apiDisplayModeCycle.length;
   const mode = apiDisplayModeCycle[apiDisplayModeIdx];
+  // 显示模式与宽屏相互独立：轮换到非 wide 档时显式退出宽屏，保证可视轮换
+  if (mode !== "wide") player.setWideScreen(false);
   player.setDisplayMode(mode);
   logAction(`setDisplayMode("${mode}")`);
 });

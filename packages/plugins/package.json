@@ -60,7 +60,8 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite build --watch",
+    "demo": "vite",
     "build": "tsc && vite build && node ../../scripts/minify-dist.mjs dist && node ../../scripts/patch-dts.mjs packages/plugins",
     "preview": "vite preview",
     "lint": "node ../../scripts/lint.mjs src --ext .ts",

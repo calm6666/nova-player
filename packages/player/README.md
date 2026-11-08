@@ -87,7 +87,7 @@ player.setWideScreen(true);   // 只更新状态 + 广播事件
 player.isWideScreen();        // 读取当前宽屏状态
 ```
 
-> `setDisplayMode("wide")` 等价于 `setWideScreen(true)`；`setDisplayMode("normal" | "web" | "mini")` 仍由播放器内部处理，并在退出宽屏时先广播 `wideScreenChange(false)`。
+> `setDisplayMode("wide")` 等价于 `setWideScreen(true)`；`setDisplayMode("normal" | "web" | "mini")` 与宽屏相互独立，不代为退出宽屏（滚动出视野自动进迷你等瞬态切换不得丢失宽屏），退出宽屏只经宽屏按钮 / `setWideScreen(false)`。
 
 ## API 速查表
 

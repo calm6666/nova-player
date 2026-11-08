@@ -866,12 +866,21 @@ function unmountFlowChild(state: {
  * 关键：切换 effect 的 dispose 挂在 Show VNode._cleanups（由 materialize 处理），
  * 不挂在被切换的子 VNode 上（否则子 VNode destroy 会把切换 effect 一起 dispose）
  */
-function initShow(vnode: VNode, anchor: FlowAnchor): () => void {
+function initShow(
+  vnode: VNode,
+  anchor: FlowAnchor,
+  /**
+   * 水合采纳场景的初始状态：SSR 直出并已对齐 DOM 的子树
+   * （见 hydrateShowSSRContent）。传入时初始即视为已挂载，
+   * 首跑 when() 与之相等直接跳过，不重挂
+   */
+  adopted?: { vnode: VNode | null },
+): () => void {
   const flow = vnode.__flow!;
   const children = flow.children ?? [];
   const fallback = flow.fallback;
   let currentState: { vnode: VNode | null; textNode: Text | null } = {
-    vnode: null,
+    vnode: adopted?.vnode ?? null,
     textNode: null,
   };
   /**
@@ -883,7 +892,8 @@ function initShow(vnode: VNode, anchor: FlowAnchor): () => void {
    *   重复触发子组件 onMounted，极易与「挂载即回写」的组件 API
    *   形成回写型循环（Cycle detected 熔断的常见形态）
    */
-  let lastVisible: boolean | undefined;
+  // 水合采纳场景初始即已挂载（undefined 仍表示未初始化，确保首跑必挂载）
+  let lastVisible: boolean | undefined = adopted ? true : undefined;
 
   const effectDispose = effect((): void => {
     const visible = flow.when ? flow.when() : false;
@@ -1983,6 +1993,92 @@ function hydrateFlowNode(
 }
 
 /**
+ * 判定 Show 的 SSR 直出内容是否从当前游标开始（与 ssr.ts 直出条件对称）
+ *
+ * 首子节点为原生元素 VNode（tag 为字符串且非 fragment）时，SSR 必然
+ * 在该位置输出其 DOM；再校验游标处 DOM 的标签名一致，防止误采纳后续
+ * 兄弟节点。校验失败计入 mismatch，调用方退回旧协议（锚点 + 客户端渲染）
+ *
+ * @param children - Show 的 __flow.children
+ * @param el - 当前游标节点
+ */
+function isShowSSRRendered(
+  children: VNodeChild[] | undefined,
+  el: ChildNode | null,
+): boolean {
+  const first = children?.[0];
+  if (
+    first === undefined ||
+    first === null ||
+    typeof first === "string" ||
+    typeof first.tag !== "string" ||
+    first.tag.toLowerCase() === "fragment" ||
+    el === null
+  ) {
+    return false;
+  }
+  if (!(el instanceof Element)) {
+    hydrationMismatchCount += 1;
+    return false;
+  }
+  if (el.tagName.toLowerCase() !== first.tag.toLowerCase()) {
+    hydrationMismatchCount += 1;
+    return false;
+  }
+  return true;
+}
+
+/**
+ * 采纳 Show 的 SSR 直出子树并接管后续显隐切换
+ *
+ * 游标 el 起为 SSR 直出的 children DOM：逐子节点走 hydrateNode 对齐
+ * （绑定 el / ref / 事件），生命周期就地补发——控制流子树不在静态
+ * children 里，hydrate 顶层的 invokeLifecycle 到不了这里，须镜像
+ * mountFlowChild 的补发顺序。锚点插在被采纳子树之后，initShow 以
+ * 「已挂载」初始状态接管，显隐翻转时照常销毁重建
+ *
+ * @param vnode - Show 的 __flow VNode
+ * @param el - 游标处首个直出 DOM 节点（isShowSSRRendered 已保证非空）
+ * @param parent - 锚点依托的父节点
+ * @returns 下一个未消费的 DOM 节点
+ */
+function hydrateShowSSRContent(
+  vnode: VNode,
+  el: ChildNode | null,
+  parent: ParentNode,
+): ChildNode | null {
+  const flow = vnode.__flow!;
+  const children = flow.children ?? [];
+  const parentNode = el?.parentNode ?? parent;
+  let cursor: ChildNode | null = el;
+  let adopted: VNode | null = null;
+
+  for (const child of children) {
+    if (typeof child === "string") {
+      // 字符串子节点：SSR 输出一个文本节点，仅消费不对齐
+      cursor = cursor?.nextSibling ?? null;
+      continue;
+    }
+    child.__parent = vnode;
+    cursor = hydrateNode(child, cursor, cursor?.parentNode ?? parentNode);
+    invokeLifecycle(child, "onBeforeMount");
+    // DOM 已随 SSR 在位，无需插入，直接补发挂载完成
+    invokeLifecycle(child, "onMounted");
+    adopted = child;
+  }
+
+  // 锚点插在被采纳子树之后（cursor 为 null 时追加到末尾）
+  const anchor = document.createTextNode("");
+  (cursor?.parentNode ?? parentNode).insertBefore(anchor, cursor);
+  vnode.el = anchor;
+
+  const dispose = initShow(vnode, anchor, { vnode: adopted });
+  if (!vnode._cleanups) vnode._cleanups = [];
+  vnode._cleanups.push(dispose);
+  return cursor;
+}
+
+/**
  * 递归水合单个节点
  * 将 VNode 与已有 DOM 元素关联：存储 el、绑定 ref/事件、收集清理函数
  *
@@ -2097,12 +2193,25 @@ function hydrateNode(
 
   /**
    * 控制流节点水合：
-   * SSR 端 __flow 输出 <!--flow--> 注释（见 ssr.ts），控制流内容在客户端渲染。
-   * 以该注释为锚点运行 initFor/initShow/initSwitch/initDynamic，
+   * SSR 端控制流默认不输出占位（见 ssr.ts），控制流内容在客户端渲染。
+   * 以空 Text 锚点运行 initFor/initShow/initSwitch/initDynamic，
    * 动态子树渲染后插入锚点之前（与 mount 的 materialize 行为一致）。
-   * 若 el 是旧版 SSR 输出的 <__flow> 空元素，先替换为注释锚点再 init。
+   * 若 el 是旧版 SSR 输出的 <!--flow--> 注释 / <__flow> 空元素，先替换为锚点再 init。
+   *
+   * Show 直出采纳例外：SSR 在 when() 为真且首子节点为原生元素时直接
+   * 输出了 children（见 ssr.ts，两端条件对称），此处按同一条件 + 标签
+   * 名校验采纳已有 DOM 后再接管切换；条件不满足则退回旧协议
    */
   if (vnode.__flow !== undefined) {
+    const showFlow = vnode.__flow;
+    if (
+      showFlow.type === "show" &&
+      showFlow.when &&
+      showFlow.when() &&
+      isShowSSRRendered(showFlow.children, el)
+    ) {
+      return hydrateShowSSRContent(vnode, el, parent);
+    }
     let anchor: Text;
     let next: ChildNode | null;
     if (isCommentNode(el)) {

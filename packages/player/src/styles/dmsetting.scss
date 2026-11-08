@@ -560,11 +560,11 @@
               display: -webkit-inline-box;
               display: -ms-inline-flexbox;
               display: inline-flex;
-              height: 14px;
+              height: 22px;
               -webkit-box-pack: center;
               -ms-flex-pack: center;
               justify-content: center;
-              width: 14px;
+              width: 22px;
 
               .ui-select-arrow-down {
                 border-left: 4px solid transparent;
@@ -593,6 +593,7 @@
             list-style: none;
             margin: 0;
             padding: 0;
+            height: 100%;
 
             .ui-select-item {
               -webkit-box-sizing: border-box;
