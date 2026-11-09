@@ -4,9 +4,9 @@
  * 与 demo/main.ts 结构一致，但播放器从构建产物导入（验证打包是否正确）。
  *
  * 导入策略：
- * - 框架核心（h, defineComponent, useState 等）：从 @/core 源码导入
- *   框架不需要独立打包发布，demo 中通过 Vite 别名即时编译
- * - 播放器（VideoPlayer）：从 packages/player/dist/index.es.js 导入
+ * - 框架核心（h, defineComponent, useState 等）：经 workspace 包名
+ *   @lumina/framework 导入（框架已独立成包）
+ * - 播放器（VideoPlayer）：从 @lumina/nova 构建产物导入
  *   这是 vite build 构建后的 ES 模块产物，验证 luminaCompile 插件是否生效
  * - 插件（HLS, DASH）：在 entry-client.ts 中按需从 dist 导入
  */
@@ -20,8 +20,8 @@ import {
   computed,
   effect,
   onEffect,
-} from "../core/index.ts";
-import type { Signal } from "../core/index.ts";
+} from "@lumina/framework";
+import type { Signal } from "@lumina/framework";
 
 // ★ 从构建产物导入播放器（monorepo 链接到 packages/player/dist）
 import { VideoPlayer } from "@lumina/nova";

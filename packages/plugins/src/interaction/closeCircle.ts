@@ -11,9 +11,9 @@
  * - onClick 可选：编辑模式不传时圆环仅渲染、不注册点击监听
  */
 
-import { h } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import { h } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 
 /** 卡片淡出过渡时长（毫秒），与 interaction.scss 的 transition 时长一致 */
 export const CARD_FADE_MS = 350;

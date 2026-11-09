@@ -5,14 +5,10 @@
  * 独立的函数组件，拥有自己的生命周期
  */
 
-import { h, defineComponent, Show } from "@/core";
-import { isBrowser } from "@/utils";
+import { h, defineComponent, Show } from '@lumina/framework/core';
+import { isBrowser } from '@lumina/framework/utils';
 import { ProgressBar, type ProgressBarApi } from "./ProgressBar";
-import type {
-  ProgressPreviewProvider,
-  ProgressSegment,
-  ProgressSkipPoints,
-} from "@/types";
+import type { ProgressPreviewProvider, ProgressSegment, ProgressSkipPoints } from "../types/player";
 
 /**
  * TopControls 组件 Props 接口

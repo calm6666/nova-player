@@ -15,8 +15,8 @@
  *   （data-ctrl-hidden / data-screen）纯 CSS 派生，无 JS 参与
  */
 
-import { h, defineComponent, useTemplateRef, signal } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, useTemplateRef, signal } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 // ============================================
 // 字幕位置类型

@@ -10,9 +10,9 @@
  * 组件不处理鼠标事件，通过 ref 暴露方法供父组件调用
  */
 
-import { h, defineComponent, useTemplateRef } from "@/core";
-import type { ComponentLifecycle, VNode } from "@/types";
-import { isBrowser } from "@/utils";
+import { h, defineComponent, useTemplateRef } from '@lumina/framework/core';
+import type { ComponentLifecycle, VNode } from "@lumina/framework/types";
+import { isBrowser } from '@lumina/framework/utils';
 import type { AnimationItem, LottiePlayer } from "lottie-web";
 
 // 浏览器端模块求值即预载 lottie-web：与播放器其余产物并行下载，

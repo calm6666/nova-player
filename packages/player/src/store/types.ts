@@ -7,7 +7,7 @@
  * 弹幕/字幕等插件设置由各插件自己管理持久化
  */
 
-import type { QualityLevel } from '@/types/streamPlugin';
+import type { QualityLevel } from '../types/streamPlugin';
 
 /**
  * 画质选项

@@ -38,7 +38,7 @@ export type { StreamPlugin, StreamConfig, BufferInfo, StreamStats, MediaManifest
 // StreamPluginTypeEnum / StreamFormatEnum 以运行时真正使用的那份为准
 // （@/types/streamPlugin，取值为小写 'hls' / 'dash' / 'flv'）；
 // ./stream/enums 下的同名枚举是大写旧版（'HLS' …），与运行时值不相等，故不再从那里导出
-export { StreamPluginTypeEnum, StreamFormatEnum } from '@/types/streamPlugin';
+export { StreamPluginTypeEnum, StreamFormatEnum } from '@lumina/nova';
 export { StreamingProtocolEnum, BufferStatusEnum } from './stream/enums';
 
 // 流媒体插件私有事件总线：StreamPluginEventEnum 的上报不再经播放器总线，
@@ -55,7 +55,7 @@ export type {
 // 与私有总线 StreamPluginEventMap 的键完全一致；
 // 此前这里导出的是 ./stream/enums 下的同名枚举（值不带 STREAM_ 前缀，如 STATS_UPDATE），
 // 拿它订阅私有总线永远匹配不上，故统一导出插件真正使用的那一份
-export { StreamPluginEventEnum } from '@/types/streamPlugin';
+export { StreamPluginEventEnum } from '@lumina/nova';
 
 // 导出 FLV 插件 - 使用工厂函数
 export { FlvPlugin, createFlvPlugin } from './flv';

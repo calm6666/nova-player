@@ -22,9 +22,9 @@
  *     createHotkeyHandlers() 中通过 keydown/keyup 配合实现。
  */
 
-import { useContext } from "@/core";
-import { StateContext, type PlayerStateMap } from "@/store/runtimeState";
-import type { TypedStateManager } from "@/core";
+import { useContext } from '@lumina/framework/core';
+import { StateContext, type PlayerStateMap } from "../store/runtimeState";
+import type { TypedStateManager } from "@lumina/framework/core";
 
 // ============================================
 // 类型定义

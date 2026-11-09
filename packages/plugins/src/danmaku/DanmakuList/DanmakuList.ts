@@ -4,19 +4,9 @@
  * 样式作用域：挂载容器由插件追加 .danmaku-wrap，本组件不额外包 DOM。
  */
 
-import {
-  defineComponent,
-  destroy,
-  For,
-  h,
-  mount,
-  signal,
-  t,
-  onEffect,
-  Show,
-} from "@/core";
-import type { VNode } from "@/types";
-import type { DanmakuItem as PlayerDanmakuItem } from "@/types/danmaku";
+import { defineComponent, destroy, For, h, mount, signal, t, onEffect, Show } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
+import type { DanmakuItem as PlayerDanmakuItem } from "@lumina/nova";
 
 import {
   CheckboxIcon,

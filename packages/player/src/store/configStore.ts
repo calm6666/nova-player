@@ -15,9 +15,9 @@
  *   无响应式、纯回调通知、`===` 短路（值未变不回调）、监听器异常隔离。
  */
 
-import { createContext } from '@/core/context';
-import type { PlayerConfig } from '@/types';
-import { createLogger } from '@/utils';
+import { createContext } from '@lumina/framework/core/context';
+import type { PlayerConfig } from '../types/player';
+import { createLogger } from '@lumina/framework/utils';
 
 /** 配置中心日志（仅 error 级别的监听器异常隔离记录） */
 const logger = createLogger('ConfigStore');

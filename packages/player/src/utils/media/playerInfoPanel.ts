@@ -19,9 +19,9 @@ import {
   type HlsPlayer,
   type FlvPlayer,
 } from "./types";
-import { Close } from "@/nova/components/icons";
-import { materialize } from "@/core";
-import { renderSvgMarkup } from "@/nova/utils/svgMarkup";
+import { Close } from "../../components/icons";
+import { materialize } from '@lumina/framework/core';
+import { renderSvgMarkup } from "../svgMarkup";
 
 /** 面板配置 */
 export interface PanelConfig {

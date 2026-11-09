@@ -14,12 +14,12 @@
  *   hover 定时器（rafTimeout）仅负责延迟时序并写信号，不直接操作 DOM
  */
 
-import { h, defineComponent, signal, computed, For, t } from "@/core";
-import { useComponentUnmount } from "@/nova/core/componentUnmount";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import type { VNode } from "@/types";
-import { ArrowRight } from "@/components/icons";
+import { h, defineComponent, signal, computed, For, t } from '@lumina/framework/core';
+import { useComponentUnmount } from "../core/componentUnmount";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import type { VNode } from "@lumina/framework/types";
+import { ArrowRight } from "./icons";
 
 /** 展开 / 收起动画的延迟（毫秒） */
 const MENU_SHOW_DELAY = 120;

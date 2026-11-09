@@ -11,9 +11,9 @@
  *   属命令式读取场景，保留 DOM 引用
  */
 
-import { h, defineComponent, signal, useTemplateRef } from '@/core';
-import type { VNode, ComponentLifecycle } from '@/types';
-import { isBrowser } from '@/utils';
+import { h, defineComponent, signal, useTemplateRef } from '@lumina/framework/core';
+import type { VNode, ComponentLifecycle } from '@lumina/framework/types';
+import { isBrowser } from '@lumina/framework/utils';
 
 /**
  * 标记点接口

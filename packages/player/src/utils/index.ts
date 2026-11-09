@@ -4,7 +4,7 @@
  * 提供播放器所需的各种工具函数
  */
 
-import { createLogger } from '@/utils';
+import { createLogger } from '@lumina/framework/utils';
 const logger = createLogger('EventEmitter');
 
 // ============================================

@@ -6,8 +6,8 @@
  * 互动插件将自身 DOM 注入到该容器中
  */
 
-import { h, defineComponent, useTemplateRef } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, useTemplateRef } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 // ============================================
 // 互动层容器组件 Props 接口

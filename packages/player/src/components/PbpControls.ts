@@ -14,13 +14,9 @@
  *     setEnergy/setProgress/setDuration（性能关键的逐帧更新，调用 render 重绘曲线）
  */
 
-import { h, defineComponent, useTemplateRef, t, signal } from "@/core";
-import {
-  buildEnergyAreaPath,
-  ENERGY_VIEW_HEIGHT,
-  ENERGY_VIEW_WIDTH,
-} from "@/nova/utils/media/energyProgress";
-import type { EnergyProgressData } from "@/nova/utils/media/energyProgress";
+import { h, defineComponent, useTemplateRef, t, signal } from '@lumina/framework/core';
+import { buildEnergyAreaPath, ENERGY_VIEW_HEIGHT, ENERGY_VIEW_WIDTH } from "../utils/media/energyProgress";
+import type { EnergyProgressData } from "../utils/media/energyProgress";
 
 export interface PbpControlsProps {
   visible?: boolean;

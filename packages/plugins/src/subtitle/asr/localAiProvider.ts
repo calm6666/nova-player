@@ -16,14 +16,9 @@
  * @module packages/plugins/src/subtitle/asr/localAiProvider
  */
 
-import type {
-  AsrEngine,
-  LocalAiSubtitleProvider,
-  SubtitleEngineContext,
-  SubtitleItem,
-} from '@/types/subtitle';
+import type { AsrEngine, LocalAiSubtitleProvider, SubtitleEngineContext, SubtitleItem } from '@lumina/nova';
 import { VadSegmenter } from './vadSegmenter';
-import { isBrowser } from '@/utils';
+import { isBrowser } from '@lumina/framework/utils';
 
 /** 本地识别轨 id（插件轨道注册表与 SubtitleCueEvent.trackId 共用） */
 export const LOCAL_AI_TRACK_ID = 'local-ai';

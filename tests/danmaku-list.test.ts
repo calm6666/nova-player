@@ -11,12 +11,12 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { initI18n } from "@/core";
-import zhCN from "../locales/zh-CN.json";
-import { mountDanmakuListView } from "@/lumina/plugins/danmaku/DanmakuList/DanmakuList";
-import type { DanmakuListViewHandle } from "@/lumina/plugins/danmaku/DanmakuList/DanmakuList";
-import { DanmakuType } from "@/types/danmaku";
-import type { DanmakuItem } from "@/types/danmaku";
+import { initI18n } from '@lumina/framework/core';
+import zhCN from "../packages/player/src/i18n/locales/zh-CN.json";
+import { mountDanmakuListView } from "../packages/plugins/src/danmaku/DanmakuList/DanmakuList";
+import type { DanmakuListViewHandle } from "../packages/plugins/src/danmaku/DanmakuList/DanmakuList";
+import { DanmakuType } from "@lumina/nova";
+import type { DanmakuItem } from "@lumina/nova";
 
 // i18n 启用中文，用于断言文案 key 均已补齐
 initI18n({ enabled: true, locale: "zh-CN", messages: { "zh-CN": zhCN } });

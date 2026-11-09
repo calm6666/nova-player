@@ -19,7 +19,7 @@
  * 由调用方隐藏速度文本，不显示「0.0MB/S」这类无意义的假数据。
  */
 
-import { isBrowser } from '@/utils';
+import { isBrowser } from '@lumina/framework/utils';
 
 /** 原生路径滑动窗口时长（毫秒）：只统计最近这段时间内完成的资源条目 */
 const WINDOW_MS = 5000;

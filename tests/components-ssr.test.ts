@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { h, renderToString } from '../core';
+import { h, renderToString } from '@lumina/framework';
 import { Loading } from '../packages/player/src/components/Loading';
 import { State } from '../packages/player/src/components/State';
 import { Switch } from '../packages/player/src/components/Switch';

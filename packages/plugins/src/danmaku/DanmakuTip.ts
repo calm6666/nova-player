@@ -23,8 +23,8 @@
  * 样式唯一来源：danmaku.scss 的 .nova-player-dm-tip 家族，TS 内零内联样式
  */
 
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
 import type { DanmakuRenderItem } from "../utils/danmaku/types";
 
 /** 操作条主体装饰（原版 TipSvgm：气泡底板描边，尾尖在顶部中间） */

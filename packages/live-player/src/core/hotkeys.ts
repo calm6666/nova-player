@@ -5,7 +5,7 @@
  * 保证说明面板永远与真实行为一致（只读展示，不提供自定义注册）。
  */
 
-import type { NovaHotkeyItem } from '@/live/types';
+import type { NovaHotkeyItem } from '../types';
 
 /** 全部快捷键（按展示顺序排列）。 */
 export const NOVA_LIVE_HOTKEYS: readonly NovaHotkeyItem[] = [

@@ -6,8 +6,8 @@
  * 提供组件外切换主题的全局信号（setMusicTheme，对应 changeTheme）。
  */
 
-import { signal } from "@/core";
-import type { Signal } from "@/core";
+import { signal } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
 
 /** 主题类型 */
 export type ThemeMode = "light" | "dark";

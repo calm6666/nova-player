@@ -26,15 +26,15 @@
 
 import flvjs from 'flv.js';
 import type { VideoPlayer } from '@lumina/nova';
-import { StreamPluginTypeEnum, StreamPluginEventEnum } from '@/types/streamPlugin';
-import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel } from '@/types/streamPlugin';
-import type { PluginOptions } from '@/types/plugin';
-import { PlayerEventEnum } from '@/core/events';
-import type { PlayerEventBus } from '../../../player/src/core/plugin';
+import { StreamPluginTypeEnum, StreamPluginEventEnum } from '@lumina/nova';
+import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel } from '@lumina/nova';
+import type { PluginOptions } from '@lumina/nova';
+import { PlayerEventEnum } from '@lumina/nova';
+import type { PlayerEventBus } from '@lumina/nova';
 import { createStreamPluginEventBus } from '../stream/streamEventBus';
 import type { StreamPluginEventBus } from '../stream/streamEventBus';
 import { BrowserCapabilityDetector } from '@lumina/nova';
-import { createLogger } from '@/utils';
+import { createLogger } from '@lumina/framework/utils';
 
 const logger = createLogger('FlvPlugin');
 

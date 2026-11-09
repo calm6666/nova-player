@@ -20,26 +20,13 @@
  *     弹幕设置初始值从运行时状态推送给 Slider API
  */
 
-import {
-  h,
-  defineComponent,
-  useContext,
-  useTemplateRef,
-  signal,
-  onEffect,
-  For,
-  t,
-} from "@/core";
-import type { VNode } from "@/types";
-import { Slider } from "@/nova/components/Slider";
-import { Checkbox } from "@/nova/components/Checkbox";
-import { ArrowLeft, ArrowRight } from "@/nova/components/icons";
-import {
-  StateContext,
-  PlayerStateKeyEnum,
-  type PlayerStateMap,
-} from "@/store/runtimeState";
-import type { TypedStateManager } from "@/core/state";
+import { h, defineComponent, useContext, useTemplateRef, signal, onEffect, For, t } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
+import { Slider } from "./Slider";
+import { Checkbox } from "./Checkbox";
+import { ArrowLeft, ArrowRight } from "./icons";
+import { StateContext, PlayerStateKeyEnum, type PlayerStateMap } from "../store/runtimeState";
+import type { TypedStateManager } from "@lumina/framework/core/state";
 
 /** 弹幕速度滑杆值（0-100）到速度倍率的映射：0 → 0.5，50 → 1.0，100 → 1.5 */
 const speedSliderToMultiplier = (value: number): number => 0.5 + value / 100;

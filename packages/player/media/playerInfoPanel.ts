@@ -13,7 +13,7 @@ import {
   formatBitrate,
 } from './chart';
 import { PlayerType, type PlayerStats, type DashPlayer, type HlsPlayer, type FlvPlayer } from './types';
-import { isBrowser } from '@/utils';
+import { isBrowser } from '@lumina/framework/utils';
 
 /** 面板配置 */
 export interface PanelConfig {

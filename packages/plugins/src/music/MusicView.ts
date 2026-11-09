@@ -8,18 +8,9 @@
  * 面板根节点为 #musicApp（与原实现一致），由视图在 onMounted 后挂载进宿主容器。
  */
 
-import {
-  h,
-  defineComponent,
-  signal,
-  computed,
-  untracked,
-  onEffect,
-  mount,
-  destroy,
-  type ComponentLifecycle,
-} from "@/core";
-import type { VNode } from "@/types";
+import { h, defineComponent, signal, computed, untracked, onEffect, mount, destroy } from '@lumina/framework/core';
+import type { ComponentLifecycle } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import { CloseIcon, MusicNoteIcon, cx } from "./base";
 import { fetchAbTest, fetchMusicDetail } from "./api";
 import { musicTheme } from "./theme";

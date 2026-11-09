@@ -13,41 +13,19 @@
  * 配置只通过 property 传入，根元素不观察任何 attribute。
  */
 
-import { getLocale, h, initI18n, isI18nEnabled, setLocale, Show, signal, t } from '@/core';
-import { dispatchPlayerEvent } from '@/live/core/events';
-import { NOVA_LIVE_HOTKEYS } from '@/live/core/hotkeys';
-import {
-  clearSettings,
-  loadMiniPosition,
-  loadSettings,
-  saveMiniPosition,
-  saveSettings,
-} from '@/live/core/persistence';
-import { detectStreamKind } from '@/live/core/stream';
-import type { StreamQuality } from '@/live/core/stream';
-import { isDanmakuPluginInstance, LivePluginHost } from '@/live/core/pluginHost';
-import { LiveTimerRegistry } from '@/live/core/timers';
-import { pauseIcon, playIcon, refreshIcon } from '@/live/icons';
-import { mergeLivePlayerMessages } from '@/live/i18n/locales';
-import { DEFAULT_DANMAKU_SETTING } from '@/live/types';
-import type {
-  NovaCodecCandidate,
-  NovaContextMenuAction,
-  NovaContextMenuTarget,
-  NovaControlAction,
-  NovaDanmakuItem,
-  NovaDanmakuSetting,
-  NovaErrorContent,
-  NovaLiveDanmakuPlugin,
-  NovaLivePlayerOptions,
-  NovaLivePlugin,
-  NovaLineCandidate,
-  NovaPanelName,
-  NovaQualityCandidate,
-  NovaScreenMode,
-  NovaVideoInfo,
-} from '@/live/types';
-import type { VNode } from '@/types';
+import { getLocale, h, initI18n, isI18nEnabled, setLocale, Show, signal, t } from '@lumina/framework/core';
+import { dispatchPlayerEvent } from '../core/events';
+import { NOVA_LIVE_HOTKEYS } from '../core/hotkeys';
+import { clearSettings, loadMiniPosition, loadSettings, saveMiniPosition, saveSettings } from '../core/persistence';
+import { detectStreamKind } from '../core/stream';
+import type { StreamQuality } from '../core/stream';
+import { isDanmakuPluginInstance, LivePluginHost } from '../core/pluginHost';
+import { LiveTimerRegistry } from '../core/timers';
+import { pauseIcon, playIcon, refreshIcon } from '../icons';
+import { mergeLivePlayerMessages } from '../i18n/locales';
+import { DEFAULT_DANMAKU_SETTING } from '../types';
+import type { NovaCodecCandidate, NovaContextMenuAction, NovaContextMenuTarget, NovaControlAction, NovaDanmakuItem, NovaDanmakuSetting, NovaErrorContent, NovaLiveDanmakuPlugin, NovaLivePlayerOptions, NovaLivePlugin, NovaLineCandidate, NovaPanelName, NovaQualityCandidate, NovaScreenMode, NovaVideoInfo } from '../types';
+import type { VNode } from '@lumina/framework/types';
 import { NovaLiveUiElement } from './base';
 import { CONTROL_BAR_TAG, NovaLivePlayerControlBarElement } from './ControlBarElement';
 import { DANMAKU_TAG, NovaLivePlayerDanmakuElement } from './DanmakuElement';

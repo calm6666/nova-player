@@ -8,7 +8,7 @@
  * 本模块只做「数据 → SVG path」的纯换算，渲染交给 PbpControls。
  */
 
-import type { EnergyProgressData } from '@/types';
+import type { EnergyProgressData } from '../../types/player';
 
 /**
  * 高能进度条数据（类型定义已上移到公共类型模块 `@/types`，

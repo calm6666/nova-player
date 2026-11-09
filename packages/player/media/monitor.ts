@@ -19,7 +19,7 @@ import {
   type HlsPlayer,
   type FlvPlayer,
 } from './types';
-import { isBrowser } from '@/utils';
+import { isBrowser } from '@lumina/framework/utils';
 
 /** 默认配置 */
 const DEFAULT_CONFIG: Required<MonitorConfig> = {

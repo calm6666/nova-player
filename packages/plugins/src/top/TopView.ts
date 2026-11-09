@@ -5,8 +5,7 @@
  */
 
 import { h, defineComponent, useTemplateRef, t, Fragment, rafTimeout, cancelRaf, type AnimationFrameID } from "@lumina/nova";
-import type { ComponentLifecycle, VNode } from "@lumina/nova";
-
+import type { ComponentLifecycle, VNode } from "@lumina/framework/types";
 
 import { Plus, Issue } from "@lumina/nova";
 /** 外链顶部操作图标（B 站 external 样式） */
@@ -212,7 +211,6 @@ export const Top = defineComponent<TopProps>(
       if (props.visible === false) {
         hide();
       }
-
 
       // 悬停提示的目标元素（挂载后才有 DOM 引用）
       issueTooltip.element = issueIconRef.value;

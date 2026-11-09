@@ -3,7 +3,7 @@
  * 用于生成码率、缓冲区、帧率等数据的平滑曲线图
  */
 
-import { h, materialize } from '@/core';
+import { h, materialize } from '@lumina/framework/core';
 import type { BitrateDataPoint, ThroughputDataPoint, BufferDataPoint, FrameRateDataPoint } from './types';
 
 /** 图表配置 */

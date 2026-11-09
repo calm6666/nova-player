@@ -3,7 +3,7 @@
  *
  * 本文件不再包含手绘图标，仅做转发，保持既有引用路径可用。
  */
-export * from '@/live/assets';
+export * from '../assets';
 
 /**
  * 复选框勾选标记。

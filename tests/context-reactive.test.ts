@@ -9,17 +9,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  createReactiveContext,
-  defineComponent,
-  destroy,
-  h,
-  mount,
-  provide,
-  signal,
-  useContext,
-} from "@/core";
-import type { VNode } from "@/types";
+import { createReactiveContext, defineComponent, destroy, h, mount, provide, signal, useContext } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import { transformCode } from "../plugins/vite-plugin-lumina-compile/transform";
 
 describe("响应式 Context", () => {
@@ -64,7 +55,7 @@ describe("响应式 Context", () => {
 
   it("useContext 作为组件 prop 时编译期不做 _rp 包裹", () => {
     const source = `
-import { h, useContext } from "@/core";
+
 const Child = () => h("span", {});
 const App = defineComponent(() => {
   const ctx = useContext(ConfigContext);

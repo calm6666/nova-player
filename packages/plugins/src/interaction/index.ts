@@ -44,15 +44,15 @@
  * ]
  */
 
-import type { Plugin, PluginOptions } from "@/types/plugin";
-import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
-import type { PlayerEventBus } from "../../../player/src/core/plugin";
-import { PlayerEventEnum } from "@/core/events";
-import { h, signal, Fragment, For, mount, destroy } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import type { Plugin, PluginOptions } from '@lumina/nova';
+import type { VideoPlayer } from "@lumina/nova";
+import type { PlayerEventBus } from "@lumina/nova";
+import { PlayerEventEnum } from "@lumina/nova";
+import { h, signal, Fragment, For, mount, destroy } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 import { updateCardsDiff } from "./diffAlgorithm";
-import { isBrowser } from "@/utils";
+import { isBrowser } from '@lumina/framework/utils';
 import { injectPluginStyle } from "../utils/injectStyle";
 // 交互插件样式以字符串形式内联导入（Vite `?inline`），install 时运行时注入
 import interactionCss from "./interaction.scss?inline";

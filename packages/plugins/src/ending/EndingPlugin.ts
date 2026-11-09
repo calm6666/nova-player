@@ -7,13 +7,13 @@
  */
 
 import {
-  h,
-  mount,
-  destroy,
-  type Plugin,
-  type SlotContext,
-  type SlotMount,
+h,
+mount,
+destroy,
+type SlotContext,
+type SlotMount
 } from "@lumina/nova";
+import { type Plugin } from '@lumina/nova';
 import { Ending as EndingView, type EndingProps } from "./EndingView";
 import { injectPluginStyle } from "../utils/injectStyle";
 import endingCss from "./style.scss?inline";

@@ -12,11 +12,11 @@
  *   选中态由 `styles/base.scss` 的类体系消费（描边统一走 text-shadow）。
  */
 
-import { h } from '@/core';
-import { DanmakuType } from '@/types/danmaku';
-import type { DanmakuItem as PluginDanmakuItem } from '@/types/danmaku';
-import type { NovaDanmakuItem, NovaDanmakuSetting, NovaLiveDanmakuPlugin } from '@/live/types';
-import type { VNode } from '@/types';
+import { h } from '@lumina/framework/core';
+import { DanmakuType } from '@lumina/nova';
+import type { DanmakuItem as PluginDanmakuItem } from '@lumina/nova';
+import type { NovaDanmakuItem, NovaDanmakuSetting, NovaLiveDanmakuPlugin } from '../types';
+import type { VNode } from '@lumina/framework/types';
 import { NovaLiveUiElement } from './base';
 
 /** 弹幕层标签名。 */

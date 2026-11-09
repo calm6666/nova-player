@@ -5,93 +5,42 @@
  * 实现播放器的所有核心功能和状态管理
  */
 
-import type {
-  PlayerConfig,
-  PlayerStateData,
-  PlayerMethods,
-  PlayerEvents,
-  ProgressiveVariant,
-  ComponentInstance,
-  VNode,
-  EventListeners,
-  DeepPartial,
-  MediaItem,
-  PlayerSource,
-  DisplayMode,
-  SubtitleConfig,
-  ProgressSkipPoints,
-  ProgressSegment,
-  EnergyProgressData,
-} from "@/types";
-import { PlayerState, PlayMode } from "@/types";
-import {
-  h,
-  mount,
-  hydrate as hydrateVNode,
-  renderToString as renderVNodeToString,
-  destroy,
-  createTypedStateManager,
-  createTypedEventBus,
-  signal,
-} from "@/core";
-import type { TypedStateManager, TypedEventBus } from "@/core";
-import type { Plugin } from "@/nova/core/plugin";
-import type { ControlsAPI } from "@/nova/components/Controls";
-import { PlayerEventEnum, PlayerEventMap } from "@/core/events";
-import {
-  PlayerStateKeyEnum,
-  PlayerStateMap,
-  StateContext,
-  ConfigContext,
-  defaultControlConfig,
-} from "@/store/runtimeState";
-import { createConfigStore, ConfigStoreContext } from "@/store/configStore";
-import type { ConfigStore } from "@/store/configStore";
-import type { PlayerPlaylistItem } from "@/store/runtimeState";
-import { PlayerContext, type SlotMount } from "@/nova/types/slots";
-import { PluginManager } from "@/nova/core/pluginManager";
-import { teardownComponentTree } from "@/nova/core/componentUnmount";
-import { createPlayerStore } from "@/nova/store";
-import type { PlayerStore } from "@/nova/store";
-import {
-  createLogger,
-  loggerManager,
-  LogLevel,
-  clearStyle,
-  isBrowser,
-} from "@/utils";
-import { isDev } from "@/core/warning";
-import {
-  setLocale,
-  getLocale,
-  registerLocale,
-  initI18n,
-  subscribeLocale,
-  localeSignal,
-} from "@/core/i18n";
-import type { Locale } from "@/core/i18n";
-import type { Signal } from "@/core/signalsCore";
+import type { ComponentInstance, VNode } from "@lumina/framework/types";
+import type { PlayerConfig, PlayerStateData, PlayerMethods, PlayerEvents, ProgressiveVariant, EventListeners, DeepPartial, MediaItem, PlayerSource, DisplayMode, ProgressSkipPoints, ProgressSegment, EnergyProgressData } from "../types/player";
+import type { SubtitleConfig } from "../types/subtitle";
+
+import { PlayerState, PlayMode } from "../types/player";
+import { h, mount, hydrate as hydrateVNode, renderToString as renderVNodeToString, destroy, createTypedStateManager, createTypedEventBus, signal } from '@lumina/framework/core';
+import type { TypedStateManager, TypedEventBus } from "@lumina/framework/core";
+import type { Plugin } from "../core/plugin";
+import type { ControlsAPI } from "../components/Controls";
+import { PlayerEventEnum, PlayerEventMap } from "../types/events";
+import { PlayerStateKeyEnum, PlayerStateMap, StateContext, ConfigContext, defaultControlConfig } from "../store/runtimeState";
+import { createConfigStore, ConfigStoreContext } from "../store/configStore";
+import type { ConfigStore } from "../store/configStore";
+import type { PlayerPlaylistItem } from "../store/runtimeState";
+import { PlayerContext, type SlotMount } from "../types/slots";
+import { PluginManager } from "../core/pluginManager";
+import { teardownComponentTree } from "../core/componentUnmount";
+import { createPlayerStore } from "../store";
+import type { PlayerStore } from "../store";
+import { createLogger, loggerManager, LogLevel, clearStyle, isBrowser } from '@lumina/framework/utils';
+import { isDev } from '@lumina/framework/core/warning';
+import { setLocale, getLocale, registerLocale, initI18n, subscribeLocale, localeSignal } from '@lumina/framework/i18n';
+import type { Locale } from "@lumina/framework/i18n";
+import { Signal } from '@lumina/framework/core/signalsCore';
 import { EventEmitter, fullscreen, pip, clamp } from "../utils";
-import type { DanmakuItem } from "@/types/danmaku";
-import { PlayerDocker } from "@/nova/components/PlayerDocker";
-import type { PlayerPluginFlags } from "@/nova/components/PlayerDocker";
+import type { DanmakuItem } from "../types/danmaku";
+import { PlayerDocker } from "../components/PlayerDocker";
+import type { PlayerPluginFlags } from "../components/PlayerDocker";
 import { StreamMiddleware, PlayerMode } from "../utils/media/streamMiddleware";
 import { detectManifestProtocol } from "../utils/media/manifestProtocol";
-import { StreamFormatEnum } from "@/types/streamPlugin";
-import type {
-  StreamPlugin,
-  QualityLevel as StreamQualityLevel,
-  MediaManifestSource,
-} from "@/types/streamPlugin";
-import defaultConfig from "@/nova/config/defaultConfig";
-import { mergePlayerConfig } from "@/nova/config/mergeConfig";
-import { normalizeConfig } from "@/nova/config/normalizeConfig";
-import {
-  configureStorage,
-  getStorage,
-  removeStorage,
-  setStorage,
-} from "@/nova/utils/storage";
+import { StreamFormatEnum } from "../types/streamPlugin";
+import type { StreamPlugin, QualityLevel as StreamQualityLevel, MediaManifestSource } from "../types/streamPlugin";
+import defaultConfig from "../config/defaultConfig";
+import { mergePlayerConfig } from "../config/mergeConfig";
+import { normalizeConfig } from "../config/normalizeConfig";
+import { configureStorage, getStorage, removeStorage, setStorage } from "../utils/storage";
 import { BrowserCapabilityDetector } from "../utils/browserCapabilityDetector";
 import type { BrowserCapabilityResult } from "../utils/browserCapabilityDetector";
 
@@ -1285,7 +1234,8 @@ export class VideoPlayer
     return h(PlayerDocker, {
       player: this,
       src: this.getCurrentSourceUrl(),
-      playerName: this.props.ui?.title,
+      // ui.title 是视频标题；播放器名称走播放器 API 顶层 playerName（缺省时 Docker 用“嗨哩播放器”）
+      playerName: this.props.playerName,
       autoplay: this.props.playback?.autoplay,
       volume: this.props.playback?.volume,
       muted: this.props.playback?.muted,
@@ -1310,7 +1260,7 @@ export class VideoPlayer
       /** 音效插件 API：右键音效调节面板使用（未装插件返回 null） */
       getAudioEffect: () =>
         (this.getPluginAPI("audioEffect") as unknown as
-          import("@/nova/components/AudioPanel").AudioPanelApi | undefined) ??
+          import("../components/AudioPanel").AudioPanelApi | undefined) ??
         null,
       /** 缓冲速度数据源（字节/秒）：流媒体插件统计优先，原生由 PlayerDocker 回退采样 */
       getStreamDownloadSpeed: () => this.getStreamDownloadSpeed(),

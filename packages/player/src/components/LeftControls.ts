@@ -14,24 +14,16 @@
  *   - 保留命令式：LottieIcon.play() / ViewpointMenu.rebuildPoints() 等组件 API 调用
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useReactiveState,
-  useContext,
-  Show,
-  signal,
-  onEffect,
-  t,
-} from "@/core";
-import type { ProgressSegment, VNode } from "@/types";
-import { PlayerStateKeyEnum, ConfigContext } from "@/store/runtimeState";
-import { StateContext } from "@/store/runtimeState";
-import { ConfigStoreContext } from "@/store/configStore";
-import { PlayerState } from "@/types";
-import { formatTime } from "@/utils/formatTime";
-import { normalizeSegmentSpan } from "@/nova/utils/media/progressSegment";
+import { h, defineComponent, useTemplateRef, useReactiveState, useContext, Show, signal, onEffect, t } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
+import type { ProgressSegment } from "../types/player";
+
+import { PlayerStateKeyEnum, ConfigContext } from "../store/runtimeState";
+import { StateContext } from "../store/runtimeState";
+import { ConfigStoreContext } from "../store/configStore";
+import { PlayerState } from "../types/player";
+import { formatTime } from '@lumina/framework/utils/formatTime';
+import { normalizeSegmentSpan } from "../utils/media/progressSegment";
 import { LottieIcon, type LottieIconApi } from "./LottieIcon";
 import { ViewpointMenu, type ViewpointItem } from "./ViewpointMenu";
 import pauseToPlayAnimationData from "../assets/lottie-icon/pause-to-play-animation.json";

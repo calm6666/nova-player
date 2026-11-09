@@ -27,8 +27,8 @@
  * - 点击条目任意区域重新打开原卡片（由插件清除关闭标记并重建显示）
  */
 
-import { h } from "@/core";
-import type { VNode } from "@/types";
+import { h } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import type { ShrinkCardEntry } from "./types";
 import { renderShrinkRing } from "./closeCircle";
 

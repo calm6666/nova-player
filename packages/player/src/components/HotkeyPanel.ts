@@ -7,9 +7,9 @@
  * 对外 show/hide/open/close API 契约不变，内部仅写信号。
  */
 
-import { h, defineComponent, signal, t } from "@/core";
-import type { ComponentLifecycle } from "@/types";
-import { HOTKEYS } from "@/nova/core/hotkeys";
+import { h, defineComponent, signal, t } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
+import { HOTKEYS } from "../core/hotkeys";
 
 /**
  * 快捷键项接口

@@ -18,26 +18,14 @@
  * API 内部仅写 signal，不再触碰 DOM。
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useState,
-  useContext,
-  useReactiveState,
-  signal,
-  computed,
-  onEffect,
-  t,
-  For,
-} from "@/core";
-import { useComponentUnmount } from "@/nova/core/componentUnmount";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import type { VNode } from "@/types";
+import { h, defineComponent, useTemplateRef, useState, useContext, useReactiveState, signal, computed, onEffect, t, For } from '@lumina/framework/core';
+import { useComponentUnmount } from "../core/componentUnmount";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import type { VNode } from "@lumina/framework/types";
 import type { PlayerPluginFlags } from "./PlayerDocker";
-import type { SubtitleTrackInfo } from "@/types/subtitle";
-import { PlayerStateKeyEnum, StateContext } from "@/store/runtimeState";
+import type { SubtitleTrackInfo } from "../types/subtitle";
+import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
 
 // ============================================
 // 对外接口（冻结，父层按此接线）

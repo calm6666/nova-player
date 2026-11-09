@@ -1,10 +1,10 @@
 /**
  * 面板内部通用控件（滑块 / 复选/ 分段选择），全部使用框架 VNode + signal。 */
 
-import { h } from '@/core';
-import type { ReadonlySignal } from '@/core';
-import { checkIcon } from '@/live/icons';
-import type { VNode } from '@/types';
+import { h } from '@lumina/framework/core';
+import type { ReadonlySignal } from '@lumina/framework/core';
+import { checkIcon } from '../icons';
+import type { VNode } from '@lumina/framework/types';
 import { icon, reactive, text } from './helpers';
 
 /** 滑块参数。*/

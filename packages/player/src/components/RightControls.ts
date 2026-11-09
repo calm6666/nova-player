@@ -4,24 +4,12 @@
  * ============================================
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useReactiveState,
-  useContext,
-  signal,
-  computed,
-  onEffect,
-  mount,
-  destroy,
-  t,
-} from "@/core";
-import type { VNode } from "@/types";
+import { h, defineComponent, useTemplateRef, useReactiveState, useContext, signal, computed, onEffect, mount, destroy, t } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import type { PlayerPluginFlags } from "./PlayerDocker";
-import { PlayerStateKeyEnum, ConfigContext } from "@/store/runtimeState";
-import { StateContext } from "@/store/runtimeState";
-import { ConfigStoreContext } from "@/store/configStore";
+import { PlayerStateKeyEnum, ConfigContext } from "../store/runtimeState";
+import { StateContext } from "../store/runtimeState";
+import { ConfigStoreContext } from "../store/configStore";
 import { VolumeSlider } from "./VolumeSlider";
 import { QualityMenu } from "./QualityMenu";
 import { PlaybackRateMenu } from "./PlaybackRateMenu";

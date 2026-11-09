@@ -9,39 +9,11 @@
 // 公共契约：从根 types/danmaku.ts 重导出
 // ============================================
 
-export {
-  DanmakuType,
-  DanmakuSpeed,
-  DanmakuFontSize,
-  DanmakuArea,
-  DanmakuPosition,
-  RenderMode,
-  ScreenMode,
-} from "@/types/danmaku";
+export { DanmakuType, DanmakuSpeed, DanmakuFontSize, DanmakuArea, DanmakuPosition, RenderMode, ScreenMode } from "@lumina/nova";
 
-export type {
-  DanmakuItem,
-  DanmakuFilter,
-  DanmakuSegment,
-  DanmakuOptions,
-  DanmakuMaskConfig,
-  MaskLoader,
-  MaskLoaderResult,
-  PerformanceStats,
-  DanmakuListProvider,
-  DanmakuSendProvider,
-} from "@/types/danmaku";
+export type { DanmakuItem, DanmakuFilter, DanmakuSegment, DanmakuOptions, DanmakuMaskConfig, MaskLoader, MaskLoaderResult, PerformanceStats, DanmakuListProvider, DanmakuSendProvider } from "@lumina/nova";
 
-import type {
-  DanmakuItem,
-  DanmakuFilter,
-  DanmakuMaskConfig,
-  PerformanceStats,
-  RenderMode,
-  ScreenMode,
-  DanmakuSpeed,
-  DanmakuArea,
-} from "@/types/danmaku";
+import type { DanmakuItem, DanmakuFilter, DanmakuMaskConfig, PerformanceStats, RenderMode, ScreenMode, DanmakuSpeed, DanmakuArea } from "@lumina/nova";
 
 // ============================================
 // 插件特有类型

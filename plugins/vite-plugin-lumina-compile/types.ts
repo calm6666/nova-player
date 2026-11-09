@@ -61,7 +61,7 @@ export interface LuminaCompileOptions {
 
   /**
    * 编译产物引用的内部函数导入路径
-   * 默认：'@/core/internal'（需要与项目的 @/core 别名一致）
+   * 默认：'@lumina/framework/core/internal'（框架包内部子路径）
    * 若用户项目使用不同的别名/包名，可在此覆盖
    */
   internalImportSource?: string;

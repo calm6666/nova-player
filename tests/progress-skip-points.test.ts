@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { destroy, h, mount } from "../core";
+import { destroy, h, mount } from '@lumina/framework';
 import { ProgressBar } from "../packages/player/src/components/ProgressBar";
 import type { VNode } from "../types";
 

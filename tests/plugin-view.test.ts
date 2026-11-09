@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { destroy, h, mount } from "../core";
+import { destroy, h, mount } from '@lumina/framework';
 import { Top as TopView } from "../packages/plugins/src/top/TopView";
 import { Ending as EndingView } from "../packages/plugins/src/ending/EndingView";
 import type { EndingApi } from "../packages/plugins/src/ending/EndingView";

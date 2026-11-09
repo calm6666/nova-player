@@ -36,21 +36,13 @@
  * removeDanmaku/clearDanmaku 同时同步渲染调度器与列表面板，保证画面与列表一致。
  */
 
-import type { Plugin, PluginOptions } from "@/types/plugin";
-import type { DanmakuCallbacks } from "@/types/callbacks";
-import type {
-  DanmakuItem,
-  DanmakuSpeed,
-  DanmakuFontSize,
-  DanmakuArea,
-  DanmakuFilter,
-  DanmakuMaskConfig,
-  MaskLoader,
-} from "@/types/danmaku";
-import { DanmakuType, ScreenMode, RenderMode } from "@/types/danmaku";
-import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
-import type { PlayerEventBus } from "../../../player/src/core/plugin";
-import { PlayerEventEnum } from "@/core/events";
+import type { Plugin, PluginOptions } from '@lumina/nova';
+import type { DanmakuCallbacks } from "@lumina/nova";
+import type { DanmakuItem, DanmakuSpeed, DanmakuFontSize, DanmakuArea, DanmakuFilter, DanmakuMaskConfig, MaskLoader } from "@lumina/nova";
+import { DanmakuType, ScreenMode, RenderMode } from "@lumina/nova";
+import type { VideoPlayer } from "@lumina/nova";
+import type { PlayerEventBus } from "@lumina/nova";
+import { PlayerEventEnum } from "@lumina/nova";
 import { PlayerStateKeyEnum } from "@lumina/nova";
 import { DanmakuManager } from "../utils/danmaku";
 import { DanmakuTip } from "./DanmakuTip";

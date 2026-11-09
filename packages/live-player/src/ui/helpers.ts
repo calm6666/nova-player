@@ -5,8 +5,8 @@
  * `__reactiveAttrs` / `_reactiveText` / `For`，不再手写 DOM 拼装。
  */
 
-import { _reactiveText, h } from '@/core';
-import type { VNode } from '@/types';
+import { _reactiveText, h } from '@lumina/framework/core';
+import type { VNode } from '@lumina/framework/types';
 
 /** 响应式属性绑定（框架 mount 识别的 `__reactiveAttrs` 契约）。 */
 export const reactive = (

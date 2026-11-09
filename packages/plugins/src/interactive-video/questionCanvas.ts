@@ -22,9 +22,9 @@
  *   高清缩放）并重绘
  */
 
-import { h, effect } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import { h, effect } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 import type { InteractiveQuestion } from "./types";
 // 默认答案背景图（可被节点配置的 background 替换）
 import defaultBgImage from "./images/bg.png";

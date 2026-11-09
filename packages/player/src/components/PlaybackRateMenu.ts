@@ -8,21 +8,12 @@
  *   hover 定时器（rafTimeout）仅负责延迟时序并写信号，不直接操作 DOM
  */
 
-import {
-  h,
-  defineComponent,
-  useReactiveState,
-  useContext,
-  t,
-  signal,
-  computed,
-  For,
-} from "@/core";
-import type { VNode } from "@/types";
-import { useComponentUnmount } from "@/nova/core/componentUnmount";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { PlayerStateKeyEnum, StateContext } from "@/store/runtimeState";
+import { h, defineComponent, useReactiveState, useContext, t, signal, computed, For } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
+import { useComponentUnmount } from "../core/componentUnmount";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
 
 const MENU_SHOW_DELAY = 120;
 const MENU_HIDE_DELAY = 220;

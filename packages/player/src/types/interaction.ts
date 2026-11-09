@@ -126,13 +126,6 @@ export interface InteractionCard {
 }
 
 /**
- * 智能合并结果
+ * 智能合并结果（工具层契约，实现在 @lumina/framework/utils/smartMerge）
  */
-export interface MergeResult<T> {
-  target: T;
-  changedProps: Array<{
-    key: string;
-    oldVal: string | number | boolean | null;
-    newVal: string | number | boolean | null;
-  }>;
-}
+export type { MergeResult } from '@lumina/framework/utils/smartMerge';

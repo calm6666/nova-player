@@ -5,10 +5,10 @@
  */
 
 import type { Plugin } from '@lumina/nova';
-import type { EventBus } from '@/core/eventBus';
+import type { EventBus } from '@lumina/framework/core/eventBus';
 // 枚举以运行时真正使用的那份为准（@/types/streamPlugin）；
 // ./enums 下曾有一份同名但取值不同的旧版（大写 'HLS' …），已删除
-import { StreamPluginTypeEnum, StreamFormatEnum } from '@/types/streamPlugin';
+import { StreamPluginTypeEnum, StreamFormatEnum } from '@lumina/nova';
 
 /**
  * 缓冲信息接口

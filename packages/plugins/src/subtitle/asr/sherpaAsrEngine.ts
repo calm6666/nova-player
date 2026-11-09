@@ -38,13 +38,7 @@
  * @module packages/plugins/src/subtitle/asr/sherpaAsrEngine
  */
 
-import type {
-  AsrEngine,
-  AsrEngineInitOptions,
-  AsrEngineStatus,
-  AsrFinalResult,
-  AsrPartialResult,
-} from '@/types/subtitle';
+import type { AsrEngine, AsrEngineInitOptions, AsrEngineStatus, AsrFinalResult, AsrPartialResult } from '@lumina/nova';
 
 /** 目标采样率（引擎约定 16kHz，与采集链一致） */
 const SAMPLE_RATE = 16000;

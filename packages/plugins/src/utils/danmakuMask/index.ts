@@ -5,7 +5,7 @@
  *
  * 使用示例：
  * ```ts
- * import { DanmakuMaskSegmenter, CapabilityDetector } from '@/utils/danmakuMask';
+ * import { DanmakuMaskSegmenter, CapabilityDetector } from './danmakuMask';
  *
  * const segmenter = new DanmakuMaskSegmenter({ maskWidth: 96, maskHeight: 54 });
  * const cap = await segmenter.init();

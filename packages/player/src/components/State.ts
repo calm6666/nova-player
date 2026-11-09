@@ -4,8 +4,8 @@
  * ============================================
  */
 
-import { h, defineComponent, signal, t, Show } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, signal, t, Show } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 /**
  * 状态组件 Props 接口

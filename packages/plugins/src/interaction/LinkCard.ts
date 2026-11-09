@@ -14,8 +14,8 @@
  * - bindDrag 为 undefined 时不绑定拖拽（展示模式不传）
  */
 
-import { h } from "@/core";
-import type { VNode } from "@/types";
+import { h } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import type { ActiveCardEntry, InteractionLink } from "./types";
 import { renderCloseCircle } from "./closeCircle";
 

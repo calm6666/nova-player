@@ -12,11 +12,11 @@
  * - 插槽 VNode 的生命周期由播放器统一管理（mount/destroy），外部只负责构造 VNode。
  */
 
-import { createContext } from '@/core';
-import type { VNode } from '@/types';
-import type { TypedStateManager } from '@/core';
-import type { PlayerStateMap } from '@/store/runtimeState';
-import type { VideoPlayer } from '@/nova/player';
+import { createContext } from '@lumina/framework/core';
+import type { VNode } from '@lumina/framework/types';
+import type { TypedStateManager } from '@lumina/framework/core';
+import type { PlayerStateMap } from '../store/runtimeState';
+import type { VideoPlayer } from '../player';
 
 /**
  * 插槽位置枚举

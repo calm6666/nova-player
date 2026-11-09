@@ -27,15 +27,15 @@ import type { MediaPlayerClass, ErrorEvent, Representation } from 'dashjs';
 import type { MediaManifest } from '../vendor/types';
 import { manifestToDash } from '../vendor/manifest-to-dash';
 import type { VideoPlayer } from '@lumina/nova';
-import { StreamPluginTypeEnum, StreamPluginEventEnum, StreamFormatEnum, AUTO_QUALITY_ID, resolveVideoCodec } from '@/types/streamPlugin';
+import { StreamPluginTypeEnum, StreamPluginEventEnum, StreamFormatEnum, AUTO_QUALITY_ID, resolveVideoCodec } from '@lumina/nova';
 import { BrowserCapabilityDetector, detectManifestProtocol } from '@lumina/nova';
-import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, AudioTrackInfo, StreamQualityChangePayload } from '@/types/streamPlugin';
-import type { PluginOptions } from '@/types/plugin';
-import { PlayerEventEnum } from '@/core/events';
-import type { PlayerEventBus } from '../../../player/src/core/plugin';
+import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel, AudioTrackInfo, StreamQualityChangePayload } from '@lumina/nova';
+import type { PluginOptions } from '@lumina/nova';
+import { PlayerEventEnum } from '@lumina/nova';
+import type { PlayerEventBus } from '@lumina/nova';
 import { createStreamPluginEventBus } from '../stream/streamEventBus';
 import type { StreamPluginEventBus } from '../stream/streamEventBus';
-import { createLogger } from '@/utils';
+import { createLogger } from '@lumina/framework/utils';
 
 const logger = createLogger('DashPlugin');
 

@@ -9,7 +9,7 @@
  * 只有偏差超过阈值才缩放，正常数据原样返回（不掩盖真实的轻微误差）。
  */
 
-import type { ProgressSegment } from '@/types';
+import type { ProgressSegment } from '../../types/player';
 
 /** 允许的相对偏差（超过才归一） */
 const SPAN_TOLERANCE = 0.01;

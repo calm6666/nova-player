@@ -12,9 +12,9 @@
  * API 内部仅写 signal；document click 关闭监听保留命令式（时序行为）。
  */
 
-import { h, defineComponent, signal, t, Show } from "@/core";
-import { isBrowser } from "@/utils";
-import type { VNode, ComponentLifecycle } from "@/types";
+import { h, defineComponent, signal, t, Show } from '@lumina/framework/core';
+import { isBrowser } from '@lumina/framework/utils';
+import type { VNode, ComponentLifecycle } from "@lumina/framework/types";
 
 /**
  * 菜单项配置

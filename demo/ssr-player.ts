@@ -6,10 +6,9 @@
  * 分段、高能曲线、插件属于运行期数据，客户端水合后通过 API 注入。
  */
 
-import { VideoPlayer } from "@/nova/player";
-import type { PlayerConfig } from "@/types";
-import zhCN from "@/locales/zh-CN.json";
-import enUS from "@/locales/en-US.json";
+import { VideoPlayer } from "@lumina/nova";
+import type { PlayerConfig } from "@lumina/nova";
+import { bundledEnUS as enUS, bundledZhCN as zhCN } from "@lumina/nova";
 
 export const DEMO_SSR_SOURCE = "/sample.mp4";
 export const DEMO_SSR_TITLE = "赶集买了几只牛蛙，好久没吃了，立马安排...";

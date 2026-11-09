@@ -7,7 +7,6 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -15,49 +14,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
-    "paths": {
-      "@/live/*": ["packages/live-player/src/*"],
-      "@/*": ["packages/player/src/*"],
-      "@/locales/*": ["locales/*"],
-      "@/types": ["types/index.ts"],
-      "@/types/*": ["types/*"],
-      "@/core": ["core/index.ts"],
-      "@/core/*": ["core/*"],
-      "@/utils": ["utils/index.ts"],
-      "@/utils/*": ["utils/*"],
-      "@/directives": ["directives/index.ts"],
-      "@/directives/*": ["directives/*"],
-      "@/events": ["events/index.ts"],
-      "@/events/*": ["events/*"],
-      "@/error": ["error/index.ts"],
-      "@/error/*": ["error/*"],
-      "@/nova/*": ["packages/player/src/*"],
-      "@/lumina/plugins/*": ["packages/plugins/src/*"],
-      "@lumina/nova": ["packages/player/src/index.ts"],
-      "hls.js": ["packages/plugins/hls/dist/hls"]
-    }
+    "ignoreDeprecations": "6.0"
   },
-  "include": [
-    "vite-env.d.ts",
-    "core/**/*",
-    "types/**/*",
-    "utils/**/*",
-    "directives/**/*",
-    "events/**/*",
-    "error/**/*",
-    "plugins/**/*",
-    "packages/player/src/**/*",
-    "packages/plugins/src/**/*",
-    "packages/plugins/hls/dist/hls.d.ts",
-    "demo/**/*",
-    "demo-prod/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "packages/live-player",
-    "demo/live-player-demo"
-  ]
+  "include": ["vite-env.d.ts", "demo/**/*", "demo-prod/**/*"],
+  "exclude": ["node_modules", "dist", "packages"]
 }

@@ -16,9 +16,9 @@
 
 // AiSubtitleEntry 已迁移至 @/types/subtitle 统一维护（模式 B Provider 也引用），
 // 此处 re-export 保持既有导入路径兼容
-export type { AiSubtitleEntry } from '@/types/subtitle';
-import type { AiSubtitleEntry } from '@/types/subtitle';
-import type { SubtitleItem } from '@/types/subtitle';
+export type { AiSubtitleEntry } from '@lumina/nova';
+import type { AiSubtitleEntry } from '@lumina/nova';
+import type { SubtitleItem } from '@lumina/nova';
 
 /** AI 字幕后端接口配置 */
 export interface AiSubtitleBackendConfig {

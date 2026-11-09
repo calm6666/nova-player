@@ -124,7 +124,7 @@ export function transformCode(
     hoistedAttrsCount: 0,
     defaultExportCount: 0,
     filename,
-    internalImportSource: options.internalImportSource ?? "@/core/internal",
+    internalImportSource: options.internalImportSource ?? "@lumina/framework/core/internal",
     usedInternalFns: [],
     hoistedDecls: [],
   };

@@ -20,7 +20,7 @@
  * @module packages/plugins/src/subtitle/asr/audioCapture
  */
 
-import type { SubtitleAudioStream } from '@/types/subtitle';
+import type { SubtitleAudioStream } from '@lumina/nova';
 
 /** 目标采样率（ASR 模型统一 16kHz） */
 const TARGET_SAMPLE_RATE = 16000;

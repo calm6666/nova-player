@@ -3,8 +3,8 @@
  * 替代 Unicode emoji，提供清晰可缩放的矢量图标
  */
 
-import { h, defineComponent } from "@/core";
-import type { VNode } from "@/types";
+import { h, defineComponent } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 
 type IconProps = { size?: number; color?: string };
 

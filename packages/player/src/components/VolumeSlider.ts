@@ -6,20 +6,12 @@
  * 处理垂直滑块拖拽、静音切换、音量数字显示
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useState,
-  useContext,
-  signal,
-  t,
-} from "@/core";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { isBrowser } from "@/utils";
-import { PlayerStateKeyEnum } from "@/store/runtimeState";
-import { StateContext } from "@/store/runtimeState";
+import { h, defineComponent, useTemplateRef, useState, useContext, signal, t } from '@lumina/framework/core';
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import { isBrowser } from '@lumina/framework/utils';
+import { PlayerStateKeyEnum } from "../store/runtimeState";
+import { StateContext } from "../store/runtimeState";
 import { LottieIcon, LottieIconApi } from "./LottieIcon";
 import volumeHoverAnimationData from "../assets/lottie-icon/volume-hover-animation.json";
 import volumeMuteHoverAnimationData from "../assets/lottie-icon/volume-mute-hover-animation.json";
@@ -141,10 +133,14 @@ export const VolumeSlider = defineComponent<
   // ============================================
 
   /**
-   * 音量按钮鼠标进入：播放图标动画并延迟展开音量面板（面板显隐由本组件自己负责）
+   * 音量按钮鼠标进入：展开音量面板，并在面板尚未展开时播放一次图标动画
+   *
+   * 绑定位置保持与 B 站一致（根节点 mouseenter），不移动监听；
+   * 通过已有展开态 shownSignal 去重：面板已展开后（如鼠标进入音量条）
+   * 不再重复播放。
    */
   const mouseVolumeEnter = (): void => {
-    volumeIconRef.value?.play();
+    if (!shownSignal.value) volumeIconRef.value?.play();
     cancelRaf(hideTimer!);
     hideTimer = null;
     if (showTimer !== null) return;
@@ -427,7 +423,10 @@ export const VolumeSlider = defineComponent<
     // 音量图标（静音切换挂在这里）
     h(
       "div",
-      { class: "nova-player-ctrl-btn-icon", onClick: handleMuteToggle },
+      {
+        class: "nova-player-ctrl-btn-icon",
+        onClick: handleMuteToggle,
+      },
       h(LottieIcon, {
         name: "volume",
         initialSlotIndex: isMuted ? 3 : 1,

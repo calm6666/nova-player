@@ -32,31 +32,16 @@
  * ]
  */
 
-import type { Plugin, PluginOptions } from "@/types/plugin";
-import type {
-  SubtitleItem,
-  ParsedSubtitle,
-  SubtitleSource,
-  SubtitleStyle,
-  LocalAiSubtitleConfig,
-  LocalAiSubtitleProvider,
-  RemoteSubtitleProvider,
-  RemoteSubtitleTrack,
-  SubtitleTrackInfo,
-  SubtitleAiStatusPayload,
-  SubtitleCueEvent,
-  SubtitleEngineContext,
-  AsrEngine,
-  AiSubtitleEntry,
-} from "@/types/subtitle";
-import { SubtitleFormat } from "@/types/subtitle";
+import type { Plugin, PluginOptions } from '@lumina/nova';
+import type { SubtitleItem, ParsedSubtitle, SubtitleSource, SubtitleStyle, LocalAiSubtitleConfig, LocalAiSubtitleProvider, RemoteSubtitleProvider, RemoteSubtitleTrack, SubtitleTrackInfo, SubtitleAiStatusPayload, SubtitleCueEvent, SubtitleEngineContext, AsrEngine, AiSubtitleEntry } from "@lumina/nova";
+import { SubtitleFormat } from "@lumina/nova";
 
-export type { SubtitleSource } from "@/types/subtitle";
-import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
-import type { PlayerEventBus } from "../../../player/src/core/plugin";
-import { PlayerEventEnum } from "@/core/events";
-import { parseSubtitle } from "@/utils/subtitle";
-import { isBrowser, createLogger } from "@/utils";
+export type { SubtitleSource } from "@lumina/nova";
+import type { VideoPlayer } from "@lumina/nova";
+import type { PlayerEventBus } from "@lumina/nova";
+import { PlayerEventEnum } from "@lumina/nova";
+import { parseSubtitle } from "@lumina/nova";
+import { isBrowser, createLogger } from '@lumina/framework/utils';
 import type { AiSubtitleBackendConfig } from "./aiSubtitleConfig";
 import { aiSubtitleEntriesToItems } from "./aiSubtitleConfig";
 import { AiSubtitleFetcher } from "./AiSubtitleFetcher";

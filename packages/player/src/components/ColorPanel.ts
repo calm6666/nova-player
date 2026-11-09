@@ -6,11 +6,11 @@
  * 回调通知上层，由上层将 CSS filter 写入 .nova-player-video 元素；重置恢复默认。
  */
 
-import { h, defineComponent, useTemplateRef, t, signal } from "@/core";
-import type { Signal } from "@/core";
-import { isBrowser } from "@/utils";
-import type { ComponentLifecycle } from "@/types";
-import type { VNode } from "@/types";
+import { h, defineComponent, useTemplateRef, t, signal } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import { isBrowser } from '@lumina/framework/utils';
+import type { ComponentLifecycle } from "@lumina/framework/types";
+import type { VNode } from "@lumina/framework/types";
 
 /** 滑杆数值上限 */
 const SLIDER_MAX = 200;

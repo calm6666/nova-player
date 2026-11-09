@@ -14,7 +14,7 @@
  *     播放完清除；再次加载同一 src 且进度有效时恢复并提示 Toast。
  */
 
-import { isBrowser } from '@/utils';
+import { isBrowser } from '@lumina/framework/utils';
 
 /** 默认 key 前缀 */
 export const DEFAULT_STORAGE_PREFIX = 'nova-player:';

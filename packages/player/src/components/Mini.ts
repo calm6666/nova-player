@@ -4,8 +4,8 @@
  * ============================================
  */
 
-import { h, defineComponent, useTemplateRef } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, useTemplateRef } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 /**
  * 迷你播放器组件 Props 接口

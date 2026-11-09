@@ -5,13 +5,7 @@
  * 提供互动卡片的默认配置
  */
 
-import type {
-  InteractionGuideThree,
-  InteractionLink,
-  InteractionScore,
-  InteractionVote,
-  VoteOption,
-} from '@/nova/types';
+import type { InteractionGuideThree, InteractionLink, InteractionScore, InteractionVote, VoteOption } from '../types';
 
 /**
  * 点赞关注默认配置

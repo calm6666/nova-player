@@ -17,8 +17,8 @@
  * （.nova-player-container[data-ctrl-hidden] 规则）。
  */
 
-import { h, defineComponent, useTemplateRef } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, useTemplateRef } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 // ============================================
 // 互动视频层 API（挂载后回传给 PlayerDocker / 插件）

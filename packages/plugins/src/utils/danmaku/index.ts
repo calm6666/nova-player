@@ -29,7 +29,7 @@ import { TrackManager } from "./trackManager";
 import { DOMEngine } from "./domEngine";
 import { CanvasEngine } from "./canvasEngine";
 import { DanmakuScheduler } from "./scheduler";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
 
 // 重新导出类型
 export {

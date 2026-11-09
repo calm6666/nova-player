@@ -7,13 +7,13 @@
  */
 
 import {
-  h,
-  mount,
-  destroy,
-  type Plugin,
-  type SlotContext,
-  type SlotMount,
+h,
+mount,
+destroy,
+type SlotContext,
+type SlotMount
 } from "@lumina/nova";
+import { type Plugin } from '@lumina/nova';
 import { Top as TopView, type TopProps } from "./TopView";
 import { injectPluginStyle } from "../utils/injectStyle";
 import topCss from "./style.scss?inline";

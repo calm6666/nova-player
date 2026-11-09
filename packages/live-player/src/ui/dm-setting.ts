@@ -7,13 +7,13 @@
  * - 第二页：更多弹幕设置（返回）、弹幕字体 + 粗体、描边类型、恢复默认。
  */
 
-import { computed, h } from '@/core';
-import type { ReadonlySignal, Signal } from '@/core';
-import type { NovaDanmakuSetting, NovaDanmakuStroke } from '@/live/types';
-import type { VNode } from '@/types';
-import { t } from '@/core';
+import { computed, h } from '@lumina/framework/core';
+import type { ReadonlySignal, Signal } from '@lumina/framework/core';
+import type { NovaDanmakuSetting, NovaDanmakuStroke } from '../types';
+import type { VNode } from '@lumina/framework/types';
+import { t } from '@lumina/framework/core';
 import { icon, reactive } from './helpers';
-import { arrowLeftIcon, arrowRightIcon } from '@/live/icons';
+import { arrowLeftIcon, arrowRightIcon } from '../icons';
 import { Checkbox, Segmented, Slider } from './controls';
 
 /** 字体候选。*/

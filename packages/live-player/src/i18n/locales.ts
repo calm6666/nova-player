@@ -5,8 +5,9 @@
  * 根元素挂载时会合并框架内置语言包与本文件词条并把默认语言设为简体中文。
  */
 
-import enUS from '@/core/locales/en-US.json';
-import zhCN from '@/core/locales/zh-CN.json';
+// 基础文案归属应用层 packages/player；live-player 只合并自己的直播词条
+import { bundledEnUS as enUS } from '@lumina/nova';
+import { bundledZhCN as zhCN } from '@lumina/nova';
 
 /** 简体中文词条。 */
 const ZH_CN: Record<string, string> = {

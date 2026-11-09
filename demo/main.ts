@@ -22,17 +22,8 @@
  * 7.  RootLayout       - 根布局（注入 Context）
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  createContext,
-  provide,
-  createTypedStateManager,
-  createTypedEventBus,
-  useState,
-} from "@/core";
-import { VideoPlayer } from "@/nova/player";
+import { h, defineComponent, useTemplateRef, createContext, provide, createTypedStateManager, createTypedEventBus, useState } from '@lumina/framework/core';
+import { VideoPlayer } from "@lumina/nova";
 import { createDemoSSRPlayer } from "./ssr-player";
 
 // SVG 图标组件（替代 Unicode emoji）

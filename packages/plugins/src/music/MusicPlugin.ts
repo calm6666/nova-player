@@ -15,13 +15,13 @@
  */
 
 import {
-  h,
-  mount,
-  destroy,
-  type Plugin,
-  type VNode,
-  type VideoPlayer,
+h,
+mount,
+destroy,
+type VideoPlayer
 } from "@lumina/nova";
+import { type VNode } from '@lumina/framework/types';
+import { type Plugin } from '@lumina/nova';
 import { PlayerStateKeyEnum } from "@lumina/nova";
 import { MusicView } from "./MusicView";
 import { injectPluginStyle } from "../utils/injectStyle";

@@ -11,11 +11,11 @@
  * API 内部仅写 signal，不再触碰 DOM。
  */
 
-import { h, defineComponent, signal, t } from "@/core";
-import type { ComponentLifecycle } from "@/types";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { Volume, Mute } from "@/nova/components/icons";
+import { h, defineComponent, signal, t } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import { Volume, Mute } from "./icons";
 
 /**
  * 音量提示组件 Props 接口

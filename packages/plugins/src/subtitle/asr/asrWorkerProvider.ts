@@ -15,12 +15,8 @@
  * @module packages/plugins/src/subtitle/asr/asrWorkerProvider
  */
 
-import type {
-  LocalAiSubtitleProvider,
-  SubtitleEngineContext,
-  SubtitleItem,
-} from '@/types/subtitle';
-import { isBrowser } from '@/utils';
+import type { LocalAiSubtitleProvider, SubtitleEngineContext, SubtitleItem } from '@lumina/nova';
+import { isBrowser } from '@lumina/framework/utils';
 import { LOCAL_AI_TRACK_ID, PARTIAL_TAIL_SECONDS } from './localAiProvider';
 import type { AsrWorkerRequest, AsrWorkerResponse } from './asrWorker';
 

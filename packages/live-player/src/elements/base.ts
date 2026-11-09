@@ -8,8 +8,8 @@
  * 服务端没有 `HTMLElement` 时退化为空基类，注册函数为 no-op。
  */
 
-import { destroy as destroyVNode, mount as mountVNode } from '@/core';
-import type { VNode } from '@/types';
+import { destroy as destroyVNode, mount as mountVNode } from '@lumina/framework/core';
+import type { VNode } from '@lumina/framework/types';
 
 /**
  * SSR 安全的 HTMLElement 基类（浏览器中就是原生 `HTMLElement`）。

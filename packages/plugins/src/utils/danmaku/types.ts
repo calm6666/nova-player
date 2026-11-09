@@ -9,38 +9,15 @@
 
 /// <reference lib="dom" />
 
-import type {
-  DanmakuItem,
-  PerformanceStats,
-  ScreenMode,
-} from "@/types/danmaku";
+import type { DanmakuItem, PerformanceStats, ScreenMode } from "@lumina/nova";
 
 // ============================================
 // 公共契约：从根 types/danmaku.ts 重导出
 // ============================================
 
-export {
-  DanmakuType,
-  DanmakuSpeed,
-  DanmakuFontSize,
-  DanmakuArea,
-  DanmakuPosition,
-  RenderMode,
-  ScreenMode,
-} from "@/types/danmaku";
+export { DanmakuType, DanmakuSpeed, DanmakuFontSize, DanmakuArea, DanmakuPosition, RenderMode, ScreenMode } from "@lumina/nova";
 
-export type {
-  DanmakuItem,
-  DanmakuFilter,
-  DanmakuOptions,
-  DanmakuSegment,
-  DanmakuMaskConfig,
-  MaskLoader,
-  MaskLoaderResult,
-  PerformanceStats,
-  DanmakuListProvider,
-  DanmakuSendProvider,
-} from "@/types/danmaku";
+export type { DanmakuItem, DanmakuFilter, DanmakuOptions, DanmakuSegment, DanmakuMaskConfig, MaskLoader, MaskLoaderResult, PerformanceStats, DanmakuListProvider, DanmakuSendProvider } from "@lumina/nova";
 
 // ============================================
 // 引擎私有类型

@@ -5,14 +5,14 @@
  * 所有操作结果与 `nova-live-player:*` 事件都写入页面最下方的事件日志。
  */
 
-import "@/live/styles/style.scss";
-import { LIVE_PLAYER_EVENTS } from "@/live/core/events";
-import { registerLivePlayerElements } from "@/live/elements";
-import { LivePlayerElement } from "@/live/elements/LivePlayerElement";
-import type { NovaQualityCandidate } from "@/live/types";
-import { createDanmakuPlugin } from "@/lumina/plugins/danmaku";
-import { createFlvPlugin } from "@/lumina/plugins/flv";
-import { createHlsPlugin } from "@/lumina/plugins/hls";
+import "@lumina/live-player/style.css";
+import { LIVE_PLAYER_EVENTS } from "@lumina/live-player";
+import { registerLivePlayerElements } from "@lumina/live-player";
+import { LivePlayerElement } from "@lumina/live-player";
+import type { NovaQualityCandidate } from "@lumina/live-player";
+import { createDanmakuPlugin } from "@lumina/plugins/danmaku";
+import { createFlvPlugin } from "@lumina/plugins/flv";
+import { createHlsPlugin } from "@lumina/plugins/hls";
 
 const DEMO_STREAM = "http://127.0.0.1:9000/video/dash2/master-segmentbase.m3u8";
 

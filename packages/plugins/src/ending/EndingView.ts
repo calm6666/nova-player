@@ -11,7 +11,7 @@
  */
 
 import { h, defineComponent, useTemplateRef, signal, t, Fragment, For, LottieIcon, type LottieIconApi } from "@lumina/nova";
-import type { VNode } from "@lumina/nova";
+import type { VNode } from "@lumina/framework/types";
 import type {
   EndingRelatedItem,
   EndingUpInfo,
@@ -1097,7 +1097,6 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
       ),
     );
   };
-
 
   /** 渲染互动视频片尾 */
   const renderInteractiveEnding = (): VNode => {

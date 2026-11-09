@@ -5,30 +5,16 @@
  * 提供弹幕输入、发送、弹幕开关和设置面板等交互功能
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useContext,
-  useReactiveState,
-  t,
-  signal,
-  computed,
-} from "@/core";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import type { ComponentLifecycle } from "@/types";
-import { StateContext, PlayerStateKeyEnum } from "@/store/runtimeState";
-import { formatOnlineCount, formatDanmakuCount } from "@/nova/utils/formatCount";
-import { DmSetting } from "@/nova/components/DmSetting";
-import type { DmSettingApi } from "@/nova/components/DmSetting";
-import { Selection } from "@/nova/components/Selection";
-import {
-  DanmakuSwitchOn,
-  DanmakuSwitchOff,
-  DanmakuSetting,
-  DanmakuTextSetting,
-} from "@/nova/components/icons";
+import { h, defineComponent, useTemplateRef, useContext, useReactiveState, t, signal, computed } from '@lumina/framework/core';
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import type { ComponentLifecycle } from "@lumina/framework/types";
+import { StateContext, PlayerStateKeyEnum } from "../store/runtimeState";
+import { formatOnlineCount, formatDanmakuCount } from "../utils/formatCount";
+import { DmSetting } from "./DmSetting";
+import type { DmSettingApi } from "./DmSetting";
+import { Selection } from "./Selection";
+import { DanmakuSwitchOn, DanmakuSwitchOff, DanmakuSetting, DanmakuTextSetting } from "./icons";
 
 /**
  * 面板显示状态

@@ -1,11 +1,25 @@
 {
   "name": "demo-prod",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "生产构建验证 demo：通过 monorepo 链接导入打包后的 @lumina/nova 与 @lumina/plugins",
+  "description": "生产构建验证 demo：通过 workspace 包名导入打包后的 @lumina/nova 与 @lumina/plugins",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "build": "vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "dependencies": {
+    "@lumina/framework": "workspace:*",
     "@lumina/nova": "workspace:*",
-    "@lumina/plugins": "workspace:*"
+    "@lumina/plugins": "workspace:*",
+    "dashjs": "^5.1.1",
+    "flv.js": "^1.6.2",
+    "hls.js": "link:../packages/plugins/hls"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^5.2.0"
   }
 }

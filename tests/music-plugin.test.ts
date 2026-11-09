@@ -3,7 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { h, mount } from "../core";
+import { h, mount } from '@lumina/framework';
 import { MusicPlugin } from "../packages/plugins/src/music/MusicPlugin";
 import { mockMusicDetail, mockVideoList, mockRecommendList } from "../packages/plugins/src/music/mock";
 import { TopPlugin } from "../packages/plugins/src/top";

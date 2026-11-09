@@ -14,30 +14,10 @@
  * 映射规则以内联方式维护（MAJOR_VERSION_COMPAT_KEYS 等常量表）。
  */
 
-import type {
-  AdvancedConfig,
-  ControlsConfig,
-  EventListeners,
-  I18nPlayerConfig,
-  InteractionConfig,
-  KeyboardStepConfig,
-  LegacyPlayerConfig,
-  MediaItem,
-  PlaybackConfig,
-  PlayerConfig,
-  PlayerSource,
-  PlayMode,
-  PluginsConfig,
-  ProgressConfig,
-  ProgressSegment,
-  QualityConfig,
-  StorageConfig,
-  SubtitleConfig,
-  SubtitleConfigSpace,
-  UiConfig,
-} from '@/types';
-import type { Plugin } from '@/nova/core/plugin';
-import { isDev, WarnSource, warn } from '@/core/warning';
+import type { AdvancedConfig, ControlsConfig, EventListeners, I18nPlayerConfig, InteractionConfig, KeyboardStepConfig, LegacyPlayerConfig, MediaItem, PlaybackConfig, PlayerConfig, PlayerSource, PlayMode, PluginsConfig, ProgressConfig, ProgressSegment, QualityConfig, StorageConfig, UiConfig } from '../types/player';
+import type { SubtitleConfig, SubtitleConfigSpace } from '../types/subtitle';
+import type { Plugin } from '../core/plugin';
+import { isDev, WarnSource, warn } from '@lumina/framework/core/warning';
 
 /**
  * 旧扁平 → 新路径 的迁移对照表
@@ -45,7 +25,6 @@ import { isDev, WarnSource, warn } from '@/core/warning';
  * 作为文档与测试的单一映射来源；`container` / `src` / `poster` 保持顶层，不在表内。
  */
 export const LEGACY_KEY_MAP = {
-  playerName: 'ui.title',
   controlBtns: 'ui.controls',
   controls: 'ui.controls',
   keyboard: 'interaction.keyboard',
@@ -163,6 +142,8 @@ export function normalizeConfig(
   const out: PlayerConfig = {};
 
   // ── 顶层资源：新旧同名，保持顶层 ──
+  // ── 顶层资源：playerName 是播放器 API 的顶层字段（播放器名称），直接透传 ──
+  if (input.playerName !== undefined) out.playerName = input.playerName;
   if (input.container !== undefined) out.container = input.container;
   if (input.src !== undefined) out.src = input.src;
   if (input.poster !== undefined) out.poster = input.poster;
@@ -209,12 +190,8 @@ export function normalizeConfig(
     out.playlistIndex = input.playlistIndex;
   }
 
-  // ── ui：playerName → title；controlBtns / controls → controls ──
+  // ── ui：controls 新键 / controlBtns 旧键 → controls ──
   const ui: UiConfig = { ...(input.ui ?? {}) };
-  if (ui.title === undefined && input.playerName !== undefined) {
-    warnMigrate('playerName', LEGACY_KEY_MAP.playerName);
-    ui.title = input.playerName;
-  }
   if (ui.controls === undefined) {
     if (input.controlBtns !== undefined) {
       warnMigrate('controlBtns', LEGACY_KEY_MAP.controlBtns);

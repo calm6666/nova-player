@@ -19,7 +19,7 @@
  * 本入口，随后 core 的 destroy(vnode) 会再触发一次 onBeforeDestroy。
  */
 
-import type { VNode } from '@/types';
+import type { VNode } from '@lumina/framework/types';
 
 /**
  * lifecycle 参数沿用 useTemplateRef 的结构化最小类型写法：

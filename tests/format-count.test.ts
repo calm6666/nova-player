@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatDanmakuCount,
-  formatOnlineCount,
-} from "@/nova/utils/formatCount";
+import { formatDanmakuCount, formatOnlineCount } from "@lumina/nova";
 
 /**
  * 发送栏计数展示格式回归测试（参考 B 站数量级策略）

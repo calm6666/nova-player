@@ -5,7 +5,7 @@
  * 定义 Controls 组件所需的所有类型和接口
  */
 
-import type { AnimationFrameID } from "@/utils/rafTimeout";
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
 
 /**
  * 音量进度状态

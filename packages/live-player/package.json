@@ -1,6 +1,6 @@
 {
   "name": "@lumina/live-player",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Live room player UI for Lumina",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,12 +19,17 @@
   "scripts": {
     "dev": "vite build --watch",
     "demo": "vite",
-    "build": "vite build && node ../../scripts/minify-dist.mjs dist && node ../../scripts/patch-dts.mjs packages/live-player",
+    "build": "vite build && node ../../scripts/minify-dist.mjs dist",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "check:selectors": "node scripts/check-duplicate-selectors.mjs",
     "smoke": "node scripts/cdp-smoke.mjs",
     "lint": "node ../../scripts/lint.mjs src --ext .ts",
     "lint:fix": "node ../../scripts/lint.mjs src --ext .ts --fix"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@lumina/framework": "workspace:*",
+    "@lumina/nova": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

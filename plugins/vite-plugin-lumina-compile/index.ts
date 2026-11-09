@@ -63,7 +63,7 @@ const DEFAULT_OPTIONS: Required<LuminaCompileOptions> = {
     // 插件自身源码不转换
     /plugins[/\\]vite-plugin-lumina-compile/,
   ],
-  internalImportSource: "@/core/internal",
+  internalImportSource: "@lumina/framework/core/internal",
 };
 
 /**

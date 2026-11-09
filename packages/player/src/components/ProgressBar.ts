@@ -1,24 +1,13 @@
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  signal,
-  For,
-  t,
-} from "@/core";
-import { useComponentUnmount } from "@/nova/core/componentUnmount";
-import { normalizeSegmentSpan } from "@/nova/utils/media/progressSegment";
-import type {
-  ProgressPreviewFrame,
-  ProgressPreviewProvider,
-  ProgressSegment,
-  ProgressSkipPoints,
-  VNode,
-} from "@/types";
-import { isBrowser } from "@/utils";
-import { formatTime } from "@/utils/formatTime";
-import { createLogger } from "@/utils";
-import { isDev } from "@/core/warning";
+import { h, defineComponent, useTemplateRef, signal, For, t } from '@lumina/framework/core';
+import { useComponentUnmount } from "../core/componentUnmount";
+import { normalizeSegmentSpan } from "../utils/media/progressSegment";
+import type { VNode } from "@lumina/framework/types";
+import type { ProgressPreviewFrame, ProgressPreviewProvider, ProgressSegment, ProgressSkipPoints } from "../types/player";
+
+import { isBrowser } from '@lumina/framework/utils';
+import { formatTime } from '@lumina/framework/utils/formatTime';
+import { createLogger } from '@lumina/framework/utils';
+import { isDev } from '@lumina/framework/core/warning';
 
 /** 进度条组件日志（仅 error 级别的异常 / 非法配置诊断） */
 const logger = createLogger("ProgressBar");

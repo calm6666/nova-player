@@ -78,9 +78,9 @@ import {
   defaultRuntimeState,
 } from './state';
 
-import { BrowserCapabilityDetector } from '@/nova/utils/browserCapabilityDetector';
-import { createLogger } from '@/utils';
-import { createSafeCall } from '@/error';
+import { BrowserCapabilityDetector } from '../utils/browserCapabilityDetector';
+import { createLogger } from '@lumina/framework/utils';
+import { createSafeCall } from '@lumina/framework/error';
 
 const logger = createLogger('PlayerStore');
 const safeCall = createSafeCall('PlayerStore');

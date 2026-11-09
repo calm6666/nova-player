@@ -5,32 +5,12 @@
  * signal 完成；对外只暴露 `bind()` 注入信号与回调。
  */
 
-import { h, signal, t } from "@/core";
-import type { Signal } from "@/core";
-import {
-  danmakuIcon,
-  danmakuOffIcon,
-  danmakuSettingIcon,
-  exitFullscreenIcon,
-  exitMiniIcon,
-  exitWebscreenIcon,
-  fullscreenIcon,
-  miniIcon,
-  mutedIcon,
-  pauseIcon,
-  playIcon,
-  refreshIcon,
-  sendIcon,
-  volumeIcon,
-  webscreenIcon,
-} from "@/live/icons";
-import type {
-  NovaControlAction,
-  NovaPanelName,
-  NovaScreenMode,
-} from "@/live/types";
-import type { LiveTimerRegistry } from "@/live/core/timers";
-import type { VNode } from "@/types";
+import { h, signal, t } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import { danmakuIcon, danmakuOffIcon, danmakuSettingIcon, exitFullscreenIcon, exitMiniIcon, exitWebscreenIcon, fullscreenIcon, miniIcon, mutedIcon, pauseIcon, playIcon, refreshIcon, sendIcon, volumeIcon, webscreenIcon } from "../icons";
+import type { NovaControlAction, NovaPanelName, NovaScreenMode } from "../types";
+import type { LiveTimerRegistry } from "../core/timers";
+import type { VNode } from "@lumina/framework/types";
 import { NovaLiveUiElement } from "./base";
 import { icon, reactive, text } from "../ui/helpers";
 

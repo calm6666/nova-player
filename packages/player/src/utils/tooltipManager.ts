@@ -15,7 +15,7 @@
  * 3. 鼠标移出或 duration 到期后自动隐藏
  *
  * 使用方式：
- * import { TooltipManager } from '@/utils/tooltipManager';
+ * import { TooltipManager } from './tooltipManager';
  * const tooltip = new TooltipManager(player.events);
  *
  * // 组件中触发 tooltip：
@@ -23,7 +23,7 @@
  * player.events.emit('tooltip:hide', { element: btnEl });
  */
 
-import type { EventBus } from '@/core/eventBus';
+import type { EventBus } from '@lumina/framework/core/eventBus';
 
 // ============================================
 // 类型守卫

@@ -15,8 +15,8 @@
  * 不为微秒级差异牺牲可读性，也不引入 lodash 依赖。
  */
 
-import { deepMerge } from '@/utils';
-import type { DeepPartial, PlayerConfig } from '@/types';
+import { deepMerge } from '@lumina/framework/utils';
+import type { DeepPartial, PlayerConfig } from '../types/player';
 
 /**
  * 合并播放器配置

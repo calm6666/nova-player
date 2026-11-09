@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { renderToString } from '../core';
+import { renderToString } from '@lumina/framework';
 import { VideoPlayer } from '../packages/player/src/player/VideoPlayer';
-import { h } from '../core';
+import { h } from '@lumina/framework';
 import { TopPlugin } from '../packages/plugins/src/top/TopPlugin';
 import { EndingPlugin } from '../packages/plugins/src/ending/EndingPlugin';
 import { HlsPlugin } from '../packages/plugins/src/hls/HlsPlugin';

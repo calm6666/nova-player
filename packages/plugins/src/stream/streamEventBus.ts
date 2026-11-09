@@ -18,10 +18,10 @@
  * @module stream/streamEventBus
  */
 
-import { createTypedEventBus } from '@/core/eventBus';
-import type { TypedEventBus } from '@/core/eventBus';
-import { StreamPluginEventEnum } from '@/types/streamPlugin';
-import type { MediaManifestSource, StreamStats } from '@/types/streamPlugin';
+import { createTypedEventBus } from '@lumina/framework/core/eventBus';
+import type { TypedEventBus } from '@lumina/framework/core/eventBus';
+import { StreamPluginEventEnum } from '@lumina/nova';
+import type { MediaManifestSource, StreamStats } from '@lumina/nova';
 
 /**
  * 无业务含义的事件载荷

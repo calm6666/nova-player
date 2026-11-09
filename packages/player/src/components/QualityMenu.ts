@@ -4,23 +4,13 @@
  * ============================================
  */
 
-import {
-  h,
-  defineComponent,
-  useState,
-  useReactiveState,
-  useContext,
-  t,
-  signal,
-  computed,
-  For,
-} from "@/core";
-import type { ReadonlySignal } from "@/core";
-import type { VNode } from "@/types";
-import { useComponentUnmount } from "@/nova/core/componentUnmount";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { PlayerStateKeyEnum, StateContext } from "@/store/runtimeState";
+import { h, defineComponent, useState, useReactiveState, useContext, t, signal, computed, For } from '@lumina/framework/core';
+import type { ReadonlySignal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
+import { useComponentUnmount } from "../core/componentUnmount";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
 
 /** 自动档 id（与 types/streamPlugin 的 AUTO_QUALITY_ID 取值一致；此处本地定义，避免跨模块耦合） */
 const AUTO_QUALITY_ID = "auto";

@@ -33,9 +33,9 @@
  * bindDrag 缺省（展示模式）时不绑定拖拽
  */
 
-import { h, signal } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import { h, signal } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 import type { ActiveCardEntry, InteractionScoreSum } from "./types";
 import { renderCloseCircle } from "./closeCircle";
 

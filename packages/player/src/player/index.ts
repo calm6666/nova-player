@@ -7,7 +7,7 @@
 export { VideoPlayer, getPlayerInstance } from "./VideoPlayer";
 
 import { VideoPlayer } from "./VideoPlayer";
-import type { PlayerConfig } from "@/types";
+import type { PlayerConfig } from "../types/player";
 
 
 /**

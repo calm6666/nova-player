@@ -7,9 +7,9 @@
  * 严禁使用 unicode 字符（×、▶、♪ 等）或自造图标。
  */
 
-import { h } from "@/core";
-import { parseSvgMarkup } from "@/nova/utils/svgMarkup";
-import type { VNode } from "@/types";
+import { h } from '@lumina/framework/core';
+import { parseSvgMarkup } from "../utils/svgMarkup";
+import type { VNode } from "@lumina/framework/types";
 
 /** Close 图标（既有实现原样复制） */
 export const Close = (attrs: Record<string, unknown> = {}): VNode =>

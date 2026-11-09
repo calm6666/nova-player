@@ -3,7 +3,7 @@
  * 与既有实现 types/interaction.ts 保持一致
  */
 
-import type { Signal } from "@/core";
+import type { Signal } from "@lumina/framework/core";
 
 /** 互动类型 */
 export type InteractionType = 1 | 2 | 3;

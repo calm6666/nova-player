@@ -1,5 +1,5 @@
 // browser-capability-detector.ts
-import { createLogger } from '@/utils';
+import { createLogger } from '@lumina/framework/utils';
 const logger = createLogger('BrowserDetector');
 
 /**

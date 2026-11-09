@@ -1,6 +1,6 @@
-import type { DisplayMode, PlayerState } from "@/types";
-import type { QualityLevel } from "@/types/streamPlugin";
-import type { SubtitleTrackInfo } from "@/types/subtitle";
+import type { DisplayMode, PlayerState } from "../types/player";
+import type { QualityLevel } from "../types/streamPlugin";
+import type { SubtitleTrackInfo } from "../types/subtitle";
 
 /**
  * ============================================
@@ -9,10 +9,10 @@ import type { SubtitleTrackInfo } from "@/types/subtitle";
  * 管理播放器的运行时状态，包括高频更新的数据
  */
 
-import { createTypedStateManager } from "@/core/state";
-import type { TypedStateManager } from "@/core/state";
-import { createContext, createReactiveContext } from "@/core/context";
-import type { ControlsConfig } from "@/nova/types";
+import { createTypedStateManager } from '@lumina/framework/core/state';
+import type { TypedStateManager } from "@lumina/framework/core/state";
+import { createContext, createReactiveContext } from '@lumina/framework/core/context';
+import type { ControlsConfig } from "../types";
 
 export type { TypedStateManager };
 
@@ -611,7 +611,7 @@ export const StateContext =
 
 // 控件开关默认值的唯一来源在 config/defaultConfig.ts，
 // 这里只做转发，避免与配置文件各写一份导致默认值漂移。
-import { defaultControlConfig } from "@/nova/config/defaultConfig";
+import { defaultControlConfig } from "../config/defaultConfig";
 
 export { defaultControlConfig };
 

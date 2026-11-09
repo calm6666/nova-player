@@ -12,13 +12,8 @@
  * - 悬停提示：命中弹幕元素时向父层 emit，由 Dialog 展示弹幕详情
  */
 
-import {
-  defineComponent,
-  h,
-  useTemplateRef,
-  signal,
-} from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { defineComponent, h, useTemplateRef, signal } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 // ============================================
 // 组件属性接口

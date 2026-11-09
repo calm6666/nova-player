@@ -6,9 +6,13 @@
  * 包括插件接口、状态管理器、事件总线、钩子系统等
  */
 
-import type { VideoPlayer } from "@/nova/index";
-import type { TypedStateManager, PlayerEventBus } from "@/core";
+import type { VideoPlayer } from "../player/VideoPlayer";
+import type { TypedStateManager } from "@lumina/framework/core";
+import type { PlayerEventBus } from "../types/events";
+import type { PluginOptions } from "@lumina/framework/types/plugin";
 export type { PlayerEventBus };
+// 通用插件选项由框架层定义，播放器出口统一再导出（插件包经 @lumina/nova 消费）
+export type { PluginOptions };
 
 /**
  * 插件接口

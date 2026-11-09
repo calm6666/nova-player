@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { defineComponent, h, signal } from '../core';
-import { mount } from '../core/mount';
+import { defineComponent, h, signal } from '@lumina/framework';
+import { mount } from '@lumina/framework/core/mount';
 import { ViewpointMenu } from '../packages/player/src/components/ViewpointMenu';
 
 describe('reactive component props', () => {

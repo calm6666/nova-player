@@ -11,8 +11,8 @@
  * API 内部仅写 signal，不再触碰 DOM。
  */
 
-import { h, defineComponent, signal } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, signal } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 /**
  * 加载组件 Props 接口

@@ -15,13 +15,7 @@
  * @module packages/plugins/src/subtitle/asr/mockAsrEngine
  */
 
-import type {
-  AsrEngine,
-  AsrEngineInitOptions,
-  AsrEngineStatus,
-  AsrFinalResult,
-  AsrPartialResult,
-} from '@/types/subtitle';
+import type { AsrEngine, AsrEngineInitOptions, AsrEngineStatus, AsrFinalResult, AsrPartialResult } from '@lumina/nova';
 
 /** 中文演示句库（按段序号轮换） */
 const ZH_SENTENCES: string[] = [

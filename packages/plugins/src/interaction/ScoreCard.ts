@@ -29,9 +29,9 @@
  * - bindDrag 为 undefined 时不绑定拖拽（展示模式不传）
  */
 
-import { h, signal } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import { h, signal } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 import type {
   ActiveCardEntry,
   InteractionScore,

@@ -11,7 +11,7 @@
  * - `StreamQuality` / `StreamSnapshot`：插件能力映射到直播 UI 的数据结构。
  */
 
-import { StreamFormatEnum } from '@/types/streamPlugin';
+import { StreamFormatEnum } from '@lumina/nova';
 
 /** 流类型。 */
 export type StreamKind = 'hls' | 'flv' | 'native';

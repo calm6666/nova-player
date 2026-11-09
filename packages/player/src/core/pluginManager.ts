@@ -7,14 +7,15 @@
  */
 
 import type { Plugin, PluginContext } from "./plugin";
-import type { VideoPlayer } from "@/nova/index";
-import type { StreamPlugin } from "@/types/streamPlugin";
-import { createStateManager } from "@/core/state";
-import { createTypedEventBus } from "@/core/eventBus";
-import { createHookSystem } from "@/core/hooks";
-import type { TypedStateManager, PlayerEventBus, HookSystem } from "@/core";
-import { PlayerEventMap } from "@/core/events";
-import { createLogger } from "@/utils";
+import type { VideoPlayer } from "../index";
+import type { StreamPlugin } from "../types/streamPlugin";
+import { createStateManager } from '@lumina/framework/core/state';
+import { createTypedEventBus } from '@lumina/framework/core/eventBus';
+import { createHookSystem } from '@lumina/framework/core/hooks';
+import type { TypedStateManager, HookSystem } from "@lumina/framework/core";
+import type { PlayerEventBus } from "../types/events";
+import { PlayerEventMap } from "../types/events";
+import { createLogger } from '@lumina/framework/utils';
 
 const logger = createLogger("PluginManager");
 

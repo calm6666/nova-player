@@ -17,10 +17,10 @@
  * ERROR_RECOVERY / LOADED_METADATA（重新加载成功）→ hide()。
  */
 
-import { h, defineComponent, useTemplateRef, t } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, useTemplateRef, t } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 // 本地网络权限开启示意图（错误面板 local-network-tip 区域展示）
-import errorSignImage from "@/assets/images/error-sign-image.png";
+import errorSignImage from "../assets/images/error-sign-image.png";
 
 // ============================================
 // 错误面板 Props 接口

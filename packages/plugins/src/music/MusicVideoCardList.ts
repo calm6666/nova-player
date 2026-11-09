@@ -5,16 +5,9 @@
  * 视频卡片网格 + 小编推荐 banner + 没看够引导。
  */
 
-import {
-  h,
-  defineComponent,
-  signal,
-  Show,
-  For,
-  onEffect,
-  type ComponentLifecycle,
-} from "@/core";
-import type { VNode } from "@/types";
+import { h, defineComponent, signal, Show, For, onEffect } from '@lumina/framework/core';
+import type { ComponentLifecycle } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import {
   ArrowRightIcon,
   DanmuCountIcon,

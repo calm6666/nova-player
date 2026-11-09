@@ -8,8 +8,8 @@
  * 颜色由父级 CSS 控制（fill 继承 currentColor），除排序箭头为固定 #999。
  */
 
-import { h } from "@/core";
-import type { VNode } from "@/types";
+import { h } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 
 // ============================================
 // 面板骨架图标

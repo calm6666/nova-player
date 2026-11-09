@@ -10,28 +10,17 @@
  *   过渡由 .ui-panel-wrap / .ui-panel-move 上的 CSS transition 承担
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useContext,
-  useReactiveState,
-  signal,
-  computed,
-  onEffect,
-  Show,
-  t,
-} from "@/core";
-import type { Signal, ReadonlySignal } from "@/core";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { PlayerStateKeyEnum, StateContext } from "@/store/runtimeState";
-import { ConfigStoreContext } from "@/store/configStore";
-import type { PlayerStateMap, TypedStateManager } from "@/store/runtimeState";
-import type { VNode } from "@/types";
+import { h, defineComponent, useTemplateRef, useContext, useReactiveState, signal, computed, onEffect, Show, t } from '@lumina/framework/core';
+import type { Signal, ReadonlySignal } from "@lumina/framework/core";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
+import { ConfigStoreContext } from "../store/configStore";
+import type { PlayerStateMap, TypedStateManager } from "../store/runtimeState";
+import type { VNode } from "@lumina/framework/types";
 import { LottieIcon, LottieIconApi } from "./LottieIcon";
-import { Switch } from "@/nova/components/Switch";
-import { Checkbox } from "@/nova/components/Checkbox";
+import { Switch } from "./Switch";
+import { Checkbox } from "./Checkbox";
 import { ArrowRight } from "./icons";
 import { RadioGroup } from "./RadioGroup";
 import type { RadioGroupOption } from "./RadioGroup";
@@ -137,7 +126,9 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
     };
 
     const handleMouseEnter = (): void => {
-      settingIconRef.value?.play();
+      // 绑定位置与 B 站一致（根节点 mouseenter），不移动监听；
+      // 用已有展开态去重：面板已展开后（鼠标进入设置面板）不再重复播放
+      if (!shownSignal.value) settingIconRef.value?.play();
       cancelRaf(hideTimer!);
       hideTimer = null;
       if (showTimer !== null) return;
@@ -468,7 +459,9 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       },
       h(
         "div",
-        { class: "nova-player-ctrl-btn-icon" },
+        {
+          class: "nova-player-ctrl-btn-icon",
+        },
         h(LottieIcon, {
           name: "setting",
           animationData: settingHoverAnimationData,

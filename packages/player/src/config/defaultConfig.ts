@@ -1,7 +1,7 @@
-import type { PlayerConfig } from "@/types";
-import type { ControlsConfig } from "@/nova/types";
-import { PlayMode } from "@/types";
-import { LogLevel } from "@/utils";
+import type { PlayerConfig } from "../types/player";
+import type { ControlsConfig } from "../types";
+import { PlayMode } from "../types/player";
+import { LogLevel } from '@lumina/framework/utils';
 
 /**
  * 默认控件开关

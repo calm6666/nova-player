@@ -13,9 +13,9 @@
  *
  */
 
-import { h } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import { h } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 
 /**
  * 渲染倒计时进度条

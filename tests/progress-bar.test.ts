@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, test } from 'vitest';
-import { h, mount } from '../core';
+import { h, mount } from '@lumina/framework';
 import { ProgressBar, type ProgressBarApi } from '../packages/player/src/components/ProgressBar';
 
 describe('ProgressBar API', () => {

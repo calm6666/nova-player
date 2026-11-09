@@ -14,37 +14,17 @@
  *   高能进度条由 Show + pbpRenderedSignal 条件渲染
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useContext,
-  useReactiveState,
-  signal,
-  onEffect,
-  untracked,
-  Show,
-} from "@/core";
-import type { Tooltip, ControlsConfig } from "@/nova/types";
-import type { PlayerScene } from "@/types";
+import { h, defineComponent, useTemplateRef, useContext, useReactiveState, signal, onEffect, untracked, Show } from '@lumina/framework/core';
+import type { Tooltip, ControlsConfig } from "../types";
+import type { PlayerScene } from "../types/player";
 import type { PlayerPluginFlags } from "./PlayerDocker";
-import type {
-  EnergyProgressData,
-  EnergyProgressProvider,
-  ProgressPreviewProvider,
-  ProgressSegment,
-  ProgressSkipPoints,
-} from "@/types";
-import {
-  ConfigContext,
-  PlayerStateKeyEnum,
-  StateContext,
-} from "@/store/runtimeState";
-import type { PlayerStateMap, TypedStateManager } from "@/store/runtimeState";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { isBrowser } from "@/utils";
-import { ComponentEventEnum } from "@/core/events";
+import type { EnergyProgressData, EnergyProgressProvider, ProgressPreviewProvider, ProgressSegment, ProgressSkipPoints } from "../types/player";
+import { ConfigContext, PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
+import type { PlayerStateMap, TypedStateManager } from "../store/runtimeState";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import { isBrowser } from '@lumina/framework/utils';
+import { ComponentEventEnum } from "../types/events";
 import { LeftControls } from "./LeftControls";
 import { RightControls } from "./RightControls";
 import { TopControls } from "./TopControls";

@@ -11,7 +11,7 @@ export {
   type ParsedSubtitle,
 } from './types';
 
-import { createLogger } from '@/utils';
+import { createLogger } from '@lumina/framework/utils';
 const logger = createLogger('Subtitle');
 
 import {

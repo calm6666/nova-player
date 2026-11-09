@@ -1,6 +1,6 @@
 {
   "name": "@lumina/nova",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Nova video player built on the Lumina framework",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,7 +11,6 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./lumina": "./dist/lumina.js",
     "./style.css": "./dist/style.css"
   },
   "files": [
@@ -20,7 +19,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "demo": "vite",
-    "build": "tsc && vite build && vite build --mode lib-cdn && sass src/styles/style.scss dist/style.css --no-source-map --style=compressed && node ../../scripts/patch-style-assets.mjs packages/player && node ../../scripts/patch-dts.mjs packages/player",
+    "build": "tsc && vite build && vite build --mode lib-cdn && sass src/styles/style.scss dist/style.css --no-source-map --style=compressed && node ../../scripts/patch-style-assets.mjs packages/player",
     "preview": "vite preview",
     "lint": "node ../../scripts/lint.mjs src --ext .ts",
     "typecheck": "tsc --noEmit",
@@ -32,14 +31,15 @@
     "core"
   ],
   "license": "MIT",
+  "dependencies": {
+    "@lumina/framework": "workspace:*",
+    "lottie-web": "^5.13.0"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "sass": "^1.99.0",
     "typescript": "^6.0.3",
     "vite": "^5.2.0",
     "vite-plugin-dts": "^3.8.0"
-  },
-  "dependencies": {
-    "lottie-web": "^5.13.0"
   }
 }

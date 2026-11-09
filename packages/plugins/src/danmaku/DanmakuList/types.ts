@@ -9,7 +9,7 @@
  *   交互逻辑原样移植，仅把 Solid 原语替换为 Lumina 原语。
  */
 
-import type { DanmakuItem as PlayerDanmakuItem } from "@/types/danmaku";
+import type { DanmakuItem as PlayerDanmakuItem } from "@lumina/nova";
 
 // ============================================
 // 面板状态

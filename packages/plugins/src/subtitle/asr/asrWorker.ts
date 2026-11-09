@@ -26,7 +26,7 @@
  * @module packages/plugins/src/subtitle/asr/asrWorker
  */
 
-import type { AsrEngine } from '@/types/subtitle';
+import type { AsrEngine } from '@lumina/nova';
 import { VadSegmenter, type VadOptions } from './vadSegmenter';
 import { MockAsrEngine } from './mockAsrEngine';
 // 真实流式识别引擎（静态 import：Worker 以 IIFE 单 chunk 构建，不支持

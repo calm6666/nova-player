@@ -1,0 +1,8 @@
+packages:
+  - 'packages/*'
+  - 'demo'
+  - 'demo-prod'
+
+onlyBuiltDependencies:
+  - esbuild
+  - '@parcel/watcher'

@@ -10,26 +10,17 @@
  * - 弹幕：把直播设置写入点播播放器约定的运行时状态键，并调用弹幕插件 API。
  */
 
-import type { VideoPlayer } from '@/nova/index';
-import { PluginManager } from '@/nova/core/pluginManager';
-import type { Plugin } from '@/nova/core/plugin';
-import { createTypedEventBus, createTypedStateManager } from '@/core';
-import { PlayerEventEnum } from '@/core/events';
-import type { PlayerEventBus, PlayerEventMap } from '@/core/events';
-import type { PlayerStateMap, RuntimeStateManager } from '@/nova/store/runtimeState';
-import { PlayerStateKeyEnum } from '@/nova/store/runtimeState';
-import {
-  StreamFormatEnum,
-  StreamPluginEventEnum,
-  StreamPluginTypeEnum,
-} from '@/types/streamPlugin';
-import type { QualityLevel, StreamPlugin } from '@/types/streamPlugin';
-import type {
-  NovaLiveDanmakuPlugin,
-  NovaLivePlugin,
-  NovaLivePluginInput,
-  NovaDanmakuSetting,
-} from '@/live/types';
+import type { VideoPlayer } from '@lumina/nova';
+import { PluginManager } from '@lumina/nova';
+import type { Plugin } from '@lumina/nova';
+import { createTypedEventBus, createTypedStateManager } from '@lumina/framework/core';
+import { PlayerEventEnum } from '@lumina/nova';
+import type { PlayerEventBus, PlayerEventMap } from '@lumina/nova';
+import type { PlayerStateMap, RuntimeStateManager } from '@lumina/nova';
+import { PlayerStateKeyEnum } from '@lumina/nova';
+import { StreamFormatEnum, StreamPluginEventEnum, StreamPluginTypeEnum } from '@lumina/nova';
+import type { QualityLevel, StreamPlugin } from '@lumina/nova';
+import type { NovaLiveDanmakuPlugin, NovaLivePlugin, NovaLivePluginInput, NovaDanmakuSetting } from '../types';
 import { detectStreamFormat, readStreamErrorMessage } from './stream';
 import type { StreamQuality, StreamSnapshot } from './stream';
 

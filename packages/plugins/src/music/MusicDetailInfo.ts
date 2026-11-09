@@ -6,16 +6,9 @@
  * 溢出检测与 IntersectionObserver 内联在组件中。
  */
 
-import {
-  h,
-  defineComponent,
-  signal,
-  Show,
-  For,
-  onEffect,
-  type ComponentLifecycle,
-} from "@/core";
-import type { VNode } from "@/types";
+import { h, defineComponent, signal, Show, For, onEffect } from '@lumina/framework/core';
+import type { ComponentLifecycle } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import {
   ArrowRightIcon,
   HeartIcon,

@@ -14,15 +14,15 @@
  *   半信号半命令式的混合状态，不如整组件统一命令式
  */
 
-import { h, defineComponent, useTemplateRef } from "@/core";
-import { useComponentUnmount } from "@/nova/core/componentUnmount";
-import type { ProgressSegment } from "@/types";
+import { h, defineComponent, useTemplateRef } from '@lumina/framework/core';
+import { useComponentUnmount } from "../core/componentUnmount";
+import type { ProgressSegment } from "../types/player";
 import {
   computeSegmentBox,
   computeSegmentRatio,
   computeSegmentBufferRatio,
 } from "./ProgressBar";
-import { normalizeSegmentSpan } from "@/nova/utils/media/progressSegment";
+import { normalizeSegmentSpan } from "../utils/media/progressSegment";
 
 /** 影子进度条挂载后回传的控制 API */
 export interface ShadowProgressAreaApi {

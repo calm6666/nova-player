@@ -4,89 +4,52 @@
  * ============================================
  */
 
-import {
-  defineComponent,
-  h,
-  mount,
-  destroy,
-  useTemplateRef,
-  useContext,
-  useState,
-  Show,
-  signal,
-  t,
-} from "@/core";
-import type { TypedStateManager } from "@/core";
-import type { PlayerEventBus } from "@/core/events";
-import { useComponentUnmount } from "@/nova/core/componentUnmount";
-import type { EnergyProgressProvider, ProgressPreviewProvider } from "@/types";
-import { createHotkeyHandlers, type HotkeyContext } from "@/nova/core/hotkeys";
-import {
-  isBrowser,
-  safeResizeObserver,
-  safeIntersectionObserver,
-} from "@/utils";
-import { Controls } from "@/nova/components/Controls";
-import type { ControlsAPI } from "@/nova/components/Controls";
-import type { Tooltip } from "@/nova/types";
-import type { ProgressBarApi } from "@/nova/components/ProgressBar";
-import { VolumeHint } from "@/nova/components/VolumeHint";
-import { Tooltips } from "@/nova/components/Tooltips";
-import { RowDm } from "@/nova/components/RowDm";
-import { SubtitleLayer } from "@/nova/components/SubtitleLayer";
-import { InteractionLayer } from "@/nova/components/InteractionLayer";
-import { InteractiveVideoLayer } from "@/nova/components/InteractiveVideoLayer";
-import type { InteractiveVideoLayerAPI } from "@/nova/components/InteractiveVideoLayer";
-import { ErrorSign } from "@/nova/components/ErrorSign";
-import type { ErrorSignAPI, ErrorSignInfo } from "@/nova/components/ErrorSign";
-import { Dialog } from "@/nova/components/Dialog";
-import { Context as ContextMenu } from "@/nova/components/Context";
-import {
-  HotkeyPanel,
-  type HotkeyPanelApi,
-} from "@/nova/components/HotkeyPanel";
-import { PlayerEventEnum } from "@/core/events";
-import {
-  PlayerStateKeyEnum,
-  StateContext,
-  type PlayerStateMap,
-} from "@/store/runtimeState";
-import { ConfigStoreContext, type ConfigStore } from "@/store/configStore";
-import type { VideoPlayer } from "@/player/VideoPlayer";
-import {
-  PlayerContext,
-  isSlotMount,
-  resolveSlotContent,
-  type SlotContent,
-  type SlotContext,
-  type SlotMount,
-} from "@/nova/types/slots";
-import { PlayerState } from "@/types";
-import type {
-  DisplayMode,
-  PlayerConfig,
-  PlayerEndingStyle,
-  ProgressSegment,
-  VNode,
-} from "@/types";
-import type { QualityLevel } from "@/types/streamPlugin";
-import { Toast } from "@/nova/components/Toast";
-import type { ToastOptions } from "@/nova/components/Toast";
-import { Loading } from "@/nova/components/Loading";
-import { State } from "@/nova/components/State";
-import { createBufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
-import { BrowserCapabilityDetector } from "@/nova/utils/browserCapabilityDetector";
-import type { BufferSpeedSampler } from "@/nova/utils/media/bufferSpeed";
-import { SendBar } from "@/nova/components/SendBar";
-import { ColorPanel, type ColorPanelApi } from "@/nova/components/ColorPanel";
-import {
-  AudioPanel,
-  type AudioPanelApi,
-  type AudioPanelHandle,
-} from "@/nova/components/AudioPanel";
-import { VideoInfo, type VideoInfoApi } from "@/nova/components/VideoInfo";
-import { RelationStrip } from "@/nova/components/RelationStrip";
-import { Mini, type MiniApi } from "@/nova/components/Mini";
+import { defineComponent, h, mount, destroy, useTemplateRef, useContext, useState, Show, signal, t } from '@lumina/framework/core';
+import type { TypedStateManager } from "@lumina/framework/core";
+import type { PlayerEventBus } from "../types/events";
+import { useComponentUnmount } from "../core/componentUnmount";
+import type { EnergyProgressProvider, ProgressPreviewProvider } from "../types/player";
+import { createHotkeyHandlers, type HotkeyContext } from "../core/hotkeys";
+import { isBrowser, safeResizeObserver, safeIntersectionObserver } from '@lumina/framework/utils';
+import { Controls } from "./Controls";
+import type { ControlsAPI } from "./Controls";
+import type { Tooltip } from "../types";
+import type { ProgressBarApi } from "./ProgressBar";
+import { VolumeHint } from "./VolumeHint";
+import { Tooltips } from "./Tooltips";
+import { RowDm } from "./RowDm";
+import { SubtitleLayer } from "./SubtitleLayer";
+import { InteractionLayer } from "./InteractionLayer";
+import { InteractiveVideoLayer } from "./InteractiveVideoLayer";
+import type { InteractiveVideoLayerAPI } from "./InteractiveVideoLayer";
+import { ErrorSign } from "./ErrorSign";
+import type { ErrorSignAPI, ErrorSignInfo } from "./ErrorSign";
+import { Dialog } from "./Dialog";
+import { Context as ContextMenu } from "./Context";
+import { HotkeyPanel, type HotkeyPanelApi } from "./HotkeyPanel";
+import { PlayerEventEnum } from "../types/events";
+import { PlayerStateKeyEnum, StateContext, type PlayerStateMap } from "../store/runtimeState";
+import { ConfigStoreContext, type ConfigStore } from "../store/configStore";
+import type { VideoPlayer } from "../player/VideoPlayer";
+import { PlayerContext, isSlotMount, resolveSlotContent, type SlotContent, type SlotContext, type SlotMount } from "../types/slots";
+import { PlayerState } from "../types/player";
+import type { VNode } from "@lumina/framework/types";
+import type { DisplayMode, PlayerConfig, PlayerEndingStyle, ProgressSegment } from "../types/player";
+
+import type { QualityLevel } from "../types/streamPlugin";
+import { Toast } from "./Toast";
+import type { ToastOptions } from "./Toast";
+import { Loading } from "./Loading";
+import { State } from "./State";
+import { createBufferSpeedSampler } from "../utils/media/bufferSpeed";
+import { BrowserCapabilityDetector } from "../utils/browserCapabilityDetector";
+import type { BufferSpeedSampler } from "../utils/media/bufferSpeed";
+import { SendBar } from "./SendBar";
+import { ColorPanel, type ColorPanelApi } from "./ColorPanel";
+import { AudioPanel, type AudioPanelApi, type AudioPanelHandle } from "./AudioPanel";
+import { VideoInfo, type VideoInfoApi } from "./VideoInfo";
+import { RelationStrip } from "./RelationStrip";
+import { Mini, type MiniApi } from "./Mini";
 
 // ============================================
 // 组件 API 接口定义
@@ -2877,7 +2840,7 @@ export const PlayerDocker = defineComponent<
         "data-screen": "normal",
         // 初始隐藏控制栏（与既有实现模板一致），由鼠标移动 / 播放交互驱动显示
         "data-ctrl-hidden": "true",
-        "aria-label": props.playerName || "嗨哩播放器",
+        "aria-label": props.playerName || "Nova Player",
         ref: "playerContainerRef",
       },
       h(

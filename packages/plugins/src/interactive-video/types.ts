@@ -8,8 +8,8 @@
  * 与 interaction（交互卡片）插件的数据结构完全独立，互不复用。
  */
 
-import type { PlayerSource } from "@/types";
-import type { Plugin } from "@/types/plugin";
+import type { PlayerSource } from "@lumina/nova";
+import type { Plugin } from '@lumina/nova';
 
 // ============================================
 // 节点与分支

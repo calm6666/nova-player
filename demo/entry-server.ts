@@ -29,7 +29,7 @@
  *   否则 hydrate 时 VNode 与 DOM 不匹配会导致水合失败
  */
 
-import { renderToString } from "@/core";
+import { renderToString } from '@lumina/framework/core';
 import { RootLayout, playerInstance, setPlayerInstance } from "./main";
 import { DEMO_SSR_PLAYER_CONFIG } from "./ssr-player";
 

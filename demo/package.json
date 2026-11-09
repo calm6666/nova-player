@@ -1,0 +1,27 @@
+{
+  "name": "@lumina/demo",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Lumina / Nova 开发态 demo（源码级联调：SSR + Hydration）",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "build": "vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@lumina/framework": "workspace:*",
+    "@lumina/live-player": "workspace:*",
+    "@lumina/nova": "workspace:*",
+    "@lumina/plugins": "workspace:*",
+    "dashjs": "^5.1.1",
+    "hls.js": "link:../packages/plugins/hls"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "sass": "^1.99.0",
+    "typescript": "^6.0.3",
+    "vite": "^5.2.0"
+  }
+}

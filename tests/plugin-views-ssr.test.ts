@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { h, renderToString } from '../core';
+import { h, renderToString } from '@lumina/framework';
 import { Top } from '../packages/plugins/src/top/TopView';
 import { Ending } from '../packages/plugins/src/ending/EndingView';
 

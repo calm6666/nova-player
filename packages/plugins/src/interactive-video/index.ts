@@ -43,13 +43,15 @@
  * ]
  */
 
-import { h, Fragment, signal, mount, destroy, effect } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode, PlayerSource } from "@/types";
-import type { VideoPlayer } from "../../../player/src/player/VideoPlayer";
-import { PlayerEventEnum } from "@/core/events";
-import { t } from "@/core";
-import { isBrowser } from "@/utils";
+import { h, Fragment, signal, mount, destroy, effect } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
+import type { PlayerSource } from "@lumina/nova";
+
+import type { VideoPlayer } from "@lumina/nova";
+import { PlayerEventEnum } from "@lumina/nova";
+import { t } from '@lumina/framework/core';
+import { isBrowser } from '@lumina/framework/utils';
 import { injectPluginStyle } from "../utils/injectStyle";
 // 互动视频插件样式以字符串形式内联导入（Vite `?inline`），install 时运行时注入
 import interactiveVideoCss from "./interactive-video.scss?inline";

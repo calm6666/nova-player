@@ -13,8 +13,8 @@
  * 悬停态仅将圆底填充色换为 #00A1D6。
  */
 
-import { h } from "@/core";
-import type { VNode } from "@/types";
+import { h } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 
 /**
  * 渲染「正在观看节点」的位置图标（水滴定位图案）

@@ -10,7 +10,7 @@
  * 4. 绑定「切换视频源」「销毁播放器」按钮事件
  */
 
-import { hydrate } from "../core/index.ts";
+import { hydrate } from "@lumina/framework";
 import { createApp } from "./main";
 
 // ★ 从构建产物导入播放器（monorepo 链接到 packages/player/dist）

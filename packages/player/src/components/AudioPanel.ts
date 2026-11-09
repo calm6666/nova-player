@@ -8,8 +8,8 @@
  * - 均衡器：预设 / 段数选择 + 5/10 段竖向 EQ + 重置
  */
 
-import { h, defineComponent, signal, t, useTemplateRef } from "@/core";
-import type { ComponentLifecycle } from "@/types";
+import { h, defineComponent, signal, t, useTemplateRef } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
 
 /** 音效插件面板使用的最小 API 契约 */
 export interface AudioPanelApi {

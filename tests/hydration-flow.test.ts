@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { Show, defineComponent, h } from '../core';
-import { hydrate } from '../core/mount';
-import { renderToString } from '../core/ssr';
+import { Show, defineComponent, h } from '@lumina/framework';
+import { hydrate } from '@lumina/framework/core/mount';
+import { renderToString } from '@lumina/framework/core/ssr';
 
 describe('hydration flow', () => {
   it('keeps following DOM and binds events when SSR flow output is empty', () => {

@@ -8,14 +8,8 @@
  * 中间件统一提供 play / pause / seek / load / getStats / getBufferInfo / getQualities / setQuality。
  */
 
-import type {
-  StreamPlugin,
-  StreamConfig,
-  StreamStats,
-  BufferInfo,
-  QualityLevel,
-} from '@/types/streamPlugin';
-import { StreamFormatEnum, StreamPluginTypeEnum } from '@/types/streamPlugin';
+import type { StreamPlugin, StreamConfig, StreamStats, BufferInfo, QualityLevel } from '../../types/streamPlugin';
+import { StreamFormatEnum, StreamPluginTypeEnum } from '../../types/streamPlugin';
 
 export enum PlayerMode { NATIVE = 'native', STREAMING = 'streaming' }
 

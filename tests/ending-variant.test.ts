@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { destroy, h, mount, t } from "../core";
+import { destroy, h, mount, t } from '@lumina/framework';
 import { Ending } from "../packages/plugins/src/ending/EndingView";
 import type { EndingApi } from "../packages/plugins/src/ending/EndingView";
 import type { VNode } from "../types";
 import countdownAnimation from "../packages/plugins/src/ending/assets/ending-countdown-animation.json";
-import zhCN from "../locales/zh-CN.json";
-import enUS from "../locales/en-US.json";
+import zhCN from "../packages/player/src/i18n/locales/zh-CN.json";
+import enUS from "../packages/player/src/i18n/locales/en-US.json";
 
 const RELATED = [
   { title: "第一集：开始", pic: "https://example.test/1.jpg", duration: 125 },

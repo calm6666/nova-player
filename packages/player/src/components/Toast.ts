@@ -9,11 +9,11 @@
  * item 内可选：cancel / badge / text / confirm
  */
 
-import { h, defineComponent, signal, t, For } from "@/core";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
-import type { AnimationFrameID } from "@/utils/rafTimeout";
-import { Close } from "@/nova/components/icons";
-import type { ComponentLifecycle, VNode } from "@/types";
+import { h, defineComponent, signal, t, For } from '@lumina/framework/core';
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
+import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
+import { Close } from "./icons";
+import type { ComponentLifecycle, VNode } from "@lumina/framework/types";
 
 /** 单条 Toast 配置 */
 export interface ToastOptions {

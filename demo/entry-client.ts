@@ -8,13 +8,12 @@
 
 // SSR 已把播放器 CSS 注入 HTML；只有纯客户端页面才由客户端注入样式
 if (!document.querySelector("style[data-ssr-nova-css]")) {
-  await import("@/styles/style.scss");
+  await import("@lumina/nova/style.css");
 }
-import { hydrate, mount } from "@/core";
-import { PlayerEventEnum } from "@/core/events";
-// 内置语言包：随 i18n 配置注入播放器（core/index.ts 已自动注册，这里显式传入保证配置完整）
-import zhCN from "@/locales/zh-CN.json";
-import enUS from "@/locales/en-US.json";
+import { hydrate, mount } from "@lumina/framework";
+import { PlayerEventEnum } from "@lumina/nova";
+// 内置语言包由播放器包统一导出
+import { bundledEnUS as enUS, bundledZhCN as zhCN } from "@lumina/nova";
 import {
   RootLayout,
   appEventBus,
@@ -22,34 +21,34 @@ import {
   setPlayerInstance,
 } from "./main";
 import { DEMO_SSR_PLAYER_CONFIG } from "./ssr-player";
-import { VideoPlayer } from "@/nova/player";
-import { createHlsPlugin } from "@/lumina/plugins/hls";
-import { createDashPlugin } from "@/lumina/plugins/dash";
-import { TopPlugin, EndingPlugin } from "@/lumina/plugins/index";
-import { MusicPlugin } from "@/lumina/plugins/music";
+import { VideoPlayer } from "@lumina/nova";
+import { createHlsPlugin } from "@lumina/plugins/hls";
+import { createDashPlugin } from "@lumina/plugins/dash";
+import { TopPlugin, EndingPlugin } from "@lumina/plugins";
+import { MusicPlugin } from "@lumina/plugins/music";
 import {
   mockMusicDetail,
   mockVideoList,
   mockRecommendList,
-} from "@/lumina/plugins/music";
-import { DanmakuPlugin } from "@/lumina/plugins/danmaku";
-import type { DanmakuPluginAPI } from "@/lumina/plugins/danmaku";
-import { InteractionPlugin } from "@/lumina/plugins/interaction";
-import { SubtitlePlugin } from "@/lumina/plugins/subtitle";
-import type { SubtitlePluginAPI } from "@/lumina/plugins/subtitle";
-import { AudioEffectPlugin } from "@/lumina/plugins/audioeffect";
+} from "@lumina/plugins/music";
+import { DanmakuPlugin } from "@lumina/plugins/danmaku";
+import type { DanmakuPluginAPI } from "@lumina/plugins/danmaku";
+import { InteractionPlugin } from "@lumina/plugins/interaction";
+import { SubtitlePlugin } from "@lumina/plugins/subtitle";
+import type { SubtitlePluginAPI } from "@lumina/plugins/subtitle";
+import { AudioEffectPlugin } from "@lumina/plugins/audioeffect";
 import type {
   AudioEffectPluginAPI,
   CombinationPresetName,
   EQPresetName,
   ReverbPresetName,
-} from "@/lumina/plugins/audioeffect";
-import { InteractiveVideoPlugin } from "@/lumina/plugins/interactive-video";
+} from "@lumina/plugins/audioeffect";
+import { InteractiveVideoPlugin } from "@lumina/plugins/interactive-video";
 import type {
   InteractiveNode,
   InteractiveVideoPluginConfig,
-} from "@/lumina/plugins/interactive-video";
-import type { MediaManifestSource } from "@/types/streamPlugin";
+} from "@lumina/plugins/interactive-video";
+import type { MediaManifestSource } from "@lumina/nova";
 import type {
   InteractionPluginAPI,
   InteractionPluginConfig,
@@ -61,13 +60,13 @@ import type {
   InteractionScore,
   InteractionScoreSum,
   CardType,
-} from "@/lumina/plugins/interaction";
-import type { AiSubtitleEntry, RemoteSubtitleTrack } from "@/types/subtitle";
+} from "@lumina/plugins/interaction";
+import type { AiSubtitleEntry, RemoteSubtitleTrack } from "@lumina/nova";
 import type {
   DanmakuItem,
   DanmakuFilter,
   MaskLoaderResult,
-} from "@/types/danmaku";
+} from "@lumina/nova";
 import {
   DanmakuType,
   RenderMode,
@@ -75,7 +74,7 @@ import {
   DanmakuFontSize,
   DanmakuArea,
   ScreenMode,
-} from "@/types/danmaku";
+} from "@lumina/nova";
 import type {
   MediaItem,
   PlayerConfig,
@@ -83,14 +82,14 @@ import type {
   ProgressSegment,
   DisplayMode,
   ProgressPreviewProvider,
-} from "@/types";
+} from "@lumina/nova";
 // PlayMode 为运行时枚举（设置播放模式轮换用），须按值导入
-import { PlayMode } from "@/types";
-import type { Plugin } from "@/nova/core/plugin";
+import { PlayMode } from "@lumina/nova";
+import type { Plugin } from "@lumina/nova";
 import {
   normalizeEnergyProgress,
   type EnergyProgressData,
-} from "@/nova/utils/media/energyProgress";
+} from "@lumina/nova";
 import {
   createMutablePreviewProvider,
   isVideoshotData,

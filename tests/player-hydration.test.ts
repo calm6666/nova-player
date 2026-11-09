@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { h, renderToString, hydrate, getHydrationMismatchCount } from '../core';
+import { h, renderToString, hydrate, getHydrationMismatchCount } from '@lumina/framework';
 import { VideoPlayer } from '../packages/player/src/player/VideoPlayer';
 
 // jsdom 不实现浏览器观察器；播放器挂载会注册它们

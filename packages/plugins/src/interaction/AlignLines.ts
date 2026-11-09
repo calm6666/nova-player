@@ -12,9 +12,9 @@
  * 编译器自动追踪 → applyStyle 增量写入 CSS 变量；
  */
 
-import { h, signal } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import { h, signal } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 import { SAFE_MARGIN } from "./dragEditor";
 
 // ============================================

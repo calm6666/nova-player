@@ -6,16 +6,9 @@
  * 全部使用 Lumina 原生写法（signal + onEffect + effect 清理），不引入其它运行时。
  */
 
-import {
-  h,
-  defineComponent,
-  signal,
-  Show,
-  untracked,
-  onEffect,
-  type ComponentLifecycle,
-} from "@/core";
-import type { VNode } from "@/types";
+import { h, defineComponent, signal, Show, untracked, onEffect } from '@lumina/framework/core';
+import type { ComponentLifecycle } from '@lumina/framework/core';
+import type { VNode } from "@lumina/framework/types";
 import { IdentifyType } from "./types";
 import {
   COPY_LINK_ICON,

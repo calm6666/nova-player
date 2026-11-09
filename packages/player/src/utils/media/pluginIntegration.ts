@@ -13,7 +13,7 @@
  * - 支持监控数据回调订阅
  *
  * 使用方式：
- * import { createMediaIntegration } from '@/utils/media';
+ * import { createMediaIntegration } from './media';
  * const integration = createMediaIntegration(videoElement, playerInstance);
  * integration.startMonitoring();
  */
@@ -33,10 +33,10 @@ import type {
   HlsPlayer as MonitorHlsPlayer,
   FlvPlayer as MonitorFlvPlayer,
 } from './types';
-import { BrowserCapabilityDetector } from '@/nova/utils/browserCapabilityDetector';
-import type { BrowserCapabilityResult } from '@/nova/utils/browserCapabilityDetector';
-import type { EventBus } from '@/core/eventBus';
-import { createLogger } from '@/utils';
+import { BrowserCapabilityDetector } from '../browserCapabilityDetector';
+import type { BrowserCapabilityResult } from '../browserCapabilityDetector';
+import type { EventBus } from '@lumina/framework/core/eventBus';
+import { createLogger } from '@lumina/framework/utils';
 const logger = createLogger('MediaIntegration');
 
 // ============================================

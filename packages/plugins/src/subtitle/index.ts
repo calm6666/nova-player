@@ -41,19 +41,4 @@ export type { LocalAiWorkerProviderOptions } from './asr/asrWorkerProvider';
 export type { AsrWorkerRequest, AsrWorkerResponse } from './asr/asrWorker';
 
 // 字幕双模式公共类型（统一维护于 @/types/subtitle，此处 re-export 便于外部接入）
-export type {
-  SubtitleTrackInfo,
-  SubtitleCueEvent,
-  SubtitleAiStatusPayload,
-  SubtitleAudioStream,
-  SubtitleEngineContext,
-  AsrEngine,
-  AsrEngineInitOptions,
-  AsrPartialResult,
-  AsrFinalResult,
-  AsrEngineStatus,
-  LocalAiSubtitleProvider,
-  LocalAiSubtitleConfig,
-  RemoteSubtitleTrack,
-  RemoteSubtitleProvider,
-} from '@/types/subtitle';
+export type { SubtitleTrackInfo, SubtitleCueEvent, SubtitleAiStatusPayload, SubtitleAudioStream, SubtitleEngineContext, AsrEngine, AsrEngineInitOptions, AsrPartialResult, AsrFinalResult, AsrEngineStatus, LocalAiSubtitleProvider, LocalAiSubtitleConfig, RemoteSubtitleTrack, RemoteSubtitleProvider } from '@lumina/nova';

@@ -17,8 +17,8 @@
 
 import type { AiSubtitleBackendConfig, AiSubtitleEntry } from './aiSubtitleConfig';
 import { defaultAiSubtitleParser, fillAiTemplate, aiSubtitleEntriesToItems } from './aiSubtitleConfig';
-import type { SubtitleItem } from '@/types/subtitle';
-import { isBrowser } from '@/utils';
+import type { SubtitleItem } from '@lumina/nova';
+import { isBrowser } from '@lumina/framework/utils';
 
 /** 默认请求超时（毫秒） */
 const DEFAULT_TIMEOUT = 30000;

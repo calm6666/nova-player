@@ -5,20 +5,13 @@
  * 这些面板不是自定义元素，全部挂在根元素内部。
  */
 
-import { For, h, signal } from '@/core';
-import type { Signal } from '@/core';
-import type {
-  NovaCodecCandidate,
-  NovaContextMenuAction,
-  NovaContextMenuTarget,
-  NovaLineCandidate,
-  NovaQualityCandidate,
-  NovaVideoInfo,
-} from '@/live/types';
-import type { VNode } from '@/types';
-import { t } from '@/core';
+import { For, h, signal } from '@lumina/framework/core';
+import type { Signal } from '@lumina/framework/core';
+import type { NovaCodecCandidate, NovaContextMenuAction, NovaContextMenuTarget, NovaLineCandidate, NovaQualityCandidate, NovaVideoInfo } from '../types';
+import type { VNode } from '@lumina/framework/types';
+import { t } from '@lumina/framework/core';
 import { icon, reactive, text } from './helpers';
-import { arrowLeftIcon, arrowRightIcon, playIcon } from '@/live/icons';
+import { arrowLeftIcon, arrowRightIcon, playIcon } from '../icons';
 
 /** 面板通用 hover 注入。*/
 export interface PanelHoverProps {

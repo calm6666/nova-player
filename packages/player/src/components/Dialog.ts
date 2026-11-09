@@ -5,10 +5,10 @@
  * 支持弹幕详情提示弹窗 (DmTip) 和通用对话框
  */
 
-import { h, defineComponent, useTemplateRef, materialize } from "@/core";
-import { isBrowser } from "@/utils";
-import { Close } from "@/nova/components/icons";
-import type { ComponentLifecycle, VNode } from "@/types";
+import { h, defineComponent, useTemplateRef, materialize } from '@lumina/framework/core';
+import { isBrowser } from '@lumina/framework/utils';
+import { Close } from "./icons";
+import type { ComponentLifecycle, VNode } from "@lumina/framework/types";
 
 /**
  * 安全转义 CSS 颜色值字符串

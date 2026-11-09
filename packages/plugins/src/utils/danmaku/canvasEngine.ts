@@ -15,7 +15,7 @@ import {
 } from "./types";
 import { DanmakuItemPool } from "./objectPool";
 import { TrackManager } from "./trackManager";
-import { rafTimeout, cancelRaf } from "@/utils/rafTimeout";
+import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
 import { calculateScale, calculateTrackHeight } from "./scaleHelper";
 
 /** Canvas引擎配置 */

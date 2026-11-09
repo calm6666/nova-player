@@ -9,14 +9,6 @@
  * 其余 i18n API 保持原有语义（插件目前不直接使用，转出以维持
  * `core/index` 的导出面不变）。
  */
-export {
-  setLocale,
-  getLocale,
-  registerLocale,
-  subscribeLocale,
-  isI18nEnabled,
-  initI18n,
-  localeSignal,
-} from '@/core/i18n';
-export type { Locale, I18nConfig } from '@/core/i18n';
+export { setLocale, getLocale, registerLocale, subscribeLocale, isI18nEnabled, initI18n, localeSignal } from '@lumina/framework/i18n';
+export type { Locale, I18nConfig } from '@lumina/framework/i18n';
 export { t } from '@lumina/nova';

@@ -19,10 +19,7 @@
  *   「帧间隔均匀」换算兜底（下标 = floor(悬停比例 * 拼版张数 * 每张格数)）。
  */
 
-import type {
-  ProgressPreviewFrame,
-  ProgressPreviewProvider,
-} from "@/types";
+import type { ProgressPreviewFrame, ProgressPreviewProvider } from "@lumina/nova";
 
 /**
  * B 站 videoshot 接口 data 的形状（与 mock-server /x/player/videoshot 一致）

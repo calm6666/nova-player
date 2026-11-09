@@ -29,9 +29,9 @@
  *
  */
 
-import { h, For } from "@/core";
-import type { Signal } from "@/core";
-import type { VNode } from "@/types";
+import { h, For } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { VNode } from "@lumina/framework/types";
 import type { InteractiveNode } from "./types";
 import { renderCheckIcon, renderPositionIcon } from "./icons";
 

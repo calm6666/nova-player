@@ -6,9 +6,9 @@
  * 卡片始终显示，按容器宽度动态增删；进入按钮跟随控制栏 / Top 显隐。
  */
 
-import { h, defineComponent, t, signal, For } from "@/core";
-import type { EndingRelatedItem } from "@/types";
-import type { VNode } from "@/types";
+import { h, defineComponent, t, signal, For } from '@lumina/framework/core';
+import type { EndingRelatedItem } from "../types/player";
+import type { VNode } from "@lumina/framework/types";
 
 export interface RelationStripProps {
   /** 相关推荐列表 */

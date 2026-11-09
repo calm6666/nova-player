@@ -14,9 +14,9 @@
  * loading(bool) 在圆点内插入 / 移除加载图标。
  */
 
-import { h, defineComponent, useTemplateRef, materialize, signal } from '@/core';
-import type { ComponentLifecycle } from '@/types';
-import type { VNode } from '@/types';
+import { h, defineComponent, useTemplateRef, materialize, signal } from '@lumina/framework/core';
+import type { ComponentLifecycle } from '@lumina/framework/types';
+import type { VNode } from '@lumina/framework/types';
 
 /**
  * 开关尺寸类型：small / middle / large

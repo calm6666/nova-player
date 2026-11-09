@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { TrackManager } from "@/lumina/plugins/utils/danmaku/trackManager";
-import {
-  DanmakuArea,
-  DanmakuType,
-  type DanmakuRenderItem,
-} from "@/lumina/plugins/utils/danmaku/types";
+import { TrackManager } from "../packages/plugins/src/utils/danmaku/trackManager";
+import { DanmakuArea, DanmakuType, type DanmakuRenderItem } from "../packages/plugins/src/utils/danmaku/types";
 
 /**
  * 轨道分配回归测试

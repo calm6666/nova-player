@@ -4,9 +4,9 @@
  * ============================================
  */
 
-import { h, defineComponent, useTemplateRef } from '@/core';
+import { h, defineComponent, useTemplateRef } from '@lumina/framework/core';
 import { CheckboxDefaultIcon, CheckboxSelectedIcon } from './icons';
-import type { ComponentLifecycle } from '@/types';
+import type { ComponentLifecycle } from '@lumina/framework/types';
 
 /**
  * 复选框组件 Props 接口

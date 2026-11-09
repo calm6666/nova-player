@@ -13,7 +13,7 @@ export type {
 } from './controls';
 
 // 控制条配置（`ControlsConfig` 与 `PlayerConfig` 同源，定义在根类型模块）
-export type { ControlsConfig } from '@/types';
+export type { ControlsConfig } from './player';
 
 export type {
   CardType,

@@ -4,22 +4,11 @@
  * ============================================
  */
 
-import {
-  h,
-  defineComponent,
-  useTemplateRef,
-  useContext,
-  t,
-  signal,
-} from "@/core";
-import type { ComponentLifecycle } from "@/types";
-import type { VNode } from "@/types";
-import type { TypedStateManager } from "@/core/state";
-import {
-  StateContext,
-  PlayerStateKeyEnum,
-  type PlayerStateMap,
-} from "@/store/runtimeState";
+import { h, defineComponent, useTemplateRef, useContext, t, signal } from '@lumina/framework/core';
+import type { ComponentLifecycle } from "@lumina/framework/types";
+import type { VNode } from "@lumina/framework/types";
+import type { TypedStateManager } from "@lumina/framework/core/state";
+import { StateContext, PlayerStateKeyEnum, type PlayerStateMap } from "../store/runtimeState";
 
 /**
  * 弹幕模式类型

@@ -9,11 +9,7 @@
  * @module packages/plugins/src/subtitle/remoteProvider
  */
 
-import type {
-  AiSubtitleEntry,
-  RemoteSubtitleProvider,
-  RemoteSubtitleTrack,
-} from '@/types/subtitle';
+import type { AiSubtitleEntry, RemoteSubtitleProvider, RemoteSubtitleTrack } from '@lumina/nova';
 import type { AiSubtitleBackendConfig } from './aiSubtitleConfig';
 import { AiSubtitleFetcher } from './AiSubtitleFetcher';
 

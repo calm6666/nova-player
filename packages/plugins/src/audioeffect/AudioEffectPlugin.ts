@@ -21,11 +21,11 @@
  * player.plugins.audioEffect?.setEQPreset('pop', '10');
  */
 
-import type { Plugin, PluginOptions } from '@/types/plugin';
-import type { VideoPlayer } from '../../../player/src/player/VideoPlayer';
-import type { PlayerEventBus } from '../../../player/src/core/plugin';
-import { PlayerEventEnum } from '@/core/events';
-import { createLogger, isBrowser } from '@/utils';
+import type { Plugin, PluginOptions } from '@lumina/nova';
+import type { VideoPlayer } from '@lumina/nova';
+import type { PlayerEventBus } from '@lumina/nova';
+import { PlayerEventEnum } from '@lumina/nova';
+import { createLogger, isBrowser } from '@lumina/framework/utils';
 import { EffectChain } from './effects/EffectChain';
 import { HiResAudioDecoder, detectHiResSupport } from './HiResAudioDecoder';
 import type { HiResDecodedAudio, HiResSupportInfo } from './HiResAudioDecoder';

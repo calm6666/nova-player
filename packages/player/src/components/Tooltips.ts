@@ -16,10 +16,10 @@
  * 命令式 API 契约不变；API 内部仅写 signal。
  */
 
-import { h, defineComponent, signal, t } from "@/core";
-import type { Signal } from "@/core";
-import type { ComponentLifecycle } from "@/types";
-import type { VNode } from "@/types";
+import { h, defineComponent, signal, t } from '@lumina/framework/core';
+import type { Signal } from "@lumina/framework/core";
+import type { ComponentLifecycle } from "@lumina/framework/types";
+import type { VNode } from "@lumina/framework/types";
 
 /**
  * 提示项接口
@@ -56,7 +56,7 @@ export interface TooltipsProps {
 /**
  * 默认提示项列表，包含播放器各按钮的默认提示文本
  *
- * 全部使用 i18n key（titleKey），文案见 core/locales/{zh-CN,en-US}.json；
+ * 全部使用 i18n key（titleKey），文案见 packages/player/src/i18n/locales/{zh-CN,en-US}.json；
  * 动态态（宽屏进入/退出、网页全屏、画中画、全屏）由 PlayerDocker 通过
  * updateTipKey 在状态变化时切换 key。
  */
