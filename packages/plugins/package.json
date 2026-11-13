@@ -54,6 +54,10 @@
     "./interactive-video": {
       "import": "./dist/interactive-video.js",
       "types": "./dist/interactive-video.d.ts"
+    },
+    "./dynamicbg": {
+      "import": "./dist/dynamicbg.js",
+      "types": "./dist/dynamicbg.d.ts"
     }
   },
   "files": [

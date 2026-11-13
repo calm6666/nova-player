@@ -125,3 +125,7 @@ export type {
   RecommendItem,
   Singer,
 } from './music';
+
+// 导出动态背景插件 - 使用工厂函数
+export { DynamicBgPlugin, createDynamicBgPlugin } from './dynamicbg';
+export type { DynamicBgPluginConfig, DynamicBgMode } from './dynamicbg';

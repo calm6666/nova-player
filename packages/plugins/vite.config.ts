@@ -68,6 +68,7 @@ export default defineConfig({
         audioeffect: resolve(__dirname, 'src/audioeffect/index.ts'),
         interaction: resolve(__dirname, 'src/interaction/index.ts'),
         'interactive-video': resolve(__dirname, 'src/interactive-video/index.ts'),
+        dynamicbg: resolve(__dirname, 'src/dynamicbg/index.ts'),
       },
       formats: ['es'],
     },

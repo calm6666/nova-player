@@ -1,0 +1,46 @@
+/**
+ * ============================================
+ * 动态背景插件样式 (DynamicBgPlugin)
+ * ============================================
+ * 三层结构（z 序自底向上，依赖 DOM 顺序，不抢 z-index 数值）：
+ * 1. .nova-player-dynamic-bg-canvas —— 模糊放大的视频帧（垫底）
+ * 2. .nova-player-dynamic-bg-mask  —— 半透明遮罩（压暗背景）
+ * 3. <video>                       —— 清晰画面（兄弟节点，排在容器之后）
+ *
+ * 整体插入位置：video.parentElement.insertBefore(wrap, video)，
+ * 在点播端父级是 .nova-player-video-wrap，直播端是 .nova-live-player
+ * 根元素，两端都不依赖额外定位约定。
+ */
+.nova-player-dynamic-bg {
+  display: block;
+  height: 100%;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 100%;
+
+  .nova-player-dynamic-bg-canvas,
+  .nova-player-dynamic-bg-mask {
+    display: block;
+    height: 100%;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    width: 100%;
+  }
+
+  .nova-player-dynamic-bg-canvas {
+    // 画布内部分辨率是显示尺寸的 resolutionScale 倍（性能优化），
+    // 这里靠 CSS 拉伸铺满；translateZ(0) 强制提升为独立合成层，
+    // 画布重绘不连带播放器其它区域重绘
+    transform: translateZ(0);
+  }
+
+  .nova-player-dynamic-bg-mask {
+    // 默认压暗色兜底；实际颜色由插件按 maskBg 配置内联写入
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
