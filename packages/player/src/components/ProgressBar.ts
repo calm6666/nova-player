@@ -223,13 +223,13 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     const hoveredSegIdxSignal = signal<number>(-1);
 
     /**
-     * 分段重建代号
+     * 分段列表的稳定身份 = 位置下标
      *
-     * 每次 rebuildSegments 自增并编入 For 的 key：key 恒变即全量重渲染，
-     * 与旧实现「销毁全部旧 VNode 再逐个 mount」的行为完全一致，
-     * 同时保证函数 ref 重新收集 DOM 引用（refs 数组已同步重置）。
+     * For 的 key 只取下标（见主渲染处）：同样数量的分段重建时 key 不变，
+     * 节点被复用、只在原节点上更新几何/内容；增删只发生在尾部。
+     * 不再使用自增 generation —— 它让每次重建的 key 全变，退化为全量重挂，
+     * 复用与函数 ref 缓存都会失效。
      */
-    let segmentGeneration = 0;
 
     // ============================================
     // DOM 引用（模板 ref + For render 的函数 ref）
@@ -306,6 +306,43 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     /** 各段上次缓冲填充比例（钳制后的 0-1），用于 updateBufferFills 去重 */
     let lastBufferRatios: number[] = [];
 
+    /**
+     * 按当前分段数量同步 DOM 引用缓存长度
+     *
+     * refs 是「位置缓存」：For 的 key 就是下标，节点按位置复用，函数 ref 只在
+     * 节点创建时写一次对应下标。因此这里只截断尾部多余项，不能置空重建——
+     * 置空后复用节点不会再触发函数 ref，数组会永远为空（进度填充一帧都不写）。
+     * 节点销毁时框架的 clearRef 不处理函数 ref，不会回调清理，所以必须在这里
+     * 主动把长度裁到当前节点数，避免继续攥着已销毁的 DOM。
+     */
+    const syncRefs = (): void => {
+      // 0 段 / 1 段时渲染的是单条整轴（SINGLE_BAR），节点数恒为 1
+      const length = Math.max(1, segmentsSignal.value.length);
+      segmentBufferRefs.length = length;
+      segmentCurrentRefs.length = length;
+    };
+
+    /**
+     * 分段填充条的引用回调工厂
+     *
+     * 创建/水合时以元素回调一次写入对应下标；销毁时框架以 `null` 回调
+     * （见 framework clearRef），这里按槽位清理，避免攥着已销毁的 DOM。
+     * 仅当槽位仍是被销毁的那个节点时才清空：同一位置若已新建节点并先写入，
+     * 旧节点的清理不能把它覆盖掉。
+     * @param cache - 目标引用缓存（缓冲条 / 已播放条）
+     * @param index - 分段位置下标
+     */
+    const fillRef =
+      (cache: Array<HTMLDivElement | null>, index: number) =>
+      (el: Element | null, vnode?: { el?: Element | null }): void => {
+        if (el instanceof HTMLDivElement) {
+          cache[index] = el;
+          return;
+        }
+        const dying = vnode?.el ?? null;
+        if (!cache[index] || cache[index] === dying) cache[index] = null;
+      };
+
     // ============================================
     // 辅助函数
     // ============================================
@@ -377,7 +414,9 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         childClass === "nova-player-progress-schedule-buffer"
           ? lastBufferRatios
           : lastFillRatios;
-      for (let i = 0; i < refs.length; i += 1) {
+      // 以「数据区间」为准遍历：refs 可能尚未收集齐（新节点未创建），
+      // 但绝不允许因为 refs 短而整段跳过不写
+      for (let i = 0; i < rangeList.length; i += 1) {
         const el = refs[i];
         const range = rangeList[i];
         if (!el || !range) continue;
@@ -414,7 +453,7 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
       if (!Number.isFinite(buffer)) return;
       const rangeList = resolveSegments();
       const playhead = Number.isFinite(currentTime) ? currentTime : 0;
-      for (let i = 0; i < segmentBufferRefs.length; i += 1) {
+      for (let i = 0; i < rangeList.length; i += 1) {
         const el = segmentBufferRefs[i];
         const range = rangeList[i];
         if (!el || !range) continue;
@@ -779,20 +818,12 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
             class: "nova-player-progress-schedule-buffer",
             style: { transform: "scaleX(0)" },
             // 函数 ref：materialize 时按当前列表下标收集 DOM 引用
-            ref: (el: Element): void => {
-              if (el instanceof HTMLDivElement) {
-                segmentBufferRefs[index] = el;
-              }
-            },
+            ref: fillRef(segmentBufferRefs, index),
           }),
           h("div", {
             class: "nova-player-progress-schedule-current",
             style: { transform: "scaleX(0)" },
-            ref: (el: Element): void => {
-              if (el instanceof HTMLDivElement) {
-                segmentCurrentRefs[index] = el;
-              }
-            },
+            ref: fillRef(segmentCurrentRefs, index),
           }),
         );
       }
@@ -807,20 +838,12 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
           h("div", {
             class: "nova-player-progress-schedule-buffer",
             style: { transform: "scaleX(0)" },
-            ref: (el: Element): void => {
-              if (el instanceof HTMLDivElement) {
-                segmentBufferRefs[index] = el;
-              }
-            },
+            ref: fillRef(segmentBufferRefs, index),
           }),
           h("div", {
             class: "nova-player-progress-schedule-current",
             style: { transform: "scaleX(0)" },
-            ref: (el: Element): void => {
-              if (el instanceof HTMLDivElement) {
-                segmentCurrentRefs[index] = el;
-              }
-            },
+            ref: fillRef(segmentCurrentRefs, index),
           }),
         );
       }
@@ -891,21 +914,21 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     /**
      * 重建进度条分段
      *
-     * 写入 segmentsSignal 即完成重建：For 按 key diff 自动更新 DOM。
-     * key 携带 generation 前缀使每次重建全量重渲染——与旧实现
-     * 「destroy 全部旧 VNode 再逐个 mount」的行为完全一致，
-     * 同时让函数 ref 重新收集 DOM 引用（缓存数组已同步重置）。
+     * 写入 segmentsSignal 即完成重建：For 按「下标」key 做 diff，数量不变时
+     * 全部节点复用，只在原节点上更新几何；增删只发生在尾部。
+     * 这里需要配合两件事：
+     * - `syncRefs()`：把引用缓存裁到新数量（不能置空，复用节点不会重跑 ref）
+     * - 清空去重缓存：节点可能被重建（单条整轴 ↔ 多段切换），必须强制重写一次
      * @param nextSegments 最新分段数据；不传则沿用当前数据强制重建
      */
     const rebuildSegments = (nextSegments?: ProgressSegment[]): void => {
-      segmentGeneration += 1;
       segmentsSignal.value = nextSegments ?? [...segmentsSignal.value];
-      // 重置 DOM 引用缓存与去重数组：For 全量重渲染时由函数 ref 重新收集
-      segmentBufferRefs = [];
-      segmentCurrentRefs = [];
+      // 引用缓存按位置保留，只裁长度；绝不置空
+      syncRefs();
+      // 去重缓存清空：新建/重建的节点需要重新写入一次填充比例
       lastFillRatios = [];
       lastBufferRatios = [];
-      // 悬停态归零（旧实现销毁元素后 hover 类自然消失，此处等价）
+      // 悬停态归零（分段重建后 hover 下标失效）
       hoveredSegIdxSignal.value = -1;
     };
 
@@ -920,6 +943,8 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
      *（effect 首跑同步，DOM 引用随函数 ref 就位），无需手动重建。
      */
     lifecycle.onMounted = (): void => {
+      // 初始节点已由 For 同步渲染、函数 ref 已写入；这里只对齐缓存长度
+      syncRefs();
       lifecycle.emit?.("progressBarMounted", {
         updateProgress,
         updateBuffer,
@@ -994,11 +1019,11 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
                 const list = segmentsSignal.value;
                 return list.length > 1 ? list : [SINGLE_BAR];
               },
-              // generation 前缀保证 rebuildSegments 触发全量重渲染（与旧重建语义一致）
+              // key = 位置下标：同类型（多分段 / 单条整轴）内重建时 key 不变，
+              // 节点复用、只更新几何与内容；kind 前缀区分两种节点的结构差异，
+              // 单条整轴 ↔ 多分段切换时结构不同，必须重建。
               key: (item: unknown, index: number): string =>
-                isProgressSegment(item)
-                  ? `g${segmentGeneration}:${index}:${item.startTime}:${item.endTime}`
-                  : `single:g${segmentGeneration}:${index}`,
+                isProgressSegment(item) ? `segment:${index}` : "single",
               render: renderSegmentItem,
             }),
           ),

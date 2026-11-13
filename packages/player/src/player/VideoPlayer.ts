@@ -989,6 +989,15 @@ export class VideoPlayer
      * 章节菜单、顶部进度条、底部影子进度条共用这一份数据。
      */
     setSegments: (segments: ProgressSegment[]): void => {
+      // 先换新的 props 根对象再改嵌套字段：
+      // configStore.set 以 prev === next 短路；若原地修改 this.props，
+      // 顶层进度条订阅 "progress.segments" 永远收不到变化（影子条走 controlsApi 才正常）。
+      const prev = this.props;
+      this.props = {
+        ...prev,
+        progress: { ...(prev.progress ?? {}) },
+        ui: { ...(prev.ui ?? {}) },
+      };
       this.props.progress = {
         ...(this.props.progress ?? {}),
         segments,
@@ -1011,6 +1020,12 @@ export class VideoPlayer
    * 仅在 progress.segments 多段时生效；关闭后底部影子进度条不再展开。
    */
   setShadowPermanent(enabled: boolean): void {
+    const prev = this.props;
+    this.props = {
+      ...prev,
+      progress: { ...(prev.progress ?? {}) },
+      ui: { ...(prev.ui ?? {}) },
+    };
     this.props.progress = {
       ...(this.props.progress ?? {}),
       shadowPermanent: enabled,
@@ -3081,6 +3096,8 @@ export class VideoPlayer
     this.events.emit(PlayerEventEnum.WEB_FULLSCREEN_CHANGE, {
       isWebFullscreen: mode === "web",
     });
+    // 显示模式统一事件：normal / web / wide / mini
+    this.events.emit(PlayerEventEnum.DISPLAY_MODE_CHANGE, { mode });
   }
 
   // ============================================

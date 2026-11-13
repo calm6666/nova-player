@@ -534,7 +534,7 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                         "div",
                         { class: `${item.cls} ui ui-switch` },
                         h(Switch, {
-                          size: "small",
+                          size: "middle",
                           name: item.name,
                           checked: item.checked,
                           onChange: item.onChange,

@@ -43,8 +43,15 @@ export type LeftControlsEvents = {
   playPause: undefined;
   /** 进度跳转，参数为跳转目标时间（秒） */
   seek: number;
-  /** 组件挂载完成 */
-  leftControlsMounted: undefined;
+  /**
+   * 组件挂载完成，回传章节列表更新 API
+   *
+   * 上层（Controls）在分段变化时直接调用该 API 更新章节菜单，
+   * 与进度条走同一条更新路径，不再依赖 configStore 的路径通知。
+   */
+  leftControlsMounted: {
+    rebuildViewpoints: (next: ProgressSegment[]) => void;
+  };
   /** 章节面板挂载完成，回传其重建 API */
   viewpointMenuMounted: { rebuildPoints: (next: ViewpointItem[]) => void };
 };
@@ -113,6 +120,15 @@ export const LeftControls = defineComponent<
   const prevConfigSignal = signal<boolean>(true);
   const nextConfigSignal = signal<boolean>(true);
   const segmentsSignal = signal<boolean>(false);
+
+  /**
+   * 当前分段数据（章节列表的唯一数据源）
+   *
+   * 不再把分段写回 `config.progressSegments` 再从那里读：配置上下文是快照，
+   * 订阅回调里写回去并不可靠；分段变化统一经 `rebuildViewpoints()` 落到这里，
+   * 由上层在 setSegments 时直接调用（与进度条同一条更新路径）。
+   */
+  let currentSegments: ProgressSegment[] = config.progressSegments ?? [];
 
   /**
    * 时间编辑态 Signal：true 时隐藏时间文本、显示 seek 输入框
@@ -544,18 +560,32 @@ export const LeftControls = defineComponent<
   const bottomLeftOrder = ["prev", "play", "next", "time", "viewpoint"];
 
   /**
-   * 从当前 config.progressSegments 计算章节点位
+   * 从当前分段数据计算章节点位
    * 供 ViewpointMenu 初始 props 和 rebuildPoints 调用共用
    * @returns 章节点位数组；分段不足 2 个时返回空数组
    */
   const computeViewpointPoints = (): ViewpointItem[] => {
-    const segments = config.progressSegments;
+    const segments = currentSegments;
     if (!segments || segments.length <= 1) return [];
     const mediaDuration = state?.get(PlayerStateKeyEnum.DURATION) ?? duration;
     return normalizeSegmentSpan(segments, mediaDuration).map((segment) => ({
       title: segment.label,
       time: segment.startTime,
     }));
+  };
+
+  /**
+   * 更新分段并同步章节菜单（对上层暴露的组件 API）
+   *
+   * 与进度条同一条更新路径：VideoPlayer.setSegments → Controls.setProgressSegments
+   * → 本方法。不再依赖 configStore 的路径订阅（配置是快照，订阅里写回再读不可靠），
+   * 因此「新增/编辑章节后控制栏章节列表不更新」被直接消除。
+   * @param next - 最新分段数据
+   */
+  const rebuildViewpoints = (next: ProgressSegment[]): void => {
+    currentSegments = next;
+    segmentsSignal.value = next.length > 1;
+    viewpointApi?.rebuildPoints(computeViewpointPoints());
   };
 
   // ============================================
@@ -575,7 +605,7 @@ export const LeftControls = defineComponent<
       configStore?.getPath<boolean>("ui.controls.prev") ?? config.prev ?? true;
     nextConfigSignal.value =
       configStore?.getPath<boolean>("ui.controls.next") ?? config.next ?? true;
-    segmentsSignal.value = (config.progressSegments?.length ?? 0) > 1;
+    segmentsSignal.value = currentSegments.length > 1;
 
     // 订阅 configStore 路径变化，更新 signal（Show 自动响应 signal 变化）
     if (configStore) {
@@ -587,22 +617,15 @@ export const LeftControls = defineComponent<
           }),
         );
       });
+      // 配置订阅仅作为兼容路径（分段仍会写进配置）；主路径是 rebuildViewpoints API
       configCleanups.push(
         configStore.subscribePath("ui.controls.progressSegments", (value) => {
-          config.progressSegments = Array.isArray(value)
-            ? (value as ProgressSegment[])
-            : [];
-          segmentsSignal.value = config.progressSegments.length > 1;
-          viewpointApi?.rebuildPoints(computeViewpointPoints());
+          rebuildViewpoints(Array.isArray(value) ? (value as ProgressSegment[]) : []);
         }),
       );
       configCleanups.push(
         configStore.subscribePath("progress.segments", (value) => {
-          config.progressSegments = Array.isArray(value)
-            ? (value as ProgressSegment[])
-            : [];
-          segmentsSignal.value = config.progressSegments.length > 1;
-          viewpointApi?.rebuildPoints(computeViewpointPoints());
+          rebuildViewpoints(Array.isArray(value) ? (value as ProgressSegment[]) : []);
         }),
       );
     }
@@ -612,12 +635,11 @@ export const LeftControls = defineComponent<
     onEffect(lifecycle, () => {
       const mediaDuration = durationSignal.value ?? 0;
       if (mediaDuration <= 0) return;
-      const segments = config.progressSegments;
-      if (!segments || segments.length <= 1) return;
+      if (currentSegments.length <= 1) return;
       viewpointApi?.rebuildPoints(computeViewpointPoints());
     });
 
-    lifecycle.emit?.("leftControlsMounted");
+    lifecycle.emit?.("leftControlsMounted", { rebuildViewpoints });
   };
 
   /** 组件销毁前取消配置订阅 */

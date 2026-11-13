@@ -324,6 +324,16 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       setDuration: (duration: number) => void;
     } | null = null;
 
+    /**
+     * 左侧控制栏 API（LeftControls 挂载后回填）
+     *
+     * 分段变化时用它把章节菜单同步到最新分段：与进度条同一条更新路径，
+     * 不依赖 configStore 的路径订阅（章节列表不更新的根因就是只靠订阅）。
+     */
+    let leftApi: {
+      rebuildViewpoints: (next: ProgressSegment[]) => void;
+    } | null = null;
+
     /** 高能数据请求序号（异步 energyProvider 竞态保护：仅应用最新一次请求的结果） */
     let energyRequestId = 0;
 
@@ -512,6 +522,9 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     const setProgressSegments = (next?: ProgressSegment[]): void => {
       shadowSegments = next ?? [];
       shadowApi?.rebuildSegments(next);
+      // 章节菜单与分段同源：直接调 LeftControls 的组件 API 更新列表，
+      // 不再依赖 configStore 路径订阅（新增章节后列表不更新的根因）
+      leftApi?.rebuildViewpoints(next ?? []);
       // 不再因「多段」自动常驻；只有 progress.shadowPermanent 开启才展开
       syncShadowPermanent();
     };
@@ -695,6 +708,12 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
             onNext: () => lifecycle.emit?.("next"),
             onPlayPause: () => lifecycle.emit?.("playPause"),
             onSeek: handleLeftSeek,
+            // 捕获章节列表 API：分段变化时由 setProgressSegments 直接驱动更新
+            onLeftControlsMounted: (api: {
+              rebuildViewpoints: (next: ProgressSegment[]) => void;
+            }) => {
+              leftApi = api;
+            },
           }),
           h("div", { class: "nova-player-control-bottom-center" }),
           h(RightControls, {
