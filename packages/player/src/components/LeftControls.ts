@@ -21,6 +21,7 @@ import type { ProgressSegment } from "../types/player";
 import { PlayerStateKeyEnum, ConfigContext } from "../store/runtimeState";
 import { StateContext } from "../store/runtimeState";
 import { ConfigStoreContext } from "../store/configStore";
+import { PlayerContext, mountControlSlots, mountReplacementSlots, resolveControlSlotContent, type ControlSlotItem } from "../types/slots";
 import { PlayerState } from "../types/player";
 import { formatTime } from '@lumina/framework/utils/formatTime';
 import { normalizeSegmentSpan } from "../utils/media/progressSegment";
@@ -95,6 +96,22 @@ export const LeftControls = defineComponent<
    * duration / currentTime 等动态数据通过 useReactiveState 获取 Signal
    */
   const state = useContext(StateContext);
+
+  /** 播放器实例上下文（插槽内容经 SlotContext 透传给外部渲染函数） */
+  const player = useContext(PlayerContext);
+
+  /**
+   * 组件根元素引用（.nova-player-control-bottom-left）
+   *
+   * leftEnd 插槽（ui.slots 中 position="leftEnd" 的外部按钮，如弹幕开关）
+   * 直接挂载到根元素末尾——与原版控制栏「time 之后直接跟弹幕开关」的
+   * DOM 结构一致，无包装容器；清理时由 mountControlSlots 只移除追加节点。
+   */
+  const rootRef = useTemplateRef<HTMLDivElement>(lifecycle, "rootRef");
+  /** leftEnd 插槽挂载清理函数 */
+  let leftEndSlotCleanup: (() => void) | null = null;
+  /** 替换原生按钮的插槽清理函数 */
+  let replaceSlotCleanup: (() => void) | null = null;
 
   /**
    * 响应式状态 Signal（useReactiveState 返回 Signal，读取 .value 自动建立依赖）
@@ -492,7 +509,16 @@ export const LeftControls = defineComponent<
     time: () =>
       h(
         "div",
-        { class: "nova-player-ctrl-btn nova-player-ctrl-time" },
+        {
+          class: "nova-player-ctrl-btn nova-player-ctrl-time",
+          // 时长 ≥ 1 小时加 state-long，cross 下用于放宽时间显示宽度
+          __reactiveAttrs: {
+            class: () =>
+              `nova-player-ctrl-btn nova-player-ctrl-time${
+                (durationSignal.value ?? 0) >= 3600 ? " state-long" : ""
+              }`,
+          },
+        },
         h("input", {
           id: "playerCtrlTimeSeekInput",
           class: "nova-player-ctrl-time-seek",
@@ -640,22 +666,66 @@ export const LeftControls = defineComponent<
     });
 
     lifecycle.emit?.("leftControlsMounted", { rebuildViewpoints });
+
+    // 挂载 leftEnd 插槽（ui.slots 消费端）：弹幕开关等外部按钮追加在
+    // 原生按钮之后（顺序与原版「time 后跟弹幕开关」一致）；
+    // 插槽列表在挂载期读取一次，销毁时由清理函数统一卸载
+    const rootEl = rootRef.value;
+    if (rootEl && player && state) {
+      const slots = player.props.ui?.slots;
+      if (slots && slots.length > 0) {
+        leftEndSlotCleanup = mountControlSlots(
+          slots,
+          "leftEnd",
+          rootEl,
+          { player, state },
+        );
+        replaceSlotCleanup = mountReplacementSlots(slots, rootEl, {
+          player,
+          state,
+        });
+      }
+    }
   };
 
-  /** 组件销毁前取消配置订阅 */
+  /** 组件销毁前取消配置订阅 + 卸载插槽内容 */
   lifecycle.onBeforeDestroy = (): void => {
     configCleanups.forEach((fn) => fn());
     configCleanups.length = 0;
+    leftEndSlotCleanup?.();
+    leftEndSlotCleanup = null;
+    replaceSlotCleanup?.();
+    replaceSlotCleanup = null;
   };
 
   // ============================================
   // 主渲染函数
   // ============================================
+
+  /**
+   * 被 replace 插槽接管的左侧原生按钮：原生按钮不渲染，
+   * 由下方渲染循环在该位置直接渲染插槽 VNode（无 host、无 wrapper、无注释占位）。
+   */
+  const replaceSlotMap = new Map<string, { slot: ControlSlotItem }>();
+  for (const slot of player?.props.ui?.slots ?? []) {
+    if (slot.replace) replaceSlotMap.set(slot.replace, { slot });
+  }
+  const slotCtx = player ? { player, state: player.state } : null;
+
   return h(
     "div",
-    { class: "nova-player-control-bottom-left" },
+    { class: "nova-player-control-bottom-left", ref: "rootRef" },
     ...bottomLeftOrder
       .map((key) => {
+        /** 替换项：按原顺序直接渲染插槽 VNode */
+        const replaced = replaceSlotMap.get(key);
+        if (replaced) {
+          const content = resolveControlSlotContent(replaced.slot, slotCtx);
+          if (!content || typeof content === "string") return null;
+          if ((content as { nodeType?: unknown }).nodeType) return null;
+          if ((content as { mount?: unknown }).mount) return null;
+          return content as VNode;
+        }
         /** 当前键对应的渲染函数 */
         const renderer = bottomLeftRenderers[key];
         if (!renderer) return null;

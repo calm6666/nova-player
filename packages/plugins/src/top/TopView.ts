@@ -82,6 +82,8 @@ export interface TopProps {
   host?: HTMLElement | null;
   /** 问题反馈点击回调 */
   onIssueClick?: () => void;
+  /** 是否显示问题反馈图标（top-issue）；默认 true；cross 页面配置 false 避免与三连图标重叠 */
+  issue?: boolean;
   /** 关注按钮点击回调 */
   onFollowClick?: () => void;
   /** 请求显示 tooltip（问题反馈图标悬停） */
@@ -338,21 +340,25 @@ export const Top = defineComponent<TopProps>(
           ),
           h("div", { class: "nova-player-top-left-panorama" }),
         ),
-        h(
-          "div",
-          { class: "nova-player-top-issue" },
-          h(
-            "span",
-            {
-              class: "nova-player-top-issue-icon",
-              ref: "issueIconRef",
-              onMouseEnter: handleIssueEnter,
-              onMouseLeave: handleIssueLeave,
-              onClick: handleIssueClick,
-            },
-            Issue(),
-          ),
-        ),
+        ...(props.issue === false
+          ? []
+          : [
+              h(
+                "div",
+                { class: "nova-player-top-issue" },
+                h(
+                  "span",
+                  {
+                    class: "nova-player-top-issue-icon",
+                    ref: "issueIconRef",
+                    onMouseEnter: handleIssueEnter,
+                    onMouseLeave: handleIssueLeave,
+                    onClick: handleIssueClick,
+                  },
+                  Issue(),
+                ),
+              ),
+            ]),
       );
     }
 
@@ -406,21 +412,25 @@ export const Top = defineComponent<TopProps>(
           h("div", { class: "nova-player-top-left-music" }),
           h("div", { class: "nova-player-top-left-panorama" }),
         ),
-        h(
-          "div",
-          { class: "nova-player-top-issue" },
-          h(
-            "span",
-            {
-              class: "nova-player-top-issue-icon",
-              ref: "issueIconRef",
-              onMouseEnter: handleIssueEnter,
-              onMouseLeave: handleIssueLeave,
-              onClick: handleIssueClick,
-            },
-            Issue(),
-          ),
-        ),
+        ...(props.issue === false
+          ? []
+          : [
+              h(
+                "div",
+                { class: "nova-player-top-issue" },
+                h(
+                  "span",
+                  {
+                    class: "nova-player-top-issue-icon",
+                    ref: "issueIconRef",
+                    onMouseEnter: handleIssueEnter,
+                    onMouseLeave: handleIssueLeave,
+                    onClick: handleIssueClick,
+                  },
+                  Issue(),
+                ),
+              ),
+            ]),
       );
     }
 
@@ -561,7 +571,9 @@ export const Top = defineComponent<TopProps>(
               ),
             ),
           )
-        : h(
+        : props.issue === false
+          ? null
+          : h(
             "div",
             { class: "nova-player-top-issue" },
             h(

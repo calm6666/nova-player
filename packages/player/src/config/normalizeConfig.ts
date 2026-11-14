@@ -14,7 +14,7 @@
  * 映射规则以内联方式维护（MAJOR_VERSION_COMPAT_KEYS 等常量表）。
  */
 
-import type { AdvancedConfig, ControlsConfig, EventListeners, I18nPlayerConfig, InteractionConfig, KeyboardStepConfig, LegacyPlayerConfig, MediaItem, PlaybackConfig, PlayerConfig, PlayerSource, PlayMode, PluginsConfig, ProgressConfig, ProgressSegment, QualityConfig, StorageConfig, UiConfig } from '../types/player';
+import type { AdvancedConfig, ControlsConfig, EventListeners, I18nPlayerConfig, InteractionConfig, KeyboardStepConfig, DisplayMode, LegacyPlayerConfig, MediaItem, PlaybackConfig, PlayerConfig, PlayerSource, PlayMode, PluginsConfig, ProgressConfig, ProgressSegment, QualityConfig, StorageConfig, UiConfig } from '../types/player';
 import type { SubtitleConfig, SubtitleConfigSpace } from '../types/subtitle';
 import type { Plugin } from '../core/plugin';
 import { isDev, WarnSource, warn } from '@lumina/framework/core/warning';
@@ -90,6 +90,8 @@ type NormalizeInput = {
   playback?: PlaybackConfig;
   playlist?: MediaItem[];
   playlistIndex?: number;
+  /** 显示模式（normal / cross），创建时确定（默认不传 = normal） */
+  mode?: DisplayMode;
   ui?: UiConfig;
   interaction?: InteractionConfig;
   quality?: QualityConfig;
@@ -147,6 +149,8 @@ export function normalizeConfig(
   if (input.container !== undefined) out.container = input.container;
   if (input.src !== undefined) out.src = input.src;
   if (input.poster !== undefined) out.poster = input.poster;
+  // ── 显示模式：normal（默认）/ cross（固定形态），创建时确定 ──
+  if (input.mode !== undefined) out.mode = input.mode;
 
   // ── playback：autoplay/muted/volume/playbackRate/loop/playMode/preload/playsinline ──
   const playback: PlaybackConfig = { ...(input.playback ?? {}) };

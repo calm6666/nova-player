@@ -1409,3 +1409,236 @@
 #music-mount.demo-music-mount:empty {
   display: none;
 }
+
+/* ============================================
+   cross 弹窗演示（demo 侧）
+   - 弹窗浮层 / 面板：demo 自有样式
+   - .nova-player-rich-pip-side-btn：悬浮圆钮皮肤——插槽内容样式归消费方
+     （demo），播放器 cross.scss 只提供挂载层定位与显隐
+   ============================================ */
+
+.cross-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cross-modal-panel {
+  background: #1f1f27;
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+}
+
+.cross-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.cross-modal-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cross-modal-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* cross 播放器容器：竖排紧凑形态无底部发送栏占条，纯 16:9 */
+.cross-modal-player-box {
+  width: 720px;
+  aspect-ratio: 16 / 9;
+}
+
+/* 悬浮上/下一个圆钮皮肤（插槽内容，归 demo）——原版 rich-pip-side-btn 逐条映射 */
+.nova-player-rich-pip-side-btn {
+  background: rgba(0, 0, 0, 0.58) !important;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 34px;
+  line-height: 34px;
+  width: 34px;
+}
+
+.nova-player-rich-pip-side-btn:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+#cross-modal-player {
+  width: 100%;
+  height: 100%;
+}
+/* ============================================
+   cross 弹窗插槽内容样式（消费方提供）
+   - 弹幕开关（原版 danmaku-switch checkbox 机制 1:1，类名 ui-* 契约）
+   - topRight 三连功能区（原版规则逐条映射，bpx-* → nova-player-*）
+   ============================================ */
+
+
+/* ---- 弹幕开关（原版 checkbox 机制 1:1，类名 ui-* 契约）---- */
+.nova-player-dm-cross-page-switch .ui-danmaku-switch-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.nova-player-dm-cross-page-switch .ui-danmaku-switch-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  fill: rgba(255, 255, 255, 0.9);
+  opacity: 0.9;
+}
+
+.nova-player-dm-cross-page-switch:hover .ui-danmaku-switch-label {
+  fill: #fff;
+  opacity: 1;
+}
+
+.nova-player-dm-cross-page-switch .ui-danmaku-switch-label svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+/* checkbox 联动（原版 :checked 机制）：勾选=开 → 显示 on 图标；取消=关 → 显示 off 图标 */
+.nova-player-dm-cross-page-switch .ui-danmaku-switch-input:checked
+  ~ .ui-danmaku-switch-label .ui-danmaku-switch-off {
+  display: none;
+}
+
+.nova-player-dm-cross-page-switch .ui-danmaku-switch-input:not(:checked)
+  ~ .ui-danmaku-switch-label .ui-danmaku-switch-on {
+  display: none;
+}
+
+/* ---- topRight 插槽内容：原版 top-right 三连功能区（bpx-* → nova-player-* 逐条映射）---- */
+.nova-player-top-right-like {
+  -webkit-box-flex: 0;
+  flex: 0 0 auto;
+  pointer-events: all;
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  z-index: 2;
+}
+
+.nova-player-three-functions-container {
+  border-radius: 16px;
+}
+
+.nova-player-three-functions-container,
+.nova-player-three-functions-container .nova-player-three-functions-btn {
+  -webkit-box-align: center;
+  -webkit-box-pack: center;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn {
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: rgb(255, 255, 255);
+  cursor: pointer;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 400;
+  height: 65px;
+  line-height: 16px;
+  position: relative;
+  transition: background 0.3s;
+  width: 60px;
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn .common-svg-container {
+  height: 24px;
+  margin-bottom: 2px;
+  position: relative;
+  width: 24px;
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn .common-svg-container .common-svg-icon {
+  height: 24px;
+  line-height: 24px;
+  width: 24px;
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn .common-svg-container .common-svg-icon svg {
+  height: 100%;
+  width: 100%;
+}
+
+/* 激活态：图标变主题色（原版 --bpx-primary-color → --nova-player-primary-color） */
+.nova-player-three-functions-container .nova-player-three-functions-btn.nova-player-state-active .common-svg-container .common-svg-icon svg {
+  fill: var(--nova-player-primary-color, #00a1d6);
+  color: var(--nova-player-primary-color, #00a1d6);
+}
+
+/* tooltip（原版 bpx-common-tooltip 逐条映射） */
+.nova-player-three-functions-container .nova-player-three-functions-btn .nova-player-common-tooltip {
+  background-color: rgb(35, 37, 39);
+  border-radius: 6px;
+  box-sizing: content-box;
+  color: rgb(255, 255, 255);
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0;
+  padding: 6px 10px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.18s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn[data-action="coin"] .nova-player-common-tooltip {
+  left: 50%;
+  position: absolute;
+  top: 70px;
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn[data-action="collect"] .nova-player-common-tooltip {
+  position: absolute;
+  right: 0px;
+  top: 70px;
+  transform: none;
+}
+
+.nova-player-three-functions-container .nova-player-three-functions-btn .nova-player-common-tooltip-active {
+  opacity: 1;
+}
+
+/* 计数文本（原版 bpx-common-like-num / -coin-num / -collect-num，随按钮字体继承） */
+.nova-player-common-like-num,
+.nova-player-common-coin-num,
+.nova-player-common-collect-num {
+  color: rgb(255, 255, 255);
+}

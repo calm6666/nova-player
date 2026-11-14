@@ -95,7 +95,10 @@ async function createServer() {
    * /@fs/... 地址。直接 Sass 编译会留下裸 @/ 路径，浏览器按相对路径请求
    * 得到 /@/assets/xxx，必然 404。
    */
-  const PLAYER_STYLE_URL = '@/styles/style.scss';
+  // 2024+ 重构：demo 已移除 @ 路径别名（见 vite.config.ts 注释），
+  // 样式入口改走 workspace 包名的 dist 产物（url(@/assets/...) 已由
+  // patch-style-assets.mjs 修补为相对路径，无需 vite 再改写）
+  const PLAYER_STYLE_URL = '@lumina/nova/style.css';
 
   /**
    * 从 Vite transformRequest 的 JS 包装中提取 CSS 字符串

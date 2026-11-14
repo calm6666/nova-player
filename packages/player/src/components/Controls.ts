@@ -32,6 +32,7 @@ import { PbpControls } from "./PbpControls";
 import { ShadowProgressArea } from "./ShadowProgressArea";
 import type { ShadowProgressAreaApi } from "./ShadowProgressArea";
 import type { ProgressBarApi } from "./ProgressBar";
+import { PlayerContext, mountControlSlots } from "../types/slots";
 
 /**
  * 视频进度数据
@@ -161,6 +162,16 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
     const stateMgr = useContext<TypedStateManager<PlayerStateMap> | null>(
       StateContext,
     );
+
+    /** 播放器实例（bottomCenter 插槽需要构造 SlotContext） */
+    const player = useContext(PlayerContext);
+    /** 底部中央容器本身即 bottomCenter 插槽挂载点，发送栏随后由 moveSendBar 追加 */
+    const bottomCenterRef = useTemplateRef<HTMLDivElement>(
+      lifecycle,
+      "bottomCenterRef",
+    );
+    /** bottomCenter 插槽清理函数 */
+    let bottomCenterSlotCleanup: (() => void) | null = null;
 
     /** 底部影子进度条 API（由 ShadowProgressArea 挂载后填充） */
     let shadowApi: ShadowProgressAreaApi | null = null;
@@ -560,6 +571,20 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
       // 影子进度条显隐初始态（响应式 attr 已订阅 shadowShowSignal，自动驱动 data-shadow-show 属性）
       shadowShowSignal.value = true;
 
+      // bottomCenter 插槽：直接挂到控制栏中央容器，插槽列表在挂载期读取一次
+      const bottomCenter = bottomCenterRef.value;
+      if (bottomCenter && player && stateMgr) {
+        const slots = player.props.ui?.slots;
+        if (slots && slots.length > 0) {
+          bottomCenterSlotCleanup = mountControlSlots(
+            slots,
+            "bottomCenter",
+            bottomCenter,
+            { player, state: stateMgr },
+          );
+        }
+      }
+
       // 暴露控制栏 API 给父组件
       lifecycle.emit?.("controlsMounted", {
         updateVolumeDisplay,
@@ -582,6 +607,12 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
         setShadowPermanent,
         setEnergy,
       });
+    };
+
+    /** 组件销毁前卸载 bottomCenter 插槽内容 */
+    lifecycle.onBeforeDestroy = (): void => {
+      bottomCenterSlotCleanup?.();
+      bottomCenterSlotCleanup = null;
     };
 
     // ============================================
@@ -715,7 +746,10 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
               leftApi = api;
             },
           }),
-          h("div", { class: "nova-player-control-bottom-center" }),
+          h("div", {
+            class: "nova-player-control-bottom-center",
+            ref: "bottomCenterRef",
+          }),
           h(RightControls, {
             scene: props.scene,
             hiRes: props.hiRes,

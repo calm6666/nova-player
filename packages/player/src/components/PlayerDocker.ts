@@ -31,7 +31,7 @@ import { PlayerEventEnum } from "../types/events";
 import { PlayerStateKeyEnum, StateContext, type PlayerStateMap } from "../store/runtimeState";
 import { ConfigStoreContext, type ConfigStore } from "../store/configStore";
 import type { VideoPlayer } from "../player/VideoPlayer";
-import { PlayerContext, isSlotMount, resolveSlotContent, type SlotContent, type SlotContext, type SlotMount } from "../types/slots";
+import { PlayerContext, isSlotMount, mountControlSlots, resolveSlotContent, type ControlSlotPosition, type SlotContent, type SlotContext, type SlotMount } from "../types/slots";
 import { PlayerState } from "../types/player";
 import type { VNode } from "@lumina/framework/types";
 import type { DisplayMode, PlayerConfig, PlayerEndingStyle, ProgressSegment } from "../types/player";
@@ -501,6 +501,23 @@ export const PlayerDocker = defineComponent<
   let topMountCleanup: (() => void) | null = null;
   let endingMountCleanup: (() => void) | null = null;
 
+  /**
+   * cross 模式视频边缘悬浮层（原版 bpx-player-rich-pip-side-prev / -next
+   * 的挂载点，类名按 nova 契约映射为 nova-player-rich-pip-side-*）
+   *
+   * 挂载点容器常驻 DOM、内容由 ui.slots 的 stageLeft / stageRight 插槽注入
+   * （插槽内容与其皮肤样式归消费方，播放器只提供挂载层与定位显隐规则）；
+   * 仅 `data-screen="cross"` 时可见。DOM 顺序置于视频区域末尾，避免被
+   * 控制栏 / 面板层遮挡（与原版同序）。
+   * 典型用途：稍后再看 PiP 形态的上一个 / 下一个悬浮按钮。
+   */
+  const stagePrevRef = useTemplateRef<HTMLDivElement>(lifecycle, "stagePrevRef");
+  const stageNextRef = useTemplateRef<HTMLDivElement>(lifecycle, "stageNextRef");
+  /** stage / topRight 插槽挂载清理函数 */
+  let stageSlotsCleanup: Array<() => void> = [];
+  /** topRight 插槽清理函数（独立于 stage——mountStageSlots 清空 stage 清理列表时不得误删 topRight） */
+  let topRightSlotCleanup: (() => void) | null = null;
+
   /** 视频占位容器 */
   const playerVideoPerchRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
@@ -542,10 +559,21 @@ export const PlayerDocker = defineComponent<
   ).__providers?.find((provider) => provider.contextId === PlayerContext.id)
     ?.value as VideoPlayer | undefined;
   const resolvedPlayer = slotPlayer ?? providerPlayer;
+  /**
+   * 插槽上下文：必须保证所有插槽（stageLeft/Right、cornerLeft/Right、topRight、
+   * bottomCenter、leftEnd、rightStart/End、替换项）都能拿到 player + state。
+   *
+   * 之前只依赖 `useContext(StateContext)`：PlayerDocker 在 SSR/水合外挂载时
+   * StateContext 可能为空（该文件 1370 行附近也为此显式注入了 __providers），
+   * 于是 slotContext 变成 null，所有插槽的函数式内容 / 自定义挂载都拿不到 ctx，
+   * corner 插槽里的按钮点击、状态订阅会全部空转。
+   *
+   * 兜底：VideoPlayer 自身持有公开的 `state`（createTypedStateManager），
+   * player 可用时一定可以构造出完整 SlotContext。
+   */
+  const slotState = stateMgr ?? resolvedPlayer?.state ?? null;
   const slotContext: SlotContext | null =
-    resolvedPlayer && stateMgr
-      ? { player: resolvedPlayer, state: stateMgr }
-      : null;
+    resolvedPlayer && slotState ? { player: resolvedPlayer, state: slotState } : null;
 
   type MountFn = (container: HTMLElement) => void | (() => void);
 
@@ -598,6 +626,8 @@ export const PlayerDocker = defineComponent<
   };
 
   const mountTopView = (): void => {
+    topRightSlotCleanup?.();
+    topRightSlotCleanup = null;
     topMountCleanup?.();
     topMountCleanup = null;
     const root = topRootRef.value;
@@ -611,6 +641,8 @@ export const PlayerDocker = defineComponent<
           props: buildTopProps(),
         } as SlotContext) ?? null;
     }
+    // topRight 插槽内容随 top 容器刷新重新追加（replaceChildren 会清掉它）
+    mountTopRightSlot();
   };
 
   const syncEndingRootClass = (): void => {
@@ -642,6 +674,60 @@ export const PlayerDocker = defineComponent<
           props: buildEndingProps(),
         } as SlotContext) ?? null;
     }
+  };
+
+  /**
+   * 挂载 cross 模式的 stage 悬浮插槽（stageLeft / stageRight）
+   *
+   * 与 mountTopView 同一节奏：onMounted 时挂一次、teardown 时统一清理。
+   * 插槽内容来自 ui.slots 中 position 为 stageLeft / stageRight 的条目，
+   * 按 order 升序排列（mountControlSlots 内部处理）。
+   */
+  const mountStageSlots = (): void => {
+    stageSlotsCleanup.forEach((fn) => fn());
+    stageSlotsCleanup = [];
+    const slots = readUi()?.slots;
+    // stageLeft / stageRight 为专用容器（replaceChildren 安全）；
+    // topRight 挂进 top 插槽区（与 TopPlugin 共享容器，见 mountTopRightSlot）
+    const targets: Array<[HTMLDivElement | null, ControlSlotPosition]> = [
+      [stagePrevRef.value, "stageLeft"],
+      [stageNextRef.value, "stageRight"],
+    ];
+    for (const [el, position] of targets) {
+      if (!el) continue;
+      el.replaceChildren();
+      stageSlotsCleanup.push(
+        mountControlSlots(slots, position, el, slotContext),
+      );
+    }
+    // cornerLeft / cornerRight 直接挂到视频区，不创建包装 DOM；
+    // 内容自行绝对定位（如 mini 播放 / 音量按钮）
+    const videoArea = playerVideoAreaRef.value;
+    if (videoArea) {
+      stageSlotsCleanup.push(
+        mountControlSlots(slots, "cornerLeft", videoArea, slotContext),
+      );
+      stageSlotsCleanup.push(
+        mountControlSlots(slots, "cornerRight", videoArea, slotContext),
+      );
+    }
+  };
+
+  /**
+   * 挂载 topRight 插槽到 top 插槽区（.nova-player-top-wrap）
+   *
+   * top 容器与 TopPlugin / ui.top 共享：这里**不清空容器**，
+   * 由 mountControlSlots 追加到既有内容之后、清理时只移除自己追加的节点；
+   * 定位（右上角）与皮肤由消费方样式负责。
+   * mountTopView 每次刷新（replaceChildren）后都会重新调用本函数。
+   */
+  const mountTopRightSlot = (): void => {
+    const root = topRootRef.value;
+    if (!root) return;
+    const slots = readUi()?.slots;
+    // 清理旧挂载后重新追加（独立清理变量，不参与 stageSlotsCleanup 的清空）
+    topRightSlotCleanup?.();
+    topRightSlotCleanup = mountControlSlots(slots, "topRight", root, slotContext);
   };
 
   // ============================================
@@ -696,7 +782,8 @@ export const PlayerDocker = defineComponent<
 
   /**
    * 按显示模式移动弹幕发送栏（与既有实现的 sendBar.moveDom 一致）：
-   * - wide / web / full：移动到 `.nova-player-control-bottom-center`（底部控制栏中央）
+   * - wide / web / cross / full：移动到 `.nova-player-control-bottom-center`（底部控制栏中央）
+   *   cross 为固定形态：发送栏移入中央后定死，全屏进出不再搬回底部
    * - normal / mini：移回 `.nova-player-sending-area`
    * 仅搬移已有的 `.nova-player-sending-bar` 节点，不改变任何类名与内部结构
    * @param mode - 目标显示模式（full 为浏览器全屏，不属于 DisplayMode，仅内部使用）
@@ -712,8 +799,14 @@ export const PlayerDocker = defineComponent<
     const center = playerContainerRef.value?.querySelector<HTMLElement>(
       ".nova-player-control-bottom-center",
     );
-    if (mode === "wide" || mode === "web" || mode === "full") {
-      if (mode === "full" && center && center.children.length > 0) return;
+    if (
+      mode === "wide" ||
+      mode === "web" ||
+      mode === "cross" ||
+      mode === "full"
+    ) {
+      // center 现在常驻 bottomCenter 插槽出口，必须判断发送栏自身是否已在中央
+      if (mode === "full" && center && bar.parentElement === center) return;
       if (!sendingBarHome && bar.parentElement) {
         sendingBarHome = bar.parentElement;
         sendingBarNext = bar.nextSibling;
@@ -2158,19 +2251,24 @@ export const PlayerDocker = defineComponent<
       );
     } else {
       // 退出浏览器全屏：若仍处于网页全屏，data-screen 必须回到 "web" 而不是 "normal"，
-      // 否则网页全屏相关的样式与可见性规则（如「选集」按钮）会失效
+      // 否则网页全屏相关的样式与可见性规则（如「选集」按钮）会失效。
+      // cross 固定形态（配置 mode="cross"）：退出全屏回到 cross，发送栏保持中央
       const stillWebFullscreen =
         stateMgr?.get(PlayerStateKeyEnum.IS_WEB_FULLSCREEN) ?? false;
-      playerContainerRef.value.setAttribute(
-        "data-screen",
-        stillWebFullscreen ? "web" : "normal",
-      );
+      const restoreMode =
+        stateMgr?.get(PlayerStateKeyEnum.DISPLAY_MODE) ?? "normal";
+      const target =
+        stillWebFullscreen
+          ? "web"
+          : restoreMode === "cross"
+            ? "cross"
+            : "normal";
+      playerContainerRef.value.setAttribute("data-screen", target);
       stateMgr?.set(PlayerStateKeyEnum.IS_FULLSCREEN, false);
       // 退出全屏：按当前是否仍在网页全屏决定是否继续监听整页滚轮
       syncVolumeWheelBinding();
-      // 退出全屏：弹幕发送栏移回发送区域 + 同步提示工具
-      // （与既有实现 handleFullscreenChange:483-492 一致）
-      moveSendBar("normal");
+      // 退出全屏：发送栏按恢复模式归位（cross → 保持控制栏中央；normal → 回发送区域）
+      moveSendBar(target);
       tooltipsApi.setScreen?.(stillWebFullscreen ? "web" : "normal");
       tooltipsApi.updateTipKey?.(
         "ctrl:fullscreen",
@@ -2504,6 +2602,11 @@ export const PlayerDocker = defineComponent<
     );
 
     // --- IntersectionObserver 迷你播放器 ---
+    // cross 固定形态（配置 mode="cross"）不注册可见性监听：
+    // mini 自动切换从源头不存在，悬浮形态不随滚动变化
+    if (props.config?.mode === "cross") {
+      miniPlayerObserver = null;
+    } else {
     miniPlayerObserver = safeIntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -2525,6 +2628,7 @@ export const PlayerDocker = defineComponent<
     if (miniPlayerObserver) {
       miniPlayerObserver.observe(docker);
     }
+    }
   };
 
   // ============================================
@@ -2536,6 +2640,31 @@ export const PlayerDocker = defineComponent<
     resolvedPlayer?.registerEndingViewRefresh(mountEndingView);
     mountTopView();
     mountEndingView();
+    // cross 模式 stage 悬浮插槽（stageLeft / stageRight，如上/下集悬浮按钮）
+    mountStageSlots();
+    // cross 固定形态：弹幕发送栏首次出现即移入控制栏中央并定死
+    // （发送栏由 danmaku 插件驱动按需渲染——embedded 场景挂载时已存在，
+    //  运行时注入插件的场景晚于此处，故用一次性 MutationObserver 兜底：
+    //  命中首次出现即完成搬移并自我销毁，零轮询、仅 cross 配置下创建）
+    if (props.config?.mode === "cross") {
+      const placeSendBarOnce = (): boolean => {
+        if (playerContainerRef.value?.querySelector(".nova-player-sending-bar")) {
+          moveSendBar("cross");
+          return true;
+        }
+        return false;
+      };
+      if (!placeSendBarOnce() && playerContainerRef.value) {
+        const sendBarWatcher = new MutationObserver(() => {
+          if (placeSendBarOnce()) sendBarWatcher.disconnect();
+        });
+        sendBarWatcher.observe(playerContainerRef.value, {
+          childList: true,
+          subtree: true,
+        });
+        cleanupFns.push(() => sendBarWatcher.disconnect());
+      }
+    }
 
     // 初始化视频
     initVideo();
@@ -2597,6 +2726,12 @@ export const PlayerDocker = defineComponent<
     topMountCleanup = null;
     endingMountCleanup?.();
     endingMountCleanup = null;
+    // cross 模式 stage 悬浮插槽清理（stageLeft / stageRight）
+    stageSlotsCleanup.forEach((fn) => fn());
+    stageSlotsCleanup = [];
+    // topRight 插槽清理（独立清理变量）
+    topRightSlotCleanup?.();
+    topRightSlotCleanup = null;
 
     if (tornDown) return;
     tornDown = true;
@@ -2837,7 +2972,8 @@ export const PlayerDocker = defineComponent<
           { "is-embedded": embeddedMode },
         ],
         "data-angle": "d3d11",
-        "data-screen": "normal",
+        // 初始显示模式来自配置 mode（normal / cross），SSR 与水合同源
+        "data-screen": props.config?.mode === "cross" ? "cross" : "normal",
         // 初始隐藏控制栏（与既有实现模板一致），由鼠标移动 / 播放交互驱动显示
         "data-ctrl-hidden": "true",
         "aria-label": props.playerName || "Nova Player",
@@ -3183,6 +3319,20 @@ export const PlayerDocker = defineComponent<
             onRetry: () => {
               lifecycle.emit?.("retry");
             },
+          }),
+          // cross 模式视频边缘悬浮层（上一个 / 下一个挂载点，原版
+          // bpx-player-rich-pip-side-prev / -next 的 nova 映射）：常驻 DOM，
+          // 内容由 ui.slots 的 stageLeft / stageRight 插槽注入（插槽内容与
+          // 皮肤样式归消费方）；仅 data-screen="cross" 时可见，定位与显隐
+          // 规则由 cross.scss 派生。DOM 顺序置于视频区域末尾，避免被
+          // 控制栏 / 面板层遮挡（与原版同序）
+          h("div", {
+            class: "nova-player-rich-pip-side-prev",
+            ref: "stagePrevRef",
+          }),
+          h("div", {
+            class: "nova-player-rich-pip-side-next",
+            ref: "stageNextRef",
           }),
         ),
         // 发送区域（弹幕输入栏，既有实现+ sendbar 挂载方式：

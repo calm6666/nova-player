@@ -183,7 +183,15 @@ const player = new VideoPlayer({
   playlistIndex: 0,
 
   ui: {
-    controls: { quality: true, episodes: true, pip: true, wideScreen: true },
+    controls: {
+      quality: true,
+      episodes: true,
+      pip: true,
+      wideScreen: true,
+      webFullscreen: true,
+      fullscreen: true,
+      setting: true,
+    },
   },
   interaction: { keyboard: true },
   quality: { mode: "auto" },
@@ -206,6 +214,20 @@ const player = new VideoPlayer({
 
 > 历史版本的扁平配置（`autoplay` / `volume` / `controls` / `controlBtns` …写在顶层）仍可通过内置兼容层
 > `normalizeConfig()` 使用，开发环境会打印一次性迁移提示。新代码请一律使用命名空间形态。
+
+控件开关补充说明：
+
+- `ui.controls` 支持 `prev / next / viewpoint / quality / episodes / setting / pip / wideScreen / webFullscreen / fullscreen / danmakuSend`；
+- 显式设为 `false` 时，`RightControls` / `LeftControls` **不渲染该按钮的 DOM**（不是 `display:none`）；取值优先级：`configStore` 当前值 → 构造期 `config` → 默认 `true`（全屏按钮运行时路径为 `ui.controls.fullscreen`）。
+
+插槽（`ui.slots`）补充说明：
+
+- 位置插槽：`leftEnd / rightStart / rightEnd / topRight / bottomCenter / stageLeft / stageRight / cornerLeft / cornerRight`；
+- `replace: NativeControlKey` 表示**原生控件不渲染**：渲染层按 `bottomRightOrder` / `bottomLeftOrder` 顺序在原始位置直接渲染插槽 VNode（无 host、无 wrapper、无注释占位）；替换内容必须是 VNode，左右控制栏只处理各自顺序表内的键；
+- `SlotContext = { player, state }`：所有插槽（含 corner / topRight / 替换项）均保证可拿到，`PlayerDocker` 以 `stateMgr ?? player.state` 兜底；
+- `TopProps.issue?: boolean`（默认 `true`）：`false` 时 top-issue 节点完全不渲染。
+
+`LottieIcon` 使用约定：`AnimationSlot` 的结束行为字段是 **`complete`**（`next` / `stop` / `loop`），写成 `onComplete` 会被忽略，动画播完会自动跳到下一个槽位；`setSequenceSlot` 需在 `onReady` 之后调用才生效。
 
 ### 国际化
 

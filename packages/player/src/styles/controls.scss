@@ -716,3 +716,14 @@
   margin-right: 20px;
   width: 99px;
 }
+
+/* 中央容器出现发送栏以外的内容时改为 flex，发送栏占用剩余空间 */
+.nova-player-control-bottom-center:has(> :not(.nova-player-sending-bar)) {
+  align-items: center;
+  display: flex;
+
+  > .nova-player-sending-bar {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

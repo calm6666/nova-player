@@ -20,6 +20,7 @@ import type { SubtitleStylePatch } from "./SubtitleMenu";
 import type { EpisodeOption } from "./EpisodesMenu";
 import { LottieIcon, type LottieIconApi } from "./LottieIcon";
 import { HiRes } from "./icons";
+import { PlayerContext, mountControlSlots, mountReplacementSlots, resolveControlSlotContent, type ControlSlotItem } from "../types/slots";
 import fullscreenAnimationData from "../assets/lottie-icon/fullscreen-animation.json";
 
 /**
@@ -108,6 +109,18 @@ export const RightControls = defineComponent<
   const configCtx = useContext(ConfigContext);
   const config = configCtx;
   const state = useContext(StateContext);
+  /** 播放器实例（rightStart / rightEnd 插槽需要构造 SlotContext） */
+  const player = useContext(PlayerContext);
+  /** 右侧控制栏容器本身即插槽挂载点 */
+  const rightRootRef = useTemplateRef<HTMLDivElement>(
+    lifecycle,
+    "rightRootRef",
+  );
+  /** 插槽清理函数 */
+  let rightStartSlotCleanup: (() => void) | null = null;
+  let rightEndSlotCleanup: (() => void) | null = null;
+  /** 替换原生按钮的插槽清理函数 */
+  let replaceSlotCleanup: (() => void) | null = null;
   /** 可订阅配置中心（由 VideoPlayer 注入），用于控件开关「设置即生效」 */
   const configStore = useContext(ConfigStoreContext);
 
@@ -849,24 +862,103 @@ export const RightControls = defineComponent<
       );
     }
 
+    // rightStart / rightEnd 直接挂到右侧控制栏容器：
+    // rightStart 以第一个原生按钮为锚点插到它之前，rightEnd 追加到末尾
+    const rightRoot = rightRootRef.value;
+    if (rightRoot && player && state) {
+      const slots = player.props.ui?.slots;
+      if (slots && slots.length > 0) {
+        const ctx = { player, state };
+        rightStartSlotCleanup = mountControlSlots(
+          slots,
+          "rightStart",
+          rightRoot,
+          ctx,
+          rightRoot.firstChild,
+        );
+        rightEndSlotCleanup = mountControlSlots(
+          slots,
+          "rightEnd",
+          rightRoot,
+          ctx,
+        );
+        replaceSlotCleanup = mountReplacementSlots(slots, rightRoot, ctx);
+      }
+    }
+
     lifecycle.emit?.("rightControlsMounted");
   };
 
-  /** 组件销毁前取消配置订阅 */
+  /** 组件销毁前取消配置订阅并卸载插槽内容 */
   lifecycle.onBeforeDestroy = (): void => {
     configCleanups.forEach((fn) => fn());
     configCleanups.length = 0;
+    rightStartSlotCleanup?.();
+    rightStartSlotCleanup = null;
+    rightEndSlotCleanup?.();
+    rightEndSlotCleanup = null;
+    replaceSlotCleanup?.();
+    replaceSlotCleanup = null;
   };
 
   // ============================================
   // 主渲染函数
   // ============================================
+
+  /**
+   * 控件开关为显式 false 时**不渲染 DOM**（不是 display:none）。
+   * 取值优先级与 onMounted 内一致：configStore 当前值 → 构造期 config → 默认显示。
+   */
+  const isHiddenByConfig = (key: string): boolean => {
+    const read = (path: string, fallback?: boolean): boolean =>
+      configStore?.getPath<boolean>(path) ?? fallback ?? true;
+    switch (key) {
+      case "quality":
+        return read("ui.controls.quality", config.quality) === false;
+      case "eplist":
+        return read("ui.controls.episodes", config.episodes) === false;
+      case "setting":
+        return read("ui.controls.setting", config.setting) === false;
+      case "pip":
+        return read("ui.controls.pip", config.pip) === false;
+      case "wide":
+        return read("ui.controls.wideScreen", config.wideScreen) === false;
+      case "web":
+        return read("ui.controls.webFullscreen", config.webFullscreen) === false;
+      case "full": {
+        const fullscreen = (config as { fullscreen?: boolean }).fullscreen;
+        return read("ui.controls.fullscreen", fullscreen) === false;
+      }
+      default:
+        return false;
+    }
+  };
+
+  /**
+   * 被 replace 插槽接管的原生按钮：原生按钮不渲染，
+   * 由下方渲染循环在该位置直接渲染插槽 VNode（无 host、无 wrapper、无注释占位）。
+   */
+  const replaceSlotMap = new Map<string, { slot: ControlSlotItem }>();
+  for (const slot of player?.props.ui?.slots ?? []) {
+    if (slot.replace) replaceSlotMap.set(slot.replace, { slot });
+  }
+  const slotCtx = player ? { player, state: player.state } : null;
+
   return h(
     "div",
-    { class: "nova-player-control-bottom-right" },
+    { class: "nova-player-control-bottom-right", ref: "rightRootRef" },
     ...bottomRightOrder
+      .filter((key) => !isHiddenByConfig(key))
       .map((key) => {
-        /** 当前键对应的渲染函数 */
+        /** 替换项：按原顺序直接渲染插槽 VNode */
+        const replaced = replaceSlotMap.get(key);
+        if (replaced) {
+          const content = resolveControlSlotContent(replaced.slot, slotCtx);
+          if (!content || typeof content === "string") return null;
+          if ((content as { nodeType?: unknown }).nodeType) return null;
+          if ((content as { mount?: unknown }).mount) return null;
+          return content as VNode;
+        }
         const renderer = bottomRightRenderers[key];
         if (!renderer) return null;
         return renderer();

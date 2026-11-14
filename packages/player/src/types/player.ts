@@ -60,7 +60,7 @@ import type { DanmakuItem } from "./danmaku";
 // 阶段 C.1：插槽类型（ControlSlotItem / EndingSlot / SlotContext / ControlSlotPosition）
 import type { ControlSlotItem, SlotContent } from "./slots";
 // 沿用 slots.ts 中已定义的同名类型，避免在此重复声明导致类型漂移
-export type { ControlSlotItem, EndingSlot, TopSlot, SlotContent, SlotMount } from "./slots";
+export type { ControlSlotItem, ControlSlotContent, ControlSlotPosition, NativeControlKey, EndingSlot, TopSlot, SlotContent, SlotMount } from "./slots";
 
 // ============================================
 // 播放器配置接口（命名空间化）
@@ -125,7 +125,7 @@ export type QualityMode = "auto" | "manual";
  * - `wide`：宽屏
  * - `mini`：迷你播放器
  */
-export type DisplayMode = "normal" | "web" | "wide" | "mini";
+export type DisplayMode = "normal" | "web" | "wide" | "mini" | "cross";
 
 /**
  * 播放列表条目
@@ -548,6 +548,18 @@ export type PlayerConfig = {
   playlist?: MediaItem[];
   /** 初始播放第几个 */
   playlistIndex?: number;
+  /**
+   * 显示模式（创建时确定，默认不传 = "normal"）
+   *
+   * - normal：普通形态
+   * - cross：竖排紧凑形态（稍后再看 PiP）——容器 `data-screen="cross"`，
+   *   不注册区域可见性监听（mini 自动切换从源头不存在）、弹幕发送栏
+   *   移入控制栏中央并定死、悬浮上/下集通过 ui.slots 的 stageLeft /
+   *   stageRight 注入、全屏 / 网页全屏退出后回到 cross
+   *
+   * 仅在创建时生效，不支持运行时在 normal ↔ cross 间动态切换。
+   */
+  mode?: DisplayMode;
   /** 外观与控件 */
   ui?: UiConfig;
   /** 交互与快捷键 */
@@ -650,6 +662,8 @@ export interface ControlsConfig {
   wideScreen?: boolean;
   /** 网页全屏按钮 */
   webFullscreen?: boolean;
+  /** 全屏按钮（运行时经 `ui.controls.fullscreen` 路径读取，显式 false 隐藏） */
+  fullscreen?: boolean;
   /** 弹幕发送栏（embedded 场景默认显示；显式 false 强制关闭，如互动编辑器） */
   danmakuSend?: boolean;
   /** 进度条分段（运行时从配置透传给控制条） */

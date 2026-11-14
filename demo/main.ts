@@ -468,6 +468,8 @@ const PlayerSection = defineComponent((_props, lifecycle) => {
         h("button", { id: "btn-quality-auto", class: "btn" }, "画质 auto"),
         h("button", { id: "btn-display-wide", class: "btn" }, "宽屏模式"),
         h("button", { id: "btn-display-normal", class: "btn" }, "普通模式"),
+        // cross 弹窗：独立 cross 播放器演示（config.mode = "cross" 固定形态）
+        h("button", { id: "btn-cross-modal", class: "btn" }, "cross 弹窗"),
       ),
     ),
     // 互动视频（华强买瓜）：协议（HLS/DASH）× playurl 格式（URL/JSON）选择 +

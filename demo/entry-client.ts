@@ -12,6 +12,7 @@ if (!document.querySelector("style[data-ssr-nova-css]")) {
 }
 import { hydrate, mount } from "@lumina/framework";
 import { PlayerEventEnum } from "@lumina/nova";
+import type { ControlSlotItem, ControlSlotPosition } from "@lumina/nova";
 // 内置语言包由播放器包统一导出
 import { bundledEnUS as enUS, bundledZhCN as zhCN } from "@lumina/nova";
 import {
@@ -21,7 +22,7 @@ import {
   setPlayerInstance,
 } from "./main";
 import { DEMO_SSR_PLAYER_CONFIG } from "./ssr-player";
-import { VideoPlayer } from "@lumina/nova";
+import { VideoPlayer, h } from "@lumina/nova";
 import { createHlsPlugin } from "@lumina/plugins/hls";
 import { createDashPlugin } from "@lumina/plugins/dash";
 import { TopPlugin, EndingPlugin } from "@lumina/plugins";
@@ -2244,6 +2245,329 @@ wireDemoButton("btn-display-normal", () => {
   player.setDisplayMode("normal");
   logAction('调用 setWideScreen(false) + setDisplayMode("normal")');
 });
+
+// ============================================
+// cross 弹窗演示：独立 cross 播放器（config.mode = "cross" 固定形态）
+// ============================================
+// 设计边界（与实现计划一致）：
+// - 播放器只提供挂载层（.nova-player-rich-pip-side-prev / -next）与定位显隐规则
+// - 悬浮按钮内容与皮肤样式由本 demo 提供（styles.css 的 .nova-player-rich-pip-side-btn）
+// - 弹幕发送栏由 DanmakuPlugin 驱动渲染，cross 下自动移入控制栏中央并定死
+const CROSS_SKIP_ICON_PATH =
+  "M16 5a1 1 0 0 0-1 1v4.615a1.431 1.431 0 0 0-.615-.829L7.21 5.23A1.439 1.439 0 0 0 5 6.445v9.11a1.44 1.44 0 0 0 2.21 1.215l7.175-4.555a1.436 1.436 0 0 0 .616-.828V16a1 1 0 0 0 2 0V6C17 5.448 16.552 5 16 5z";
+
+let crossModalPlayer: VideoPlayer | null = null;
+let crossModalOverlay: HTMLElement | null = null;
+
+/** 关闭弹窗：销毁独立实例并移除浮层 */
+const closeCrossModal = (): void => {
+  crossModalPlayer?.destroy();
+  crossModalPlayer = null;
+  crossModalOverlay?.remove();
+  crossModalOverlay = null;
+  logAction("cross 弹窗已关闭（独立实例已销毁）");
+};
+
+wireDemoButton("btn-cross-modal", () => {
+  if (crossModalOverlay) {
+    closeCrossModal();
+    return;
+  }
+  const overlay = document.createElement("div");
+  overlay.className = "cross-modal-overlay";
+  overlay.innerHTML = [
+    '<div class="cross-modal-panel">',
+    '  <div class="cross-modal-head">',
+    '    <span>cross 模式独立播放器（config.mode = "cross"）</span>',
+    '    <button class="cross-modal-close" aria-label="关闭">×</button>',
+    "  </div>",
+    '  <div class="cross-modal-player-box"><div id="cross-modal-player"></div></div>',
+    "</div>",
+  ].join("");
+  document.body.appendChild(overlay);
+  crossModalOverlay = overlay;
+  const closeBtn = overlay.querySelector(".cross-modal-close");
+  closeBtn?.addEventListener("click", closeCrossModal);
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) closeCrossModal();
+  });
+
+  /**
+   * stage 插槽按钮（上一个 / 下一个悬浮圆钮）
+   * 内容与皮肤样式归消费方（demo），播放器只负责挂载与定位显隐
+   */
+  const stageSkipSlot = (
+    id: string,
+    position: ControlSlotPosition,
+    label: string,
+    flip: boolean,
+    act: () => Promise<unknown>,
+  ): ControlSlotItem => ({
+    id,
+    position,
+    vnode: () =>
+      h(
+        "div",
+        {
+          class: "nova-player-rich-pip-side-btn",
+          role: "button",
+          "aria-label": label,
+          title: label,
+          onClick: () => {
+            void act();
+          },
+        },
+        h(
+          "svg",
+          {
+            xmlns: "http://www.w3.org/2000/svg",
+            viewBox: "0 0 22 22",
+            width: 22,
+            height: 22,
+            // 上一个按钮 = skip 图标旋转 180°（原版 ctrl-prev 同款处理）
+            style: flip ? "transform:rotate(180deg)" : "",
+          },
+          h("path", { d: CROSS_SKIP_ICON_PATH, fill: "#ffffff" }),
+        ),
+      ),
+  });
+
+  /**
+   * leftEnd 弹幕开关插槽：原版 ui-danmaku-switch 结构与图标 1:1
+   * （input checkbox + label + on/off 双 svg，:checked CSS 联动；
+   *  外壳类名按 nova 契约映射，图标内容与图标状态类名保持原版原名）
+   */
+  const DM_SWITCH_ON_PATH_1 =
+    "M11.989 4.828c-.47 0-.975.004-1.515.012l-1.71-2.566a1.008 1.008 0 0 0-1.678 1.118l.999 1.5c-.681.018-1.403.04-2.164.068a4.013 4.013 0 0 0-3.83 3.44c-.165 1.15-.245 2.545-.245 4.185 0 1.965.115 3.67.35 5.116a4.012 4.012 0 0 0 3.763 3.363l.906.046c1.205.063 1.808.095 3.607.095a.988.988 0 0 0 0-1.975c-1.758 0-2.339-.03-3.501-.092l-.915-.047a2.037 2.037 0 0 1-1.91-1.708c-.216-1.324-.325-2.924-.325-4.798 0-1.563.076-2.864.225-3.904.14-.977.96-1.713 1.945-1.747 2.444-.087 4.465-.13 6.063-.131 1.598 0 3.62.044 6.064.13.96.034 1.71.81 1.855 1.814.075.524.113 1.962.141 3.065v.002c.01.342.017.65.025.88a.987.987 0 1 0 1.974-.068c-.008-.226-.016-.523-.025-.856v-.027c-.03-1.118-.073-2.663-.16-3.276-.273-1.906-1.783-3.438-3.74-3.507-.9-.032-1.743-.058-2.531-.078l1.05-1.46a1.008 1.008 0 0 0-1.638-1.177l-1.862 2.59c-.38-.004-.744-.007-1.088-.007h-.13Zm.521 4.775h-1.32v4.631h2.222v.847h-2.618v1.078h2.618l.003.678c.36.026.714.163 1.01.407h.11v-1.085h2.694v-1.078h-2.695v-.847H16.8v-4.63h-1.276a8.59 8.59 0 0 0 .748-1.42L15.183 7.8a14.232 14.232 0 0 1-.814 1.804h-1.518l.693-.308a8.862 8.862 0 0 0-.814-1.408l-1.045.352c.297.396.572.847.825 1.364Zm-4.18 3.564.154-1.485h1.98V8.294h-3.2v.98H9.33v1.43H7.472l-.308 3.453h2.277c0 1.166-.044 1.925-.12 2.277-.078.352-.386.528-.936.528-.308 0-.616-.022-.902-.055l.297 1.067.062.005c.285.02.551.04.818.04 1.001-.067 1.562-.419 1.694-1.057.11-.638.176-1.903.176-3.795h-2.2Zm7.458.11v-.858h-1.254v.858h1.254Zm-2.376-.858v.858h-1.199v-.858h1.2Zm-1.199-.946h1.2v-.902h-1.2v.902Zm2.321 0v-.902h1.254v.902h-1.254Z";
+  const DM_SWITCH_ON_PATH_2 =
+    "M22.846 14.627a1 1 0 0 0-1.412.075l-5.091 5.703-2.216-2.275-.097-.086-.008-.005a1 1 0 0 0-1.322 1.493l2.963 3.041.093.083.007.005c.407.315 1 .27 1.354-.124l5.81-6.505.08-.102.005-.008a1 1 0 0 0-.166-1.295Z";
+  const DM_SWITCH_OFF_PATH =
+    "m8.085 4.891-.999-1.499a1.008 1.008 0 0 1 1.679-1.118l1.709 2.566c.54-.008 1.045-.012 1.515-.012h.13c.345 0 .707.003 1.088.007l1.862-2.59a1.008 1.008 0 0 1 1.637 1.177l-1.049 1.46c.788.02 1.631.046 2.53.078 1.958.069 3.468 1.6 3.74 3.507.088.613.13 2.158.16 3.276l.001.027c.01.333.017.63.025.856a.987.987 0 0 1-1.974.069c-.008-.23-.016-.539-.025-.881v-.002c-.028-1.103-.066-2.541-.142-3.065-.143-1.004-.895-1.78-1.854-1.813-2.444-.087-4.466-.13-6.064-.131-1.598 0-3.619.044-6.063.13a2.037 2.037 0 0 0-1.945 1.748c-.15 1.04-.225 2.341-.225 3.904 0 1.874.11 3.474.325 4.798.154.949.95 1.66 1.91 1.708a97.58 97.58 0 0 0 5.416.139.988.988 0 0 1 0 1.975c-2.196 0-3.61-.047-5.513-.141A4.012 4.012 0 0 1 2.197 17.7c-.236-1.446-.351-3.151-.351-5.116 0-1.64.08-3.035.245-4.184A4.013 4.013 0 0 1 5.92 4.96c.761-.027 1.483-.05 2.164-.069Zm4.436 4.707h-1.32v4.63h2.222v.848h-2.618v1.078h2.431a5.01 5.01 0 0 1 3.575-3.115V9.598h-1.276a8.59 8.59 0 0 0 .748-1.42l-1.089-.384a14.232 14.232 0 0 1-.814 1.804h-1.518l.693-.308a8.862 8.862 0 0 0-.814-1.408l-1.045.352c.297.396.572.847.825 1.364Zm-4.18 3.564.154-1.485h1.98V8.289h-3.2v.979h2.067v1.43H7.483l-.308 3.454h2.277c0 1.166-.044 1.925-.12 2.277-.078.352-.386.528-.936.528-.308 0-.616-.022-.902-.055l.297 1.067.062.004c.285.02.551.04.818.04 1.001-.066 1.562-.418 1.694-1.056.11-.638.176-1.903.176-3.795h-2.2Zm7.458.11v-.858h-1.254v.858H15.8Zm-2.376-.858v.858h-1.199v-.858h1.2Zm-1.199-.946h1.2v-.902h-1.2v.902Zm2.321 0v-.902H15.8v.902h-1.254Zm3.517 10.594a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-.002-1.502a2.5 2.5 0 0 1-2.217-3.657l3.326 3.398a2.49 2.49 0 0 1-1.109.259Zm2.5-2.5c0 .42-.103.815-.286 1.162l-3.328-3.401a2.5 2.5 0 0 1 3.614 2.239Z";
+
+  const dmSwitchSlot = (): ControlSlotItem => ({
+    id: "cross-dm-switch",
+    position: "leftEnd",
+    vnode: (ctx) =>
+      h(
+        "div",
+        {
+          class:
+            "nova-player-ctrl-btn nova-player-dm-cross-page-switch ui ui-danmaku-switch",
+          role: "button",
+          "aria-label": "弹幕开关",
+        },
+        h("div", { class: "ui-area" },
+          h("input", {
+            class: "ui-danmaku-switch-input",
+            type: "checkbox",
+            id: "cross-dm-switch-input",
+            checked: ctx.player.isDanmakuVisible(),
+            onChange: (event: Event) => {
+              ctx.player.setDanmakuVisible(
+                (event.currentTarget as HTMLInputElement).checked,
+              );
+            },
+          }),
+          h("label", {
+            class: "ui-danmaku-switch-label",
+            for: "cross-dm-switch-input",
+          },
+            h("span", { class: "ui-danmaku-switch-on" },
+              h("svg", { xmlns: "http://www.w3.org/2000/svg", "data-pointer": "none", viewBox: "0 0 24 24" },
+                h("path", { "fill-rule": "evenodd", d: DM_SWITCH_ON_PATH_1, "clip-rule": "evenodd" }),
+                h("path", { fill: "#00AEEC", "fill-rule": "evenodd", d: DM_SWITCH_ON_PATH_2, "clip-rule": "evenodd" }),
+              ),
+            ),
+            h("span", { class: "ui-danmaku-switch-off" },
+              h("svg", { xmlns: "http://www.w3.org/2000/svg", "data-pointer": "none", viewBox: "0 0 24 24" },
+                h("path", { "fill-rule": "evenodd", d: DM_SWITCH_OFF_PATH, "clip-rule": "evenodd" }),
+              ),
+            ),
+          ),
+        ),
+      ),
+  });
+
+  const crossPlayer: VideoPlayer = new VideoPlayer({
+    src: "/sample.mp4",
+    mode: "cross",
+    playback: { autoplay: true, muted: true, volume: 0.3 },
+    playlist: [
+      { src: "/sample.mp4", title: "cross 播放列表 · 第 1 个" },
+      { src: "/sample.mp4", title: "cross 播放列表 · 第 2 个" },
+      { src: "/sample.mp4", title: "cross 播放列表 · 第 3 个" },
+    ],
+    plugins: {
+      list: [
+        DanmakuPlugin(),
+        // top：播放器自带 TopPlugin（TopView 类名 nova-player-top-*，cross 样式由 cross.scss 派生）
+        TopPlugin({ data: { title: "cross 独立播放器（弹窗）" } }),
+      ],
+    },
+    ui: {
+      slots: [
+        stageSkipSlot(
+          "cross-stage-prev",
+          "stageLeft",
+          "上一个",
+          true,
+          () => crossPlayer.prev(),
+        ),
+        stageSkipSlot(
+          "cross-stage-next",
+          "stageRight",
+          "下一个",
+          false,
+          () => crossPlayer.next(),
+        ),
+        dmSwitchSlot(),
+        // topRight 插槽内容：原版 top-right 三连功能区 1:1
+        // （like + 计数 / coin(state-active) + 计数 + tooltip / collect + 计数 + tooltip；
+        //  结构与类名逐条镜像原版：bpx-player-* → nova-player-* 契约映射，
+        //  bpx-common-* → common-*（与播放器既有 common-svg-icon 命名一致）；
+        //  图标 path 逐字节原版；皮肤样式见 styles.css）
+        {
+          id: "cross-top-right",
+          position: "topRight",
+          vnode: () =>
+            h(
+              "div",
+              { class: "nova-player-top-right-like" },
+              h(
+                "div",
+                { class: "nova-player-three-functions-container" },
+                h(
+                  "div",
+                  {
+                    class: "nova-player-three-functions-btn",
+                    "data-action": "like",
+                    onClick: (event: Event) => {
+                      const el = event.currentTarget as HTMLElement;
+                      const active = el.classList.toggle("nova-player-state-active");
+                      const num = el.querySelector(".nova-player-common-like-num");
+                      if (num) num.textContent = active ? "935" : "934";
+                    },
+                  },
+                  h(
+                    "div",
+                    { class: "common-svg-container" },
+                    h(
+                      "div",
+                      { class: "common-svg-icon" },
+                      h(
+                        "svg",
+                        {
+                          xmlns: "http://www.w3.org/2000/svg",
+                          fill: "none",
+                          "data-pointer": "none",
+                          viewBox: "0 0 24 24",
+                        },
+                        h("path", {
+                          fill: "#fff",
+                          "fill-rule": "evenodd",
+                          "clip-rule": "evenodd",
+                          d: "M13.925 3.045a.798.798 0 0 0-.683.254c-.265.31-.372.564-.504.939l-.045.132c-.132.379-.3.864-.649 1.482-.598 1.06-1.156 1.7-1.843 2.302-.562.493-1.135.829-1.701.989v10.582c.787.017 1.629.027 2.5.027 2.247 0 4.153-.07 5.437-.137.91-.047 1.7-.497 2.113-1.23.577-1.028 1.29-2.535 1.721-4.31.402-1.654.586-3.013.668-3.973.038-.444-.313-.852-.859-.852h-4.982a.75.75 0 0 1-.694-1.034v-.003l.005-.01.016-.04.062-.162c.053-.14.126-.34.204-.572.158-.475.327-1.06.403-1.572.117-.782.088-1.411-.218-1.993-.33-.624-.704-.79-.95-.819Zm2.239 4.705h3.916c1.324 0 2.476 1.063 2.354 2.48a28.048 28.048 0 0 1-.705 4.2c-.473 1.946-1.25 3.583-1.872 4.69-.698 1.242-1.992 1.924-3.343 1.993-1.304.067-3.236.14-5.514.14-2.207 0-4.223-.068-5.652-.134-1.608-.073-2.957-1.267-3.13-2.904A38.236 38.236 0 0 1 2 14.252c0-1.369.087-2.61.19-3.595.179-1.722 1.656-2.907 3.318-2.907H7.75c.319 0 .814-.155 1.462-.724.563-.493 1.013-1.002 1.526-1.912.28-.495.408-.864.537-1.236l.048-.138c.156-.442.337-.9.78-1.416a2.297 2.297 0 0 1 1.996-.768c.826.096 1.588.63 2.103 1.609.521.987.514 1.988.376 2.913a10.946 10.946 0 0 1-.414 1.672ZM7 19.683V9.25H5.508c-.964 0-1.734.673-1.826 1.562a33.59 33.59 0 0 0-.182 3.44c0 1.428.1 2.766.21 3.806.091.863.803 1.522 1.706 1.563.47.021 1.002.043 1.584.063Z",
+                        }),
+                      ),
+                    ),
+                  ),
+                  h("div", { class: "nova-player-common-like-num" }, "934"),
+                ),
+                h(
+                  "div",
+                  {
+                    class:
+                      "nova-player-three-functions-btn nova-player-state-active",
+                    "data-action": "coin",
+                    onClick: (event: Event) => {
+                      (event.currentTarget as HTMLElement).classList.toggle(
+                        "nova-player-state-active",
+                      );
+                    },
+                  },
+                  h(
+                    "div",
+                    { class: "common-svg-container" },
+                    h(
+                      "div",
+                      { class: "common-svg-icon" },
+                      h(
+                        "svg",
+                        {
+                          xmlns: "http://www.w3.org/2000/svg",
+                          fill: "none",
+                          "data-pointer": "none",
+                          viewBox: "0 0 24 24",
+                        },
+                        h("path", {
+                          fill: "#00AEEC",
+                          "fill-rule": "evenodd",
+                          "clip-rule": "evenodd",
+                          d: "M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Zm3.25 4.75a.75.75 0 0 1 0 1.5h-2.5v1.507c1.12.122 2.064.536 2.761 1.247.848.867 1.239 2.077 1.239 3.457v.5a.75.75 0 0 1-1.5 0v-.5c0-1.105-.31-1.895-.81-2.407-.385-.393-.938-.673-1.69-.776V17a.75.75 0 0 1-1.5 0v-5.722c-.752.103-1.306.383-1.69.776-.501.512-.81 1.302-.81 2.407v.5a.75.75 0 0 1-1.5 0v-.5c0-1.38.39-2.59 1.239-3.457.697-.711 1.64-1.125 2.76-1.247V8.25h-2.5a.75.75 0 0 1 0-1.5h6.5Z",
+                        }),
+                      ),
+                    ),
+                  ),
+                  h("div", { class: "nova-player-common-coin-num" }, "127"),
+                  h(
+                    "div",
+                    { class: "nova-player-common-tooltip" },
+                    "对本稿件的投币枚数已用完",
+                  ),
+                ),
+                h(
+                  "div",
+                  {
+                    class: "nova-player-three-functions-btn",
+                    "data-action": "collect",
+                    onClick: (event: Event) => {
+                      (event.currentTarget as HTMLElement).classList.toggle(
+                        "nova-player-state-active",
+                      );
+                    },
+                  },
+                  h(
+                    "div",
+                    { class: "common-svg-container" },
+                    h(
+                      "div",
+                      { class: "common-svg-icon" },
+                      h(
+                        "svg",
+                        {
+                          xmlns: "http://www.w3.org/2000/svg",
+                          fill: "none",
+                          "data-pointer": "none",
+                          viewBox: "0 0 24 24",
+                        },
+                        h("path", {
+                          fill: "#fff",
+                          "fill-rule": "evenodd",
+                          "clip-rule": "evenodd",
+                          d: "M10.162 3.28c.752-1.524 2.924-1.524 3.676 0l1.718 3.48a.75.75 0 0 0 .565.41l3.842.559c1.681.244 2.353 2.31 1.136 3.497l-2.78 2.71a.75.75 0 0 0-.216.663l.657 3.826c.287 1.675-1.47 2.952-2.975 2.161L12.35 18.78a.75.75 0 0 0-.698 0l-3.436 1.806c-1.504.791-3.262-.486-2.975-2.16l.657-3.827a.75.75 0 0 0-.216-.664l-2.78-2.71C1.684 10.04 2.356 7.974 4.037 7.73L7.88 7.17a.75.75 0 0 0 .565-.41l1.718-3.482Zm2.331.663a.55.55 0 0 0-.986 0L9.789 7.424a2.25 2.25 0 0 1-1.694 1.231l-3.842.558a.55.55 0 0 0-.305.939l2.78 2.71a2.25 2.25 0 0 1 .647 1.99L6.72 18.68a.55.55 0 0 0 .798.58l3.436-1.807a2.25 2.25 0 0 1 2.094 0l3.436 1.807a.55.55 0 0 0 .798-.58l-.656-3.826a2.25 2.25 0 0 1 .647-1.992l2.78-2.71a.55.55 0 0 0-.305-.938l-3.842-.558a2.25 2.25 0 0 1-1.694-1.23l-1.718-3.482Z",
+                        }),
+                      ),
+                    ),
+                  ),
+                  h("div", { class: "nova-player-common-collect-num" }, "541"),
+                  h(
+                    "div",
+                    { class: "nova-player-common-tooltip" },
+                    "添加到默认收藏夹",
+                  ),
+                ),
+              ),
+            ),
+        },
+      ],
+    },
+  });
+  crossModalPlayer = crossPlayer;
+  const mountEl = overlay.querySelector("#cross-modal-player");
+  if (mountEl) crossPlayer.mount(mountEl as HTMLElement);
+  logAction('cross 弹窗已打开（独立实例 config.mode = "cross"）');
+});
+
 
 // i18n 状态查询：getLocale() 与 getLocaleSignal().value 当前值对照
 // （Signal 与方法读值应始终一致，读取 .value 不建立依赖）

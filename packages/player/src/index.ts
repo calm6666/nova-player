@@ -73,8 +73,9 @@ export { BrowserCapabilityDetector } from './utils/browserCapabilityDetector';
 export type { PlayerStateMap, RuntimeStateManager } from './store/runtimeState';
 export { PluginManager } from './core/pluginManager';
 
-// 导出插槽类型（插件 / 配置共用）
-export type { SlotContent, SlotMount, SlotContext } from './types/slots';
+// 导出插槽类型与挂载助手（插件 / 配置共用）
+export type { SlotContent, SlotMount, SlotContext, ControlSlotItem, ControlSlotContent, ControlSlotPosition, NativeControlKey } from './types/slots';
+export { mountControlSlots, mountReplacementSlots } from './types/slots';
 
 // 导出 Lumina 运行时（Top/Ending 插件视图使用，避免重复打包框架）
 export { h, mount, destroy, defineComponent, useTemplateRef, signal, Fragment, For, onEffect, t } from '@lumina/framework/core';

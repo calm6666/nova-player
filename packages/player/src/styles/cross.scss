@@ -1,0 +1,211 @@
+/**
+ * ============================================
+ * cross 显示模式（竖排紧凑形态 / 稍后再看 PiP）
+ * ============================================
+ *
+ * 进入方式：配置 `mode: "cross"`（创建时确定，不做运行时动态切换），
+ * 容器获得 data-screen="cross"。
+ *
+ * 规则逐条镜像原版 bpx-player-container[data-screen="cross"] 的实现
+ * （提取自原版完整 DOM 文件的 CSS，逐条对照），类名按 nova 契约映射
+ * （bpx-player-* → nova-player-*）：
+ *
+ * 1. rich-pip-side-prev / -next：视频画面左右边缘垂直居中的悬浮层
+ *    挂载点（内容由 ui.slots 的 stageLeft / stageRight 插槽注入，
+ *    插槽内容皮肤样式归消费方，不在此文件）。
+ *    显隐 = 容器 :hover / :focus-within（原版逐字规则，无附加条件）
+ * 2. 原生 ctrl-prev / ctrl-next 隐藏（上下集由悬浮层承担，与原版一致）
+ * 3. control-bottom：flex 两端布局，left/right 各让出 40px，
+ *    bottom-center 占据 flex: 1（为发送栏预留的中槽）
+ * 4. 发送栏：由 moveSendBar 移入控制栏中央（与 full/web 同路径）并定死，
+ *    底部不再有发送栏——中央槽位样式镜像 player.scss @mixin screen-style()
+ *    的 full/web 规则（不带 min-width:750px 限制——cross 是紧凑小窗；
+ *    也不带小屏隐藏输入条规则——cross 的发送栏必须可见）
+ * 5. top：挂载点为既有 `.nova-player-top-wrap`（ui.top 插槽 / TopPlugin 注入内容）；
+ *    top 的内容样式（渐变遮罩、标题栏等）归消费方，不在此文件
+ *
+ * 播放器容器本身不设任何尺寸：16:9 由外部挂载父容器决定。
+ */
+
+.nova-player-container[data-screen="cross"] {
+  // ---- 原版：.bpx-player-ctrl-prev / -next（cross 下原生上下集隐藏）----
+  .nova-player-ctrl-prev,
+  .nova-player-ctrl-next {
+    display: none;
+  }
+
+  // ---- 原版：.bpx-player-rich-pip-side-next / -prev（悬浮层挂载点）----
+  .nova-player-rich-pip-side-next,
+  .nova-player-rich-pip-side-prev {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: opacity 0.18s;
+    z-index: 6;
+  }
+
+  .nova-player-rich-pip-side-prev {
+    left: 10px;
+  }
+
+  .nova-player-rich-pip-side-next {
+    right: 10px;
+  }
+
+  // ---- 原版：.bpx-player-ctrl-time ----
+  .nova-player-ctrl-time {
+    margin: 0 !important;
+  }
+
+  // ---- 发送栏基础皮肤（可见性与宽度由下面三段媒体查询控制）----
+  .nova-player-control-bottom-center {
+    height: 34px;
+    line-height: 34px;
+    padding: 0;
+
+    .nova-player-sending-bar {
+      background: none !important;
+      border: none !important;
+      height: 34px !important;
+      line-height: 34px !important;
+      margin: 0 auto !important;
+      max-width: 729px !important;
+      padding: 0 !important;
+      width: 100%;
+
+      .nova-player-video-inputbar {
+        background: none rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.6);
+        margin: 0;
+        padding: 0;
+      }
+
+      .nova-player-video-inputbar-wrap {
+        border: none;
+        width: auto;
+      }
+    }
+  }
+
+  // ---- 原版媒体查询（630–860）：控制栏改 flex、左右让 40px、发送栏撑满中槽 ----
+  @media screen and (min-width: 631px) and (max-width: 860px) {
+    .nova-player-control-bottom {
+      display: flex;
+      justify-content: space-between;
+
+      .nova-player-control-bottom-left,
+      .nova-player-control-bottom-right {
+        flex: 0 0 auto;
+      }
+
+      .nova-player-control-bottom-left {
+        margin-right: 40px;
+      }
+
+      .nova-player-control-bottom-right {
+        margin-left: 40px;
+      }
+
+      .nova-player-control-bottom-center {
+        flex: 1 1 auto;
+        min-width: 0;
+
+        .nova-player-sending-bar {
+          width: 100%;
+
+          .nova-player-video-inputbar {
+            min-width: 122px;
+            width: calc(100% - 72px);
+          }
+        }
+      }
+    }
+  }
+
+  // ---- 原版媒体查询（≥860）：输入条固定 400px ----
+  @media screen and (min-width: 860px) {
+    .nova-player-control-bottom-center
+      .nova-player-sending-bar
+      .nova-player-video-inputbar {
+      width: 400px;
+    }
+  }
+
+  // ---- 原版媒体查询（≤630）：整条发送栏隐藏 ----
+  @media screen and (max-width: 630px) {
+    .nova-player-sending-bar {
+      display: none;
+    }
+  }
+
+  // ---- 原版：.bpx-player-top-mask（cross 顶部渐变遮罩）→ TopView 对应物 ----
+  .nova-player-top-mask {
+    background: linear-gradient(rgba(0, 0, 0, 0.8), transparent);
+    height: 96px;
+    transform: none;
+    transition: opacity 0.18s;
+    z-index: 1;
+  }
+
+  // ---- 原版：.bpx-player-top-left（cross 顶部左侧栏）→ TopView 对应物 ----
+  .nova-player-top-left {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    left: 0;
+    top: 0;
+    margin-top: 0;
+    max-width: calc(100% - 180px);
+    min-width: 0;
+    padding: 12px;
+    pointer-events: auto;
+    z-index: 2;
+  }
+
+  // ---- 原版：.bpx-player-top-left-title（cross 标题，空标题隐藏占位）----
+  .nova-player-top-left-title {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    line-height: 18px;
+    margin: 4px 0 6px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  // ---- 原版：.bpx-player-three-functions-container（顶部右侧功能区）→ .nova-player-top-issue ----
+  .nova-player-top-issue {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+}
+
+// ---- 原版规则原文（逐字映射）----
+// .bpx-player-container[data-screen="cross"]:focus-within .bpx-player-rich-pip-side-next,
+// .bpx-player-container[data-screen="cross"]:focus-within .bpx-player-rich-pip-side-prev,
+// .bpx-player-container[data-screen="cross"]:hover .bpx-player-rich-pip-side-next,
+// .bpx-player-container[data-screen="cross"]:hover .bpx-player-rich-pip-side-prev
+//   { opacity: 1; pointer-events: auto; }
+.nova-player-container[data-screen="cross"]:focus-within,
+.nova-player-container[data-screen="cross"]:hover {
+  .nova-player-rich-pip-side-next,
+  .nova-player-rich-pip-side-prev {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// 非 cross 模式悬浮层隐藏（DOM 常驻但无副作用）
+.nova-player-container:not([data-screen="cross"]) {
+  .nova-player-rich-pip-side-next,
+  .nova-player-rich-pip-side-prev {
+    display: none;
+  }
+}

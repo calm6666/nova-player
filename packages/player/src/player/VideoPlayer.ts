@@ -637,9 +637,11 @@ export class VideoPlayer
         errorCode: 0,
         errorMessage: "",
         isWebFullscreen: false,
+        /** 显示模式：创建时由配置 mode 确定（normal / cross），创建后 normal 形态
+         *  经 setDisplayMode 运行时切换；cross 为固定形态（见 setDisplayMode 拦截） */
+        displayMode: this.props.mode ?? "normal",
         /** 宽屏：持久化读回（bpx_player_profile.iswide 同款，下次加载恢复宽屏布局） */
         isWideScreen: this.store.getPersistentState().isWideScreen ?? false,
-        displayMode: "normal",
         isMinPlayer: false,
         qualityCurrent: qualityInit,
         qualityMode: "none",
@@ -2936,7 +2938,10 @@ export class VideoPlayer
    */
   toggleWebFullscreen(): void {
     const isWeb = this.state.get(PlayerStateKeyEnum.IS_WEB_FULLSCREEN) ?? false;
-    this.setDisplayMode(isWeb ? "normal" : "web");
+    // cross 固定形态：退出网页全屏后恢复配置的 mode（cross），而非 normal
+    this.setDisplayMode(
+      isWeb ? (this.props.mode ?? "normal") : "web",
+    );
   }
 
   /**
@@ -3081,6 +3086,17 @@ export class VideoPlayer
   setDisplayMode(mode: DisplayMode): void {
     if (mode === "wide") {
       this.setWideScreen(true);
+      return;
+    }
+
+    // cross 固定形态：配置 mode="cross" 时监听未注册、发送栏已定死中央，
+    // 运行时切换到 mini / normal 会破坏形态语义，一律拦截；
+    // 仅允许 web（网页全屏）与回到配置值 cross（toggleWebFullscreen 恢复路径）
+    if (
+      this.props.mode === "cross" &&
+      mode !== "web" &&
+      mode !== "cross"
+    ) {
       return;
     }
 

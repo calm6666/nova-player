@@ -1335,6 +1335,29 @@ const hls = player.getPlugin<HlsPlugin>("hls");
 
 公共事件（`streamError` / `streamQualityChange`）仍走 `player.on`。
 
+## 控件与插槽（2026-11-14 变更）
+
+### 控件开关
+
+- `ui.controls` 支持 `prev / next / viewpoint / quality / episodes / setting / pip / wideScreen / webFullscreen / fullscreen / danmakuSend`；
+- 显式 `false` 时 `RightControls` / `LeftControls` **不渲染该按钮的 DOM**（不是 `display:none`）；
+- 优先级：`configStore` 当前值 → 构造期 `config` → 默认 `true`；全屏按钮运行时路径为 `ui.controls.fullscreen`。
+
+### 插槽
+
+- 位置插槽：`leftEnd / rightStart / rightEnd / topRight / bottomCenter / stageLeft / stageRight / cornerLeft / cornerRight`；
+- `replace: NativeControlKey`：**原生控件不渲染**；渲染层按 `bottomRightOrder` / `bottomLeftOrder` 在原始位置直接渲染插槽 VNode（无 host、无 wrapper、无注释占位）；替换内容必须是 VNode；左右控制栏只处理各自顺序表内的键；
+- `SlotContext = { player, state }`：所有插槽（含 corner / topRight / 替换项）均保证可拿到，`PlayerDocker` 以 `stateMgr ?? player.state` 兜底。
+
+### Top 插件
+
+- `TopProps.issue?: boolean`（默认 `true`）；`false` 时 top-issue 节点完全不渲染。
+
+### LottieIcon
+
+- `AnimationSlot` 的结束行为字段为 **`complete`**（`next` / `stop` / `loop`），写成 `onComplete` 会被忽略并自动跳到下一槽；
+- `setSequenceSlot` 需在 `onReady` 之后调用；`autoplay:false` 的槽停在起始帧。
+
 ---
 
 > 本文档与代码同步维护。如发现 API 与实际不符，以 [`packages/player/src/`](../packages/player/src) 与 [`packages/plugins/src/`](../packages/plugins/src) 源码为准。
