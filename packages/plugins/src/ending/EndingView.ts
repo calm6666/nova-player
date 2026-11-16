@@ -93,6 +93,8 @@ export interface EndingProps {
   host?: HTMLElement | null;
   /** 播放器 video，用于截取最后一帧作为片尾背景 */
   video?: HTMLVideoElement | null;
+  /** 从播放器上下文取 video（优先于自行查询 DOM） */
+  getVideo?: () => HTMLVideoElement | null;
   /** 面板 API 回调（核心据此控制显隐） */
   onEndingMounted?: (api: {
     showEndWrap: () => void;
@@ -391,10 +393,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const captureEndingFrame = (): void => {
     const root = endingWrapRef.value;
     if (!root) return;
-    const video =
-      props.video ??
-      root.closest(".nova-player-container")?.querySelector("video") ??
-      null;
+    const video = props.video ?? props.getVideo?.() ?? null;
     if (!video) return;
     if (video.readyState < 2 || video.videoWidth <= 0) return;
     const canvas = document.createElement("canvas");
@@ -422,11 +421,11 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     captureEndingFrame();
     const root = endingWrapRef.value;
     if (!root) return;
-    // display 与 data-select 同属显隐状态：只靠 CSS 无法覆盖容器上的内联隐藏
-    root.removeAttribute("style");
+    // 清空内联 display 让 CSS 显隐生效，不动其它内联样式
+    root.style.display = "";
     root.setAttribute("data-select", "1");
     startCountdown();
-    // 面板显示后再测量内容尺寸，真实 B 站进入片尾即写入 transform: scale(...)
+    // 面板显示后再测量内容尺寸
     requestAnimationFrame(() => applyContentScale());
   };
 
@@ -445,7 +444,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     stopCountdown();
     const root = endingWrapRef.value;
     if (!root) return;
-    root.removeAttribute("style");
+    root.style.display = "";
     root.setAttribute("data-select", "2");
   };
 
@@ -453,7 +452,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const closeShareWrap = (): void => {
     const root = endingWrapRef.value;
     if (root) {
-      root.removeAttribute("style");
+      root.style.display = "";
       root.setAttribute("data-select", "1");
     }
     startCountdown();

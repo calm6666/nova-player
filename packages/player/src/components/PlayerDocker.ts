@@ -1335,7 +1335,7 @@ export const PlayerDocker = defineComponent<
     if (!videoArea) return;
 
     const [styles, componentRaw] = await Promise.all([
-      import("./lazy-panel-styles"),
+      import("./LazyPanelStyles"),
       name === "color"
         ? import("./ColorPanel")
         : name === "audio"

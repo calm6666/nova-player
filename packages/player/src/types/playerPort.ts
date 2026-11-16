@@ -58,6 +58,9 @@ export interface PlayerPort {
   seek(time: number): void;
   isPlaying(): boolean;
 
+  /** 获取当前 <video> 元素（尚未创建时返回 null；插件/UI 不自行 querySelector） */
+  getVideoElement?(): HTMLVideoElement | null;
+
   // ---- 音量 ----
   setVolume(volume: number): void;
   getVolume(): number;

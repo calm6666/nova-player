@@ -57,10 +57,17 @@ class EndingPluginClass implements Plugin {
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
       const viewProps = (ctx as EndingPluginMountContext | null)?.props;
+      // video 从播放器上下文提供，插件不使用 querySelector 自行查找
+      const player = (ctx as SlotContext | null)?.player as
+        | (SlotContext["player"] & {
+            getVideoElement?: () => HTMLVideoElement | null;
+          })
+        | undefined;
       const vnode = h(EndingView, {
         ...viewProps,
         ...this.config.data,
         host: container,
+        getVideo: () => player?.getVideoElement?.() ?? null,
       });
       mount(vnode, container);
       return () => destroy(vnode);

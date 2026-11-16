@@ -4272,6 +4272,11 @@ export class VideoPlayer
   // ============================================
 
   /** 获取当前时间（秒） */
+  /** 获取当前 <video> 元素（尚未创建时返回 null） */
+  getVideoElement(): HTMLVideoElement | null {
+    return this.videoEl;
+  }
+
   getCurrentTime(): number {
     return this.state.get(PlayerStateKeyEnum.CURRENT_TIME) ?? 0;
   }
