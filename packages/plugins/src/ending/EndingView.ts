@@ -91,9 +91,7 @@ export interface EndingProps {
   onDownloadApp?: () => void;
   /** 插件挂载时的根容器（.nova-player-ending-wrap） */
   host?: HTMLElement | null;
-  /** 播放器 video，用于截取最后一帧作为片尾背景 */
-  video?: HTMLVideoElement | null;
-  /** 从播放器上下文取 video（优先于自行查询 DOM） */
+  /** 从播放器上下文取 video（用于截取最后一帧作为片尾背景） */
   getVideo?: () => HTMLVideoElement | null;
   /** 面板 API 回调（核心据此控制显隐） */
   onEndingMounted?: (api: {
@@ -393,7 +391,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const captureEndingFrame = (): void => {
     const root = endingWrapRef.value;
     if (!root) return;
-    const video = props.video ?? props.getVideo?.() ?? null;
+    const video = props.getVideo?.() ?? null;
     if (!video) return;
     if (video.readyState < 2 || video.videoWidth <= 0) return;
     const canvas = document.createElement("canvas");
@@ -421,8 +419,8 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     captureEndingFrame();
     const root = endingWrapRef.value;
     if (!root) return;
-    // 清空内联 display 让 CSS 显隐生效，不动其它内联样式
-    root.style.display = "";
+    // 直接移除内联 style，显隐完全交给 data-select 与 CSS
+    root.removeAttribute("style");
     root.setAttribute("data-select", "1");
     startCountdown();
     // 面板显示后再测量内容尺寸
@@ -444,7 +442,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
     stopCountdown();
     const root = endingWrapRef.value;
     if (!root) return;
-    root.style.display = "";
+    root.removeAttribute("style");
     root.setAttribute("data-select", "2");
   };
 
@@ -452,7 +450,7 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
   const closeShareWrap = (): void => {
     const root = endingWrapRef.value;
     if (root) {
-      root.style.display = "";
+      root.removeAttribute("style");
       root.setAttribute("data-select", "1");
     }
     startCountdown();

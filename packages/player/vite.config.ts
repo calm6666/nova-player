@@ -108,7 +108,7 @@ export default defineConfig(({ command, mode }) => {
                   /[\\/]src[\\/]components[\\/](ColorPanel|AudioPanel|VideoInfo|HotkeyPanel|FeedbackPanel)\.ts$/.test(
                     id,
                   ) ||
-                  /[\\/]src[\\/]components[\\/]lazy-panel-styles\.ts$/.test(id)
+                  /[\\/]src[\\/]components[\\/]LazyPanelStyles\.ts$/.test(id)
                 ) {
                   return "ui-panels";
                 }

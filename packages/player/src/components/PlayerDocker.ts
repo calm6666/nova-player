@@ -1326,7 +1326,7 @@ export const PlayerDocker = defineComponent<
   /**
    * 挂载单个面板：组件与样式都动态 import，首次打开才进入网络
    *
-   * 样式通过 lazy-panel-styles 的 ?inline 字符串随组件一起加载并注入 head，
+   * 样式通过 LazyPanelStyles 的 ?inline 字符串随组件一起加载并注入 head，
    * 不进入首屏 style.css。
    */
   const mountPanel = async (name: PanelName): Promise<void> => {
