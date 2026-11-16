@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * 字幕设置面板组件 (SubtitleMenu)
  * ============================================
@@ -26,6 +26,7 @@ import type { VNode } from "@lumina/framework/types";
 import type { PlayerPluginFlags } from "./PlayerDocker";
 import type { SubtitleTrackInfo } from "../types/subtitle";
 import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
+import { PlayerContext, createReplaceResolver } from "../types/slots";
 
 // ============================================
 // 对外接口（冻结，父层按此接线）
@@ -434,6 +435,9 @@ export const SubtitleMenu = defineComponent<
   SubtitleMenuEvents
 >((props, lifecycle) => {
   const state = useContext(StateContext);
+  const player = useContext(PlayerContext);
+  /** 原生字幕结果区替换解析器：命中 replace 时结果元素渲染期不创建 */
+  const replaceResolver = createReplaceResolver(player);
 
   // ============================================
   // 初值
@@ -1226,6 +1230,39 @@ export const SubtitleMenu = defineComponent<
   // 主渲染
   // ============================================
 
+  /**
+   * 字幕结果区：插槽接管时 `.nova-player-ctrl-subtitle-result-wrap`
+   * 在渲染期不创建，直接渲染插槽内容；面板保持原生。
+   */
+  const renderSubtitleResult = (): VNode | null => {
+    const hit = replaceResolver.take("subtitle");
+    if (hit.replaced) return hit.node;
+    return h(
+      "div",
+      { class: "nova-player-ctrl-subtitle-result-wrap" },
+      h(
+        "div",
+        { class: "nova-player-ctrl-subtitle-result" },
+        () => {
+          const hitLabel = languages.find(
+            (item) => item.lang === currentLang.value,
+          );
+          return visible.value && hitLabel
+            ? hitLabel.label
+            : t("player.ui.subtitle.label");
+        },
+      ),
+      h(
+        "span",
+        {
+          class: "nova-player-ctrl-subtitle-result-icon",
+          style: { display: visible.value ? "" : "none" },
+        },
+        SubtitleMarkIcon(),
+      ),
+    );
+  };
+
   return h(
     "div",
     {
@@ -1234,10 +1271,6 @@ export const SubtitleMenu = defineComponent<
         "nova-player-ctrl-subtitle",
         { "state-show": showSig.value },
       ],
-      // 未装 subtitle 插件时整个按钮（含设置面板）不显示：
-      // style 表达式内调用 plugins getter，读取 signal.value 被
-      // 编译器包装为 __reactiveAttrs 原位更新，插件运行中装卸时
-      // 自动显隐；未传 plugins getter 时保持显示
       style: {
         display: (props.plugins?.().subtitle ?? true) ? "" : "none",
       },
@@ -1247,32 +1280,8 @@ export const SubtitleMenu = defineComponent<
       onMouseLeave: handleMouseLeave,
     },
 
-    // ---------- 按钮结果区 ----------
-    h(
-      "div",
-      { class: "nova-player-ctrl-subtitle-result-wrap" },
-      h(
-        "div",
-        { class: "nova-player-ctrl-subtitle-result" },
-        // 结果文案：字幕关闭时显示「字幕」，开启时显示当前语言名
-        // （visibleSig + langSig + localeSignal 三依赖，显式 getter 协议）
-        () => {
-          const hit = languages.find((item) => item.lang === currentLang.value);
-          return visible.value && hit
-            ? hit.label
-            : t("player.ui.subtitle.label");
-        },
-      ),
-      // 标记图标仅在字幕开启时显示（参考 DOM 关闭态该图标为 display:none）
-      h(
-        "span",
-        {
-          class: "nova-player-ctrl-subtitle-result-icon",
-          style: { display: visible.value ? "" : "none" },
-        },
-        SubtitleMarkIcon(),
-      ),
-    ),
+    // ---------- 按钮结果区（原生结果元素 / 插槽内容二选一） ----------
+    renderSubtitleResult(),
 
     // ---------- 面板 ----------
     h(
@@ -1778,3 +1787,4 @@ export const SubtitleMenu = defineComponent<
     ),
   );
 });
+

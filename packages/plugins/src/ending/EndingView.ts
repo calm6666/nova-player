@@ -420,27 +420,42 @@ export const Ending = defineComponent<EndingProps>((props, lifecycle) => {
 
   const showEndWrap = (): void => {
     captureEndingFrame();
-    endingWrapRef.value?.setAttribute("data-select", "1");
+    const root = endingWrapRef.value;
+    if (!root) return;
+    // display 与 data-select 同属显隐状态：只靠 CSS 无法覆盖容器上的内联隐藏
+    root.removeAttribute("style");
+    root.setAttribute("data-select", "1");
     startCountdown();
     // 面板显示后再测量内容尺寸，真实 B 站进入片尾即写入 transform: scale(...)
     requestAnimationFrame(() => applyContentScale());
   };
 
-  /** 关闭片尾面板（移除 data-select） */
+  /** 关闭片尾面板（移除 data-select 并同步隐藏容器） */
   const closeEndWrap = (): void => {
-    endingWrapRef.value?.removeAttribute("data-select");
+    const root = endingWrapRef.value;
+    if (root) {
+      root.removeAttribute("data-select");
+      root.style.display = "none";
+    }
     stopCountdown();
   };
 
   /** 显示分享面板（data-select="2"，仅 station） */
   const showShareWrap = (): void => {
     stopCountdown();
-    endingWrapRef.value?.setAttribute("data-select", "2");
+    const root = endingWrapRef.value;
+    if (!root) return;
+    root.removeAttribute("style");
+    root.setAttribute("data-select", "2");
   };
 
   /** 关闭分享面板，回到片尾面板（data-select="1"） */
   const closeShareWrap = (): void => {
-    endingWrapRef.value?.setAttribute("data-select", "1");
+    const root = endingWrapRef.value;
+    if (root) {
+      root.removeAttribute("style");
+      root.setAttribute("data-select", "1");
+    }
     startCountdown();
   };
 

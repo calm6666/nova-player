@@ -26,12 +26,13 @@ import { ErrorSign } from "./ErrorSign";
 import type { ErrorSignAPI, ErrorSignInfo } from "./ErrorSign";
 import { Dialog } from "./Dialog";
 import { Context as ContextMenu } from "./Context";
-import { HotkeyPanel, type HotkeyPanelApi } from "./HotkeyPanel";
+import type { HotkeyPanelApi } from "./HotkeyPanel";
+import type { FeedbackPanelApi } from "./FeedbackPanel";
 import { PlayerEventEnum } from "../types/events";
 import { PlayerStateKeyEnum, StateContext, type PlayerStateMap } from "../store/runtimeState";
 import { ConfigStoreContext, type ConfigStore } from "../store/configStore";
 import type { VideoPlayer } from "../player/VideoPlayer";
-import { PlayerContext, isSlotMount, mountControlSlots, resolveSlotContent, type ControlSlotPosition, type SlotContent, type SlotContext, type SlotMount } from "../types/slots";
+import { PlayerContext, isSlotMount, mountRegionSlots, resolveSlotContent, type SlotContent, type SlotContext, type SlotMount } from "../types/slots";
 import { PlayerState } from "../types/player";
 import type { VNode } from "@lumina/framework/types";
 import type { DisplayMode, PlayerConfig, PlayerEndingStyle, ProgressSegment } from "../types/player";
@@ -45,9 +46,9 @@ import { createBufferSpeedSampler } from "../utils/media/bufferSpeed";
 import { BrowserCapabilityDetector } from "../utils/browserCapabilityDetector";
 import type { BufferSpeedSampler } from "../utils/media/bufferSpeed";
 import { SendBar } from "./SendBar";
-import { ColorPanel, type ColorPanelApi } from "./ColorPanel";
-import { AudioPanel, type AudioPanelApi, type AudioPanelHandle } from "./AudioPanel";
-import { VideoInfo, type VideoInfoApi } from "./VideoInfo";
+import type { ColorPanelApi } from "./ColorPanel";
+import type { AudioPanelApi, AudioPanelHandle } from "./AudioPanel";
+import type { VideoInfoApi } from "./VideoInfo";
 import { RelationStrip } from "./RelationStrip";
 import { Mini, type MiniApi } from "./Mini";
 
@@ -492,7 +493,7 @@ export const PlayerDocker = defineComponent<
     "playerVideoAreaRef",
   );
 
-  /** 插件根容器 */
+  /** 插件根容器（TopPlugin / ui.top 注入内容） */
   const topRootRef = useTemplateRef<HTMLDivElement>(lifecycle, "topRootRef");
   const endingRootRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
@@ -501,22 +502,14 @@ export const PlayerDocker = defineComponent<
   let topMountCleanup: (() => void) | null = null;
   let endingMountCleanup: (() => void) | null = null;
 
-  /**
-   * cross 模式视频边缘悬浮层（原版 bpx-player-rich-pip-side-prev / -next
-   * 的挂载点，类名按 nova 契约映射为 nova-player-rich-pip-side-*）
-   *
-   * 挂载点容器常驻 DOM、内容由 ui.slots 的 stageLeft / stageRight 插槽注入
-   * （插槽内容与其皮肤样式归消费方，播放器只提供挂载层与定位显隐规则）；
-   * 仅 `data-screen="cross"` 时可见。DOM 顺序置于视频区域末尾，避免被
-   * 控制栏 / 面板层遮挡（与原版同序）。
-   * 典型用途：稍后再看 PiP 形态的上一个 / 下一个悬浮按钮。
-   */
-  const stagePrevRef = useTemplateRef<HTMLDivElement>(lifecycle, "stagePrevRef");
-  const stageNextRef = useTemplateRef<HTMLDivElement>(lifecycle, "stageNextRef");
-  /** stage / topRight 插槽挂载清理函数 */
-  let stageSlotsCleanup: Array<() => void> = [];
-  /** topRight 插槽清理函数（独立于 stage——mountStageSlots 清空 stage 清理列表时不得误删 topRight） */
-  let topRightSlotCleanup: (() => void) | null = null;
+  /** 视频区悬浮插槽清理函数（video.overlay） */
+  let videoOverlaySlotCleanup: (() => void) | null = null;
+  /** 顶部起始位插槽清理函数（top.start） */
+  let topStartSlotCleanup: (() => void) | null = null;
+  /** 顶部末尾位插槽清理函数（top.end） */
+  let topEndSlotCleanup: (() => void) | null = null;
+  /** 区域插槽刷新回调的注销函数（插件插槽声明变化时重挂） */
+  let unregisterSlotsRefresh: (() => void) | null = null;
 
   /** 视频占位容器 */
   const playerVideoPerchRef = useTemplateRef<HTMLDivElement>(
@@ -560,8 +553,8 @@ export const PlayerDocker = defineComponent<
     ?.value as VideoPlayer | undefined;
   const resolvedPlayer = slotPlayer ?? providerPlayer;
   /**
-   * 插槽上下文：必须保证所有插槽（stageLeft/Right、cornerLeft/Right、topRight、
-   * bottomCenter、leftEnd、rightStart/End、替换项）都能拿到 player + state。
+   * 插槽上下文：必须保证所有区域插槽（video.overlay、top.start/top.end、
+   * controls.* 与替换项）都能拿到 player + state。
    *
    * 之前只依赖 `useContext(StateContext)`：PlayerDocker 在 SSR/水合外挂载时
    * StateContext 可能为空（该文件 1370 行附近也为此显式注入了 __providers），
@@ -600,7 +593,7 @@ export const PlayerDocker = defineComponent<
 
   /** 插槽优先于插件；每次刷新时重新解析，支持插件动态装载 / 卸载 */
   const getTopMount = (): SlotMount["mount"] | null => {
-    const pluginMount = resolvedPlayer?.getTopPluginMount() ?? null;
+    const pluginMount = resolvedPlayer?.getTopPluginMount?.() ?? null;
     return (
       createSlotMount(readUi()?.top) ??
       (pluginMount
@@ -613,7 +606,7 @@ export const PlayerDocker = defineComponent<
   };
 
   const getEndingMount = (): SlotMount["mount"] | null => {
-    const pluginMount = resolvedPlayer?.getEndingPluginMount() ?? null;
+    const pluginMount = resolvedPlayer?.getEndingPluginMount?.() ?? null;
     return (
       createSlotMount(readUi()?.ending) ??
       (pluginMount
@@ -626,8 +619,6 @@ export const PlayerDocker = defineComponent<
   };
 
   const mountTopView = (): void => {
-    topRightSlotCleanup?.();
-    topRightSlotCleanup = null;
     topMountCleanup?.();
     topMountCleanup = null;
     const root = topRootRef.value;
@@ -641,8 +632,6 @@ export const PlayerDocker = defineComponent<
           props: buildTopProps(),
         } as SlotContext) ?? null;
     }
-    // topRight 插槽内容随 top 容器刷新重新追加（replaceChildren 会清掉它）
-    mountTopRightSlot();
   };
 
   const syncEndingRootClass = (): void => {
@@ -665,6 +654,8 @@ export const PlayerDocker = defineComponent<
     const root = endingRootRef.value;
     if (!root) return;
     syncEndingRootClass();
+    // 初始即完全隐藏；播放结束由 EndingView 显式置为 block
+    root.style.display = "none";
     root.replaceChildren();
     const mount = getEndingMount();
     if (mount) {
@@ -677,57 +668,65 @@ export const PlayerDocker = defineComponent<
   };
 
   /**
-   * 挂载 cross 模式的 stage 悬浮插槽（stageLeft / stageRight）
+   * 挂载视频区悬浮插槽（video.overlay）
    *
-   * 与 mountTopView 同一节奏：onMounted 时挂一次、teardown 时统一清理。
-   * 插槽内容来自 ui.slots 中 position 为 stageLeft / stageRight 的条目，
-   * 按 order 升序排列（mountControlSlots 内部处理）。
+   * 统一挂到 `.nova-player-video-area`：播放器不创建任何包装 DOM，
+   * 插槽内容的定位、层级、显隐与皮肤样式全部归消费方。
+   * 内容可任意多个、按 order 依次追加。
    */
-  const mountStageSlots = (): void => {
-    stageSlotsCleanup.forEach((fn) => fn());
-    stageSlotsCleanup = [];
-    const slots = readUi()?.slots;
-    // stageLeft / stageRight 为专用容器（replaceChildren 安全）；
-    // topRight 挂进 top 插槽区（与 TopPlugin 共享容器，见 mountTopRightSlot）
-    const targets: Array<[HTMLDivElement | null, ControlSlotPosition]> = [
-      [stagePrevRef.value, "stageLeft"],
-      [stageNextRef.value, "stageRight"],
-    ];
-    for (const [el, position] of targets) {
-      if (!el) continue;
-      el.replaceChildren();
-      stageSlotsCleanup.push(
-        mountControlSlots(slots, position, el, slotContext),
-      );
-    }
-    // cornerLeft / cornerRight 直接挂到视频区，不创建包装 DOM；
-    // 内容自行绝对定位（如 mini 播放 / 音量按钮）
+  const mountVideoOverlaySlots = (): void => {
+    videoOverlaySlotCleanup?.();
+    videoOverlaySlotCleanup = null;
     const videoArea = playerVideoAreaRef.value;
-    if (videoArea) {
-      stageSlotsCleanup.push(
-        mountControlSlots(slots, "cornerLeft", videoArea, slotContext),
-      );
-      stageSlotsCleanup.push(
-        mountControlSlots(slots, "cornerRight", videoArea, slotContext),
-      );
-    }
+    if (!videoArea) return;
+    videoOverlaySlotCleanup = mountRegionSlots(
+      readUi()?.slots,
+      resolvedPlayer?.getSlotDefinitions() ?? [],
+      "video.overlay",
+      videoArea,
+      slotContext,
+    );
   };
 
   /**
-   * 挂载 topRight 插槽到 top 插槽区（.nova-player-top-wrap）
+   * 挂载顶部区域插槽（top.start / top.end）
    *
-   * top 容器与 TopPlugin / ui.top 共享：这里**不清空容器**，
-   * 由 mountControlSlots 追加到既有内容之后、清理时只移除自己追加的节点；
-   * 定位（右上角）与皮肤由消费方样式负责。
-   * mountTopView 每次刷新（replaceChildren）后都会重新调用本函数。
+   * 两个锚点由播放器固定渲染，与 TopPlugin / ui.top 无关：
+   * 未安装 Top 插件、未配置 ui.top 时依旧可以向顶部插入自定义内容。
    */
-  const mountTopRightSlot = (): void => {
-    const root = topRootRef.value;
-    if (!root) return;
+  const mountTopRegionSlots = (): void => {
+    topStartSlotCleanup?.();
+    topStartSlotCleanup = null;
+    topEndSlotCleanup?.();
+    topEndSlotCleanup = null;
     const slots = readUi()?.slots;
-    // 清理旧挂载后重新追加（独立清理变量，不参与 stageSlotsCleanup 的清空）
-    topRightSlotCleanup?.();
-    topRightSlotCleanup = mountControlSlots(slots, "topRight", root, slotContext);
+    const definitions = resolvedPlayer?.getSlotDefinitions() ?? [];
+    const view = topRootRef.value;
+    const wrap = view?.parentElement as HTMLElement | null;
+    if (!view || !wrap) return;
+    // top.start 插在顶部内容之前，top.end 追加在末尾；不创建任何占位 DOM
+    topStartSlotCleanup = mountRegionSlots(
+      slots,
+      definitions,
+      "top.start",
+      wrap,
+      slotContext,
+      view,
+    );
+    topEndSlotCleanup = mountRegionSlots(
+      slots,
+      definitions,
+      "top.end",
+      wrap,
+      slotContext,
+      null,
+    );
+  };
+
+  /** 重新挂载播放器自己负责的全部区域插槽（插件插槽声明变化时触发） */
+  const mountOwnedRegionSlots = (): void => {
+    mountVideoOverlaySlots();
+    mountTopRegionSlots();
   };
 
   // ============================================
@@ -805,7 +804,7 @@ export const PlayerDocker = defineComponent<
       mode === "cross" ||
       mode === "full"
     ) {
-      // center 现在常驻 bottomCenter 插槽出口，必须判断发送栏自身是否已在中央
+      // center 现在常驻 controls.center 插槽出口，必须判断发送栏自身是否已在中央
       if (mode === "full" && center && bar.parentElement === center) return;
       if (!sendingBarHome && bar.parentElement) {
         sendingBarHome = bar.parentElement;
@@ -1180,6 +1179,9 @@ export const PlayerDocker = defineComponent<
   /** 快捷键面板 API，由 HotkeyPanel 组件挂载后填充 */
   const hotkeyPanelApi: Partial<HotkeyPanelApi> = {};
 
+  /** 问题反馈面板 API，由 FeedbackPanel 组件挂载后填充 */
+  const feedbackPanelApi: Partial<FeedbackPanelApi> = {};
+
   /** 右键菜单组件 API，由 Context 组件挂载后填充 */
   const contextApi: {
     /** 在指定坐标显示右键菜单 */
@@ -1310,21 +1312,53 @@ export const PlayerDocker = defineComponent<
     audio?: VNode;
     info?: VNode;
     keyboard?: VNode;
+    feedback?: VNode;
   } = {};
 
   /** 音量提示层懒挂载节点（首次滚轮/快捷键调节音量时创建，之后复用） */
   let volumeHintVNode: VNode | null = null;
 
+  type PanelName = "color" | "audio" | "info" | "keyboard" | "feedback";
+
+  /** 进行中的面板加载任务：同一面板并发打开只加载/挂载一次 */
+  const panelLoading = new Map<PanelName, Promise<void>>();
+
   /**
-   * 按需挂载面板（已挂载则直接复用）
-   * @param name - 面板名：color 色彩调整 / info 视频统计信息 / keyboard 快捷键说明
+   * 挂载单个面板：组件与样式都动态 import，首次打开才进入网络
+   *
+   * 样式通过 lazy-panel-styles 的 ?inline 字符串随组件一起加载并注入 head，
+   * 不进入首屏 style.css。
    */
-  const ensurePanel = (name: "color" | "audio" | "info" | "keyboard"): void => {
+  const mountPanel = async (name: PanelName): Promise<void> => {
+    if (lazyPanelVNodes[name]) return;
     const videoArea = playerVideoAreaRef.value;
     if (!videoArea) return;
 
+    const [styles, componentRaw] = await Promise.all([
+      import("./lazy-panel-styles"),
+      name === "color"
+        ? import("./ColorPanel")
+        : name === "audio"
+          ? import("./AudioPanel")
+          : name === "info"
+            ? import("./VideoInfo")
+            : name === "keyboard"
+              ? import("./HotkeyPanel")
+              : import("./FeedbackPanel"),
+    ]);
+    // 动态 import 的联合类型无法直接取成员，这里按面板名收窄为同一份结构
+    const component = componentRaw as unknown as {
+      ColorPanel: typeof import("./ColorPanel").ColorPanel;
+      AudioPanel: typeof import("./AudioPanel").AudioPanel;
+      VideoInfo: typeof import("./VideoInfo").VideoInfo;
+      HotkeyPanel: typeof import("./HotkeyPanel").HotkeyPanel;
+      FeedbackPanel: typeof import("./FeedbackPanel").FeedbackPanel;
+    };
+    styles.ensureLazyPanelStyles();
+    if (!playerVideoAreaRef.value) return;
+
     if (name === "color" && !lazyPanelVNodes.color) {
-      lazyPanelVNodes.color = h(ColorPanel, {
+      lazyPanelVNodes.color = h(component.ColorPanel, {
         onClose: () => {
           colorPanelApi.close?.();
         },
@@ -1354,7 +1388,7 @@ export const PlayerDocker = defineComponent<
     }
 
     if (name === "audio" && !lazyPanelVNodes.audio) {
-      lazyPanelVNodes.audio = h(AudioPanel, {
+      lazyPanelVNodes.audio = h(component.AudioPanel, {
         api: props.getAudioEffect?.() ?? null,
         onClose: () => {
           audioPanelApi.close?.();
@@ -1367,7 +1401,7 @@ export const PlayerDocker = defineComponent<
     }
 
     if (name === "info" && !lazyPanelVNodes.info) {
-      lazyPanelVNodes.info = h(VideoInfo, {
+      lazyPanelVNodes.info = h(component.VideoInfo, {
         src: props.src,
         // 原生流媒体实例提供者：码率曲线优先读 hls.js/dash.js 的静态码率
         getNativePlayer: props.getNativeStreamPlayer,
@@ -1388,7 +1422,7 @@ export const PlayerDocker = defineComponent<
     }
 
     if (name === "keyboard" && !lazyPanelVNodes.keyboard) {
-      lazyPanelVNodes.keyboard = h(HotkeyPanel, {
+      lazyPanelVNodes.keyboard = h(component.HotkeyPanel, {
         onHotkeyPanelMounted: (api: HotkeyPanelApi) => {
           hotkeyPanelApi.open = api.open;
           hotkeyPanelApi.close = api.close;
@@ -1396,6 +1430,27 @@ export const PlayerDocker = defineComponent<
       });
       mount(lazyPanelVNodes.keyboard, videoArea);
     }
+
+    if (name === "feedback" && !lazyPanelVNodes.feedback) {
+      lazyPanelVNodes.feedback = h(component.FeedbackPanel, {
+        submit: props.config?.feedback?.submit,
+        openWindow: props.config?.feedback?.openWindow,
+        onFeedbackPanelMounted: (api: FeedbackPanelApi) => {
+          feedbackPanelApi.open = api.open;
+          feedbackPanelApi.close = api.close;
+        },
+      });
+      mount(lazyPanelVNodes.feedback, videoArea);
+    }
+  };
+
+  /** 按需挂载面板（已挂载直接返回；并发调用复用同一加载任务） */
+  const ensurePanel = (name: PanelName): Promise<void> => {
+    const existing = panelLoading.get(name);
+    if (existing) return existing;
+    const task = mountPanel(name).finally(() => panelLoading.delete(name));
+    panelLoading.set(name, task);
+    return task;
   };
 
   // ============================================
@@ -1946,7 +2001,7 @@ export const PlayerDocker = defineComponent<
     if (resolvedPlayer) {
       // 统一走 player.setWideScreen：状态写入 + 持久化（nova_player_profile.iswide）
       // + 事件广播单点同步，避免旁路状态导致持久化遗漏
-      resolvedPlayer.setWideScreen(next);
+      resolvedPlayer.setWideScreen?.(next);
       return;
     }
     syncWideTooltip(next);
@@ -1956,26 +2011,32 @@ export const PlayerDocker = defineComponent<
     });
   };
 
-  /** 切换静音状态 */
+  /** 最近一次非零音量：静音时归零、取消静音时恢复（与主流播放器/原版一致） */
+  let lastNonZeroVolume = Math.min(1, Math.max(0.01, readVolume() || 1));
+
+  /** 切换静音状态：静音时音量条归零，取消静音恢复上一次非零音量 */
   const toggleMute = (): void => {
-    const next = !readMuted();
-    if (videoRef.value) {
-      videoRef.value.muted = next;
+    const muted = readMuted() || readVolume() === 0;
+    if (muted) {
+      setVolume(lastNonZeroVolume > 0 ? lastNonZeroVolume : 1);
+    } else {
+      lastNonZeroVolume = Math.min(1, Math.max(0.01, readVolume()));
+      setVolume(0);
     }
-    stateMgr?.set(PlayerStateKeyEnum.MUTED, next);
-    controlsApi.updateMute?.(next);
   };
 
-  /** 设置音量，限制在 0-1 范围内 */
+  /** 设置音量，限制在 0-1 范围内；0 自动静音，>0 自动解除静音 */
   const setVolume = (vol: number): void => {
     const clamped = Math.min(1, Math.max(0, vol));
-    if (videoRef.value) videoRef.value.volume = clamped;
-    // 音量被调到大于 0 时自动解除静音，与主流播放器一致；
-    // 否则静音状态下拖动音量条 / 向上滚轮会「数字在动但没声音」
-    if (clamped > 0 && readMuted()) {
-      if (videoRef.value) videoRef.value.muted = false;
-      stateMgr?.set(PlayerStateKeyEnum.MUTED, false);
-      controlsApi.updateMute?.(false);
+    if (clamped > 0) lastNonZeroVolume = clamped;
+    const nextMuted = clamped === 0;
+    if (videoRef.value) {
+      videoRef.value.volume = clamped;
+      videoRef.value.muted = nextMuted;
+    }
+    if (readMuted() !== nextMuted) {
+      stateMgr?.set(PlayerStateKeyEnum.MUTED, nextMuted);
+      controlsApi.updateMute?.(nextMuted);
     }
     stateMgr?.set(PlayerStateKeyEnum.VOLUME, clamped);
     controlsApi.updateVolumeDisplay?.(clamped);
@@ -2423,40 +2484,6 @@ export const PlayerDocker = defineComponent<
 
     if (!container || !videoArea || !perch || !docker) return;
 
-    // --- 控制栏点击兜底：SSR 水合时组件内 onClick 可能未重新绑定 ---
-    const onControlCapture = (event: MouseEvent): void => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const button = target.closest<HTMLElement>(".nova-player-ctrl-btn");
-      if (!button) return;
-      const classes = button.classList;
-      if (classes.contains("nova-player-ctrl-play")) {
-        event.stopImmediatePropagation();
-        event.preventDefault();
-        togglePlayPause();
-      } else if (classes.contains("nova-player-ctrl-mute")) {
-        event.stopImmediatePropagation();
-        event.preventDefault();
-        toggleMute();
-      } else if (classes.contains("nova-player-ctrl-full")) {
-        event.stopImmediatePropagation();
-        event.preventDefault();
-        toggleFullscreen();
-      } else if (classes.contains("nova-player-ctrl-web")) {
-        event.stopImmediatePropagation();
-        event.preventDefault();
-        toggleWebFullscreen();
-      } else if (classes.contains("nova-player-ctrl-wide")) {
-        event.stopImmediatePropagation();
-        event.preventDefault();
-        toggleWide();
-      }
-    };
-    container.addEventListener("click", onControlCapture, true);
-    cleanupFns.push(() =>
-      container.removeEventListener("click", onControlCapture, true),
-    );
-
     // --- ResizeObserver 容器尺寸变化 ---
     resizeObserver?.observe(docker);
 
@@ -2505,9 +2532,12 @@ export const PlayerDocker = defineComponent<
       }
       showControls("video");
     };
-    perch.addEventListener("mousemove", onMouseMovePerch);
+    // 监听挂在视频区而不是 perch：片尾层等绝对定位兄弟层会覆盖 perch，
+    // 播放结束后鼠标落在片尾面板上时 perch 收不到事件，控制栏无法唤起
+    const hoverArea = playerVideoAreaRef.value ?? perch;
+    hoverArea.addEventListener("mousemove", onMouseMovePerch);
     cleanupFns.push(() =>
-      perch.removeEventListener("mousemove", onMouseMovePerch),
+      hoverArea.removeEventListener("mousemove", onMouseMovePerch),
     );
 
     // --- mousemove on 控制栏 / 顶栏 → 仅显示、不自动隐藏 ---
@@ -2595,10 +2625,10 @@ export const PlayerDocker = defineComponent<
       document.removeEventListener("wheel", handleVolumeWheel),
     );
 
-    // --- 右键菜单监听 ---
-    container.addEventListener("contextmenu", onContextMenu);
+    // --- 右键菜单监听（挂视频区：片尾等覆盖层上的右键同样生效） ---
+    videoArea.addEventListener("contextmenu", onContextMenu);
     cleanupFns.push(() =>
-      container.removeEventListener("contextmenu", onContextMenu),
+      videoArea.removeEventListener("contextmenu", onContextMenu),
     );
 
     // --- IntersectionObserver 迷你播放器 ---
@@ -2636,12 +2666,15 @@ export const PlayerDocker = defineComponent<
   // ============================================
 
   lifecycle.onMounted = (): void => {
-    resolvedPlayer?.registerTopViewRefresh(mountTopView);
-    resolvedPlayer?.registerEndingViewRefresh(mountEndingView);
+    resolvedPlayer?.registerTopViewRefresh?.(mountTopView);
+    resolvedPlayer?.registerEndingViewRefresh?.(mountEndingView);
     mountTopView();
     mountEndingView();
-    // cross 模式 stage 悬浮插槽（stageLeft / stageRight，如上/下集悬浮按钮）
-    mountStageSlots();
+    // 区域插槽（video.overlay / top.start / top.end，如上/下集、三连等）
+    mountOwnedRegionSlots();
+    // 插件插槽声明变化后重新挂载（插件运行期 install / uninstall）
+    unregisterSlotsRefresh =
+      resolvedPlayer?.registerSlotsRefresh(mountOwnedRegionSlots) ?? null;
     // cross 固定形态：弹幕发送栏首次出现即移入控制栏中央并定死
     // （发送栏由 danmaku 插件驱动按需渲染——embedded 场景挂载时已存在，
     //  运行时注入插件的场景晚于此处，故用一次性 MutationObserver 兜底：
@@ -2726,12 +2759,15 @@ export const PlayerDocker = defineComponent<
     topMountCleanup = null;
     endingMountCleanup?.();
     endingMountCleanup = null;
-    // cross 模式 stage 悬浮插槽清理（stageLeft / stageRight）
-    stageSlotsCleanup.forEach((fn) => fn());
-    stageSlotsCleanup = [];
-    // topRight 插槽清理（独立清理变量）
-    topRightSlotCleanup?.();
-    topRightSlotCleanup = null;
+    // 区域插槽清理（video.overlay / top.start / top.end）
+    videoOverlaySlotCleanup?.();
+    videoOverlaySlotCleanup = null;
+    topStartSlotCleanup?.();
+    topStartSlotCleanup = null;
+    topEndSlotCleanup?.();
+    topEndSlotCleanup = null;
+    unregisterSlotsRefresh?.();
+    unregisterSlotsRefresh = null;
 
     if (tornDown) return;
     tornDown = true;
@@ -2771,6 +2807,7 @@ export const PlayerDocker = defineComponent<
     lazyPanelVNodes.audio = undefined;
     lazyPanelVNodes.info = undefined;
     lazyPanelVNodes.keyboard = undefined;
+    lazyPanelVNodes.feedback = undefined;
 
     // 销毁懒挂载的音量提示层
     if (volumeHintVNode) {
@@ -2834,7 +2871,7 @@ export const PlayerDocker = defineComponent<
    * 避免出现没有音乐数据来源的空音乐顶栏。
    */
   const hasMusicPlugin = (): boolean =>
-    resolvedPlayer?.hasPlugin("music") ?? false;
+    resolvedPlayer?.hasPlugin?.("music") ?? false;
 
   /**
    * 构造 Top 插件挂载 props
@@ -2870,6 +2907,10 @@ export const PlayerDocker = defineComponent<
     },
     onMoreClick: (): void => {
       lifecycle.emit?.("more");
+    },
+    // 问题反馈图标：点击打开反馈面板（首次懒挂载，之后复用）
+    onIssueClick: (): void => {
+      void ensurePanel("feedback").then(() => feedbackPanelApi.open?.());
     },
     // 问题反馈图标的悬停提示（既有实现的
     // top.on("show-tooltip"/"hide-tooltip") 接通 Tooltips 组件）
@@ -3082,7 +3123,13 @@ export const PlayerDocker = defineComponent<
           ),
           // 顶部栏（标题 / 关注 / 问题反馈，既有实现挂载于视频区域；
           // ui.title 动态更新时由 configStore 订阅驱动 setTitle）
-          h("div", { class: "nova-player-top-wrap", ref: "topRootRef" }),
+          // 顶部区域：top.start 插到 top-view 之前，top.end 追加到末尾，
+          // 全部按节点锚点插入，不创建任何占位 DOM
+          h(
+            "div",
+            { class: "nova-player-top-wrap" },
+            h("div", { class: "nova-player-top-view", ref: "topRootRef" }),
+          ),
           // 外链场景：相关推荐条与 Top 同级，跟随控制栏显隐
           embeddedMode
             ? h(RelationStrip, {
@@ -3320,20 +3367,6 @@ export const PlayerDocker = defineComponent<
               lifecycle.emit?.("retry");
             },
           }),
-          // cross 模式视频边缘悬浮层（上一个 / 下一个挂载点，原版
-          // bpx-player-rich-pip-side-prev / -next 的 nova 映射）：常驻 DOM，
-          // 内容由 ui.slots 的 stageLeft / stageRight 插槽注入（插槽内容与
-          // 皮肤样式归消费方）；仅 data-screen="cross" 时可见，定位与显隐
-          // 规则由 cross.scss 派生。DOM 顺序置于视频区域末尾，避免被
-          // 控制栏 / 面板层遮挡（与原版同序）
-          h("div", {
-            class: "nova-player-rich-pip-side-prev",
-            ref: "stagePrevRef",
-          }),
-          h("div", {
-            class: "nova-player-rich-pip-side-next",
-            ref: "stageNextRef",
-          }),
         ),
         // 发送区域（弹幕输入栏，既有实现+ sendbar 挂载方式：
         // .nova-player-sending-area > .nova-player-sending-bar。
@@ -3426,24 +3459,13 @@ export const PlayerDocker = defineComponent<
           contextApi.hideMenu = api.hideMenu;
         },
         onOpenPanel: (panel: "color" | "audio" | "keyboard" | "info") => {
-          // 面板按需懒挂载：首次打开才创建（既有实现的懒创建模式），之后复用
-          ensurePanel(panel);
-          // 「视频色彩调整」菜单项 → 打开色彩调整面板
-          if (panel === "color") {
-            colorPanelApi.open?.();
-          }
-          // 「音效调节」菜单项 → 打开音效面板
-          if (panel === "audio") {
-            audioPanelApi.open?.();
-          }
-          // 「快捷键说明」菜单项 → 打开快捷键面板
-          if (panel === "keyboard") {
-            hotkeyPanelApi.open?.();
-          }
-          // 「视频统计信息」菜单项 → 打开统计信息面板
-          if (panel === "info") {
-            videoInfoApi.open?.();
-          }
+          // 面板组件与样式都按需加载：加载完成后再调用面板自身 open
+          void ensurePanel(panel).then(() => {
+            if (panel === "color") colorPanelApi.open?.();
+            if (panel === "audio") audioPanelApi.open?.();
+            if (panel === "keyboard") hotkeyPanelApi.open?.();
+            if (panel === "info") videoInfoApi.open?.();
+          });
         },
       }),
     ),

@@ -6,8 +6,10 @@
  * 阶段 C.1：播放器支持外部通过配置注入控制栏插槽与片尾页面内容。
  *
  * 设计要点：
- * - 控制栏插槽走「配置数组 + 位置/顺序」：每项携带 position/order/vnode，
- *   由 LeftControls / RightControls / TopControls 按 position 分组、按 order 升序渲染。
+ * - 区域插槽走「配置数组 + 插槽 id/顺序」：每项携带 slot/order/content，
+ *   由 LeftControls / RightControls / PlayerDocker 按 slot 分组、按 order 升序渲染。
+ * - 插件插槽由插件在 install 时通过 defineSlot 声明（id + 所属区域 + order + 默认内容），
+ *   播放器只提供挂载规则，插槽内容由插件自己管理；消费方仍可通过 ui.slots 追加。
  * - 片尾页面插槽走「整页替换」：传入 content 即替换默认 Ending 组件渲染。
  * - 插槽 VNode 的生命周期由播放器统一管理（mount/destroy），外部只负责构造 VNode。
  */
@@ -16,36 +18,66 @@ import { createContext, mount } from '@lumina/framework/core';
 import type { VNode } from '@lumina/framework/types';
 import type { TypedStateManager } from '@lumina/framework/core';
 import type { PlayerStateMap } from '../store/runtimeState';
-import type { VideoPlayer } from '../player';
+import type { PlayerPort, PlayerUiHost } from './playerPort';
 
 /**
- * 插槽位置枚举
+ * 播放器内置区域插槽 id
  *
- * - leftEnd：左侧按钮组末尾（prev / play / next / time 之后）
- * - rightStart：右侧按钮组开头（quality 之前），由右控制栏首部出口承载
- * - rightEnd：右侧按钮组末尾（full 之后），由右控制栏尾部出口承载
- * - topRight：顶部栏右侧（与顶部进度条同层）
- * - bottomCenter：底部中央（LeftControls 与 RightControls 之间）；
+ * 区域容器由播放器固定渲染（无论是否装入插件 / 是否配置 ui.top 都存在），
+ * 消费方可随时向区域追加内容：
+ *
+ * - video.overlay：视频画面区域（`.nova-player-video-area`）的悬浮插槽位；
+ *   插槽内容按 order 依次追加，位置 / 层级 / 显隐 / 皮肤全部由插槽内容
+ *   自行控制（播放器不创建任何包装 DOM，也不提供定位规则），
+ *   如稍后再看 PiP 的上一个 / 下一个、mini 播放 / 音量按钮等
+ * - controls.left.end：左侧按钮组末尾（prev / play / next / time 之后）
+ * - controls.center：底部中央（LeftControls 与 RightControls 之间）；
  *   出口固定在控制栏中央，原生弹幕发送栏由 moveSendBar 追加在其后
- * - stageLeft / stageRight：视频画面左右边缘垂直居中的悬浮层
- *   （cross 模式专属，如稍后再看形态的上一个 / 下一个悬浮按钮；
- *    挂载点容器常驻 DOM，显隐与定位由 cross.scss 按 data-screen 派生）
- * - cornerLeft / cornerRight：视频画面左下 / 右下的常驻悬浮层，
- *   直接挂到 video-area，内容自行绝对定位（如 mini 播放 / 音量按钮）
+ * - controls.right.start：右侧按钮组开头（quality 之前）
+ * - controls.right.end：右侧按钮组末尾（full 之后）
+ * - top.start：顶部栏左侧起始位（顶部内容之前）
+ * - top.end：顶部栏右侧末尾位（顶部内容之后）
  */
-export type ControlSlotPosition =
-  | 'leftEnd'
-  | 'rightStart'
-  | 'rightEnd'
-  | 'topRight'
-  | 'bottomCenter'
-  | 'stageLeft'
-  | 'stageRight'
-  | 'cornerLeft'
-  | 'cornerRight';
+export type RegionSlotId =
+  | 'video.overlay'
+  | 'controls.left.end'
+  | 'controls.center'
+  | 'controls.right.start'
+  | 'controls.right.end'
+  | 'top.start'
+  | 'top.end';
 
 /**
- * 控制栏插槽内容
+ * 插件自定义插槽 id
+ *
+ * 命名规则：`plugin.<插件名>.<用途>`。
+ * 插件在 install 时通过 `defineSlot` 声明（id + 所属区域 + 排序 + 默认内容），
+ * 播放器只负责按区域挂载；插槽的语义与内容全部由插件自己管理。
+ */
+export type PluginSlotId = `plugin.${string}.${string}`;
+
+/** 全部可挂载的插槽 id */
+export type SlotId = RegionSlotId | PluginSlotId;
+
+/**
+ * 插件插槽定义
+ *
+ * 插件 install 时声明，播放器据此把插槽内容挂到 `region` 对应区域；
+ * 消费方仍可通过 `ui.slots` 向该插槽追加内容。
+ */
+export interface PluginSlotDefinition {
+  /** 插件插槽 id（plugin.<插件名>.<用途>） */
+  id: PluginSlotId;
+  /** 挂载区域 */
+  region: RegionSlotId;
+  /** 区域内的排序权重，小的在前；默认 0 */
+  order?: number;
+  /** 插件为该插槽提供的默认内容；不提供时仅作为空插槽供消费方追加 */
+  content?: SlotEntryContent;
+}
+
+/**
+ * 插槽项内容
  *
  * - VNode：交给框架 mount，保留组件生命周期与事件；
  * - Node：原生 DOM 节点，直接 append（跨文档时由浏览器 adopt）；
@@ -56,18 +88,18 @@ export type ControlSlotPosition =
  * 框架没有编译期响应式：函数只在挂载期执行一次，字符串内容也是静态快照。
  * 需要动态更新时使用 SlotMount 保存元素引用后手动更新，或由调用方重建插槽。
  */
-export type ControlSlotContent =
+export type SlotEntryContent =
   | VNode
   | Node
   | string
   | SlotMount
-  | ((ctx: SlotContext) => ControlSlotContent | null);
+  | ((ctx: SlotContext) => SlotEntryContent | null);
 
 /**
  * 可被插槽替换的原生控制按钮
  *
- * 用于 host 完全接管某个原生按钮：原生按钮隐藏，插槽内容挂到同一位置。
- * 替换项仍带 position 字段，但替换模式下 position 不参与排序。
+ * 用于 host 完全接管某个原生按钮：原生按钮不渲染，插槽内容挂到同一位置。
+ * 替换项仍带 slot 字段，但替换模式下 slot 不参与排序。
  */
 export type NativeControlKey =
   | "play"
@@ -86,7 +118,7 @@ export type NativeControlKey =
   | "full"
   | "flac";
 
-/** 原生控制按钮选择器（替换时按此定位） */
+/** 原生控制按钮选择器（保留用于兼容 / 测试定位；替换渲染已改为渲染期判定） */
 export const NATIVE_CONTROL_SELECTORS: Record<NativeControlKey, string> = {
   play: ".nova-player-ctrl-play",
   prev: ".nova-player-ctrl-prev",
@@ -105,23 +137,70 @@ export const NATIVE_CONTROL_SELECTORS: Record<NativeControlKey, string> = {
   flac: ".nova-player-ctrl-flac",
 };
 
+/** 替换目标类型：按钮图标元素 / 按钮结果（文字）元素 */
+export type NativeReplaceTargetKind = "btn-icon" | "result";
+
+/**
+ * 各原生控件被插槽接管时「首次渲染就不创建」的目标元素
+ *
+ * 语义：只要调用方提供了 `replace: key` 的插槽，对应目标元素在渲染期直接
+ * 不创建（不是先渲染再清空/删除），只渲染插槽内容；按钮壳、面板、事件、
+ * 其它子节点保持不变。这样既不会泄漏 Lottie 实例，也允许消费方自定义图标/文案。
+ *
+ * 注：`time` 未纳入替换目标（保持原生渲染），列出仅用于满足 Record 完整性。
+ */
+export const NATIVE_REPLACE_TARGETS: Record<
+  NativeControlKey,
+  { kind: NativeReplaceTargetKind; selector: string }
+> = {
+  play: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  prev: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  next: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  time: { kind: "result", selector: ".nova-player-ctrl-time" },
+  quality: { kind: "result", selector: ".nova-player-ctrl-quality-result" },
+  eplist: { kind: "result", selector: ".nova-player-ctrl-eplist-result" },
+  playbackrate: { kind: "result", selector: ".nova-player-ctrl-playbackrate-result" },
+  subtitle: { kind: "result", selector: ".nova-player-ctrl-subtitle-result-wrap" },
+  volume: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  setting: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  pip: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  wide: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  web: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  full: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+  flac: { kind: "btn-icon", selector: ".nova-player-ctrl-btn-icon" },
+};
+
+/**
+ * 找到某个原生控件的替换插槽（同一 key 取数组中第一个）
+ *
+ * @param entries - 全量插槽项（来自 player.props.ui.slots）
+ * @param key - 原生控件 key
+ * @returns 命中的替换插槽项；未提供时返回 undefined（走原生渲染）
+ */
+export function findReplaceSlot(
+  entries: readonly SlotEntry[] | undefined,
+  key: NativeControlKey,
+): SlotEntry | undefined {
+  return (entries ?? []).find((entry) => entry.replace === key);
+}
+
 /**
  * 单个插槽项
  */
-export interface ControlSlotItem {
+export interface SlotEntry {
   /** 唯一 id，用于 diff / 卸载 */
   id: string;
-  /** 插槽位置 */
-  position: ControlSlotPosition;
+  /** 目标插槽 id（内置区域或插件声明的插槽） */
+  slot: SlotId;
   /**
    * 排序权重，小的在前；默认 0
    *
-   * 同一 position 内多个插槽按 order 升序排列；同 order 时按数组顺序稳定排列。
+   * 同一插槽内多个插槽项按 order 升序排列；同 order 时按数组顺序稳定排列。
    */
   order?: number;
   /**
    * 替换原生控制按钮；指定后默认隐藏原生按钮，内容直接挂到该按钮所在容器。
-   * 替换模式下 position 不参与排序。
+   * 替换模式下 slot 不参与排序。
    */
   replace?: NativeControlKey;
   /**
@@ -136,9 +215,9 @@ export interface ControlSlotItem {
   replacePanel?: "native" | "custom";
   /**
    * 插槽内容，支持 VNode / 原生 Node / HTML 字符串 / 自定义挂载。
-   * 详见 ControlSlotContent。
+   * 详见 SlotEntryContent。
    */
-  vnode: ControlSlotContent;
+  content: SlotEntryContent;
 }
 
 /**
@@ -147,8 +226,8 @@ export interface ControlSlotItem {
  * 传递给函数形式 vnode 的运行时上下文，供其访问播放器实例与状态管理器。
  */
 export interface SlotContext {
-  /** 播放器实例（可用于调用 API / 订阅事件） */
-  player: VideoPlayer;
+  /** 播放器端口（UI/插件只依赖该契约，不依赖 VideoPlayer 具体实现） */
+  player: PlayerPort;
   /** 运行时状态管理器（与组件树内 useContext(StateContext) 同源） */
   state: TypedStateManager<PlayerStateMap>;
 }
@@ -194,26 +273,74 @@ export function resolveSlotContent(
  * 由 VideoPlayer.render() 通过 __providers 注入，供子组件在渲染插槽函数时
  * 构造 SlotContext。默认值为 null：未注入时不调用函数式 vnode。
  */
-export const PlayerContext = createContext<VideoPlayer | null>(null);
+export const PlayerContext = createContext<PlayerUiHost | null>(null);
 
 /**
- * 按位置过滤插槽并按 order 升序稳定排序
+ * 按插槽 id 过滤插槽项并按 order 升序稳定排序
  *
  * 稳定排序：同 order 时保持原数组顺序（Array.prototype.sort 在主流引擎中是稳定排序）。
- * 函数式 vnode 在此不展开，由调用方在持有时通过 resolveSlotVNode 处理。
  *
- * @param slots - 全量插槽列表（来自 ui.slots）
- * @param position - 目标位置
- * @returns 该位置下的插槽项（已排序）
+ * @param entries - 全量插槽项（来自 ui.slots）
+ * @param slot - 目标插槽 id
+ * @returns 该插槽下的插槽项（已排序）
  */
-export function pickSlotsByPosition(
-  slots: readonly ControlSlotItem[] | undefined,
-  position: ControlSlotPosition,
-): readonly ControlSlotItem[] {
-  if (!slots || slots.length === 0) return [];
-  return slots
-    .filter((slot) => slot.position === position && !slot.replace)
+export function pickSlotEntries(
+  entries: readonly SlotEntry[] | undefined,
+  slot: SlotId,
+): readonly SlotEntry[] {
+  if (!entries || entries.length === 0) return [];
+  return entries
+    .filter((entry) => entry.slot === slot && !entry.replace)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+/**
+ * 汇总某个区域应挂载的全部插槽项
+ *
+ * 规则（播放器只提供挂载规则，内容由插件 / 消费方自己管理）：
+ * - `slot === region` 的插槽项按自身 order 参与排序；
+ * - 插件定义的插槽（`definition.region === region`）把默认内容作为一项挂入，
+ *   并包含消费方以该插件插槽 id 追加的插槽项；
+ * - 插件插槽的排序权重 = 定义 order + 插槽项 order。
+ *
+ * @param entries - 全量插槽项（来自 ui.slots）
+ * @param definitions - 插件插槽定义（来自 player.getSlotDefinitions()）
+ * @param region - 目标区域
+ * @returns 该区域内的插槽项（已排序）
+ */
+export function collectRegionEntries(
+  entries: readonly SlotEntry[] | undefined,
+  definitions: readonly PluginSlotDefinition[] | undefined,
+  region: RegionSlotId,
+): readonly SlotEntry[] {
+  const list: Array<{ entry: SlotEntry; order: number }> = [];
+  for (const entry of entries ?? []) {
+    if (entry.replace) continue;
+    if (entry.slot === region) {
+      list.push({ entry, order: entry.order ?? 0 });
+      continue;
+    }
+    const definition = (definitions ?? []).find(
+      (item) => item.region === region && item.id === entry.slot,
+    );
+    if (definition) {
+      list.push({ entry, order: (definition.order ?? 0) + (entry.order ?? 0) });
+    }
+  }
+  for (const definition of definitions ?? []) {
+    if (definition.region !== region || !definition.content) continue;
+    list.push({
+      entry: {
+        id: definition.id,
+        slot: definition.id,
+        content: definition.content,
+      },
+      order: definition.order ?? 0,
+    });
+  }
+  return list
+    .sort((a, b) => a.order - b.order)
+    .map((item) => item.entry);
 }
 
 /** 原生 DOM 判定：用 nodeType 而不是 instanceof，兼容 Document PiP 等跨 realm 节点 */
@@ -231,15 +358,15 @@ function isDomNode(value: unknown): value is Node {
  *
  * 函数形式在挂载期展开一次并传入 SlotContext；ctx 为 null 时不执行。
  *
- * @param slot - 插槽项
+ * @param entry - 插槽项
  * @param ctx - SlotContext，player / state 任一缺失视为不可用
  * @returns VNode / Node / HTML 字符串 / SlotMount / null
  */
-export function resolveControlSlotContent(
-  slot: ControlSlotItem,
+export function resolveSlotEntryContent(
+  entry: SlotEntry,
   ctx: SlotContext | null,
 ): VNode | Node | string | SlotMount | null {
-  let current: ControlSlotContent | null = slot.vnode;
+  let current: SlotEntryContent | null = entry.content;
   while (typeof current === "function") {
     if (!ctx) return null;
     current = current(ctx);
@@ -276,12 +403,12 @@ interface MountedSlotItem {
 
 /** 挂载单个插槽项；anchor 存在时插入到锚点之前 */
 function mountSlotItem(
-  item: ControlSlotItem,
+  item: SlotEntry,
   container: HTMLElement,
   ctx: SlotContext | null,
   anchor: Node | null,
 ): MountedSlotItem {
-  const content = resolveControlSlotContent(item, ctx);
+  const content = resolveSlotEntryContent(item, ctx);
   if (!content) return { nodes: [], cleanup: null };
 
   // 用 lastChild 而不是 lastElementChild：HTML 字符串可能以文本节点开头
@@ -316,32 +443,114 @@ function mountSlotItem(
   return { nodes, cleanup };
 }
 
+/** 判断值是否为框架 VNode（与 DOM Node 区分：VNode 没有 nodeType，带 tag/__tmpl/__flow/__reactive） */
+function isFrameworkVNode(value: unknown): value is VNode {
+  if (typeof value !== "object" || value === null) return false;
+  const vnode = value as {
+    tag?: unknown;
+    __tmpl?: unknown;
+    __flow?: unknown;
+    __reactive?: unknown;
+  };
+  return (
+    typeof vnode.tag === "string" ||
+    typeof vnode.tag === "function" ||
+    vnode.__tmpl !== undefined ||
+    vnode.__flow !== undefined ||
+    vnode.__reactive !== undefined
+  );
+}
+
 /**
- * 把指定位置的插槽内容批量挂载到容器，返回统一清理函数
+ * 解析替换插槽内容（被替换的目标节点在渲染期直接不创建）
  *
- * 内容支持 VNode / 原生 Node / HTML 字符串 / SlotMount（见 ControlSlotContent）。
+ * 替换内容**直接作为该位置的节点插入，不创建任何包装元素 / 占位 / 自造 class**：
+ * - VNode：原样返回，交给框架 mount，生命周期由框架管理；
+ * - 空内容（null / undefined）：返回 null，目标节点同样不渲染；
+ * - 原生 Node / HTML 字符串 / SlotMount：无法在渲染期“无包装”地插入，
+ *   输出一次开发警告并返回 null（需要挂载原生节点时请使用 `custom` 模式，
+ *   由调用方自行接管整个按钮，或改用区域插槽）。
+ *
+ * @param entry - 命中 replace 的插槽项
+ * @param ctx - SlotContext
+ */
+export function resolveReplaceVNode(
+  entry: SlotEntry,
+  ctx: SlotContext | null,
+): VNode | null {
+  const content = resolveSlotEntryContent(entry, ctx);
+  if (content === null || content === undefined) return null;
+  if (isFrameworkVNode(content)) return content;
+  console.warn(
+    `[nova-player] replace 插槽 "${entry.id}" 的内容必须是 VNode（当前为 ${
+      typeof content === "string" ? "HTML 字符串" : "原生 Node / SlotMount"
+    }）；` +
+      "渲染期替换不创建包装元素，原生节点请改用 custom 模式或区域插槽。",
+  );
+  return null;
+}
+
+/**
+ * 替换解析器：控制栏组件在渲染期询问「某个原生控件是否被插槽接管」
+ *
+ * 语义：`take(key).replaced === true` 时，调用方必须**不创建**目标节点，
+ * 直接用返回的 node（可能为 null）替代；`replaced === false` 时走原生渲染。
+ */
+export interface ReplaceResolver {
+  /** 解析某个原生控件的替换内容 */
+  take(key: NativeControlKey): { replaced: boolean; node: VNode | null };
+}
+
+/**
+ * 创建替换解析器
+ *
+ * @param player - 播放器 UI 宿主（来自 PlayerContext）；为空时全部走原生渲染
+ */
+export function createReplaceResolver(
+  player: PlayerUiHost | null | undefined,
+): ReplaceResolver {
+  const slotCtx = (): SlotContext | null =>
+    player ? { player, state: player.state } : null;
+  return {
+    take(key: NativeControlKey): { replaced: boolean; node: VNode | null } {
+      const entry = findReplaceSlot(player?.props.ui?.slots, key);
+      if (!entry) return { replaced: false, node: null };
+      return { replaced: true, node: resolveReplaceVNode(entry, slotCtx()) };
+    },
+  };
+}
+
+/**
+ * 把某个区域的插槽内容批量挂载到容器，返回统一清理函数
+ *
+ * 区域内容 = 直接指向该区域的插槽项 + 插件声明在该区域的插槽（含默认内容
+ * 与消费方追加到插件插槽的插槽项），统一按 order 排序后挂载。
+ *
+ * 内容支持 VNode / 原生 Node / HTML 字符串 / SlotMount（见 SlotEntryContent）。
  *
  * 消费端约定：
- * - 容器可为「本位置专用空 div」，也可为与原生内容共享的容器
+ * - 容器可为「本区域专用空 div」，也可为与原生内容共享的容器
  *   （共享时清理函数只移除本次挂载追加的节点，不触碰容器内已有元素）；
  * - 重复挂载前应先执行上一次返回的清理函数；
  * - 清理函数幂等：自定义挂载的 cleanup 先执行，再移除本次追加但仍在容器中的节点。
  *
- * @param slots - 全量插槽列表（来自 ui.slots）
- * @param position - 目标位置（leftEnd / stageLeft / stageRight 等）
+ * @param entries - 全量插槽项（来自 ui.slots）
+ * @param definitions - 插件插槽定义（来自 player.getSlotDefinitions()）
+ * @param region - 目标区域
  * @param container - 目标容器元素
  * @param ctx - SlotContext；为 null 时跳过函数式内容，仅挂载静态内容
  * @param anchor - 可选插入锚点；指定时插槽节点插到锚点之前，缺省追加到容器末尾
  * @returns 清理函数（幂等：重复调用无副作用）
  */
-export function mountControlSlots(
-  slots: readonly ControlSlotItem[] | undefined,
-  position: ControlSlotPosition,
+export function mountRegionSlots(
+  entries: readonly SlotEntry[] | undefined,
+  definitions: readonly PluginSlotDefinition[] | undefined,
+  region: RegionSlotId,
   container: HTMLElement,
   ctx: SlotContext | null,
   anchor: Node | null = null,
 ): () => void {
-  const items = pickSlotsByPosition(slots, position);
+  const items = collectRegionEntries(entries, definitions, region);
   /** 本次挂载追加的节点（清理时只移除这些，不影响容器内已有元素） */
   const appended: Node[] = [];
   /** 自定义挂载返回的清理函数 */
@@ -372,18 +581,26 @@ export function mountControlSlots(
 }
 
 /**
- * 挂载替换原生控制按钮的插槽
+ * 挂载替换原生控制按钮的插槽（**已废弃，不再被运行时调用**）
+ *
+ * 新版替换语义在**渲染期**判定：控制栏组件通过 `createReplaceResolver` /
+ * `findReplaceSlot` 读取 `ui.slots`，命中 replace 时直接不创建目标节点
+ * （见 `NATIVE_REPLACE_TARGETS`），因此不再需要“先渲染后清空/删除”的 DOM 手术。
+ *
+ * 保留导出仅为兼容既有外部调用方与单元测试；新代码不要使用。
+ *
+ * @deprecated 使用 `createReplaceResolver` 在渲染期替换，避免 Lottie 实例泄漏。
  *
  * 对每个带 replace 的插槽：隐藏对应原生按钮，并把插槽内容插到按钮原位置。
  * 清理时移除插槽内容并恢复原生按钮显示。
  *
- * @param slots - 全量插槽列表
+ * @param slots - 全量插槽项
  * @param container - 原生按钮所在容器
  * @param ctx - SlotContext
  * @returns 清理函数（幂等）
  */
 export function mountReplacementSlots(
-  slots: readonly ControlSlotItem[] | undefined,
+  slots: readonly SlotEntry[] | undefined,
   container: HTMLElement,
   ctx: SlotContext | null,
 ): () => void {
@@ -406,7 +623,7 @@ export function mountReplacementSlots(
 
     // 插槽替换 = 原生控件不渲染：所有 replace 项统一走「内容插原位 + 原生 DOM 移除」，
     // 不存在 display:none 保留 DOM 的分支。
-    if ((item.replacePanel as string) === "native-panel-keep") {
+    if ((item.replacePanel ?? "custom") === "native") {
       const iconHost =
         native.querySelector<HTMLElement>(".nova-player-ctrl-btn-icon") ?? native;
       // 图标容器内部一律清空（图标 DOM 直接移除，不是 display:none）；

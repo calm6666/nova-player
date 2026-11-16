@@ -6,7 +6,7 @@
  */
 
 import type { ComponentInstance, VNode } from "@lumina/framework/types";
-import type { PlayerConfig, PlayerStateData, PlayerMethods, PlayerEvents, ProgressiveVariant, EventListeners, DeepPartial, MediaItem, PlayerSource, DisplayMode, ProgressSkipPoints, ProgressSegment, EnergyProgressData } from "../types/player";
+import type { PlayerConfig, PlayerStateData, PlayerMethods, PlayerEvents, ProgressiveVariant, EventListeners, DeepPartial, MediaItem, PlayerSource, DisplayMode, ProgressSkipPoints, ProgressSegment, EnergyProgressData, ProgressThumbIconConfig } from "../types/player";
 import type { SubtitleConfig } from "../types/subtitle";
 
 import { PlayerState, PlayMode } from "../types/player";
@@ -19,7 +19,7 @@ import { PlayerStateKeyEnum, PlayerStateMap, StateContext, ConfigContext, defaul
 import { createConfigStore, ConfigStoreContext } from "../store/configStore";
 import type { ConfigStore } from "../store/configStore";
 import type { PlayerPlaylistItem } from "../store/runtimeState";
-import { PlayerContext, type SlotMount } from "../types/slots";
+import { PlayerContext, type PluginSlotDefinition, type PluginSlotId, type SlotMount } from "../types/slots";
 import { PluginManager } from "../core/pluginManager";
 import { teardownComponentTree } from "../core/componentUnmount";
 import { createPlayerStore } from "../store";
@@ -228,8 +228,10 @@ function isProgressiveVariantItem(value: unknown): value is ProgressiveVariant {
  * 视频播放器类
  * 实现 ComponentInstance 接口，可作为组件使用
  */
+import type { PlayerPort } from "../types/playerPort";
+
 export class VideoPlayer
-  implements ComponentInstance<PlayerConfig>, PlayerMethods
+  implements ComponentInstance<PlayerConfig>, PlayerMethods, PlayerPort
 {
   /** Top / Ending 插件挂载入口（插件 install 时注册，PlayerDocker 读取） */
   private topPluginMount: SlotMount["mount"] | null = null;
@@ -258,6 +260,59 @@ export class VideoPlayer
 
   getEndingPluginMount(): SlotMount["mount"] | null {
     return this.endingPluginMount;
+  }
+
+  /** 插件声明的插槽（按声明顺序；挂载时由播放器按 region 统一排序） */
+  private slotDefinitions: PluginSlotDefinition[] = [];
+
+  /** 区域插槽刷新回调集合（组件挂载时注册，defineSlot / undefineSlot 后统一重挂） */
+  private slotRefreshCallbacks = new Set<() => void>();
+
+  /**
+   * 声明插件插槽
+   *
+   * 插件在 install 中调用：声明插槽 id、所属区域、排序与默认内容，
+   * 播放器只负责挂载规则，插槽语义与内容由插件自己管理。
+   *
+   * @param definition - 插件插槽定义
+   * @returns 回收函数（插件 uninstall 时调用即撤销声明）
+   */
+  defineSlot(definition: PluginSlotDefinition): () => void {
+    this.slotDefinitions = [
+      ...this.slotDefinitions.filter((item) => item.id !== definition.id),
+      definition,
+    ];
+    this.refreshSlots();
+    return (): void => this.undefineSlot(definition.id);
+  }
+
+  /** 撤销插件插槽声明 */
+  undefineSlot(id: PluginSlotId): void {
+    this.slotDefinitions = this.slotDefinitions.filter((item) => item.id !== id);
+    this.refreshSlots();
+  }
+
+  /** 读取全部插件插槽定义 */
+  getSlotDefinitions(): readonly PluginSlotDefinition[] {
+    return this.slotDefinitions;
+  }
+
+  /**
+   * 注册区域插槽刷新回调
+   *
+   * @param refresh - 刷新函数（重新挂载自己负责的区域）
+   * @returns 取消注册函数
+   */
+  registerSlotsRefresh(refresh: () => void): () => void {
+    this.slotRefreshCallbacks.add(refresh);
+    return (): void => {
+      this.slotRefreshCallbacks.delete(refresh);
+    };
+  }
+
+  /** 触发全部区域插槽重新挂载（插件插槽声明变化后调用） */
+  refreshSlots(): void {
+    for (const refresh of this.slotRefreshCallbacks) refresh();
   }
 
   /** Top / Ending 视图动态刷新（不重建播放器） */
@@ -319,6 +374,9 @@ export class VideoPlayer
 
   /** 片头 / 片尾跳过断点（progress.skipPoints，外部数据源提供） */
   private skipPoints: ProgressSkipPoints | null = null;
+
+  /** 最近一次非零音量：静音时归零、取消静音时恢复（与 UI 静音按钮一致） */
+  private lastNonZeroVolume = 1;
 
   /** 当前视频是否已执行过片头跳过（换源后重置） */
   private skipIntroDone = false;
@@ -1014,7 +1072,33 @@ export class VideoPlayer
       this.pendingEnergy = data;
       this.controlsApi?.setEnergy(data);
     },
+    /**
+     * 设置自定义进度条 thumb 图标
+     *
+     * 直接传动画 JSON URL 与动画描述；传 null 恢复内置兜底动画。
+     */
+    setThumbIcon: (config: ProgressThumbIconConfig | null): void => {
+      this.setProgressThumbIcon(config);
+    },
   };
+
+  /**
+   * 设置自定义进度条 thumb 图标（动态更新）
+   *
+   * 通过 ConfigStore 的 `progress.thumbIcon` 路径通知进度条重建动画，
+   * 不需要重启播放器；传 null 恢复内置兜底动画。
+   */
+  setProgressThumbIcon(config: ProgressThumbIconConfig | null): void {
+    const prev = this.props;
+    const progress = { ...(prev.progress ?? {}) };
+    if (config) {
+      progress.thumbIcon = config;
+    } else {
+      delete progress.thumbIcon;
+    }
+    this.props = { ...prev, progress };
+    this.configStore.set(this.props);
+  }
 
   /**
    * 设置分段进度条常驻展开
@@ -2764,6 +2848,7 @@ export class VideoPlayer
   setVolume(volume: number): void {
     const clampedVolume = clamp(volume, 0, 1);
     const isMuted = clampedVolume === 0;
+    if (clampedVolume > 0) this.lastNonZeroVolume = clampedVolume;
 
     this.state.set(PlayerStateKeyEnum.VOLUME, clampedVolume);
     this.state.set(PlayerStateKeyEnum.MUTED, isMuted);
@@ -2793,12 +2878,19 @@ export class VideoPlayer
 
   /**
    * 切换静音
+   *
+   * 与 UI 静音按钮语义一致：静音时音量归零（音量条落到 0），取消静音恢复
+   * 上一次非零音量；不静音时记住当前音量再归零。
    */
   toggleMute(): void {
-    const currentVolume = this.state.get(PlayerStateKeyEnum.VOLUME) ?? 1;
-    const currentMuted = this.state.get(PlayerStateKeyEnum.MUTED) ?? false;
-    this.setVolume(currentVolume);
-    this.setMuted(!currentMuted);
+    const muted = this.isMuted() || this.getVolume() === 0;
+    if (muted) {
+      this.setVolume(this.lastNonZeroVolume > 0 ? this.lastNonZeroVolume : 1);
+    } else {
+      const currentVolume = this.getVolume();
+      if (currentVolume > 0) this.lastNonZeroVolume = currentVolume;
+      this.setVolume(0);
+    }
   }
 
   /**

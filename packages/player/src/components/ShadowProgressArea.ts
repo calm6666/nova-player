@@ -94,10 +94,10 @@ export const ShadowProgressArea = defineComponent<
   // ============================================
 
   /** 各分段缓冲条 */
-  let bufferRefs: Array<HTMLDivElement | null> = [];
+  const bufferRefs: Array<HTMLDivElement | null> = [];
 
   /** 各分段已播放条 */
-  let currentRefs: Array<HTMLDivElement | null> = [];
+  const currentRefs: Array<HTMLDivElement | null> = [];
 
   /** 各段上次已播放填充比例（钳制后 0-1，去重写入） */
   let lastFillRatios: number[] = [];

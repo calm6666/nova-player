@@ -57,10 +57,10 @@ import { LogLevel } from '@lumina/framework/utils';
 import type { MediaManifestSource, QualityLevel } from "./streamPlugin";
 // 弹幕 Provider 契约（纯类型，零运行时依赖）
 import type { DanmakuItem } from "./danmaku";
-// 阶段 C.1：插槽类型（ControlSlotItem / EndingSlot / SlotContext / ControlSlotPosition）
-import type { ControlSlotItem, SlotContent } from "./slots";
+// 阶段 C.1：插槽类型（SlotEntry / EndingSlot / SlotContext / SlotId）
+import type { SlotEntry, SlotContent } from "./slots";
 // 沿用 slots.ts 中已定义的同名类型，避免在此重复声明导致类型漂移
-export type { ControlSlotItem, ControlSlotContent, ControlSlotPosition, NativeControlKey, EndingSlot, TopSlot, SlotContent, SlotMount } from "./slots";
+export type { SlotEntry, SlotEntryContent, SlotId, RegionSlotId, PluginSlotId, PluginSlotDefinition, NativeControlKey, EndingSlot, TopSlot, SlotContent, SlotMount } from "./slots";
 
 // ============================================
 // 播放器配置接口（命名空间化）
@@ -309,12 +309,12 @@ export interface UiConfig {
   /** Ending 整体插槽：替换 .nova-player-ending-wrap 内部内容 */
   ending?: SlotContent;
   /**
-   * 控制栏插槽列表
+   * 插槽项列表
    *
-   * 阶段 C.2：每项按 position 注入对应位置，按 order 升序排列。
+   * 每项按 slot（内置区域 id 或插件声明的插槽 id）注入对应区域，按 order 升序排列。
    * 框架无响应式：列表在挂载期读取一次，运行时变更需通过 setConfig 重渲染。
    */
-  slots?: ControlSlotItem[];
+  slots?: SlotEntry[];
 }
 
 /**
@@ -454,6 +454,36 @@ export interface OgvEndingConfig {
 /**
  * 进度条配置
  */
+export interface ProgressThumbAnimationSource {
+  /** 动画 JSON URL（kind="lottie"）或图片 URL（kind="image"） */
+  url: string;
+  /** 资源类型，默认 lottie */
+  kind?: "lottie" | "image";
+  /** 动画总帧数（描述信息，决定常态停帧与落点延迟） */
+  totalFrames?: number;
+  /** 动画帧率（描述信息，与 totalFrames 一起计算落点延迟） */
+  frameRate?: number;
+  /** 常态停帧，默认 floor(totalFrames / 2) */
+  idleFrame?: number;
+  /** 尺寸（px），缺省取 thumbIcon.size，再缺省 20 */
+  size?: number;
+  /** 拖拽方向：跟随鼠标（默认）或固定正向 */
+  direction?: "follow" | "fixed";
+}
+
+export interface ProgressThumbIconConfig {
+  /** 拖拽动画；不传时使用内置兜底动画 */
+  drag?: ProgressThumbAnimationSource;
+  /** 松手落点动画；不传时使用内置兜底动画 */
+  drop?: ProgressThumbAnimationSource;
+  /** 完全没有动画时直接展示的静态图片 URL */
+  staticImage?: string;
+  /** 统一尺寸（px），单项 size 优先 */
+  size?: number;
+  /** 落点动画结束后的复位延迟；未提供时按 totalFrames / frameRate 计算 */
+  dropDelayMs?: number;
+}
+
 export interface ProgressConfig {
   /** 进度条分段数据 */
   segments?: ProgressSegment[];
@@ -475,6 +505,13 @@ export interface ProgressConfig {
   energyProvider?: EnergyProgressProvider;
   /** 片头 / 片尾跳过断点（外部提供，用于进度条标记与自动跳过） */
   skipPoints?: ProgressSkipPoints;
+  /**
+   * 自定义进度条 thumb 图标
+   *
+   * 直接传动画 JSON URL 与动画描述；播放器内部 fetch 并交给 lottie，
+   * 不区分 url1/url2 语义。没有动画时可用 staticImage 直接展示图片。
+   */
+  thumbIcon?: ProgressThumbIconConfig;
 }
 
 /**
@@ -554,8 +591,8 @@ export type PlayerConfig = {
    * - normal：普通形态
    * - cross：竖排紧凑形态（稍后再看 PiP）——容器 `data-screen="cross"`，
    *   不注册区域可见性监听（mini 自动切换从源头不存在）、弹幕发送栏
-   *   移入控制栏中央并定死、悬浮上/下集通过 ui.slots 的 stageLeft /
-   *   stageRight 注入、全屏 / 网页全屏退出后回到 cross
+   *   移入控制栏中央并定死、悬浮上/下集通过 ui.slots 的 video.overlay
+   *   注入、全屏 / 网页全屏退出后回到 cross
    *
    * 仅在创建时生效，不支持运行时在 normal ↔ cross 间动态切换。
    */
@@ -582,6 +619,21 @@ export type PlayerConfig = {
   advanced?: AdvancedConfig;
   /** 配置式事件回调 */
   callbacks?: EventListeners;
+  /**
+   * 问题反馈面板（Top 的问题反馈图标打开）
+   *
+   * 提交接口与外链打开由宿主注入；未提供 submit 时仅对外广播事件。
+   */
+  feedback?: {
+    /** 提交反馈：返回 0 成功，其它为失败码 */
+    submit?: (data: {
+      tagId: number;
+      content: string;
+      contact: string;
+    }) => Promise<number> | number;
+    /** 外链打开方式（默认 window.open） */
+    openWindow?: (url: string) => void;
+  };
   /** i18n 国际化配置（未配置时 t() 走零开销英文字面量路径） */
   i18n?: I18nPlayerConfig;
 };

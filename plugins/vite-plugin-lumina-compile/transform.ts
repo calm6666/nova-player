@@ -411,7 +411,7 @@ function hasAttrsAncestor(path: BabelPath): boolean {
 /**
  * 判断 AST 节点是否为静态值（字面量）
  */
-function isStaticValue(node: t.Node): boolean {
+export function isStaticValue(node: t.Node): boolean {
   if (t.isStringLiteral(node)) return true;
   if (t.isNumericLiteral(node)) return true;
   if (t.isBooleanLiteral(node)) return true;
@@ -811,7 +811,7 @@ function hoistStaticCall(
 // 保证：模板克隆出的 DOM ≡ SSR 输出的 HTML ≡ 水合时浏览器解析的 DOM。
 
 /** 与 ssr.ts VOID_ELEMENTS 一致：自闭合标签（镜像 SSR 行为：不输出子节点） */
-const HTML_VOID_TAGS = new Set([
+export const HTML_VOID_TAGS = new Set([
   "area",
   "base",
   "br",
@@ -832,7 +832,7 @@ const HTML_VOID_TAGS = new Set([
  * 作为 <template> 根会被 HTML 解析器丢弃/错位的标签（表格上下文家族）
  * 这些标签必须出现在 table 上下文中，独立解析时被静默丢弃
  */
-const TEMPLATE_UNSAFE_ROOTS = new Set([
+export const TEMPLATE_UNSAFE_ROOTS = new Set([
   "tr",
   "td",
   "th",
@@ -917,7 +917,7 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
 };
 
 /** 编译期 HTML 转义（镜像 ssr.ts escapeHtml） */
-function escapeHtmlText(str: string): string {
+export function escapeHtmlText(str: string): string {
   let out = "";
   for (let i = 0; i < str.length; i++) {
     const char = str[i];
@@ -1114,7 +1114,7 @@ function staticStyleAttr(node: t.Node): string | null {
  * 编译期序列化静态属性对象（镜像 ssr.ts serializeAttrs 的静态子集）
  * @returns 属性字符串（含前导空格的拼接结果）；null 表示需要回退 VNode 路径
  */
-function serializeStaticAttrs(attrs: t.ObjectExpression): string | null {
+export function serializeStaticAttrs(attrs: t.ObjectExpression): string | null {
   const parts: string[] = [];
 
   for (const prop of attrs.properties) {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * 右侧控制按钮组件 (RightControls)
  * ============================================
@@ -20,7 +20,7 @@ import type { SubtitleStylePatch } from "./SubtitleMenu";
 import type { EpisodeOption } from "./EpisodesMenu";
 import { LottieIcon, type LottieIconApi } from "./LottieIcon";
 import { HiRes } from "./icons";
-import { PlayerContext, mountControlSlots, mountReplacementSlots, resolveControlSlotContent, type ControlSlotItem } from "../types/slots";
+import { PlayerContext, mountRegionSlots, resolveSlotEntryContent, createReplaceResolver, type SlotEntry, type NativeControlKey } from "../types/slots";
 import fullscreenAnimationData from "../assets/lottie-icon/fullscreen-animation.json";
 
 /**
@@ -109,8 +109,21 @@ export const RightControls = defineComponent<
   const configCtx = useContext(ConfigContext);
   const config = configCtx;
   const state = useContext(StateContext);
-  /** 播放器实例（rightStart / rightEnd 插槽需要构造 SlotContext） */
+  /** 播放器实例（controls.right.start / controls.right.end 插槽需要构造 SlotContext） */
   const player = useContext(PlayerContext);
+  /**
+   * 原生控件替换解析器：replace 命中的按钮图标在**渲染期就不创建**，
+   * 直接渲染插槽内容（不再挂载后清空/删除，避免 Lottie 实例泄漏）。
+   */
+  const replaceResolver = createReplaceResolver(player);
+  /** 图标位渲染：插槽接管时返回插槽内容（可能为 null），否则渲染原生图标 */
+  const renderIconArea = (
+    key: NativeControlKey,
+    fallback: () => VNode,
+  ): VNode | null => {
+    const hit = replaceResolver.take(key);
+    return hit.replaced ? hit.node : fallback();
+  };
   /** 右侧控制栏容器本身即插槽挂载点 */
   const rightRootRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
@@ -119,8 +132,8 @@ export const RightControls = defineComponent<
   /** 插槽清理函数 */
   let rightStartSlotCleanup: (() => void) | null = null;
   let rightEndSlotCleanup: (() => void) | null = null;
-  /** 替换原生按钮的插槽清理函数 */
-  let replaceSlotCleanup: (() => void) | null = null;
+  /** 插件插槽声明变化时的刷新回调注销函数 */
+  let unregisterSlotsRefresh: (() => void) | null = null;
   /** 可订阅配置中心（由 VideoPlayer 注入），用于控件开关「设置即生效」 */
   const configStore = useContext(ConfigStoreContext);
 
@@ -547,12 +560,14 @@ export const RightControls = defineComponent<
           ),
           onClick: onClickHiRes,
         },
-        h(
-          "div",
-          {
-            class: "nova-player-ctrl-btn-icon",
-          },
-          h(HiRes),
+        renderIconArea("flac", () =>
+          h(
+            "div",
+            {
+              class: "nova-player-ctrl-btn-icon",
+            },
+            h(HiRes),
+          ),
         ),
       );
     },
@@ -631,29 +646,31 @@ export const RightControls = defineComponent<
           onMouseEnter: mousePipEnter,
           onMouseLeave: mousePipLeave,
         },
-        h(
-          "div",
-          { class: "nova-player-ctrl-btn-icon" },
-          h(LottieIcon, {
-            name: "pip",
-            sequence: [
-              {
-                loadAnimationData: loadPipHoverData,
-                complete: "stop",
-                autoplay: false,
-              },
-              {
-                loadAnimationData: loadPipExitHoverData,
-                complete: "stop",
-                autoplay: false,
-              },
-            ],
-            // 初始槽位按挂载时的状态快照选择；lottie 异步就绪后再经
-            // onReady 补同步一次，覆盖「挂载即已激活」与加载时序空窗
-            initialSlotIndex: resolveSlot(isPipSignal.value),
-            onReady: syncPipIcon,
-            ref: "pipRef",
-          }),
+        renderIconArea("pip", () =>
+          h(
+            "div",
+            { class: "nova-player-ctrl-btn-icon" },
+            h(LottieIcon, {
+              name: "pip",
+              sequence: [
+                {
+                  loadAnimationData: loadPipHoverData,
+                  complete: "stop",
+                  autoplay: false,
+                },
+                {
+                  loadAnimationData: loadPipExitHoverData,
+                  complete: "stop",
+                  autoplay: false,
+                },
+              ],
+              // 初始槽位按挂载时的状态快照选择；lottie 异步就绪后再经
+              // onReady 补同步一次，覆盖「挂载即已激活」与加载时序空窗
+              initialSlotIndex: resolveSlot(isPipSignal.value),
+              onReady: syncPipIcon,
+              ref: "pipRef",
+            }),
+          ),
         ),
       );
     },
@@ -674,27 +691,29 @@ export const RightControls = defineComponent<
           onMouseEnter: mouseWideEnter,
           onMouseLeave: mouseWideLeave,
         },
-        h(
-          "div",
-          { class: "nova-player-ctrl-btn-icon" },
-          h(LottieIcon, {
-            name: "wide",
-            sequence: [
-              {
-                loadAnimationData: loadWideHoverData,
-                complete: "stop",
-                autoplay: false,
-              },
-              {
-                loadAnimationData: loadWideExitHoverData,
-                complete: "stop",
-                autoplay: false,
-              },
-            ],
-            initialSlotIndex: resolveSlot(isWideSignal.value),
-            onReady: syncWideIcon,
-            ref: "wideRef",
-          }),
+        renderIconArea("wide", () =>
+          h(
+            "div",
+            { class: "nova-player-ctrl-btn-icon" },
+            h(LottieIcon, {
+              name: "wide",
+              sequence: [
+                {
+                  loadAnimationData: loadWideHoverData,
+                  complete: "stop",
+                  autoplay: false,
+                },
+                {
+                  loadAnimationData: loadWideExitHoverData,
+                  complete: "stop",
+                  autoplay: false,
+                },
+              ],
+              initialSlotIndex: resolveSlot(isWideSignal.value),
+              onReady: syncWideIcon,
+              ref: "wideRef",
+            }),
+          ),
         ),
       );
     },
@@ -715,27 +734,29 @@ export const RightControls = defineComponent<
           onMouseEnter: mouseWebEnter,
           onMouseLeave: mouseWebLeave,
         },
-        h(
-          "div",
-          { class: "nova-player-ctrl-btn-icon" },
-          h(LottieIcon, {
-            name: "webFullscreen",
-            sequence: [
-              {
-                loadAnimationData: loadWebFullscreenData,
-                complete: "stop",
-                autoplay: false,
-              },
-              {
-                loadAnimationData: loadWebExitFullscreenData,
-                complete: "stop",
-                autoplay: false,
-              },
-            ],
-            initialSlotIndex: resolveSlot(isWebFullscreenSignal.value),
-            onReady: syncWebFullscreenIcon,
-            ref: "webFullscreenRef",
-          }),
+        renderIconArea("web", () =>
+          h(
+            "div",
+            { class: "nova-player-ctrl-btn-icon" },
+            h(LottieIcon, {
+              name: "webFullscreen",
+              sequence: [
+                {
+                  loadAnimationData: loadWebFullscreenData,
+                  complete: "stop",
+                  autoplay: false,
+                },
+                {
+                  loadAnimationData: loadWebExitFullscreenData,
+                  complete: "stop",
+                  autoplay: false,
+                },
+              ],
+              initialSlotIndex: resolveSlot(isWebFullscreenSignal.value),
+              onReady: syncWebFullscreenIcon,
+              ref: "webFullscreenRef",
+            }),
+          ),
         ),
       );
     },
@@ -756,15 +777,17 @@ export const RightControls = defineComponent<
           onMouseLeave: mouseFullscreenLeave,
           onClick: toggleFullscreen,
         },
-        h(
-          "div",
-          { class: "nova-player-ctrl-btn-icon" },
-          h(LottieIcon, {
-            name: "fullscreen",
-            animationData: fullscreenAnimationData,
-            ref: "fullscreenRef",
-            autoplay: false,
-          }),
+        renderIconArea("full", () =>
+          h(
+            "div",
+            { class: "nova-player-ctrl-btn-icon" },
+            h(LottieIcon, {
+              name: "fullscreen",
+              animationData: fullscreenAnimationData,
+              ref: "fullscreenRef",
+              autoplay: false,
+            }),
+          ),
         ),
       ),
   };
@@ -790,6 +813,39 @@ export const RightControls = defineComponent<
   // ============================================
   // 生命周期钩子
   // ============================================
+
+  /**
+   * 挂载右侧区域插槽（controls.right.start / controls.right.end + 替换项）
+   *
+   * 两个区域直接挂到右侧控制栏容器：start 以第一个原生按钮为锚点插到它之前，
+   * end 追加到末尾；同时合并插件声明在这两个区域的插槽。
+   */
+  const mountRightRegionSlots = (): void => {
+    rightStartSlotCleanup?.();
+    rightStartSlotCleanup = null;
+    rightEndSlotCleanup?.();
+    rightEndSlotCleanup = null;
+    const rightRoot = rightRootRef.value;
+    if (!rightRoot || !player || !state) return;
+    const slots = player.props.ui?.slots;
+    const definitions = player.getSlotDefinitions();
+    const ctx = { player, state };
+    rightStartSlotCleanup = mountRegionSlots(
+      slots,
+      definitions,
+      "controls.right.start",
+      rightRoot,
+      ctx,
+      rightRoot.firstChild,
+    );
+    rightEndSlotCleanup = mountRegionSlots(
+      slots,
+      definitions,
+      "controls.right.end",
+      rightRoot,
+      ctx,
+    );
+  };
 
   /**
    * 组件挂载后：初始化 config signal（驱动 onEffect 首次评估）并订阅 configStore 路径变化
@@ -862,29 +918,10 @@ export const RightControls = defineComponent<
       );
     }
 
-    // rightStart / rightEnd 直接挂到右侧控制栏容器：
-    // rightStart 以第一个原生按钮为锚点插到它之前，rightEnd 追加到末尾
-    const rightRoot = rightRootRef.value;
-    if (rightRoot && player && state) {
-      const slots = player.props.ui?.slots;
-      if (slots && slots.length > 0) {
-        const ctx = { player, state };
-        rightStartSlotCleanup = mountControlSlots(
-          slots,
-          "rightStart",
-          rightRoot,
-          ctx,
-          rightRoot.firstChild,
-        );
-        rightEndSlotCleanup = mountControlSlots(
-          slots,
-          "rightEnd",
-          rightRoot,
-          ctx,
-        );
-        replaceSlotCleanup = mountReplacementSlots(slots, rightRoot, ctx);
-      }
-    }
+    // 右侧区域插槽（controls.right.start / controls.right.end）
+    mountRightRegionSlots();
+    unregisterSlotsRefresh =
+      player?.registerSlotsRefresh(mountRightRegionSlots) ?? null;
 
     lifecycle.emit?.("rightControlsMounted");
   };
@@ -897,8 +934,8 @@ export const RightControls = defineComponent<
     rightStartSlotCleanup = null;
     rightEndSlotCleanup?.();
     rightEndSlotCleanup = null;
-    replaceSlotCleanup?.();
-    replaceSlotCleanup = null;
+    unregisterSlotsRefresh?.();
+    unregisterSlotsRefresh = null;
   };
 
   // ============================================
@@ -938,9 +975,9 @@ export const RightControls = defineComponent<
    * 被 replace 插槽接管的原生按钮：原生按钮不渲染，
    * 由下方渲染循环在该位置直接渲染插槽 VNode（无 host、无 wrapper、无注释占位）。
    */
-  const replaceSlotMap = new Map<string, { slot: ControlSlotItem }>();
+  const replaceSlotMap = new Map<string, { slot: SlotEntry }>();
   for (const slot of player?.props.ui?.slots ?? []) {
-    if (slot.replace) replaceSlotMap.set(slot.replace, { slot });
+    if (slot.replace && (slot.replacePanel ?? "custom") !== "native") replaceSlotMap.set(slot.replace, { slot });
   }
   const slotCtx = player ? { player, state: player.state } : null;
 
@@ -953,7 +990,7 @@ export const RightControls = defineComponent<
         /** 替换项：按原顺序直接渲染插槽 VNode */
         const replaced = replaceSlotMap.get(key);
         if (replaced) {
-          const content = resolveControlSlotContent(replaced.slot, slotCtx);
+          const content = resolveSlotEntryContent(replaced.slot, slotCtx);
           if (!content || typeof content === "string") return null;
           if ((content as { nodeType?: unknown }).nodeType) return null;
           if ((content as { mount?: unknown }).mount) return null;
@@ -966,3 +1003,4 @@ export const RightControls = defineComponent<
       .filter((vnode): vnode is VNode => vnode !== null),
   );
 });
+

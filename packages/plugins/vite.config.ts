@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 import { resolve } from 'path';
-import { luminaCompile } from '../../plugins/vite-plugin-lumina-compile';
+import luminaCompileV2 from '../../plugins/vite-plugin-lumina-compile-v2';
 
 /** 生产构建统一压缩/混淆策略 */
 const terserOptions = {
@@ -31,7 +31,7 @@ export default defineConfig({
      * 编译期 h() 改写（与播放器包一致）：
      * 把响应式属性包装成 __reactiveAttrs、响应式文本包装成 _reactiveText。
      */
-    luminaCompile(),
+    luminaCompileV2(),
     dts({
       // 根 vite-env.d.ts 声明了 *.png / *.scss?inline / *?url 等资源模块，
       // 不挂进 include 的话 dts 内部 tsc 解析资源导入会报 TS2307（构建噪音）

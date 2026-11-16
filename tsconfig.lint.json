@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "vite-env.d.ts",
+    "demo/**/*",
+    "demo-prod/**/*",
+    "packages/**/*.ts",
+    "packages/**/*.d.ts",
+    "plugins/**/*.ts",
+    "tests/**/*.ts",
+    "scripts/**/*.mjs"
+  ],
+  "exclude": ["node_modules", "dist", "**/dist/**"]
+}

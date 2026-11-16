@@ -1,0 +1,335 @@
+.nova-player-feedback-panel {
+  -webkit-font-smoothing: antialiased;
+  background-color: rgba(33, 33, 33, 0.9);
+  border-radius: 4px;
+  color: #fff;
+  display: none;
+  font-size: 12px;
+  left: 50%;
+  min-height: 300px;
+  overflow: hidden;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  z-index: 80;
+
+  &.nova-player-panel-active {
+    display: block;
+  }
+
+  div,
+  p {
+    margin: 0;
+    padding: 0;
+  }
+
+  a,
+  a:active,
+  a:hover,
+  a:link,
+  a:visited {
+    text-decoration: none;
+  }
+
+  .nova-player-feedback-title {
+    border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
+    font-size: 16px;
+    line-height: 40px;
+    text-align: center;
+  }
+
+  .nova-player-feedback-close {
+    fill: #fff;
+    cursor: pointer;
+    height: 22px;
+    line-height: 22px;
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 22px;
+
+    > .common-svg-icon {
+      pointer-events: none;
+    }
+  }
+
+  .nova-player-feedback-content-default {
+    font-size: 12px;
+    margin: 10px 16px;
+  }
+
+  .nova-player-feedback-tabmenu {
+    height: 180px;
+    position: relative;
+    text-align: left;
+
+    .nova-player-feedback-tabmenu-list {
+      box-sizing: border-box;
+      cursor: pointer;
+      display: block;
+      float: left;
+      height: 18px;
+      line-height: 18px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      padding-left: 20px;
+      padding-right: 8px;
+      position: relative;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      width: 50%;
+
+      &:before {
+        border: 1px solid #ccc;
+        border-radius: 50%;
+        content: "";
+        display: inline-block;
+        height: 12px;
+        left: 0;
+        position: absolute;
+        top: 2px;
+        width: 12px;
+      }
+
+      &.nova-player-feedback-tabmenu-list-active {
+        &:before {
+          border-color: var(--nova-fn-color, #00a1d6);
+        }
+
+        &:after {
+          background: var(--nova-fn-color, #00a1d6);
+          border-radius: 50%;
+          content: "";
+          display: inline-block;
+          height: 8px;
+          left: 3px;
+          position: absolute;
+          top: 5px;
+          width: 8px;
+        }
+      }
+    }
+  }
+
+  .nova-player-feedback-content-input {
+    margin-bottom: 6px;
+
+    .nova-player-feedback-input {
+      background-color: rgba(33, 33, 33, 0.9);
+      border: 1px solid hsla(0, 0%, 100%, 0.4);
+      box-sizing: border-box;
+      color: #999;
+      font-size: 12px;
+      height: 22px;
+      outline: none;
+      text-indent: 6px;
+      width: 100%;
+
+      &:focus {
+        border: 1px solid var(--nova-fn-color, #00a1d6);
+      }
+    }
+
+    .nova-player-feedback-input-overrange {
+      color: #fa5a57;
+      height: 16px;
+      line-height: 16px;
+      text-align: left;
+    }
+  }
+
+  .nova-player-feedback-contact {
+    align-items: center;
+    display: flex;
+    height: 24px;
+    margin-bottom: 16px;
+    position: relative;
+
+    .nova-player-feedback-contact-tip {
+      flex: 0 1 auto;
+      height: 24px;
+      line-height: 24px;
+      margin-right: 8px;
+      max-width: 40%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nova-player-feedback-contact-input {
+      background-color: rgba(33, 33, 33, 0.9);
+      border: 1px solid hsla(0, 0%, 100%, 0.4);
+      box-sizing: border-box;
+      color: #999;
+      flex: 1 1 auto;
+      font-size: 12px;
+      height: 24px;
+      min-width: 0;
+      outline: none;
+      text-indent: 6px;
+      width: auto;
+
+      &:focus {
+        border: 1px solid var(--nova-fn-color, #00a1d6);
+      }
+    }
+
+    .nova-player-feedback-type-error {
+      color: #fa5a57;
+      height: 16px;
+      left: 0;
+      line-height: 16px;
+      position: absolute;
+      text-align: left;
+      top: 100%;
+    }
+  }
+
+  .nova-player-feedback-submit-wrap {
+    border-top: 1px solid hsla(0, 0%, 100%, 0.1);
+    display: flex;
+    justify-content: center;
+    padding: 9px 0 20px;
+
+    .nova-player-feedback-submit {
+      align-items: center;
+      background: hsla(0, 0%, 100%, 0.2);
+      border-radius: 2px;
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      justify-content: center;
+      line-height: 1.35;
+      min-height: 24px;
+      min-width: 92px;
+      padding: 3px 8px;
+      text-align: center;
+
+      &:hover {
+        background: hsla(0, 0%, 100%, 0.3);
+      }
+    }
+  }
+
+  .nova-player-feedback-version {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    justify-content: center;
+    margin: 0 auto;
+    text-align: center;
+    width: 100%;
+
+    a {
+      color: #999;
+      height: 14px;
+      line-height: 14px;
+
+      &:hover,
+      &:active {
+        color: var(--nova-fn-color, #00a1d6);
+      }
+    }
+  }
+
+  .nova-player-feedback-content-success,
+  .nova-player-feedback-content-fail {
+    text-align: center;
+    width: 100%;
+  }
+
+  .nova-player-feedback-success-image {
+    background: url(//s1.hdslb.com/bfs/static/player/img/back-success.png) no-repeat;
+    background-size: 100px 103px;
+    height: 103px;
+    margin: 20px auto 16px;
+    width: 100px;
+  }
+
+  .nova-player-feedback-success-title {
+    color: #fff;
+    font-size: 14px;
+    line-height: 20px;
+    margin: 0 auto 8px;
+    padding: 0 20px;
+    word-wrap: break-word;
+  }
+
+  .nova-player-feedback-tips-wrap {
+    color: #999;
+    line-height: 16px;
+    margin-bottom: 40px;
+    padding: 0 20px;
+    text-align: center;
+
+    a {
+      color: #999;
+      text-decoration: none;
+    }
+  }
+
+  .nova-player-feedback-tips {
+    user-select: all;
+    word-wrap: break-word;
+
+    a {
+      white-space: nowrap;
+    }
+  }
+
+  .nova-player-feedback-fail-title {
+    color: #fff;
+    line-height: 17px;
+    margin: 10px auto 13px;
+    padding: 0 20px;
+    word-wrap: break-word;
+  }
+
+  .nova-player-feedback-fail-image {
+    background: url(//s1.hdslb.com/bfs/static/player/img/back-fail.png) no-repeat;
+    background-size: 148px 112px;
+    height: 112px;
+    margin: 0 auto 17px;
+    width: 148px;
+  }
+
+  .nova-player-feedback-resubmit {
+    align-items: center;
+    background-color: var(--nova-fn-color, #00a1d6);
+    border-radius: 2px;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    justify-content: center;
+    line-height: 1.35;
+    margin: 16px auto;
+    min-height: 24px;
+    min-width: 84px;
+    padding: 3px 8px;
+
+    &:hover {
+      background-color: var(--nova-fn-hover-color, #00b5e5);
+    }
+  }
+
+  .nova-player-feedback-tooltip {
+    background-color: rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: #fff;
+    font-size: 14px;
+    left: 50%;
+    line-height: 20px;
+    max-width: 320px;
+    min-height: 42px;
+    padding: 11px 20px;
+    position: absolute;
+    text-align: center;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    white-space: normal;
+    word-wrap: break-word;
+  }
+}

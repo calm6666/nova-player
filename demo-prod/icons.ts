@@ -3,8 +3,8 @@
  * 完全不使用 Unicode emoji，所有图标均为纯 SVG 矢量图
  */
 
-import { h, defineComponent } from '../core/index.ts';
-import type { VNode } from '../types/index.ts';
+import { h, defineComponent } from '@lumina/framework/core';
+import type { VNode } from '@lumina/framework/types';
 
 type IconProps = { size?: number; color?: string };
 

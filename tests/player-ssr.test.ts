@@ -1,13 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
+
 import { renderToString } from '@lumina/framework';
 import { VideoPlayer } from '../packages/player/src/player/VideoPlayer';
 import { h } from '@lumina/framework';
 import { TopPlugin } from '../packages/plugins/src/top/TopPlugin';
 import { EndingPlugin } from '../packages/plugins/src/ending/EndingPlugin';
-import { HlsPlugin } from '../packages/plugins/src/hls/HlsPlugin';
-import { DashPlugin } from '../packages/plugins/src/dash/DashPlugin';
-import { FlvPlugin } from '../packages/plugins/src/flv/FlvPlugin';
+import type { Plugin } from '../packages/player/src/core/plugin';
 
 describe('player SSR', () => {
   it('serializes reactive style attrs as CSS, not [object Object]', () => {
@@ -39,10 +38,23 @@ describe('player SSR', () => {
   });
 
   it('does not install stream plugins in Node', () => {
+    // 流媒体插件的实现模块在求值期会静态导入 dashjs / hls.js / flv.js，这些库
+    // 需要 window/document；Node（SSR）下不能也不应求值它们。这里用「同 name 的
+    // 最小插件实现」验证播放器在 Node 下的安装策略：流媒体插件一律不安装。
+    const fakeStreamPlugin = (name: string): Plugin =>
+      ({
+        name,
+        install: (): void => undefined,
+        uninstall: (): void => undefined,
+      }) as unknown as Plugin;
     const player = new VideoPlayer({
       src: 'https://example.com/video.m3u8',
       plugins: {
-        list: [new HlsPlugin(), new DashPlugin(), new FlvPlugin()],
+        list: [
+          fakeStreamPlugin('hls'),
+          fakeStreamPlugin('dash'),
+          fakeStreamPlugin('flv'),
+        ],
       },
     });
     expect(() => player.renderToString()).not.toThrow();

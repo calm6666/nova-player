@@ -12,6 +12,8 @@ import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
 import { isBrowser } from '@lumina/framework/utils';
 import { PlayerStateKeyEnum } from "../store/runtimeState";
 import { StateContext } from "../store/runtimeState";
+import { PlayerContext, createReplaceResolver } from "../types/slots";
+import type { VNode } from "@lumina/framework/types";
 import { LottieIcon, LottieIconApi } from "./LottieIcon";
 import volumeHoverAnimationData from "../assets/lottie-icon/volume-hover-animation.json";
 import volumeMuteHoverAnimationData from "../assets/lottie-icon/volume-mute-hover-animation.json";
@@ -44,6 +46,9 @@ export const VolumeSlider = defineComponent<
   VolumeSliderEvents
 >((_props, lifecycle) => {
   const state = useContext(StateContext);
+  const player = useContext(PlayerContext);
+  /** 原生音量图标替换解析器：命中 replace 时图标容器在渲染期不创建 */
+  const replaceResolver = createReplaceResolver(player);
   const initialVolume = state?.get(PlayerStateKeyEnum.VOLUME) ?? 1;
   const initialMuted = state?.get(PlayerStateKeyEnum.MUTED) ?? false;
 
@@ -403,29 +408,18 @@ export const VolumeSlider = defineComponent<
   // ============================================
   // 主渲染函数
   // ============================================
-  return h(
-    "div",
-    {
-      // 响应式 class：编译期将含 signal.value 的数组提取到 __reactiveAttrs，
-      // mount 时注册 effect，shownSignal 变化时自动 normalizeClass 重新应用
-      class: [
-        "nova-player-ctrl-btn nova-player-ctrl-volume",
-        {
-          "state-show": shownSignal.value,
-        },
-      ],
-      role: "button",
-      "aria-label": t("player.ui.controls.volume"),
-      // 响应式迁移后根节点 class 由 shownSignal 信号驱动，不再需要 volumeRootRef 引用（删除残留 ref 字符串，避免运行时未注册告警）
-      onMouseEnter: mouseVolumeEnter,
-      onMouseLeave: mouseVolumeLeave,
-    },
-    // 音量图标（静音切换挂在这里）
-    h(
+  /**
+   * 音量图标位：插槽接管时原生 `.nova-player-ctrl-btn-icon` 容器不创建，
+   * 插槽内容**直接插入按钮**（零包装元素）；点击静音由按钮根节点承接，
+   * 滑块区域的点击/拖拽会 stopPropagation，不会误触静音。
+   */
+  const renderVolumeIcon = (): VNode | null => {
+    const hit = replaceResolver.take("volume");
+    if (hit.replaced) return hit.node;
+    return h(
       "div",
       {
         class: "nova-player-ctrl-btn-icon",
-        onClick: handleMuteToggle,
       },
       h(LottieIcon, {
         name: "volume",
@@ -457,7 +451,31 @@ export const VolumeSlider = defineComponent<
         autoplay: false,
         ref: "volumeIconRef",
       }),
-    ),
+    );
+  };
+
+  return h(
+    "div",
+    {
+      // 响应式 class：编译期将含 signal.value 的数组提取到 __reactiveAttrs，
+      // mount 时注册 effect，shownSignal 变化时自动 normalizeClass 重新应用
+      class: [
+        "nova-player-ctrl-btn nova-player-ctrl-volume",
+        {
+          "state-show": shownSignal.value,
+        },
+      ],
+      role: "button",
+      "aria-label": t("player.ui.controls.volume"),
+      // 点击静音统一由按钮根节点承接：插槽接管图标后仍保持原生点击行为；
+      // 滑块/面板内部事件会 stopPropagation，不受影响。
+      onClick: handleMuteToggle,
+      // 响应式迁移后根节点 class 由 shownSignal 信号驱动，不再需要 volumeRootRef 引用（删除残留 ref 字符串，避免运行时未注册告警）
+      onMouseEnter: mouseVolumeEnter,
+      onMouseLeave: mouseVolumeLeave,
+    },
+    // 音量图标位（原生图标 / 插槽内容二选一，插槽接管时原生容器不创建）
+    renderVolumeIcon(),
     // 音量控制区域
     h(
       "div",
@@ -502,3 +520,4 @@ export const VolumeSlider = defineComponent<
     ),
   );
 });
+

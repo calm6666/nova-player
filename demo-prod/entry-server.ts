@@ -5,7 +5,7 @@
  * Vite 会递归转换 core/ 内部文件的 @/ 导入。
  */
 
-import { renderToString } from '../core/index.ts';
+import { renderToString } from '@lumina/framework/core';
 import { createApp } from './main';
 
 const SSR_MODULE_LOAD_TIME = Date.now();

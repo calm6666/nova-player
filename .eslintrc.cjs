@@ -9,7 +9,9 @@ module.exports = {
   ignorePatterns: ['dist', '.eslintrc.cjs', 'node_modules', '**/vite.config.ts', 'packages/plugins/hls/**', 'packages/player/media/**'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    project: './tsconfig.json',
+    // 根 tsconfig 只覆盖 demo；packages/plugins/tests 等源码由 tsconfig.lint.json 覆盖，
+    // 否则 typed-linting 会对未纳入 project 的文件报 parsing error。
+    project: ['./tsconfig.json', './tsconfig.lint.json'],
     tsconfigRootDir: __dirname,
   },
   plugins: ['@typescript-eslint'],

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * 设置面板组件 (SettingMenu)
  * ============================================
@@ -17,6 +17,7 @@ import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
 import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
 import { ConfigStoreContext } from "../store/configStore";
 import type { PlayerStateMap, TypedStateManager } from "../store/runtimeState";
+import { PlayerContext, createReplaceResolver } from "../types/slots";
 import type { VNode } from "@lumina/framework/types";
 import { LottieIcon, LottieIconApi } from "./LottieIcon";
 import { Switch } from "./Switch";
@@ -259,6 +260,27 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
     );
     /** 配置中心（读取 progress.skipPoints / ui.endingStyle 决定是否展示跳过头尾） */
     const configStore = useContext(ConfigStoreContext);
+  const player = useContext(PlayerContext);
+  /** 原生设置图标替换解析器：命中 replace 时图标容器在渲染期不创建 */
+  const replaceResolver = createReplaceResolver(player);
+  /** 设置按钮图标位：插槽接管时返回插槽内容（可能为 null），否则渲染原生 Lottie 图标 */
+  const renderSettingIcon = (): VNode | null => {
+    const hit = replaceResolver.take("setting");
+    if (hit.replaced) return hit.node;
+    return h(
+      "div",
+      {
+        class: "nova-player-ctrl-btn-icon",
+      },
+      h(LottieIcon, {
+        name: "setting",
+        animationData: settingHoverAnimationData,
+        loop: false,
+        autoplay: false,
+        ref: "settingIconRef",
+      }),
+    );
+  };
 
     /**
      * 响应式信号：高能进度条渲染态（设置面板复选框 = 是否渲染开关）
@@ -441,10 +463,11 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
       clearTimers();
     };
 
+    // 原生设置图标被插槽接管时：图标容器渲染期不创建，直接渲染插槽内容
+
     return h(
       "div",
       {
-        // 展开态类名由 shownSignal 响应式驱动（__reactiveAttrs + normalizeClass）
         class: [
           "nova-player-ctrl-btn",
           "nova-player-ctrl-setting",
@@ -452,24 +475,11 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
         ],
         role: "button",
         "aria-label": t("player.ui.settings.title"),
-        // 配置显隐：display 单一来源（父层 ui.controls.setting 经 visible prop 传入）
         style: { display: configVisibleSignal.value ? "" : "none" },
         onMouseEnter: handleMouseEnter,
         onMouseLeave: handleMouseLeave,
       },
-      h(
-        "div",
-        {
-          class: "nova-player-ctrl-btn-icon",
-        },
-        h(LottieIcon, {
-          name: "setting",
-          animationData: settingHoverAnimationData,
-          loop: false,
-          autoplay: false,
-          ref: "settingIconRef",
-        }),
-      ),
+      renderSettingIcon(),
       h(
         "div",
         { class: "nova-player-ctrl-setting-box" },
@@ -859,3 +869,4 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
     );
   },
 );
+

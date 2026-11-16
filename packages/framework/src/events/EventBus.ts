@@ -59,7 +59,7 @@ export class EventBus {
    * });
    */
   once<T = unknown>(event: string, handler: EventHandler<T>): () => void {
-    const onceHandler = (payload: T) => {
+    const onceHandler = (payload: T): void => {
       handler(payload);
       this.off(event, onceHandler);
     };

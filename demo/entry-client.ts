@@ -12,7 +12,7 @@ if (!document.querySelector("style[data-ssr-nova-css]")) {
 }
 import { hydrate, mount } from "@lumina/framework";
 import { PlayerEventEnum } from "@lumina/nova";
-import type { ControlSlotItem, ControlSlotPosition } from "@lumina/nova";
+import type { SlotEntry, SlotId } from "@lumina/nova";
 // 内置语言包由播放器包统一导出
 import { bundledEnUS as enUS, bundledZhCN as zhCN } from "@lumina/nova";
 import {
@@ -2250,8 +2250,8 @@ wireDemoButton("btn-display-normal", () => {
 // cross 弹窗演示：独立 cross 播放器（config.mode = "cross" 固定形态）
 // ============================================
 // 设计边界（与实现计划一致）：
-// - 播放器只提供挂载层（.nova-player-rich-pip-side-prev / -next）与定位显隐规则
-// - 悬浮按钮内容与皮肤样式由本 demo 提供（styles.css 的 .nova-player-rich-pip-side-btn）
+// - 播放器只把 video.overlay 插槽直接挂到 video-area，不提供挂载层
+// - 悬浮按钮的定位、显隐与皮肤样式全部由本 demo 提供（见 styles.css）
 // - 弹幕发送栏由 DanmakuPlugin 驱动渲染，cross 下自动移入控制栏中央并定死
 const CROSS_SKIP_ICON_PATH =
   "M16 5a1 1 0 0 0-1 1v4.615a1.431 1.431 0 0 0-.615-.829L7.21 5.23A1.439 1.439 0 0 0 5 6.445v9.11a1.44 1.44 0 0 0 2.21 1.215l7.175-4.555a1.436 1.436 0 0 0 .616-.828V16a1 1 0 0 0 2 0V6C17 5.448 16.552 5 16 5z";
@@ -2294,22 +2294,24 @@ wireDemoButton("btn-cross-modal", () => {
 
   /**
    * stage 插槽按钮（上一个 / 下一个悬浮圆钮）
-   * 内容与皮肤样式归消费方（demo），播放器只负责挂载与定位显隐
+   * 播放器只负责把内容挂到 video-area；定位、显隐与皮肤样式全部归本 demo
    */
   const stageSkipSlot = (
     id: string,
-    position: ControlSlotPosition,
+    slot: SlotId,
     label: string,
     flip: boolean,
     act: () => Promise<unknown>,
-  ): ControlSlotItem => ({
+  ): SlotEntry => ({
     id,
-    position,
-    vnode: () =>
+    slot,
+    content: () =>
       h(
         "div",
         {
-          class: "nova-player-rich-pip-side-btn",
+          class: `nova-player-rich-pip-side-btn ${
+            flip ? "nova-player-rich-pip-side-prev" : "nova-player-rich-pip-side-next"
+          }`,
           role: "button",
           "aria-label": label,
           title: label,
@@ -2333,7 +2335,7 @@ wireDemoButton("btn-cross-modal", () => {
   });
 
   /**
-   * leftEnd 弹幕开关插槽：原版 ui-danmaku-switch 结构与图标 1:1
+   * controls.left.end 弹幕开关插槽：原版 ui-danmaku-switch 结构与图标 1:1
    * （input checkbox + label + on/off 双 svg，:checked CSS 联动；
    *  外壳类名按 nova 契约映射，图标内容与图标状态类名保持原版原名）
    */
@@ -2344,10 +2346,10 @@ wireDemoButton("btn-cross-modal", () => {
   const DM_SWITCH_OFF_PATH =
     "m8.085 4.891-.999-1.499a1.008 1.008 0 0 1 1.679-1.118l1.709 2.566c.54-.008 1.045-.012 1.515-.012h.13c.345 0 .707.003 1.088.007l1.862-2.59a1.008 1.008 0 0 1 1.637 1.177l-1.049 1.46c.788.02 1.631.046 2.53.078 1.958.069 3.468 1.6 3.74 3.507.088.613.13 2.158.16 3.276l.001.027c.01.333.017.63.025.856a.987.987 0 0 1-1.974.069c-.008-.23-.016-.539-.025-.881v-.002c-.028-1.103-.066-2.541-.142-3.065-.143-1.004-.895-1.78-1.854-1.813-2.444-.087-4.466-.13-6.064-.131-1.598 0-3.619.044-6.063.13a2.037 2.037 0 0 0-1.945 1.748c-.15 1.04-.225 2.341-.225 3.904 0 1.874.11 3.474.325 4.798.154.949.95 1.66 1.91 1.708a97.58 97.58 0 0 0 5.416.139.988.988 0 0 1 0 1.975c-2.196 0-3.61-.047-5.513-.141A4.012 4.012 0 0 1 2.197 17.7c-.236-1.446-.351-3.151-.351-5.116 0-1.64.08-3.035.245-4.184A4.013 4.013 0 0 1 5.92 4.96c.761-.027 1.483-.05 2.164-.069Zm4.436 4.707h-1.32v4.63h2.222v.848h-2.618v1.078h2.431a5.01 5.01 0 0 1 3.575-3.115V9.598h-1.276a8.59 8.59 0 0 0 .748-1.42l-1.089-.384a14.232 14.232 0 0 1-.814 1.804h-1.518l.693-.308a8.862 8.862 0 0 0-.814-1.408l-1.045.352c.297.396.572.847.825 1.364Zm-4.18 3.564.154-1.485h1.98V8.289h-3.2v.979h2.067v1.43H7.483l-.308 3.454h2.277c0 1.166-.044 1.925-.12 2.277-.078.352-.386.528-.936.528-.308 0-.616-.022-.902-.055l.297 1.067.062.004c.285.02.551.04.818.04 1.001-.066 1.562-.418 1.694-1.056.11-.638.176-1.903.176-3.795h-2.2Zm7.458.11v-.858h-1.254v.858H15.8Zm-2.376-.858v.858h-1.199v-.858h1.2Zm-1.199-.946h1.2v-.902h-1.2v.902Zm2.321 0v-.902H15.8v.902h-1.254Zm3.517 10.594a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-.002-1.502a2.5 2.5 0 0 1-2.217-3.657l3.326 3.398a2.49 2.49 0 0 1-1.109.259Zm2.5-2.5c0 .42-.103.815-.286 1.162l-3.328-3.401a2.5 2.5 0 0 1 3.614 2.239Z";
 
-  const dmSwitchSlot = (): ControlSlotItem => ({
+  const dmSwitchSlot = (): SlotEntry => ({
     id: "cross-dm-switch",
-    position: "leftEnd",
-    vnode: (ctx) =>
+    slot: "controls.left.end",
+    content: (ctx) =>
       h(
         "div",
         {
@@ -2361,9 +2363,9 @@ wireDemoButton("btn-cross-modal", () => {
             class: "ui-danmaku-switch-input",
             type: "checkbox",
             id: "cross-dm-switch-input",
-            checked: ctx.player.isDanmakuVisible(),
+            checked: ctx.player.isDanmakuVisible?.() ?? true,
             onChange: (event: Event) => {
-              ctx.player.setDanmakuVisible(
+              ctx.player.setDanmakuVisible?.(
                 (event.currentTarget as HTMLInputElement).checked,
               );
             },
@@ -2408,28 +2410,28 @@ wireDemoButton("btn-cross-modal", () => {
       slots: [
         stageSkipSlot(
           "cross-stage-prev",
-          "stageLeft",
+          "video.overlay",
           "上一个",
           true,
           () => crossPlayer.prev(),
         ),
         stageSkipSlot(
           "cross-stage-next",
-          "stageRight",
+          "video.overlay",
           "下一个",
           false,
           () => crossPlayer.next(),
         ),
         dmSwitchSlot(),
-        // topRight 插槽内容：原版 top-right 三连功能区 1:1
+        // top.end 插槽内容：原版 top-right 三连功能区 1:1
         // （like + 计数 / coin(state-active) + 计数 + tooltip / collect + 计数 + tooltip；
         //  结构与类名逐条镜像原版：bpx-player-* → nova-player-* 契约映射，
         //  bpx-common-* → common-*（与播放器既有 common-svg-icon 命名一致）；
         //  图标 path 逐字节原版；皮肤样式见 styles.css）
         {
           id: "cross-top-right",
-          position: "topRight",
-          vnode: () =>
+          slot: "top.end",
+          content: () =>
             h(
               "div",
               { class: "nova-player-top-right-like" },

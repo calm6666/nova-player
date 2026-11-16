@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import path from 'node:path';
 import dts from 'vite-plugin-dts';
-import { luminaCompile } from '../../plugins/vite-plugin-lumina-compile';
+import luminaCompileV2 from '../../plugins/vite-plugin-lumina-compile-v2';
 
 /** 生产构建统一压缩/混淆策略 */
 const terserOptions = {
@@ -23,9 +23,8 @@ export default defineConfig({
   publicDir: false,
   plugins: [
     // live-player 必须排除在编译转换之外：本包刻意使用运行时 h() + 显式
-    // reactive()/text() 辅助函数，编译器会把「VNode 变量」误判为动态文本，
-    // 生成 _reactiveText(() => vnode)，导致按钮内容渲染成 [object Object]。
-    luminaCompile({ exclude: [/node_modules/, /\.test\./, /\.spec\./, /packages[\\/]live-player[\\/]/] }),
+    // reactive()/text() 辅助函数，编译骨架化会改变其 VNode 变量的求值方式。
+    luminaCompileV2({ exclude: [/node_modules/, /\.spec\./, /packages[\\/]live-player[\\/]/] }),
     dts({
       include: ['src'],
       entryRoot: 'src',
@@ -33,7 +32,7 @@ export default defineConfig({
       insertTypesEntry: true,
       rollupTypes: false,
       // 声明文件生成只做 emit：类型检查由 `tsc --noEmit -p tsconfig.json` 负责。
-      skipDiagnostics: true,
+      // skipDiagnostics: true,
       logLevel: 'silent',
     }),
   ],

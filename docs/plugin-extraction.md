@@ -154,14 +154,14 @@ Top 插件按 `mode` 返回不同 VNode；`music` 模式可以渲染歌曲信息
 
 ### 9.1 现状核查
 
-仓库里已经有一套「未完成」的插槽基础：
+仓库里已有一套插槽基础：
 
-- `packages/player/src/types/slots.ts` 定义了 `ControlSlotItem` / `EndingSlot` / `SlotContext` / `resolveSlotVNode()` / `pickSlotsByPosition()`；
-- `PlayerConfig.ui.slots` 声明了控制栏插槽；
+- `packages/player/src/types/slots.ts` 定义了 `SlotEntry` / `PluginSlotDefinition` / `EndingSlot` / `SlotContext` / `resolveSlotEntryContent()` / `pickSlotEntries()` / `collectRegionEntries()`；
+- `PlayerConfig.ui.slots` 声明了区域插槽与插件插槽；
 - `PlayerConfig.ending.content` 声明了片尾整页替换；
-- 但当前 `PlayerDocker` **没有消费** `ui.slots`，也没有读取 `ending.content`，Top 更没有插槽入口。
+- `PlayerDocker` / `Controls` / `LeftControls` / `RightControls` 已消费 `ui.slots`，区域容器（含 `top.start` / `top.end`）常驻；插件通过 `player.defineSlot()` 声明 `plugin.<插件名>.<用途>` 插槽。
 
-所以「插槽」不是从零设计，而是要把这套已声明的契约真正接到 Host 上，并补齐 Top/Ending 的区域槽位。
+所以「插槽」不是从零设计，而是把已声明的契约接到 Host 上，并由插件自行声明自己的插槽。
 
 ### 9.2 两级插槽
 

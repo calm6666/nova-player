@@ -222,9 +222,11 @@ const player = new VideoPlayer({
 
 插槽（`ui.slots`）补充说明：
 
-- 位置插槽：`leftEnd / rightStart / rightEnd / topRight / bottomCenter / stageLeft / stageRight / cornerLeft / cornerRight`；
-- `replace: NativeControlKey` 表示**原生控件不渲染**：渲染层按 `bottomRightOrder` / `bottomLeftOrder` 顺序在原始位置直接渲染插槽 VNode（无 host、无 wrapper、无注释占位）；替换内容必须是 VNode，左右控制栏只处理各自顺序表内的键；
-- `SlotContext = { player, state }`：所有插槽（含 corner / topRight / 替换项）均保证可拿到，`PlayerDocker` 以 `stateMgr ?? player.state` 兜底；
+- 区域插槽：`video.overlay / controls.left.end / controls.center / controls.right.start / controls.right.end / top.start / top.end`；
+- `video.overlay`：直接挂到 `.nova-player-video-area` 的单一悬浮插槽位，内容可任意多个（按 order 追加），位置 / 层级 / 显隐 / 皮肤全部由插槽内容自控；
+- 插件插槽：id 规则 `plugin.<插件名>.<用途>`，插件在 `install` 中通过 `player.defineSlot({ id, region, order, content })` 声明，播放器只提供挂载规则；未安装插件 / 未配置 `ui.top` 时 `top.start` / `top.end` 仍可插入自定义内容；
+- `replace: NativeControlKey` 表示**原生控件不渲染**：渲染层按 `bottomRightOrder` / `bottomLeftOrder` 顺序在原始位置直接渲染插槽内容（无 host、无 wrapper、无注释占位）；替换内容必须是 VNode，左右控制栏只处理各自顺序表内的键；
+- `SlotContext = { player, state }`：所有插槽（含 `video.overlay` / `top.*` / 插件插槽 / 替换项）均保证可拿到，`PlayerDocker` 以 `stateMgr ?? player.state` 兜底；
 - `TopProps.issue?: boolean`（默认 `true`）：`false` 时 top-issue 节点完全不渲染。
 
 `LottieIcon` 使用约定：`AnimationSlot` 的结束行为字段是 **`complete`**（`next` / `stop` / `loop`），写成 `onComplete` 会被忽略，动画播完会自动跳到下一个槽位；`setSequenceSlot` 需在 `onReady` 之后调用才生效。
@@ -429,6 +431,16 @@ player.progress.applyPermanent(false); // 收起
 player.progress.isPermanent(); // 当前是否常驻展开
 player.progress.setSegments(segments); // 章节 / 顶部 / 影子进度条共用
 player.progress.setEnergy(energy); // 高能进度条数据
+player.progress.setThumbIcon(thumbIcon); // 自定义 thumb 图标（传 null 恢复内置）
+player.setProgressThumbIcon(thumbIcon); // 等价顶层方法
+
+// 自定义进度条 thumb：直接传动画 JSON URL + 动画描述，或静态图片
+player.setProgressThumbIcon({
+  size: 28,
+  drag: { url: "/icons/thumb-drag.json", totalFrames: 60, frameRate: 30 },
+  drop: { url: "/icons/thumb-drop.json", totalFrames: 24, frameRate: 30 },
+});
+player.setProgressThumbIcon(null); // 恢复内置兜底动画
 
 // 状态查询
 const s = player.getState(); // PlayerStateData 快照

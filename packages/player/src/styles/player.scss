@@ -592,6 +592,27 @@ img {
   position: relative;
 }
 
+/* 顶部区域容器：由播放器固定渲染，未装 TopPlugin / 未配 ui.top 时同样存在 */
+.nova-player-top-wrap {
+  color: #fff;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  width: 100%;
+  z-index: 45;
+}
+
+/* 顶部插槽锚点与顶部内容容器：不产生盒子，子节点直接参与 top-wrap 的 flex 布局 */
+.nova-player-top-view {
+  display: contents;
+}
+
 .nova-player-video-perch {
   -webkit-box-flex: 0;
   -webkit-box-pack: center;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * 清晰度选择面板组件 (QualityMenu)
  * ============================================
@@ -8,6 +8,7 @@ import { h, defineComponent, useState, useReactiveState, useContext, t, signal, 
 import type { ReadonlySignal } from "@lumina/framework/core";
 import type { VNode } from "@lumina/framework/types";
 import { useComponentUnmount } from "../core/componentUnmount";
+import { PlayerContext, createReplaceResolver } from "../types/slots";
 import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
 import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
 import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
@@ -112,6 +113,9 @@ export type QualityMenuEvents = {
 export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
   (props, lifecycle) => {
     const state = useContext(StateContext);
+  const player = useContext(PlayerContext);
+  /** 原生清晰度结果区替换解析器：命中 replace 时结果元素渲染期不创建 */
+  const replaceResolver = createReplaceResolver(player);
 
     /** 展开 / 收起定时器 */
     let showTimer: AnimationFrameID | null = null;
@@ -628,29 +632,14 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
     // 主渲染函数
     // ============================================
 
-    return h(
-      "div",
-      {
-        class: [
-          "nova-player-ctrl-btn",
-          "nova-player-ctrl-quality",
-          { "state-show": shownSignal.value },
-        ],
-        role: "button",
-        "aria-label": t("player.ui.controls.quality"),
-        style: {
-          display: configVisibleSignal.value ? "" : "none",
-          visibility: collapsedSignal.value ? "hidden" : "",
-          width: collapsedSignal.value ? "0" : "",
-          marginRight: collapsedSignal.value ? "0" : "",
-        },
-        onMouseEnter: handleMouseEnter,
-        onMouseLeave: handleMouseLeave,
-      },
-      // 当前清晰度显示（result-wrap > result-name + 自动徽标）
-      // resultNameSignal 是 computed，自动追踪 switchingSignal/autoActiveSignal/autoConcreteLabelSignal
-      // _reactiveText 让 result-name 文本随 resultNameSignal 变化自动更新
-      h(
+    /**
+     * 清晰度结果区：插槽接管时 `.nova-player-ctrl-quality-result`
+     * 在渲染期不创建，直接渲染插槽内容；下拉菜单保持原生。
+     */
+    const renderQualityResult = (): VNode | null => {
+      const hit = replaceResolver.take("quality");
+      if (hit.replaced) return hit.node;
+      return h(
         "div",
         { class: "nova-player-ctrl-quality-result" },
         h(
@@ -673,7 +662,30 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
             AUTO_LABEL,
           ),
         ),
-      ),
+      );
+    };
+
+    return h(
+      "div",
+      {
+        class: [
+          "nova-player-ctrl-btn",
+          "nova-player-ctrl-quality",
+          { "state-show": shownSignal.value },
+        ],
+        role: "button",
+        "aria-label": t("player.ui.controls.quality"),
+        style: {
+          display: configVisibleSignal.value ? "" : "none",
+          visibility: collapsedSignal.value ? "hidden" : "",
+          width: collapsedSignal.value ? "0" : "",
+          marginRight: collapsedSignal.value ? "0" : "",
+        },
+        onMouseEnter: handleMouseEnter,
+        onMouseLeave: handleMouseLeave,
+      },
+      // 当前清晰度结果位（原生结果元素 / 插槽内容二选一）
+      renderQualityResult(),
       // 清晰度下拉菜单（For 组件 key-based 精准更新，menuItemsSignal 变化时自动同步）
       h(
         "div",
@@ -699,3 +711,4 @@ export const QualityMenu = defineComponent<QualityMenuProps, QualityMenuEvents>(
     );
   },
 );
+

@@ -1413,8 +1413,8 @@
 /* ============================================
    cross 弹窗演示（demo 侧）
    - 弹窗浮层 / 面板：demo 自有样式
-   - .nova-player-rich-pip-side-btn：悬浮圆钮皮肤——插槽内容样式归消费方
-     （demo），播放器 cross.scss 只提供挂载层定位与显隐
+   - 悬浮上 / 下一个圆钮：定位、显隐与皮肤全部归消费方（demo），
+     播放器不再提供任何挂载层或规则
    ============================================ */
 
 .cross-modal-overlay {
@@ -1466,7 +1466,35 @@
   aspect-ratio: 16 / 9;
 }
 
-/* 悬浮上/下一个圆钮皮肤（插槽内容，归 demo）——原版 rich-pip-side-btn 逐条映射 */
+/* 悬浮上/下一个圆钮：定位、显隐与皮肤（插槽内容，归 demo）
+   —— 原版 rich-pip-side-* 逐条映射，cross 模式容器 hover / 聚焦时可见 */
+.nova-player-container[data-screen="cross"] .nova-player-rich-pip-side-prev,
+.nova-player-container[data-screen="cross"] .nova-player-rich-pip-side-next {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: opacity 0.18s;
+  z-index: 6;
+}
+
+.nova-player-container[data-screen="cross"]:hover .nova-player-rich-pip-side-prev,
+.nova-player-container[data-screen="cross"]:hover .nova-player-rich-pip-side-next,
+.nova-player-container[data-screen="cross"]:focus-within .nova-player-rich-pip-side-prev,
+.nova-player-container[data-screen="cross"]:focus-within .nova-player-rich-pip-side-next {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nova-player-rich-pip-side-prev {
+  left: 10px;
+}
+
+.nova-player-rich-pip-side-next {
+  right: 10px;
+}
+
 .nova-player-rich-pip-side-btn {
   background: rgba(0, 0, 0, 0.58) !important;
   border-radius: 50%;
@@ -1491,7 +1519,7 @@
 /* ============================================
    cross 弹窗插槽内容样式（消费方提供）
    - 弹幕开关（原版 danmaku-switch checkbox 机制 1:1，类名 ui-* 契约）
-   - topRight 三连功能区（原版规则逐条映射，bpx-* → nova-player-*）
+   - top.end 三连功能区（原版规则逐条映射，bpx-* → nova-player-*）
    ============================================ */
 
 
@@ -1533,7 +1561,7 @@
   display: none;
 }
 
-/* ---- topRight 插槽内容：原版 top-right 三连功能区（bpx-* → nova-player-* 逐条映射）---- */
+/* ---- top.end 插槽内容：原版 top-right 三连功能区（bpx-* → nova-player-* 逐条映射）---- */
 .nova-player-top-right-like {
   -webkit-box-flex: 0;
   flex: 0 0 auto;

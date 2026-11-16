@@ -1,7 +1,8 @@
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 import { resolve } from "path";
-import { luminaCompile } from "../../plugins/vite-plugin-lumina-compile";
+import luminaCompileV2 from "../../plugins/vite-plugin-lumina-compile-v2";
+
 
 /** 生产构建统一压缩/混淆策略 */
 const terserOptions = {
@@ -39,7 +40,7 @@ export default defineConfig(({ command, mode }) => {
      */
     publicDir: command === "build" ? false : "public",
     plugins: [
-      luminaCompile(),
+      luminaCompileV2(),
       // 类型声明只在工程构建时生成（CDN 构建跳过，避免重复输出与产物覆盖）
       ...(isCdnBuild
         ? []
@@ -100,6 +101,32 @@ export default defineConfig(({ command, mode }) => {
               entryFileNames: "[name].js",
               assetFileNames: "[name].[ext]",
               chunkFileNames: "chunks/[name].js",
+              // core / ui 分包：单一入口不变，仅按源码模块边界切 chunk
+              manualChunks(id: string) {
+                // 懒挂载面板：组件与其样式字符串独立成 chunk，首次打开才加载
+                if (
+                  /[\\/]src[\\/]components[\\/](ColorPanel|AudioPanel|VideoInfo|HotkeyPanel|FeedbackPanel)\.ts$/.test(
+                    id,
+                  ) ||
+                  /[\\/]src[\\/]components[\\/]lazy-panel-styles\.ts$/.test(id)
+                ) {
+                  return "ui-panels";
+                }
+                if (id.includes("/src/components/") || id.includes("\\src\\components\\")) {
+                  return "ui";
+                }
+                if (
+                  id.includes("/src/player/") ||
+                  id.includes("\\src\\player\\") ||
+                  id.includes("/src/store/") ||
+                  id.includes("\\src\\store\\") ||
+                  id.includes("/src/core/") ||
+                  id.includes("\\src\\core\\")
+                ) {
+                  return "core";
+                }
+                return undefined;
+              },
             },
           },
           outDir: resolve(__dirname, "dist"),

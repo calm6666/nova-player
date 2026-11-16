@@ -1,5 +1,13 @@
-import { h, defineComponent, useTemplateRef, signal, For, t } from '@lumina/framework/core';
+import { h, defineComponent, useTemplateRef, useContext, signal, For, t } from '@lumina/framework/core';
 import { useComponentUnmount } from "../core/componentUnmount";
+import { ConfigStoreContext, type ConfigStore } from "../store/configStore";
+import type { AnimationItem } from "lottie-web";
+import type {
+  ProgressThumbAnimationSource,
+  ProgressThumbIconConfig,
+} from "../types/player";
+import thumbFallbackData from "../assets/lottie-icon/progress-thumb-fallback.json";
+import pullIndicatorData from "../assets/lottie-icon/progress-pull-indicator.json";
 import { normalizeSegmentSpan } from "../utils/media/progressSegment";
 import type { VNode } from "@lumina/framework/types";
 import type { ProgressPreviewFrame, ProgressPreviewProvider, ProgressSegment, ProgressSkipPoints } from "../types/player";
@@ -11,6 +19,49 @@ import { isDev } from '@lumina/framework/core/warning';
 
 /** 进度条组件日志（仅 error 级别的异常 / 非法配置诊断） */
 const logger = createLogger("ProgressBar");
+
+/** lottie-web 模块类型（动态导入后缓存，避免每个实例重复拉取） */
+type ProgressLottie = typeof import("lottie-web").default;
+
+let progressLottiePromise: Promise<ProgressLottie> | null = null;
+
+/** 懒加载 lottie-web：与播放器其余图标共用同一模块缓存 */
+function loadProgressLottie(): Promise<ProgressLottie> {
+  if (progressLottiePromise === null) {
+    progressLottiePromise = import("lottie-web").then((mod) => mod.default);
+  }
+  return progressLottiePromise;
+}
+
+/** 自定义 thumb 动画 JSON 缓存：同一 URL 只请求一次 */
+const thumbDataCache = new Map<string, Promise<Record<string, unknown>>>();
+
+/** 按 URL 拉取 thumb 动画 JSON（失败时从缓存移除，允许下次重试） */
+function loadThumbData(url: string): Promise<Record<string, unknown>> {
+  const cached = thumbDataCache.get(url);
+  if (cached !== undefined) return cached;
+  const promise = fetch(url).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`thumb icon fetch failed: ${response.status}`);
+    }
+    return (await response.json()) as Record<string, unknown>;
+  });
+  thumbDataCache.set(url, promise);
+  promise.catch(() => thumbDataCache.delete(url));
+  return promise;
+}
+
+/** 动画常态停帧：描述优先，其次实际总帧数的一半 */
+function resolveIdleFrame(
+  source: ProgressThumbAnimationSource | undefined,
+  totalFrames: number,
+): number {
+  if (source?.idleFrame !== undefined) return source.idleFrame;
+  if (source?.totalFrames !== undefined) {
+    return Math.floor(source.totalFrames / 2);
+  }
+  return Math.floor(totalFrames / 2);
+}
 
 /**
  * 计算单个分段在当前时间下的填充比例（纯函数，便于单元测试）
@@ -256,6 +307,30 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     /** 拖拽滑块元素引用（逐帧命令式定位 translateX） */
     const thumbRef = useTemplateRef<HTMLDivElement>(lifecycle, "thumbRef");
 
+    /** 轨道元素引用（精度模式上拉时改高度） */
+    const trackRef = useTemplateRef<HTMLDivElement>(lifecycle, "progressTrackRef");
+
+    /** 精度模式上拉指示器元素引用（与 thumb 同步 translateX） */
+    const pullIndicatorRef = useTemplateRef<HTMLDivElement>(
+      lifecycle,
+      "pullIndicatorRef",
+    );
+
+    /** thumb 图标容器（lottie 的 drag / drop DOM 动态挂入） */
+    const thumbIconRef = useTemplateRef<HTMLDivElement>(
+      lifecycle,
+      "thumbIconRef",
+    );
+
+    /** 精度模式状态：驱动 state-pulling 类（thumb 隐藏 / cursor 显示） */
+    const pullingSignal = signal(false);
+
+    /** 自定义 thumb 配置：来自 ConfigStore 的 progress.thumbIcon，运行时可变 */
+    const configStore = useContext<ConfigStore | null>(ConfigStoreContext);
+    const thumbConfigSignal = signal<ProgressThumbIconConfig | undefined>(
+      configStore?.getPath<ProgressThumbIconConfig>("progress.thumbIcon"),
+    );
+
     // ============================================
     // 状态（仅命令式路径使用，无声明式消费者）
     // ============================================
@@ -280,6 +355,36 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
 
     /** 预览帧请求序号（异步 provider 竞态保护：仅应用最新一次悬停请求的结果） */
     let previewRequestId = 0;
+
+    /** 精度模式：拖拽开始时记录的轨道基准高度 */
+    let trackBaseHeight = 0;
+    /** 精度模式是否已进入（驱动 state-pulling 与拖拽映射） */
+    let pullingActive = false;
+    /** 精度模式局部时间窗口（按上拉比例收窄） */
+    let precisionLeftTime = 0;
+    let precisionRightTime = 0;
+    /** 拖拽起点百分比与 thumb 方向（demo 同款状态） */
+    let startPercentage = 0;
+    let thumbDirection = 0;
+    let thumbClientX = 0;
+    /** 当前上拉倍数（demo 的 ratioY） */
+    let pullRatio = 1;
+
+    /** thumb 拖拽 / 落点双动画与精度模式上拉动画 */
+    let dragAnim: AnimationItem | null = null;
+    let dropAnim: AnimationItem | null = null;
+    let pullAnim: AnimationItem | null = null;
+    let thumbDragDom: HTMLDivElement | null = null;
+    let thumbDropDom: HTMLDivElement | null = null;
+    /** thumb 尺寸、方向策略与自定义落点参数 */
+    let thumbSize = 20;
+    let dragDirection: "follow" | "fixed" = "follow";
+    let hasCustomDrop = false;
+    let dragIdleFrame = 0;
+    let dropIdleFrame = 0;
+    let dropDelayMs = 0;
+    let dropResetTimer: ReturnType<typeof setTimeout> | null = null;
+    let offThumbConfig: (() => void) | null = null;
 
     // ============================================
     // DOM 引用缓存（For render 的函数 ref 收集，零 querySelectorAll）
@@ -362,6 +467,16 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         Math.min(1, (clientX - rect.left) / rect.width),
       );
       return ratio * durationSignal.value;
+    };
+
+    /** 根据鼠标位置计算整条进度条上的百分比（0-1） */
+    const getPercentageFromX = (clientX: number): number => {
+      if (!progressAreaRef.value) return 0;
+      const rect = progressAreaRef.value.getBoundingClientRect();
+      return Math.max(
+        0,
+        Math.min(1, (clientX - rect.left) / (rect.width || 1)),
+      );
     };
 
     /**
@@ -507,8 +622,13 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         /** 滑块的水平偏移量（像素），按整条比例换算并减去滑块自身宽度的一半 */
         const position =
           (time / durationSignal.value) *
-            progressAreaRef.value.clientWidth - 10;
+            progressAreaRef.value.clientWidth -
+          thumbSize / 2;
         thumbRef.value.style.transform = `translateX(${position}px)`;
+        // 上拉指示器始终贴在 thumb 上方，使用同一位移
+        if (pullIndicatorRef.value) {
+          pullIndicatorRef.value.style.transform = `translateX(${position}px)`;
+        }
       }
     };
 
@@ -640,7 +760,6 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         clearTimeout(hoverTimer);
       }
       hoverTimer = setTimeout(() => {
-        // 响应式：写入信号，编译期自动包装的 __reactiveAttrs 会切换 state-active 类
         popupActiveSignal.value = true;
         hoverTimer = null;
       }, 300);
@@ -671,6 +790,293 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
       }
     };
 
+    /** 销毁 thumb / 上拉动画并清空挂载点（配置重建时复用） */
+    const destroyThumbAnimations = (): void => {
+      dragAnim?.destroy();
+      dropAnim?.destroy();
+      pullAnim?.destroy();
+      dragAnim = null;
+      dropAnim = null;
+      pullAnim = null;
+      thumbDragDom = null;
+      thumbDropDom = null;
+      thumbDirection = 0;
+      if (dropResetTimer !== null) {
+        clearTimeout(dropResetTimer);
+        dropResetTimer = null;
+      }
+      if (thumbIconRef.value) thumbIconRef.value.replaceChildren();
+    };
+
+    /** thumb 尺寸：容器与图标同步，定位公式用 thumbSize / 2 居中 */
+    const applyThumbSize = (size: number): void => {
+      thumbSize = size;
+      if (!thumbRef.value) return;
+      thumbRef.value.style.width = `${size}px`;
+      thumbRef.value.style.height = `${size}px`;
+    };
+
+    /**
+     * thumb 拖拽动画（demo handleThumbAnim 同款）
+     *
+     * 方向不变时继续当前播放；方向反转时 setDirection(±1) 后从头播放；
+     * 首次移动先把拖拽动画停在描述指定的常态帧。
+     */
+    const handleThumbAnim = (clientX: number): void => {
+      if (!dragAnim || !thumbDragDom || !thumbIconRef.value) return;
+      if (thumbIconRef.value.firstChild !== thumbDragDom) {
+        thumbIconRef.value.replaceChildren(thumbDragDom);
+      }
+      if (thumbDirection === 0) {
+        dragAnim.goToAndStop(dragIdleFrame, true);
+      }
+      if (dragDirection === "fixed") {
+        if (thumbDirection !== 1) {
+          thumbDirection = 1;
+          dragAnim.setDirection(1);
+          dragAnim.play();
+        }
+      } else if (clientX > thumbClientX && thumbDirection < 1) {
+        thumbDirection = 1;
+        dragAnim.setDirection(1);
+        dragAnim.play();
+      } else if (clientX < thumbClientX && thumbDirection > -1) {
+        thumbDirection = -1;
+        dragAnim.setDirection(-1);
+        dragAnim.play();
+      }
+      thumbClientX = clientX;
+    };
+
+    /** 松手落点动画：自定义落点播一次并延时复位，否则停在常态帧（demo 同款） */
+    const showThumbDropFrame = (): void => {
+      if (!dropAnim || !thumbDropDom || !thumbIconRef.value) return;
+      thumbIconRef.value.replaceChildren(thumbDropDom);
+      dropAnim.setDirection(1);
+      if (hasCustomDrop) {
+        dropAnim.goToAndPlay(0, true);
+        if (dropDelayMs > 0) {
+          if (dropResetTimer !== null) clearTimeout(dropResetTimer);
+          dropResetTimer = setTimeout(() => {
+            dropAnim?.goToAndStop(dropIdleFrame, true);
+            dropResetTimer = null;
+          }, dropDelayMs);
+        }
+      } else {
+        dropAnim.goToAndStop(dropIdleFrame, true);
+      }
+      thumbDirection = 0;
+    };
+
+    /**
+     * 重建 thumb 动画与精度模式上拉动画
+     *
+     * 配置来自 ConfigStore 的 progress.thumbIcon：
+     * - 无配置：内置兜底动画
+     * - drag/drop 传 URL：播放器 fetch JSON 后交给 lottie
+     * - kind="image" 或 staticImage：直接渲染静态图片，不创建 lottie
+     * - 描述里的 totalFrames / frameRate / idleFrame 决定停帧与落点延迟
+     */
+    const rebuildThumbAnimations = async (): Promise<void> => {
+      if (!isBrowser()) return;
+      const icon = thumbIconRef.value;
+      if (!icon) return;
+      const config = thumbConfigSignal.value;
+      destroyThumbAnimations();
+
+      dragDirection = config?.drag?.direction ?? "follow";
+      applyThumbSize(
+        config?.size ?? config?.drag?.size ?? config?.drop?.size ?? 20,
+      );
+
+      // 静态图片：不做拖拽 / 落点动画
+      const staticImage =
+        config?.staticImage ??
+        (config?.drag?.kind === "image" ? config.drag.url : undefined);
+      if (staticImage) {
+        const image = document.createElement("img");
+        image.src = staticImage;
+        image.style.cssText = "width:100%;height:100%;object-fit:contain;";
+        icon.appendChild(image);
+        hasCustomDrop = false;
+        dropIdleFrame = 0;
+        dropDelayMs = 0;
+        return;
+      }
+
+      const dragSource = config?.drag;
+      const dropSource = config?.drop;
+      dragIdleFrame =
+        dragSource?.idleFrame ??
+        (dragSource?.totalFrames !== undefined
+          ? Math.floor(dragSource.totalFrames / 2)
+          : 0);
+      dropIdleFrame =
+        dropSource?.idleFrame ??
+        (dropSource?.totalFrames !== undefined
+          ? Math.floor(dropSource.totalFrames / 2)
+          : 0);
+      hasCustomDrop = Boolean(dropSource?.url);
+      dropDelayMs =
+        config?.dropDelayMs ??
+        (dropSource?.totalFrames && dropSource.frameRate
+          ? (dropSource.totalFrames / dropSource.frameRate) * 1000 + 200
+          : 0);
+
+      let dragData: Record<string, unknown> = thumbFallbackData;
+      let dropData: Record<string, unknown> = thumbFallbackData;
+      if (dragSource?.url && dragSource.kind !== "image") {
+        try {
+          dragData = await loadThumbData(dragSource.url);
+        } catch {
+          dragData = thumbFallbackData;
+        }
+      }
+      if (dropSource?.url && dropSource.kind !== "image") {
+        try {
+          dropData = await loadThumbData(dropSource.url);
+        } catch {
+          dropData = thumbFallbackData;
+        }
+      }
+
+      const lottie = await loadProgressLottie();
+      if (!thumbIconRef.value) return;
+      thumbDragDom = document.createElement("div");
+      thumbDropDom = document.createElement("div");
+      thumbDragDom.style.cssText = "width:100%;height:100%;";
+      thumbDropDom.style.cssText = "width:100%;height:100%;";
+
+      dragAnim = lottie.loadAnimation({
+        container: thumbDragDom,
+        renderer: "svg",
+        loop: false,
+        autoplay: false,
+        animationData: dragData,
+      });
+      dropAnim = lottie.loadAnimation({
+        container: thumbDropDom,
+        renderer: "svg",
+        loop: false,
+        autoplay: false,
+        animationData: dropData,
+      });
+      dragAnim.addEventListener("DOMLoaded", () => {
+        dragIdleFrame = resolveIdleFrame(
+          dragSource,
+          dragAnim?.totalFrames ?? 0,
+        );
+        dragAnim?.goToAndStop(dragIdleFrame, true);
+      });
+      dropAnim.addEventListener("DOMLoaded", () => {
+        dropIdleFrame = resolveIdleFrame(
+          dropSource,
+          dropAnim?.totalFrames ?? 0,
+        );
+        dropAnim?.goToAndStop(dropIdleFrame, true);
+      });
+      thumbIconRef.value.appendChild(thumbDragDom);
+
+      if (pullIndicatorRef.value) {
+        pullAnim = lottie.loadAnimation({
+          container: pullIndicatorRef.value,
+          renderer: "svg",
+          loop: false,
+          autoplay: false,
+          animationData: pullIndicatorData,
+        });
+        // 首次按下发生在动画加载完成前时补一次播放
+        pullAnim.addEventListener("DOMLoaded", () => {
+          if (isDragging) pullAnim?.play();
+        });
+      }
+    };
+
+    /**
+     * 精度模式：按鼠标上移距离抬高轨道，切换 pulling 状态并同步光标尺寸
+     *
+     * 上拉高度夹在 [基准高度, 11 倍基准高度]；高度变化时停止上拉动画（停在当前帧），
+     * thumb 隐藏、cursor 显示并按原版公式随高度改变尺寸。
+     */
+    const applyPulling = (clientX: number, clientY: number): void => {
+      const track = trackRef.value;
+      if (!track) return;
+      if (trackBaseHeight <= 0) trackBaseHeight = track.clientHeight || 4;
+      const rect = track.getBoundingClientRect();
+      const height = Math.min(
+        Math.max(Math.floor(rect.bottom - clientY), trackBaseHeight),
+        trackBaseHeight * 11,
+      );
+      track.style.height = `${height}px`;
+
+      const ratio = height / trackBaseHeight;
+      if (ratio !== pullRatio) {
+        pullRatio = ratio;
+        // demo 同款：高度变化时停止上拉动画，停在当前帧
+        pullAnim?.stop();
+        const duration = durationSignal.value;
+        if (ratio > 1) {
+          precisionLeftTime = (1 - 1 / ratio) * startPercentage * duration;
+          precisionRightTime =
+            precisionLeftTime + (1 / ratio) * duration;
+        } else {
+          precisionLeftTime = 0;
+          precisionRightTime = duration;
+        }
+        const active = ratio > 1;
+        if (active !== pullingActive) {
+          pullingActive = active;
+          pullingSignal.value = active;
+        }
+      }
+
+      const cursor = cursorRef.value;
+      if (!cursor) return;
+      if (!pullingActive) {
+        cursor.style.width = "";
+        cursor.style.height = "";
+        cursor.style.left = "";
+        cursor.style.top = "";
+        cursor.style.transform = "";
+        return;
+      }
+      // 光标尺寸随轨道高度变化（bpx 原版公式）
+      const cw = -0.205 * height + 13.026;
+      const ch = 1.026 * height + 6.872;
+      const pct = Math.max(
+        0,
+        Math.min(1, (clientX - rect.left) / (rect.width || 1)),
+      );
+      cursor.style.width = `${cw}px`;
+      cursor.style.height = `${ch}px`;
+      cursor.style.left = `${-cw / 2}px`;
+      cursor.style.top = `${(height - ch) / 2}px`;
+      cursor.style.transform = `translateX(${pct * rect.width}px)`;
+    };
+
+    /** 退出精度模式：恢复轨道高度、pulling 类、光标尺寸与局部时间窗口 */
+    const resetPulling = (): void => {
+      const track = trackRef.value;
+      if (track) track.style.height = "";
+      pullAnim?.stop();
+      pullRatio = 1;
+      precisionLeftTime = 0;
+      precisionRightTime = 0;
+      if (pullingActive) {
+        pullingActive = false;
+        pullingSignal.value = false;
+      }
+      const cursor = cursorRef.value;
+      if (cursor) {
+        cursor.style.width = "";
+        cursor.style.height = "";
+        cursor.style.left = "";
+        cursor.style.top = "";
+        cursor.style.transform = "";
+      }
+      trackBaseHeight = 0;
+    };
+
     /**
      * 鼠标按下处理（与既有实现 handleMouseDown 一致：点击立即跳转，
      * 随后进入拖拽状态，拖拽过程中连续 seek）
@@ -679,6 +1085,15 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
       if (!isBrowser()) return;
       event.preventDefault();
       isDragging = true;
+      trackBaseHeight = trackRef.value?.clientHeight || 4;
+      startPercentage = getPercentageFromX(event.clientX);
+      thumbDirection = 0;
+      thumbClientX = event.clientX;
+      // 按下即挂拖拽动画并播放 precision 上拉动画（demo handleDragDown 同款）
+      if (thumbIconRef.value && thumbDragDom) {
+        thumbIconRef.value.replaceChildren(thumbDragDom);
+      }
+      pullAnim?.play();
 
       lifecycle.emit?.("seekStart");
 
@@ -694,11 +1109,23 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
       const onMouseMove = (e: MouseEvent): void => {
         if (!isDragging) return;
         e.preventDefault();
-        /** 拖拽位置对应的时间 */
-        const t = getTimeFromX(e.clientX);
-        updateProgressUI(t);
-        updatePopup(e.clientX);
-        lifecycle.emit?.("seek", t);
+        const pct = getPercentageFromX(e.clientX);
+        // 先处理精度模式高度，再决定拖拽映射（demo onDragMove 顺序一致）
+        applyPulling(e.clientX, e.clientY);
+
+        let target: number;
+        if (pullingActive) {
+          // 精度模式：局部时间窗口内取时间，不再更新全局预览与 thumb 动画
+          target =
+            precisionLeftTime +
+            (precisionRightTime - precisionLeftTime) * pct;
+        } else {
+          handleThumbAnim(e.clientX);
+          updatePopup(e.clientX);
+          target = pct * durationSignal.value;
+        }
+        updateProgressUI(target);
+        lifecycle.emit?.("seek", target);
       };
 
       /**
@@ -706,6 +1133,9 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
        */
       const onMouseUp = (): void => {
         isDragging = false;
+        // 松手落点动画：无自定义图标时切回 drop 动画停在中间帧
+        showThumbDropFrame();
+        resetPulling();
         lifecycle.emit?.("seekEnd");
 
         document.removeEventListener("mousemove", onMouseMove);
@@ -730,8 +1160,8 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         hoverTimer = null;
       }
       if (!isDragging) {
-        // 响应式：写入信号，编译期自动包装的 __reactiveAttrs 会移除 state-active 类
         popupActiveSignal.value = false;
+        resetPulling();
       }
     };
 
@@ -742,7 +1172,6 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     /**
      * 分段几何的响应式样式 getter
      *
-     * 编译器把 style: segmentBoxStyle(index) 包装为 __reactiveAttrs getter，
      * 函数体内部读取 segmentsSignal / durationSignal 建立依赖：
      * 时长到手（setDuration）或分段重建（rebuildSegments）时，
      * 每个分段容器的 left/width/marginRight 由响应式系统增量更新，
@@ -795,7 +1224,6 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         return h(
           "div",
           {
-            // 响应式 class：hover 由 hoveredSegIdxSignal 驱动（编译期包装为 __reactiveAttrs）
             class: [
               "nova-player-progress-schedule nova-player-progress-schedule-segment",
               { hover: hoveredSegIdxSignal.value === index },
@@ -873,7 +1301,6 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     /**
      * 单根分钟刻度位置的响应式样式 getter
      *
-     * 编译器把 style: minuteTickStyle(minute) 包装为 __reactiveAttrs getter，
      * 读取 durationSignal 建立依赖：时长变化时已渲染刻度的 left 位置
      * 由响应式系统增量更新（替代旧实现全量销毁重建）。
      * @param minute - 分钟数
@@ -951,6 +1378,18 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         setDuration,
         rebuildSegments,
       });
+      void rebuildThumbAnimations();
+      // 运行时更新 progress.thumbIcon：重建动画，不重启播放器
+      if (configStore) {
+        offThumbConfig = configStore.subscribePath(
+          "progress.thumbIcon",
+          (value) => {
+            thumbConfigSignal.value =
+              value as ProgressThumbIconConfig | undefined;
+            if (isBrowser()) void rebuildThumbAnimations();
+          },
+        );
+      }
     };
 
     /**
@@ -974,6 +1413,9 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         document.removeEventListener("mouseup", dragMouseUp);
         dragMouseUp = null;
       }
+      destroyThumbAnimations();
+      offThumbConfig?.();
+      offThumbConfig = null;
       segmentBufferRefs = [];
       segmentCurrentRefs = [];
       lastFillRatios = [];
@@ -999,17 +1441,17 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
       h(
         "div",
         {
-          // 响应式 class：state-active 由 popupActiveSignal 驱动（编译期包装为 __reactiveAttrs）
           class: [
             "nova-player-progress-wrap",
-            { "state-active": popupActiveSignal.value },
+            {
+              "state-active": popupActiveSignal.value,
+              "state-pulling": pullingSignal.value,
+            },
           ],
         },
         h(
           "div",
-          { class: "nova-player-progress" },
-          // 当前播放进度条（For：segmentsSignal 驱动 key-based 精准更新，
-          // 替代旧实现手动 mount/destroy + querySelectorAll 收集引用）
+          { class: "nova-player-progress", ref: "progressTrackRef" },
           h(
             "div",
             { class: "nova-player-progress-schedule-wrap" },
@@ -1019,16 +1461,11 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
                 const list = segmentsSignal.value;
                 return list.length > 1 ? list : [SINGLE_BAR];
               },
-              // key = 位置下标：同类型（多分段 / 单条整轴）内重建时 key 不变，
-              // 节点复用、只更新几何与内容；kind 前缀区分两种节点的结构差异，
-              // 单条整轴 ↔ 多分段切换时结构不同，必须重建。
               key: (item: unknown, index: number): string =>
                 isProgressSegment(item) ? `segment:${index}` : "single",
               render: renderSegmentItem,
             }),
           ),
-          // 分钟刻度层（For：durationSignal 驱动，时长到手自动补建，
-          // 时长变化自动增删并响应式重排位置，替代旧 buildScaleplate）
           h(
             "div",
             { class: "nova-player-progress-scaleplate" },
@@ -1127,14 +1564,12 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
               ref: "thumbRef",
               style: { left: "0%" },
             },
-            h(
-              "div",
-              {
-                class:
-                  "nova-player-progress-thumb-icon nova-player-progress-thumb-icon-dynamic nova-player-progress-thumb-active",
-              },
-              h("span", { class: "common-svg-icon" }),
-            ),
+            h("div", {
+              class:
+                "nova-player-progress-thumb-icon nova-player-progress-thumb-icon-dynamic nova-player-progress-thumb-active",
+              // lottie 的 drag / drop 两个实例挂载点
+              ref: "thumbIconRef",
+            }),
           ),
           // 移动指示器
           h(
@@ -1146,7 +1581,6 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
             h("div", { class: "nova-player-progress-move-indicator-down" }),
             h("div", { class: "nova-player-progress-move-indicator-up" }),
           ),
-          // 预览弹窗（显隐由 .nova-player-progress-wrap 的 state-active 类配合 CSS 控制）
           h(
             "div",
             {
@@ -1158,7 +1592,6 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
               { class: "nova-player-progress-preview" },
               h("img", {
                 class: "nova-player-progress-preview-image",
-                // 响应式 src + style：信号驱动（编译期包装为 __reactiveAttrs）
                 src: previewSrcSignal.value,
                 style: {
                   width: previewWidthSignal.value,
@@ -1182,15 +1615,12 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
               () => hotspotTextSignal.value,
             ),
           ),
-          // 拉拽指示器
-          h(
-            "div",
-            {
-              class: "nova-player-progress-pull-indicator",
-              style: { transform: "translateX(0px)" },
-            },
-            h("span", { class: "common-svg-icon" }),
-          ),
+          // 精度模式上拉指示器（lottie 直接挂载到该容器，与 thumb 同步位移）
+          h("div", {
+            class: "nova-player-progress-pull-indicator",
+            ref: "pullIndicatorRef",
+            style: { transform: "translateX(0px)" },
+          }),
           // 光标
           h("div", { class: "nova-player-progress-cursor", ref: "cursorRef" }),
         ),

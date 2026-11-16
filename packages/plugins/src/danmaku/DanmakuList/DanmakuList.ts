@@ -976,8 +976,21 @@ export const DanmakuList = defineComponent<DanmakuListProps>(
       if (!isLoggedIn()) return;
       if (!pickerInited.value) {
         const today = nowDate();
-        viewYear.value = today.year;
-        viewMonth.value = today.month;
+        // 默认定位到「最近一个存在历史弹幕的月份」：
+        // 直接打开当前月时，若该月没有任何可用日期，选择器会是一片空白，
+        // 用户无从下手（默认演示数据也集中在更早的月份）。
+        const todayKey = formatDateKey(today.year, today.month, today.day);
+        const latestAvailable = [...historyDateSet()]
+          .filter((key: string): boolean => key <= todayKey)
+          .sort()
+          .pop();
+        if (latestAvailable !== undefined) {
+          viewYear.value = Number(latestAvailable.slice(0, 4));
+          viewMonth.value = Number(latestAvailable.slice(5, 7)) - 1;
+        } else {
+          viewYear.value = today.year;
+          viewMonth.value = today.month;
+        }
         pickerInited.value = true;
       }
       datePickerOpen.value = !datePickerOpen.value;

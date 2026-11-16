@@ -10,11 +10,10 @@
  * （提取自原版完整 DOM 文件的 CSS，逐条对照），类名按 nova 契约映射
  * （bpx-player-* → nova-player-*）：
  *
- * 1. rich-pip-side-prev / -next：视频画面左右边缘垂直居中的悬浮层
- *    挂载点（内容由 ui.slots 的 stageLeft / stageRight 插槽注入，
- *    插槽内容皮肤样式归消费方，不在此文件）。
- *    显隐 = 容器 :hover / :focus-within（原版逐字规则，无附加条件）
- * 2. 原生 ctrl-prev / ctrl-next 隐藏（上下集由悬浮层承担，与原版一致）
+ * 1. 原生 ctrl-prev / ctrl-next 隐藏（上下集交给 video.overlay 插槽承担，
+ *    与原版一致）
+ * 2. 视频区悬浮插槽：`video.overlay` 直接挂到 video-area，播放器不提供
+ *    挂载层——内容定位、层级、显隐与皮肤样式全部归消费方，不在此文件
  * 3. control-bottom：flex 两端布局，left/right 各让出 40px，
  *    bottom-center 占据 flex: 1（为发送栏预留的中槽）
  * 4. 发送栏：由 moveSendBar 移入控制栏中央（与 full/web 同路径）并定死，
@@ -32,26 +31,6 @@
   .nova-player-ctrl-prev,
   .nova-player-ctrl-next {
     display: none;
-  }
-
-  // ---- 原版：.bpx-player-rich-pip-side-next / -prev（悬浮层挂载点）----
-  .nova-player-rich-pip-side-next,
-  .nova-player-rich-pip-side-prev {
-    opacity: 0;
-    pointer-events: none;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: opacity 0.18s;
-    z-index: 6;
-  }
-
-  .nova-player-rich-pip-side-prev {
-    left: 10px;
-  }
-
-  .nova-player-rich-pip-side-next {
-    right: 10px;
   }
 
   // ---- 原版：.bpx-player-ctrl-time ----
@@ -184,28 +163,5 @@
   .nova-player-top-issue {
     flex: 0 0 auto;
     margin-left: auto;
-  }
-}
-
-// ---- 原版规则原文（逐字映射）----
-// .bpx-player-container[data-screen="cross"]:focus-within .bpx-player-rich-pip-side-next,
-// .bpx-player-container[data-screen="cross"]:focus-within .bpx-player-rich-pip-side-prev,
-// .bpx-player-container[data-screen="cross"]:hover .bpx-player-rich-pip-side-next,
-// .bpx-player-container[data-screen="cross"]:hover .bpx-player-rich-pip-side-prev
-//   { opacity: 1; pointer-events: auto; }
-.nova-player-container[data-screen="cross"]:focus-within,
-.nova-player-container[data-screen="cross"]:hover {
-  .nova-player-rich-pip-side-next,
-  .nova-player-rich-pip-side-prev {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-// 非 cross 模式悬浮层隐藏（DOM 常驻但无副作用）
-.nova-player-container:not([data-screen="cross"]) {
-  .nova-player-rich-pip-side-next,
-  .nova-player-rich-pip-side-prev {
-    display: none;
   }
 }

@@ -261,6 +261,8 @@ export interface VNode {
   __flow?: FlowData;
   /** 静态模板标记：编译期模板化的静态子树，mount 直接克隆 DOM，SSR 直拼 html，水合直接采用 SSR DOM */
   __tmpl?: TmplData;
+  /** v2 骨架洞：与 __tmpl 配对，挂载/水合时按 path 绑定动态文本 */
+  __holes?: SkeletonHole[];
   /**
    * 多根静态模板克隆出的顶层节点列表（仅 roots > 1 时存在，mount/水合两种路径都会填充）
    * destroy 时逐个从 DOM 移除（多根无单一 el 可依赖）
@@ -269,6 +271,149 @@ export interface VNode {
   /** 内部标记：是否已挂载（开发环境检测重复挂载） */
   _mounted?: boolean;
 }
+
+/**
+ * v2 骨架 elementText 洞：元素只有文本子节点（静态 + 动态全部合并），直接写 textContent
+ *
+ * 模板中该元素为空元素，客户端 clone 后按 path 定位元素并写 textContent；
+ * SSR 按 parts 中的洞位求值输出文本。全程不产生占位节点。
+ */
+export interface SkeletonElementTextHole {
+  kind: "elementText";
+  /** 多根 fragment 时的根下标，默认 0 */
+  root?: number;
+  /** 从根元素开始的元素子节点索引路径；空数组表示根元素本身 */
+  path: number[];
+  /** 文本 getter */
+  get: () => string;
+}
+
+/**
+ * v2 骨架动态文本洞（零占位节点）
+ *
+ * 编译期把插入点编码为「父级静态子节点下标 + 文本内字符偏移」：
+ * 锚点是元素就直接插到它之前；锚点是文本则在插入前 splitText 拆开静态文本。
+ * 模板与 SSR 产物里都没有该文本的任何占位节点。
+ */
+export interface SkeletonTextHole {
+  kind: "text";
+  /** 根下标；-1 表示 fragment 顶层 */
+  root: number;
+  /** 洞所在父元素的元素路径（[] 表示该根元素自身） */
+  parent?: number[];
+  /** 父级静态子节点下标；等于子节点数量时表示追加 */
+  anchorChild: number;
+  /** 锚点是文本节点时的字符偏移（0 表示插到该文本节点之前） */
+  anchorOffset: number;
+  /** 文本 getter */
+  get: () => string;
+}
+
+/** v2 骨架属性洞：元素属性值动态，客户端 effect 更新，SSR 序列化输出 */
+export interface SkeletonAttrHole {
+  kind: "attr";
+  /** 多根 fragment 时的根下标，默认 0 */
+  root?: number;
+  /** 元素路径，语义同 elementText */
+  path: number[];
+  /** 原始属性名（如 className / style / checked） */
+  name: string;
+  /** 属性值 getter */
+  get: () => unknown;
+}
+
+/**
+ * v2 骨架整对象 attrs 洞
+ *
+ * attrs 不是对象字面量（变量 / 调用结果 / 含展开计算）时使用：模板不含任何
+ * 属性，客户端一次性 applyAttrs（含事件 / ref / 指令语义），SSR 不输出属性。
+ * 这样静态结构仍编译为骨架，不退回解释执行 h()。
+ */
+export interface SkeletonAttrsHole {
+  kind: "attrs";
+  /** 多根 fragment 时的根下标，默认 0 */
+  root?: number;
+  /** 元素路径，语义同 elementText */
+  path: number[];
+  /** attrs 对象 getter */
+  get: () => unknown;
+}
+
+/**
+ * v2 骨架子节点洞（零占位节点）
+ *
+ * 模板里不为动态子节点保留任何注释或文本占位：编译期只记录插入位置。
+ * - 客户端克隆骨架后，按 parent + anchorChild/anchorOffset 定位插入点，
+ *   把动态节点挂到静态锚点之前；
+ * - SSR 不输出该洞（与事件 / ref / 指令洞一致），SSR DOM 与模板静态结构完全一致；
+ * - 水合采用 SSR 静态骨架后，客户端再挂载动态节点，全程无锚点标记。
+ */
+export interface SkeletonChildHole {
+  kind: "child";
+  /** 根下标；-1 表示 fragment 顶层洞 */
+  root: number;
+  /** root >= 0 时：洞所在父元素的元素路径（[] 表示该根元素自身） */
+  parent?: number[];
+  /** 父级静态子节点下标；等于子节点数量时表示追加 */
+  anchorChild: number;
+  /** 锚点是文本节点时的字符偏移（0 表示插到该文本节点之前） */
+  anchorOffset: number;
+  /** 动态子节点 getter（VNode / 字符串 / null 等任意 h() 子节点值） */
+  get: () => unknown;
+}
+
+/** v2 骨架事件洞：客户端绑定事件，SSR 不输出属性 */
+export interface SkeletonEventHole {
+  kind: "event";
+  /** 多根 fragment 时的根下标，默认 0 */
+  root?: number;
+  /** 元素路径，语义同 elementText */
+  path: number[];
+  /** 原始事件 prop 名（如 onClick） */
+  name: string;
+  /** 事件处理器 getter */
+  get: () => unknown;
+}
+
+/** v2 骨架 ref 洞：客户端/水合绑定元素引用，SSR 不输出 */
+export interface SkeletonRefHole {
+  kind: "ref";
+  root?: number;
+  path: number[];
+  get: () => unknown;
+}
+
+/** v2 骨架内容洞：innerHTML / textContent / svgContent */
+export interface SkeletonContentHole {
+  kind: "content";
+  root?: number;
+  path: number[];
+  mode: "innerHTML" | "textContent" | "svgContent";
+  get: () => unknown;
+}
+
+/** v2 骨架指令洞：客户端应用 v-* 指令，SSR 不输出 */
+export interface SkeletonDirectiveHole {
+  kind: "directive";
+  root?: number;
+  path: number[];
+  name: string;
+  get: () => unknown;
+}
+
+export type SkeletonHole =
+  | SkeletonElementTextHole
+  | SkeletonTextHole
+  | SkeletonAttrHole
+  | SkeletonAttrsHole
+  | SkeletonChildHole
+  | SkeletonEventHole
+  | SkeletonRefHole
+  | SkeletonContentHole
+  | SkeletonDirectiveHole;
+
+/** v2 SSR 片段：字符串为静态片段，数字为洞下标 */
+export type SkeletonPart = string | number;
 
 /**
  * 静态模板数据（编译期 DOM 化：静态子树 → HTML 字符串 + 运行时 cloneNode）
@@ -285,6 +430,8 @@ export interface TmplData {
   roots: number;
   /** 克隆函数：惰性创建 <template> 后 cloneNode，仅客户端 mount 路径调用 */
   clone: () => Node;
+  /** v2 有序片段；缺省时 SSR 直接输出 html */
+  parts?: SkeletonPart[];
 }
 
 // ============================================

@@ -192,6 +192,7 @@
   width: 20px;
 
   .nova-player-progress-thumb-icon {
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
     height: 100%;
     line-height: 12px;
     -webkit-transform: scale(0);
@@ -332,17 +333,34 @@
 }
 
 .nova-player-progress-pull-indicator {
+  bottom: 10px;
   height: 18px;
+  left: 0;
   line-height: 18px;
+  pointer-events: none;
   position: absolute;
   width: 18px;
-  opacity: 0;
-  display: none;
+  z-index: 1;
+  will-change: transform;
 
   svg {
     width: 100%;
     height: 100%;
+    overflow: visible;
     transform: translate3d(0px, 0px, 0px);
+  }
+}
+
+/* 精度模式：thumb 隐藏，光标随轨道高度显示 */
+.nova-player-progress-wrap.state-pulling {
+  .nova-player-progress-thumb {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .nova-player-progress-cursor {
+    opacity: 1;
+    visibility: visible;
   }
 }
 

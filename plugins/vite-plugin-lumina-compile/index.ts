@@ -172,6 +172,10 @@ export function luminaCompile(options?: LuminaCompileOptions): Plugin {
       const isExcluded = opts.exclude.some((pattern) => pattern.test(id));
       if (isExcluded) return null;
 
+      // v2 已在 pre 阶段处理过的文件仍继续走 v1：
+      // v2 只替换命中的 h()，剩余调用交给 v1 编译，避免混合文件退化到运行时 h()。
+      // v2 自身通过 @lumina-compiled:v2 标记保证幂等。
+
       // 第二层：内容过滤 —— 只转换真正使用了框架 API 的文件
       // 参照 Vue 只处理 .vue、Solid 只处理 JSX 的思路
       // 纯工具/类型文件即使有 class 也不会被转换

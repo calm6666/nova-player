@@ -7,7 +7,10 @@
  * 支持服务端渲染(SSR)环境
  */
 
-import type { VNode, VNodeAttrs, VNodeChild, Lifecycle, RefValue, DirectiveFn } from "../types/index";
+import type { VNode, VNodeAttrs, VNodeChild, Lifecycle, RefValue, DirectiveFn, SkeletonChildHole, SkeletonTextHole, SkeletonHole, SkeletonPart, TmplData } from "../types/index";
+
+/** 会插入动态节点的洞（child / text）：零占位节点，靠静态锚点定位 */
+type InsertHole = SkeletonChildHole | SkeletonTextHole;
 import { effect, untracked } from "./signalsCore";
 import type { Signal } from "./signalsCore";
 import { isBrowser } from "../utils/index";
@@ -172,6 +175,733 @@ export function mount(vnode: VNode | string, container: HTMLElement): void {
 }
 
 /**
+ * 按元素子节点索引解析骨架 path
+ *
+ * path 只计入 Element.children，文本节点不参与索引。
+ */
+function resolveSkeletonPath(root: Element, path: number[]): Element | null {
+  let current: Element | null = root;
+  for (const index of path) {
+    current = current?.children.item(index) ?? null;
+    if (current === null) return null;
+  }
+  return current;
+}
+
+/**
+ * 在骨架根的顶层节点里取第 N 个元素节点（文本根不参与计数）
+ */
+function skeletonRootAt(roots: Node[], index: number): Element | null {
+  let seen = 0;
+  for (const node of roots) {
+    if (node.nodeType !== 1) continue;
+    if (seen === index) return node as Element;
+    seen += 1;
+  }
+  return null;
+}
+
+/** 骨架静态路径键：path 只计入元素子节点 */
+function skeletonPathKey(path: number[]): string {
+  return path.join("/");
+}
+
+/**
+ * 水合参考树
+ *
+ * 由编译产物的 parts 还原出的游离 <template> 内容，节点位置的洞替换为
+ * 占位注释，仅用于和 SSR DOM 逐节点对齐。它永远不会插入文档，不参与渲染。
+ */
+interface SkeletonReference {
+  content: DocumentFragment;
+  /** 洞两侧都是文本时 HTML 解析会合并文本，无法按参考对齐，回退旧路径 */
+  unsafeTextMerge: boolean;
+}
+
+const skeletonReferenceCache = new WeakMap<SkeletonPart[], SkeletonReference>();
+
+/** 构建（并缓存）骨架水合参考树 */
+function getSkeletonReference(
+  parts: SkeletonPart[],
+  holes: SkeletonHole[],
+): SkeletonReference {
+  const cached = skeletonReferenceCache.get(parts);
+  if (cached !== undefined) return cached;
+
+  let html = "";
+  for (const part of parts) {
+    if (typeof part !== "number") {
+      html += part;
+      continue;
+    }
+    const hole = holes[part];
+    // 属性洞位于标签内部，占位注释会让 HTML 非法；只有节点位置的洞需要占位
+    if (hole !== undefined && (hole.kind === "child" || hole.kind === "text")) {
+      html += `<!--h${part}-->`;
+    }
+  }
+
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const content = template.content;
+
+  // 洞夹在两段静态文本之间时解析器会合并文本，无法逐节点对齐
+  let unsafeTextMerge = false;
+  const walker = document.createTreeWalker(content, NodeFilter.SHOW_COMMENT);
+  let comment = walker.nextNode();
+  while (comment !== null) {
+    const prev = comment.previousSibling;
+    const next = comment.nextSibling;
+    if (
+      prev !== null &&
+      next !== null &&
+      prev.nodeType === 3 &&
+      next.nodeType === 3
+    ) {
+      unsafeTextMerge = true;
+      break;
+    }
+    comment = walker.nextNode();
+  }
+
+  const reference = { content, unsafeTextMerge };
+  skeletonReferenceCache.set(parts, reference);
+  return reference;
+}
+
+/** 水合上下文：洞表、静态路径到真实元素的映射、失败标记 */
+interface SkeletonHydrationContext {
+  holes: SkeletonHole[];
+  pathMap: Map<string, Element>;
+  failed: boolean;
+  vnode: VNode;
+}
+
+/**
+ * 在已采用的骨架根内按参考树对齐，就地水合 SSR 直出的洞内容
+ *
+ * 返回 false 表示无法安全复用（参考不可用或结构对不上），调用方回退旧路径。
+ */
+function hydrateSkeletonTree(
+  vnode: VNode,
+  rootEl: Element,
+  reference: SkeletonReference,
+): boolean {
+  const rootRef = reference.content.firstElementChild;
+  if (rootRef === null) return false;
+
+  const ctx: SkeletonHydrationContext = {
+    holes: vnode.__holes ?? [],
+    // 空字符串键对应骨架根自身（path 为 [] 的 attr / ref 洞）
+    pathMap: new Map<string, Element>([["", rootEl]]),
+    failed: false,
+    vnode,
+  };
+
+  const rest = hydrateSkeletonChildren(rootRef, rootEl, ctx, []);
+  if (ctx.failed) return false;
+
+  // 参考树之外的残余 SSR 节点属于已失效的洞输出，清理避免重复
+  let node = rest;
+  while (node !== null) {
+    const next = node.nextSibling;
+    node.parentNode?.removeChild(node);
+    node = next;
+  }
+
+  vnode.el = rootEl;
+  // 节点位置的洞已由遍历处理，这里只绑定剩余路径洞（attr / ref / event 等）
+  bindSkeletonHoles(vnode, [rootEl], undefined, ctx.pathMap);
+  return true;
+}
+
+/** 按参考树递归对齐并水合一层子节点，返回对齐结束后的游标 */
+function hydrateSkeletonChildren(
+  refParent: ParentNode,
+  domParent: Element,
+  ctx: SkeletonHydrationContext,
+  parentPath: number[],
+): ChildNode | null {
+  let cursor: ChildNode | null = domParent.firstChild;
+  let elementIndex = 0;
+
+  for (const refChild of Array.from(refParent.childNodes)) {
+    if (refChild.nodeType === 8) {
+      // 占位注释：该位置是节点洞，按洞类型复用或新建
+      const holeIndex = Number((refChild as Comment).data.slice(1));
+      const hole = ctx.holes[holeIndex];
+      if (hole === undefined) continue;
+      cursor = hydrateSkeletonHole(hole, cursor, domParent, ctx);
+      if (ctx.failed) return cursor;
+      continue;
+    }
+
+    if (refChild.nodeType === 1) {
+      if (
+        !(cursor instanceof Element) ||
+        cursor.tagName !== (refChild as Element).tagName
+      ) {
+        ctx.failed = true;
+        return cursor;
+      }
+      const path = parentPath.concat(elementIndex);
+      elementIndex += 1;
+      ctx.pathMap.set(skeletonPathKey(path), cursor);
+      cursor = hydrateSkeletonChildren(
+        refChild as Element,
+        cursor,
+        ctx,
+        path,
+      );
+      if (ctx.failed) return cursor;
+      continue;
+    }
+
+    // 静态文本：SSR 与参考内容应逐字一致
+    if (
+      cursor === null ||
+      cursor.nodeType !== 3 ||
+      (cursor as Text).data !== (refChild as Text).data
+    ) {
+      ctx.failed = true;
+      return cursor;
+    }
+    cursor = cursor.nextSibling;
+  }
+
+  return cursor;
+}
+
+/** 水合单个节点位置的洞，返回新的游标 */
+function hydrateSkeletonHole(
+  hole: SkeletonHole,
+  cursor: ChildNode | null,
+  parent: Element,
+  ctx: SkeletonHydrationContext,
+): ChildNode | null {
+  const vnode = ctx.vnode;
+  if (!vnode._cleanups) vnode._cleanups = [];
+
+  // 文本洞：SSR 不直出，直接创建文本节点并建立响应式绑定
+  if (hole.kind === "text") {
+    const textNode = document.createTextNode(String(hole.get() ?? ""));
+    parent.insertBefore(textNode, cursor);
+    const dispose = effect(() => {
+      const next = String(hole.get() ?? "");
+      if (textNode.textContent !== next) textNode.textContent = next;
+    });
+    vnode._cleanups.push(dispose);
+    return cursor;
+  }
+
+  if (hole.kind !== "child") return cursor;
+
+  const value = hole.get();
+  if (value === null || value === undefined || typeof value === "boolean") {
+    return cursor;
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    parent.insertBefore(document.createTextNode(String(value)), cursor);
+    return cursor;
+  }
+
+  const child = value as VNode;
+  if (child.__parent === undefined) child.__parent = vnode;
+
+  // SSR 只直出元素根的 child 洞（见 ssr.ts 的同一套规则），其余直接挂载；
+  // fragment / 组件按 hydrateNode 自身的游标语义消费 SSR 节点
+  let canHydrate = hole.root !== -1 && cursor !== null;
+  if (canHydrate && typeof child.tag === "string") {
+    canHydrate =
+      cursor instanceof Element &&
+      cursor.tagName.toLowerCase() === String(child.tag).toLowerCase();
+  }
+
+  if (canHydrate) {
+    const next = hydrateNode(child, cursor, parent);
+    if (next !== cursor) return next;
+    // 洞 vnode 与 SSR 输出对不上：交给调用方整段回退
+    ctx.failed = true;
+    return cursor;
+  }
+
+  // 无 SSR 输出：挂到参考位置（cursor 之前）
+  const before = parent.lastChild;
+  mount(child, parent as unknown as HTMLElement);
+  const moved: Node[] = [];
+  let node = before !== null ? before.nextSibling : parent.firstChild;
+  while (node !== null) {
+    moved.push(node);
+    node = node.nextSibling;
+  }
+  for (const mounted of moved) parent.insertBefore(mounted, cursor);
+  vnode._cleanups.push(() => destroy(child));
+  return cursor;
+}
+
+/** 解析骨架洞的父容器与静态节点序列 */
+function skeletonInsertScope(
+  roots: Node[],
+  root: number,
+  parentPath: number[] | undefined,
+): { container: Node; nodes: Node[] } | null {
+  if (root === -1) {
+    const container = roots[0]?.parentNode;
+    if (!container) return null;
+    return { container, nodes: roots };
+  }
+  const rootNode = roots[root];
+  if (!rootNode || rootNode.nodeType !== 1) return null;
+  const parentEl = resolveSkeletonPath(rootNode as Element, parentPath ?? []);
+  if (!parentEl) return null;
+  return { container: parentEl, nodes: Array.from(parentEl.childNodes) };
+}
+
+/** child / text 洞的待插入目标 */
+interface PendingInsert {
+  hole: InsertHole;
+  container: Node;
+  /** 插入到该节点之前；null 表示追加到末尾 */
+  ref: Node | null;
+  /** 锚点文本节点（插入前需按 offset 拆分静态文本） */
+  textNode: Text | null;
+  offset: number;
+  /** 插在该文本节点整段之后 */
+  atEnd: boolean;
+}
+
+/**
+ * 解析 child / text 洞的插入目标
+ */
+function resolveHoleInsert(
+  roots: Node[],
+  hole: InsertHole,
+  fragmentContext: { container: Node; ref: Node | null } | undefined,
+): PendingInsert | null {
+  const scope =
+    hole.root === -1 && roots.length === 0
+      ? fragmentContext
+        ? { container: fragmentContext.container, nodes: [] as Node[] }
+        : null
+      : skeletonInsertScope(roots, hole.root, hole.parent);
+  if (!scope) return null;
+  const { container, nodes } = scope;
+  const index = hole.anchorChild;
+  const offset = hole.anchorOffset;
+  if (index < nodes.length) {
+    const node = nodes[index];
+    if (node.nodeType === 3) {
+      const text = node as Text;
+      if (offset === 0) {
+        return { hole, container, ref: text, textNode: null, offset: 0, atEnd: false };
+      }
+      if (offset < text.data.length) {
+        return { hole, container, ref: null, textNode: text, offset, atEnd: false };
+      }
+      return { hole, container, ref: null, textNode: text, offset, atEnd: true };
+    }
+    return { hole, container, ref: node, textNode: null, offset: 0, atEnd: false };
+  }
+  // 追加：fragment 顶层必须追加在最后一个静态根之后
+  if (hole.root === -1) {
+    if (nodes.length === 0) {
+      return {
+        hole,
+        container,
+        ref: fragmentContext?.ref ?? null,
+        textNode: null,
+        offset: 0,
+        atEnd: false,
+      };
+    }
+    const lastRoot = nodes[nodes.length - 1];
+    return {
+      hole,
+      container,
+      ref: lastRoot.nextSibling,
+      textNode: null,
+      offset: 0,
+      atEnd: false,
+    };
+  }
+  return { hole, container, ref: null, textNode: null, offset: 0, atEnd: false };
+}
+
+/**
+ * 绑定 v2 骨架洞
+ *
+ * 编译产物里没有任何注释 / 文本占位节点，锚点就是模板自带的静态节点。
+ * 分四步，互不干扰：
+ * 1. 解析 child / text 洞的插入目标（此时静态结构未被改动）；
+ * 2. 按偏移拆分锚点文本节点（静态文本内部插入动态内容必需）；
+ * 3. 绑定 attr / event / ref / 指令 / 内容 / elementText 路径洞；
+ * 4. 挂载 child 洞动态节点、插入 text 洞文本节点（插到锚点之前）。
+ */
+function bindSkeletonHoles(
+  vnode: VNode,
+  roots: Node[],
+  fragmentContext?: { container: Node; ref: Node | null },
+  pathMap?: Map<string, Element>,
+): void {
+  const holes = vnode.__holes;
+  if (!holes || holes.length === 0) return;
+  if (!vnode._cleanups) vnode._cleanups = [];
+
+  /** 路径洞目标：水合路径用参考树映射，其余仍按 SSR 结构解析 */
+  const resolveHoleEl = (hole: {
+    root?: number;
+    path: number[];
+  }): Element | null => {
+    if (pathMap !== undefined) {
+      return pathMap.get(skeletonPathKey(hole.path)) ?? null;
+    }
+    const rootNode = skeletonRootAt(roots, hole.root ?? 0);
+    if (rootNode === null || rootNode.nodeType !== 1) return null;
+    return resolveSkeletonPath(rootNode, hole.path);
+  };
+
+  // 步骤 1：解析 child / text 洞插入目标
+  const pending: PendingInsert[] = [];
+  for (const hole of holes) {
+    // 水合路径：节点位置的洞已由 hydrateSkeletonHole 就地处理
+    if (pathMap !== undefined) break;
+    if (hole.kind !== "child" && hole.kind !== "text") continue;
+    const target = resolveHoleInsert(roots, hole, fragmentContext);
+    if (target) pending.push(target);
+  }
+
+  // 步骤 2：拆分锚点文本节点（倒序拆分，偏移互不影响）
+  const splitOffsets = new Map<Text, Set<number>>();
+  for (const item of pending) {
+    if (!item.textNode) continue;
+    const offsets = splitOffsets.get(item.textNode) ?? new Set<number>();
+    offsets.add(item.offset);
+    splitOffsets.set(item.textNode, offsets);
+  }
+  const splitPieces = new Map<Text, Map<number, Text>>();
+  const splitTails = new Map<Text, Text>();
+  for (const [textNode, offsets] of splitOffsets) {
+    const sorted = [...offsets].sort((a, b) => b - a);
+    const pieces = new Map<number, Text>();
+    let tail: Text = textNode;
+    for (const offset of sorted) {
+      tail = textNode.splitText(offset);
+      pieces.set(offset, tail);
+    }
+    splitPieces.set(textNode, pieces);
+    if (sorted.length > 0) {
+      splitTails.set(textNode, pieces.get(sorted[0]) ?? textNode);
+    }
+  }
+  // 回填锚点：文本内部偏移取拆分后的后半段，文本末尾取最后一段之后的节点
+  for (const item of pending) {
+    if (!item.textNode) continue;
+    const pieces = splitPieces.get(item.textNode);
+    if (item.atEnd) {
+      const tail = splitTails.get(item.textNode) ?? item.textNode;
+      item.ref = tail.nextSibling;
+    } else if (pieces !== undefined && pieces.size > 0) {
+      item.ref = pieces.get(item.offset) ?? item.textNode.nextSibling;
+    } else {
+      item.ref = item.textNode.nextSibling;
+    }
+  }
+
+  // 步骤 3：路径洞（不改变节点结构）
+  for (const hole of holes) {
+    if (hole.kind === "child" || hole.kind === "text") continue;
+    if (!hole.path) continue;
+    const el = resolveHoleEl(hole);
+    if (el === null) continue;
+
+    if (hole.kind === "event") {
+      const eventName = hole.name.slice(2).toLowerCase();
+      let current: EventListener | null = null;
+      const dispose = effect(() => {
+        const handler = hole.get();
+        if (current !== null) {
+          el.removeEventListener(eventName, current);
+          current = null;
+        }
+        if (typeof handler === "function") {
+          current = handler as EventListener;
+          el.addEventListener(eventName, current);
+        }
+      });
+      vnode._cleanups.push(dispose, () => {
+        if (current !== null) {
+          el.removeEventListener(eventName, current);
+          current = null;
+        }
+      });
+      continue;
+    }
+
+    if (hole.kind === "ref") {
+      const dispose = effect(() => {
+        bindRef(hole.get(), el, vnode);
+      });
+      vnode._cleanups.push(dispose);
+      continue;
+    }
+
+    if (hole.kind === "directive") {
+      const dirVNode: VNode = {
+        tag: "__skeleton_directive__",
+        attrs: { [hole.name]: hole.get() },
+        children: [],
+      };
+      applyAttrs(el, dirVNode.attrs, dirVNode);
+      if (dirVNode._cleanups) {
+        vnode._cleanups.push(...dirVNode._cleanups);
+      }
+      continue;
+    }
+
+    if (hole.kind === "content") {
+      const dispose = effect(() => {
+        const value = String(hole.get() ?? "");
+        if (hole.mode === "textContent") {
+          if (el.textContent !== value) el.textContent = value;
+        } else if (hole.mode === "innerHTML") {
+          if (el.innerHTML !== value) el.innerHTML = value;
+        } else {
+          el.replaceChildren(parseSafeSVG(value));
+        }
+      });
+      vnode._cleanups.push(dispose);
+      continue;
+    }
+
+    if (hole.kind === "attrs") {
+      // 整对象 attrs：一次性应用（含事件 / ref / 指令语义，与 v1 一致）
+      const attrs = hole.get();
+      if (attrs !== null && typeof attrs === "object") {
+        applyAttrs(el, attrs as VNodeAttrs, vnode);
+      }
+      continue;
+    }
+
+    if (hole.kind === "elementText") {
+      const dispose = effect(() => {
+        const next = String(hole.get() ?? "");
+        if (el.textContent !== next) el.textContent = next;
+      });
+      vnode._cleanups.push(dispose);
+      continue;
+    }
+
+    // attr 洞：class/style 覆盖式更新，其它属性复用 applyAttrs 语义
+    if (hole.name === "class" || hole.name === "className") {
+      const dispose = effect(() => {
+        const cls = normalizeClass(hole.get() as ClassInput);
+        if (cls) el.setAttribute("class", cls);
+        else el.removeAttribute("class");
+      });
+      vnode._cleanups.push(dispose);
+      continue;
+    }
+
+    if (hole.name === "style") {
+      const styleEl = el as HTMLElement | SVGElement;
+      let prevStyleProps: Set<string> | undefined;
+      const dispose = effect(() => {
+        const normalized = normalizeStyle(hole.get() as StyleInput);
+        if (prevStyleProps) {
+          for (const prop of prevStyleProps) {
+            styleEl.style.removeProperty(prop);
+          }
+        }
+        prevStyleProps = new Set();
+        if (normalized) {
+          for (const prop in normalized) {
+            if (!Object.prototype.hasOwnProperty.call(normalized, prop)) continue;
+            styleEl.style.setProperty(prop, normalized[prop]);
+            prevStyleProps.add(prop);
+          }
+        }
+      });
+      vnode._cleanups.push(dispose);
+      continue;
+    }
+
+    const dispose = effect(() => {
+      const attrVNode: VNode = {
+        tag: "__skeleton_attr__",
+        attrs: { [hole.name]: hole.get() },
+        children: [],
+      };
+      applyAttrs(el, attrVNode.attrs, attrVNode);
+    });
+    vnode._cleanups.push(dispose);
+  }
+
+  // 步骤 4：挂载动态子节点 / 插入动态文本节点（插到静态锚点之前）
+  for (const item of pending) {
+    const hole = item.hole;
+    if (hole.kind === "text") {
+      const owner = item.container.ownerDocument ?? document;
+      const textNode = owner.createTextNode("");
+      item.container.insertBefore(textNode, item.ref);
+      const dispose = effect(() => {
+        const next = String(hole.get() ?? "");
+        if (textNode.textContent !== next) textNode.textContent = next;
+      });
+      vnode._cleanups.push(dispose);
+      continue;
+    }
+    if (hole.kind !== "child") continue;
+    const resolved = hole.get();
+    if (resolved === null || resolved === undefined) continue;
+    if (typeof resolved === "boolean") continue;
+    if (typeof resolved === "string" || typeof resolved === "number") {
+      const owner = item.container.ownerDocument ?? document;
+      item.container.insertBefore(
+        owner.createTextNode(String(resolved)),
+        item.ref,
+      );
+      continue;
+    }
+    const child = resolved as VNode;
+    // 补 __parent 链：context / 生命周期 / 字符串 ref 依赖它
+    if (child.__parent === undefined) {
+      child.__parent = vnode;
+    }
+    // 先挂到容器上（组件 onMounted 可访问已挂载 DOM），再把新增节点整体
+    // 移到锚点之前；连续多个洞按声明顺序插到同一个锚点之前，顺序天然保持
+    const before = item.container.lastChild;
+    mount(child, item.container as HTMLElement);
+    const moved: Node[] = [];
+    let node = before ? before.nextSibling : item.container.firstChild;
+    while (node) {
+      moved.push(node);
+      node = node.nextSibling;
+    }
+    for (const mounted of moved) {
+      item.container.insertBefore(mounted, item.ref);
+    }
+    vnode._cleanups.push(() => destroy(child));
+  }
+}
+
+/** 从模板 HTML 取根标签名；文本根返回 null */
+function skeletonRootTag(html: string): string | null {
+  const match = /^<([a-zA-Z][\w-]*)/.exec(html.trimStart());
+  return match === null ? null : match[1].toLowerCase();
+}
+
+/**
+ * 判断两个节点是否同一静态骨架节点（标签 + 静态属性一致 / 文本一致）
+ *
+ * 用于水合时把 SSR 子节点与模板静态节点对齐；对不上的 SSR 节点就是
+ * 直出的动态内容，直接移除后由洞重新挂载。
+ */
+function sameStaticNode(refNode: Node, domNode: Node): boolean {
+  if (refNode.nodeType === 1) {
+    if (domNode.nodeType !== 1) return false;
+    const refEl = refNode as Element;
+    const domEl = domNode as Element;
+    if (refEl.tagName !== domEl.tagName) return false;
+    for (const attr of Array.from(refEl.attributes)) {
+      if (domEl.getAttribute(attr.name) !== attr.value) return false;
+    }
+    return true;
+  }
+  if (refNode.nodeType === 3) {
+    return (
+      domNode.nodeType === 3 &&
+      (domNode as Text).data === (refNode as Text).data
+    );
+  }
+  return refNode.nodeType === domNode.nodeType;
+}
+
+/** 递归对齐静态骨架，移除 SSR 直出的动态子节点（零注释节点） */
+function pruneStaticNode(refNode: Node, domNode: Node): void {
+  if (refNode.nodeType !== 1 || domNode.nodeType !== 1) return;
+  if (!sameStaticNode(refNode, domNode)) return;
+  const refEl = refNode as Element;
+  const domEl = domNode as Element;
+  let refChild: Node | null = refEl.firstChild;
+  let domChild: Node | null = domEl.firstChild;
+  while (refChild !== null) {
+    // 在剩余 SSR 子节点里找到对应的静态节点；前面的都属于直出的动态内容
+    let matched: Node | null = domChild;
+    while (matched !== null && !sameStaticNode(refChild, matched)) {
+      matched = matched.nextSibling;
+    }
+    if (matched === null) return; // 结构异常：放弃清理，保留 SSR 原样
+    while (domChild !== null && domChild !== matched) {
+      const next: Node | null = domChild.nextSibling;
+      domEl.removeChild(domChild);
+      domChild = next;
+    }
+    pruneStaticNode(refChild, matched);
+    refChild = refChild.nextSibling;
+    domChild = matched.nextSibling;
+  }
+  // 末尾剩余 SSR 节点 = 直出的动态内容
+  while (domChild !== null) {
+    const next: Node | null = domChild.nextSibling;
+    domEl.removeChild(domChild);
+    domChild = next;
+  }
+}
+
+/**
+ * 水合时清理 SSR 骨架根里直出的动态内容
+ *
+ * SSR 会直出子节点洞里的静态元素根以保留首屏；水合时按模板静态结构
+ * 对齐并移除动态节点（保留静态节点身份与原位），随后由洞重新挂载动态内容。
+ * 全程不需要注释节点，也不整段替换已经匹配的节点。
+ */
+function pruneSkeletonDynamicChildren(root: Element, tmpl: TmplData): void {
+  const reference = tmpl.clone();
+  if (!(reference instanceof Element)) return;
+  pruneStaticNode(reference, root);
+}
+
+/**
+ * 把游标处的 SSR 骨架节点整段替换为客户端克隆骨架
+ *
+ * 用于多根骨架或根标签不一致的情况；返回游标之后的节点。
+ */
+function replaceSkeletonInPlace(
+  vnode: VNode,
+  el: ChildNode,
+): ChildNode | null {
+  const tmpl = vnode.__tmpl;
+  const parentNode = el.parentNode;
+  const next = el.nextSibling;
+  if (!tmpl || parentNode === null) return next;
+  const cloned = tmpl.clone();
+  const freshNodes =
+    cloned instanceof Element ? [cloned] : Array.from(cloned.childNodes);
+  parentNode.insertBefore(cloned, el);
+  if (freshNodes.length === 1) {
+    vnode.el = freshNodes[0] as Element | Text;
+  } else if (freshNodes.length > 1) {
+    vnode.__tmplRoots = freshNodes;
+  }
+  if (vnode.__holes !== undefined && vnode.__holes.length > 0) {
+    bindSkeletonHoles(
+      vnode,
+      freshNodes,
+      freshNodes.length === 0 ? { container: parentNode, ref: el } : undefined,
+    );
+  }
+  // 移除该游标对应的 SSR 节点（单根 1 个，多根按 roots 数）
+  const count = Math.max(1, tmpl.roots);
+  let current: Node | null = el;
+  for (let i = 0; i < count && current !== null; i++) {
+    const after: Node | null = current.nextSibling;
+    if (current.parentNode === parentNode) parentNode.removeChild(current);
+    current = after;
+  }
+  return next;
+}
+
+/**
  * 将虚拟节点物化为真实 DOM 节点
  * 递归处理子节点，构建完整的 DOM 树
  * 在服务端环境中返回一个模拟的节点对象
@@ -209,8 +939,36 @@ export function materialize(vnode: VNode | string): Node {
     const cloned = vnode.__tmpl.clone();
     if (cloned instanceof Element) {
       vnode.el = cloned;
-    } else if (cloned instanceof DocumentFragment && cloned.childNodes.length > 1) {
-      vnode.__tmplRoots = Array.from(cloned.childNodes);
+      if (vnode.__holes !== undefined && vnode.__holes.length > 0) {
+        // fragment 顶层洞（root === -1）需要「兄弟容器」才能追加到单根之后：
+        // 先把克隆出的元素放进 DocumentFragment，再在其上绑定洞
+        const needsFragmentScope = vnode.__holes.some(
+          (hole) =>
+            (hole.kind === "child" || hole.kind === "text") && hole.root === -1,
+        );
+        if (needsFragmentScope) {
+          const fragment = document.createDocumentFragment();
+          fragment.appendChild(cloned);
+          bindSkeletonHoles(vnode, [cloned]);
+          return fragment;
+        }
+        bindSkeletonHoles(vnode, [cloned]);
+      }
+    } else if (cloned instanceof DocumentFragment) {
+      const roots = Array.from(cloned.childNodes);
+      if (roots.length === 1) {
+        // 单根但是文本根（fragment 顶层静态文本）：记录 el 供 destroy 移除
+        vnode.el = roots[0] as Element | Text;
+      } else if (roots.length > 1) {
+        vnode.__tmplRoots = roots;
+      }
+      if (vnode.__holes !== undefined && vnode.__holes.length > 0) {
+        bindSkeletonHoles(
+          vnode,
+          roots,
+          roots.length === 0 ? { container: cloned, ref: null } : undefined,
+        );
+      }
     }
     return cloned;
   }
@@ -1311,6 +2069,16 @@ export function applyAttrs(
   attrs: VNodeAttrs,
   vnode: VNode,
 ): void {
+  // 防御：手工 VNode / 控制流内部节点可能没有 attrs 对象
+  if (attrs === undefined || attrs === null) {
+    if (isDev()) {
+      warn(
+        WarnSource.MOUNT,
+        `[Lumina/mount] applyAttrs received ${String(attrs)} attrs for tag "${String(vnode.tag)}"`,
+      );
+    }
+    return;
+  }
   /**
    * 清理函数数组
    * 用于存储事件监听和指令的清理函数
@@ -2106,27 +2874,60 @@ function hydrateNode(
    * - 单根：采用当前 DOM 节点为 vnode.el，游标前进一个（nextSibling）
    * - 多根：按 roots 数跳过并收集兄弟节点到 __tmplRoots（destroy 清理用），
    *   返回最后一个节点之后的节点（与 Fragment 水合的游标语义一致）
-   * - roots === 0：SSR 未输出任何节点，游标不动（当前节点留给下一个兄弟）
+   * - roots === 0：模板没有静态根，SSR 不输出任何节点，动态洞在游标处插入
    */
   if (vnode.__tmpl !== undefined) {
-    const roots = vnode.__tmpl.roots;
+    const tmpl = vnode.__tmpl;
+    const roots = tmpl.roots;
     if (roots === 1) {
+      const expectedTag = skeletonRootTag(tmpl.html);
       if (el instanceof Element) {
+        // 根标签不一致：计入 mismatch，并整段替换为客户端骨架
+        if (expectedTag !== null && el.tagName.toLowerCase() !== expectedTag) {
+          hydrationMismatchCount += 1;
+          return replaceSkeletonInPlace(vnode, el);
+        }
         vnode.el = el;
+        // v2 有序片段：按游离参考树逐节点对齐，洞内容就地水合复用；
+        // 参考不可用或结构对不上时回退整段替换（与旧裁剪路径同语义）
+        if (
+          tmpl.parts !== undefined &&
+          vnode.__holes !== undefined &&
+          vnode.__holes.length > 0
+        ) {
+          const reference = getSkeletonReference(tmpl.parts, vnode.__holes);
+          if (
+            !reference.unsafeTextMerge &&
+            hydrateSkeletonTree(vnode, el, reference)
+          ) {
+            return el.nextSibling;
+          }
+          return replaceSkeletonInPlace(vnode, el);
+        }
+        // 旧版静态模板：SSR 直出的动态子节点先清掉，再由洞重新挂载
+        pruneSkeletonDynamicChildren(el, tmpl);
+        if (vnode.__holes !== undefined && vnode.__holes.length > 0) {
+          bindSkeletonHoles(vnode, [el]);
+        }
+        return el.nextSibling;
+      }
+      if (isTextNode(el)) {
+        vnode.el = el;
+        if (vnode.__holes !== undefined && vnode.__holes.length > 0) {
+          bindSkeletonHoles(vnode, [el]);
+        }
       }
       return el.nextSibling;
     }
     if (roots === 0) {
+      // 模板没有静态根：动态洞全部由客户端在游标处插入（SSR 不输出占位）
+      if (vnode.__holes !== undefined && vnode.__holes.length > 0) {
+        bindSkeletonHoles(vnode, [], { container: parent, ref: el });
+      }
       return el;
     }
-    let current: ChildNode | null = el;
-    const collected: Node[] = [];
-    for (let i = 0; i < roots && current !== null; i++) {
-      collected.push(current);
-      current = current.nextSibling;
-    }
-    vnode.__tmplRoots = collected;
-    return current;
+    // 多根：SSR 直出的动态内容会打乱静态根计数，整段替换为客户端骨架
+    return replaceSkeletonInPlace(vnode, el);
   }
 
   /**

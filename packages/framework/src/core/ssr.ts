@@ -159,7 +159,67 @@ export function renderToString(
    * 与客户端 <template> 克隆出的 DOM 严格一致，水合时可整段采用。
    */
   if (vnode.__tmpl !== undefined) {
-    return vnode.__tmpl.html;
+    const { html, parts } = vnode.__tmpl;
+    const holes = vnode.__holes;
+    // v2 骨架：按有序片段输出，洞位置求值并按 SSR 文本规则转义
+    if (parts !== undefined && holes !== undefined) {
+      const out: string[] = [];
+      for (const part of parts) {
+        if (typeof part === "number") {
+          const hole = holes[part];
+          if (hole?.kind === "attr") {
+            out.push(serializeSkeletonAttr(hole.name, hole.get()));
+          } else if (hole?.kind === "attrs") {
+            // 动态 attrs 整对象：SSR 无法静态序列化，客户端/水合时 applyAttrs
+            out.push("");
+          } else if (hole?.kind === "child") {
+            // 子节点洞：SSR 直出「元素根」的动态内容以保留首屏；
+            // 文本根会与相邻静态文本合并、fragment 顶层会打乱静态根计数，
+            // 这两类不直出，交由客户端水合后挂载（仍然零注释 / 零占位节点）
+            if (hole.root === -1) {
+              out.push("");
+            } else {
+              const value = hole.get();
+              if (
+                value === null ||
+                value === undefined ||
+                typeof value === "boolean" ||
+                typeof value === "string" ||
+                typeof value === "number"
+              ) {
+                out.push("");
+              } else {
+                const rendered = renderToString(value as VNode | string);
+                out.push(rendered.startsWith("<") ? rendered : "");
+              }
+            }
+          } else if (hole?.kind === "text") {
+            // 动态文本洞：不直出，避免与静态文本节点合并后无法拆回
+            out.push("");
+          } else if (hole?.kind === "event") {
+            // 事件在客户端绑定，SSR 不输出
+            out.push("");
+          } else if (hole?.kind === "ref") {
+            // ref 在客户端/水合绑定，SSR 不输出
+            out.push("");
+          } else if (hole?.kind === "directive") {
+            // 指令在客户端应用，SSR 不输出
+            out.push("");
+          } else if (hole?.kind === "content") {
+            const value = String(hole.get() ?? "");
+            out.push(
+              hole.mode === "textContent" ? escapeHtml(value) : value,
+            );
+          } else {
+            out.push(escapeHtml(String(hole?.get() ?? "")));
+          }
+        } else {
+          out.push(part);
+        }
+      }
+      return out.join("");
+    }
+    return html;
   }
 
   /** 响应式文本节点：SSR 直接调用 getter 获取当前值（无 effect 追踪） */
@@ -471,6 +531,32 @@ function serializeAttrs(attrs: VNodeAttrs): string {
   }
 
   return parts.join("");
+}
+
+/**
+ * 序列化 v2 骨架的动态属性
+ *
+ * 与 serializeAttrs 单属性语义一致，返回含前导空格的属性字符串。
+ */
+export function serializeSkeletonAttr(name: string, value: unknown): string {
+  if (SKIP_ATTRS.has(name)) return "";
+  if (name === "class" || name === "className") {
+    const cls = normalizeClass(value as never);
+    return cls ? ` class="${escapeHtml(cls)}"` : "";
+  }
+  if (name === "style") {
+    const normalized = normalizeStyle(value as StyleInput);
+    if (!normalized) return "";
+    return serializeStyle(normalized as StyleInput, escapeHtml);
+  }
+  if (name.startsWith("on") && typeof value === "function") return "";
+  if (value === undefined || value === null) return "";
+  const htmlAttr = DOM_PROPERTY_TO_HTML_ATTR[name] ?? name;
+  if (typeof value === "boolean") {
+    if (isBooleanAttr(name)) return value ? ` ${htmlAttr}` : "";
+    return ` ${htmlAttr}="${value ? "true" : "false"}"`;
+  }
+  return ` ${htmlAttr}="${escapeHtml(String(value))}"`;
 }
 
 /**

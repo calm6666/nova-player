@@ -21,6 +21,7 @@ export default defineConfig({
         index: resolve(src, 'index.ts'),
         i18n: resolve(src, 'i18n.ts'),
         'core/index': resolve(src, 'core/index.ts'),
+        'core/internal-dom': resolve(src, 'core/internal-dom.ts'),
         'types/index': resolve(src, 'types/index.ts'),
         'types/plugin': resolve(src, 'types/plugin.ts'),
         'utils/index': resolve(src, 'utils/index.ts'),

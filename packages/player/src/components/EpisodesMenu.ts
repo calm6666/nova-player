@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * 选集面板组件 (EpisodesMenu)
  * ============================================
@@ -11,6 +11,7 @@
 import { h, defineComponent, useReactiveState, useContext, t, signal, computed, For, Show } from '@lumina/framework/core';
 import type { ReadonlySignal } from "@lumina/framework/core";
 import { useComponentUnmount } from "../core/componentUnmount";
+import { PlayerContext, createReplaceResolver } from "../types/slots";
 import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
 import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
 import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
@@ -89,6 +90,9 @@ export const EpisodesMenu = defineComponent<
   EpisodesMenuEvents
 >((props, lifecycle) => {
   const state = useContext(StateContext);
+  const player = useContext(PlayerContext);
+  /** 原生选集结果区替换解析器：命中 replace 时结果元素渲染期不创建 */
+  const replaceResolver = createReplaceResolver(player);
 
   // ============================================
   // 面板展开态（hover 定时器时序 + signal 驱动类名）
@@ -212,6 +216,20 @@ export const EpisodesMenu = defineComponent<
   // 主渲染函数
   // ============================================
 
+  /**
+   * 选集结果区：插槽接管时 `.nova-player-ctrl-eplist-result`
+   * 在渲染期不创建，直接渲染插槽内容；面板保持原生。
+   */
+  const renderEplistResult = (): VNode | null => {
+    const hit = replaceResolver.take("eplist");
+    if (hit.replaced) return hit.node;
+    return h(
+      "div",
+      { class: "nova-player-ctrl-eplist-result" },
+      t("player.ui.settings.episodes"),
+    );
+  };
+
   return h(
     "div",
     {
@@ -231,12 +249,8 @@ export const EpisodesMenu = defineComponent<
       onMouseLeave: handleMouseLeave,
       onKeydown: handleKeydown,
     },
-    // 按钮文案
-    h(
-      "div",
-      { class: "nova-player-ctrl-eplist-result" },
-      t("player.ui.settings.episodes"),
-    ),
+    // 按钮文案位（原生结果元素 / 插槽内容二选一）
+    renderEplistResult(),
     // 选集面板
     h(
       "div",
@@ -331,3 +345,4 @@ export const EpisodesMenu = defineComponent<
     ),
   );
 });
+

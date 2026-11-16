@@ -1,6 +1,6 @@
 # @lumina/nova
 
-> hili-player 自研框架驱动的视频播放器。插件按需渲染 + 控制栏插槽 + 完整事件回调 + 持久化 + SSR 原生支持。
+> hili-player 自研框架驱动的视频播放器。插件按需渲染 + 区域 / 插件插槽 + 完整事件回调 + 持久化 + SSR 原生支持。
 
 完整 API 文档见 [`docs/api.md`](../../docs/api.md)。本 README 仅作索引。
 
@@ -36,10 +36,10 @@ player.mount(document.querySelector("#player")!);
 | --- | --- |
 | `playback` | 播放行为：autoplay / muted / volume / playbackRate / loop / playMode / preload / playsinline / startTime |
 | `playlist` / `playlistIndex` | 播放列表与起始下标 |
-| `ui` | 标题 `title`、控件开关 `controls`、控制栏插槽 `slots` |
+| `ui` | 标题 `title`、控件开关 `controls`、区域 / 插件插槽 `slots` |
 | `interaction` | 快捷键：布尔或 `KeyboardStepConfig` |
 | `quality` | 默认档位 / 选择模式 / 上下限 / 自定义文案 |
-| `progress` | 进度条分段 `segments` |
+| `progress` | 进度条分段 `segments`、自定义 thumb 图标 `thumbIcon` |
 | `danmaku` / `subtitle` | 兼容旧调用方的可选字段；运行时能力由 `DanmakuPlugin` / `SubtitlePlugin` 提供 |
 | `plugins` | `list: Plugin[]` + `options` |
 | `ending` | 片尾页面插槽 `content` |
@@ -148,7 +148,7 @@ player.getPlugin<SubtitlePluginAPI>("subtitle")?.setStyle({ fontSize: 24 });
 
 ## 插槽
 
-控制栏插槽走「配置数组 + 位置/顺序」，片尾页面走「整页替换」：
+区域插槽走「配置数组 + 插槽 id/顺序」，插件插槽由插件在 `install` 中自行声明，片尾页面走「整页替换」：
 
 ```ts
 import { h, defineComponent, useContext } from "@lumina/nova";
@@ -161,13 +161,28 @@ const MyButton = defineComponent(() => {
 
 new VideoPlayer({
   ui: {
-    slots: [{ id: "my-btn", position: "rightStart", order: 10, vnode: h(MyButton, {}) }],
+    slots: [{ id: "my-btn", slot: "controls.right.start", order: 10, content: h(MyButton, {}) }],
   },
   ending: { content: () => h(CustomEnding, {}) },
 });
 ```
 
-位置：`leftEnd` / `rightStart` / `rightEnd` / `topRight` / `bottomCenter`。详见 [`docs/api.md` §7](../../docs/api.md#7-插槽机制)。
+区域插槽（容器永远存在）：`video.overlay` / `controls.left.end` / `controls.center` / `controls.right.start` / `controls.right.end` / `top.start` / `top.end`。`video.overlay` 只有一个插槽位，位置 / 层级 / 显隐 / 皮肤由插槽内容自控；未安装 Top 插件 / 未配置 `ui.top` 时 `top.start` / `top.end` 仍可插入自定义内容。
+
+插件插槽（id 规则 `plugin.<插件名>.<用途>`）由插件自己声明，播放器只提供挂载规则：
+
+```ts
+install(player) {
+  return player.defineSlot({
+    id: "plugin.top.issue",
+    region: "top.start",
+    order: 0,
+    content: () => h(IssueButton, {}),
+  });
+}
+```
+
+详见 [`docs/api.md` §7](../../docs/api.md#7-插槽机制)。
 
 ## 持久化
 

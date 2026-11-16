@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * 播放倍速选择菜单组件 (PlaybackRateMenu)
  * ============================================
@@ -14,6 +14,7 @@ import { useComponentUnmount } from "../core/componentUnmount";
 import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
 import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
 import { PlayerStateKeyEnum, StateContext } from "../store/runtimeState";
+import { PlayerContext, createReplaceResolver } from "../types/slots";
 
 const MENU_SHOW_DELAY = 120;
 const MENU_HIDE_DELAY = 220;
@@ -45,6 +46,9 @@ export const PlaybackRateMenu = defineComponent<
 
   /** 运行时状态管理器（用于订阅当前倍速） */
   const state = useContext(StateContext);
+  const player = useContext(PlayerContext);
+  /** 原生倍速结果区替换解析器：命中 replace 时结果元素渲染期不创建 */
+  const replaceResolver = createReplaceResolver(player);
 
   // ============================================
   // 面板展开态（hover 定时器时序 + signal 驱动类名）
@@ -183,6 +187,25 @@ export const PlaybackRateMenu = defineComponent<
   // 主渲染函数
   // ============================================
 
+  /**
+   * 倍速结果区：插槽接管时 `.nova-player-ctrl-playbackrate-result`
+   * 在渲染期不创建，直接渲染插槽内容；面板保持原生。
+   */
+  const renderRateResult = (): VNode | null => {
+    const hit = replaceResolver.take("playbackrate");
+    if (hit.replaced) return hit.node;
+    return h(
+      "div",
+      { class: "nova-player-ctrl-playbackrate-result" },
+      () => {
+        const rateValue = currentRate.value;
+        return rateValue === 1
+          ? t("player.ui.controls.playbackRate")
+          : formatRateLabel(rateValue);
+      },
+    );
+  };
+
   return h(
     "div",
     {
@@ -197,20 +220,8 @@ export const PlaybackRateMenu = defineComponent<
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
     },
-    // 当前倍速显示：显式零参箭头 getter 协议
-    // （t() 内部读取 localeSignal，显式 getter 才能在 currentRate 变化与
-    // setLocale 语言切换时都重新求值；写成直接表达式会被求值成静态文本，
-    // 切语言后「倍速」两个字不会跟着翻译）
-    h(
-      "div",
-      { class: "nova-player-ctrl-playbackrate-result" },
-      () => {
-        const rateValue = currentRate.value;
-        return rateValue === 1
-          ? t("player.ui.controls.playbackRate")
-          : formatRateLabel(rateValue);
-      },
-    ),
+    // 当前倍速结果位（原生结果元素 / 插槽内容二选一）
+    renderRateResult(),
     // 倍速下拉菜单（For 组件：key-based 精准更新，每个倍速值只渲染一次）
     h(
       "div",
@@ -229,3 +240,4 @@ export const PlaybackRateMenu = defineComponent<
     ),
   );
 });
+

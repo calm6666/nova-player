@@ -47,7 +47,8 @@ import {
 import type {
   PlayerConfig,
   VNode,
-  ControlSlotItem,
+  SlotEntry,
+  PluginSlotDefinition,
   EndingSlot,
   SlotContext,
   Plugin,
@@ -134,7 +135,7 @@ pnpm demo
 | `ui.share`                    | `ShareInfo`                                             | `undefined`            | 否（挂载期读取）                | 片尾分享面板：视频地址 / 嵌入代码 / 二维码图片        |
 | `ui.disableBoxShadow`         | `boolean`                                               | `false`                | 是（`setBoxShadowDisabled`）    | 添加 `state-disable-box-shadow` 类名禁用容器阴影      |
 | `ui.controls`                 | `ControlsConfig`                                        | `defaultControlConfig` | 否                              | 控件开关（见下）                                      |
-| `ui.slots`                    | `ControlSlotItem[]`                                     | `undefined`            | 否                              | 控制栏插槽（见 §7）                                   |
+| `ui.slots`                    | `SlotEntry[]`                                           | `undefined`            | 否                              | 区域 / 插件插槽（见 §7）                               |
 | `interaction.keyboard`        | `boolean \| KeyboardStepConfig`                         | `true`                 | 否                              | 快捷键开关或步长配置                                  |
 | `quality.default`             | `string`                                                | `'auto'`               | 是（`setQuality`）              | 默认画质                                              |
 | `quality.mode`                | `'auto' \| 'manual'`                                    | `'auto'`               | 是（`setQualityMode`）          | 选择模式                                              |
@@ -143,6 +144,7 @@ pnpm demo
 | `progress.segments`           | `ProgressSegment[]`                                     | `[]`                   | 是（`setConfig`）               | 进度条分段                                            |
 | `progress.shadowPermanent`    | `boolean`                                               | `false`                | 是（`setShadowPermanent`）      | 多段时展开底部影子进度条                              |
 | `progress.skipPoints`         | `ProgressSkipPoints`                                    | `undefined`            | 是（`setSkipPoints`）           | 片头结束 / 片尾开始断点（进度条圆点 + 跳过头尾）      |
+| `progress.thumbIcon`          | `ProgressThumbIconConfig`                               | `undefined`            | 是（`setProgressThumbIcon`）    | 自定义 thumb 图标（动画 JSON URL + 动画描述 / 静态图片） |
 | `subtitle`                    | `SubtitleConfigSpace`                                   | `undefined`            | 是                              | 兼容旧调用方；运行时能力由 `SubtitlePlugin` 提供      |
 | `plugins.list`                | `Plugin[]`                                              | `[]`                   | 是（`use` / `uninstallPlugin`） | 插件实例列表                                          |
 | `plugins.options`             | `Record<string, unknown>`                               | `{}`                   | 否                              | 按插件名索引的选项                                    |
@@ -168,7 +170,67 @@ pnpm demo
 | `webFullscreen`    | `boolean`           | `true`      | 网页全屏                 |
 | `progressSegments` | `ProgressSegment[]` | `undefined` | 进度条分段（运行时透传） |
 
-### 3.2 `KeyboardStepConfig`
+### 3.2 `ProgressThumbIconConfig` 自定义进度条 thumb
+
+直接传动画 JSON URL 与动画描述，播放器内部 `fetch` 并交给 lottie，不区分 url1/url2 语义；
+没有动画时可用 `staticImage` 直接展示图片。
+
+```ts
+const config = {
+  progress: {
+    thumbIcon: {
+      size: 28,
+      drag: {
+        url: "/icons/thumb-drag.json",
+        kind: "lottie",
+        totalFrames: 60,
+        frameRate: 30,
+        idleFrame: 30,
+        direction: "follow",
+      },
+      drop: {
+        url: "/icons/thumb-drop.json",
+        totalFrames: 24,
+        frameRate: 30,
+      },
+      dropDelayMs: 1000,
+    },
+  },
+};
+```
+
+| 字段 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- |
+| `drag` | `ProgressThumbAnimationSource` | 内置兜底动画 | 拖拽动画 |
+| `drop` | `ProgressThumbAnimationSource` | 内置兜底动画 | 松手落点动画 |
+| `staticImage` | `string` | `undefined` | 完全无动画时展示的图片 URL |
+| `size` | `number` | `20` | 统一尺寸（px），单项 `size` 优先 |
+| `dropDelayMs` | `number` | 按 `totalFrames / frameRate` 计算 | 落点动画结束后复位到常态帧的延迟 |
+
+`ProgressThumbAnimationSource`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `url` | `string` | 动画 JSON URL 或图片 URL |
+| `kind` | `'lottie' \| 'image'` | 资源类型，默认 `lottie` |
+| `totalFrames` | `number` | 动画总帧数，决定常态停帧与落点延迟 |
+| `frameRate` | `number` | 帧率，与 `totalFrames` 一起计算落点延迟 |
+| `idleFrame` | `number` | 常态停帧，默认 `floor(totalFrames / 2)` |
+| `size` | `number` | 单项尺寸，优先于 `thumbIcon.size` |
+| `direction` | `'follow' \| 'fixed'` | 拖拽方向，默认跟随鼠标 |
+
+运行时更新：
+
+```ts
+player.setProgressThumbIcon(config.progress.thumbIcon); // 应用新图标
+player.progress.setThumbIcon(config.progress.thumbIcon); // 等价别名
+player.setProgressThumbIcon(null); // 恢复内置兜底动画
+```
+
+更新通过 ConfigStore 的 `progress.thumbIcon` 路径通知进度条重建动画，不需要重启播放器；
+同一动画 URL 只请求一次，请求失败自动回落内置兜底。
+
+### 3.3 `KeyboardStepConfig`
 
 | 字段         | 类型     | 说明                      |
 | ------------ | -------- | ------------------------- |
@@ -364,6 +426,30 @@ player.isBoxShadowDisabled(); // → true
 
 // 等价的 setConfig 写法
 player.setConfig({ ui: { disableBoxShadow: false } }); // 开启阴影
+```
+
+### 4.13 插槽声明
+
+插件在 `install` 中声明自己的插槽（`plugin.<插件名>.<用途>`），播放器只负责按 `region` 挂载：
+
+| 方法                   | 签名                                                       | 说明                                               |
+| ---------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| `defineSlot`           | `(definition: PluginSlotDefinition) => () => void`         | 声明插件插槽（同 id 覆盖），返回注销函数           |
+| `undefineSlot`         | `(id: PluginSlotId) => void`                               | 撤销插件插槽声明                                   |
+| `getSlotDefinitions`   | `() => readonly PluginSlotDefinition[]`                    | 读取全部插件插槽定义                               |
+| `registerSlotsRefresh` | `(refresh: () => void) => () => void`                      | 注册插槽刷新回调（区域挂载层内部使用），返回注销函数 |
+| `refreshSlots`         | `() => void`                                               | 手动触发全部刷新回调（`defineSlot` / `undefineSlot` 已自动调用） |
+
+```ts
+install(player) {
+  const dispose = player.defineSlot({
+    id: "plugin.top.issue",
+    region: "top.start",
+    order: 0,
+    content: () => h(IssueButton, {}),
+  });
+  return () => dispose();
+}
 ```
 
 ---
@@ -748,30 +834,48 @@ InteractionPlugin({
 
 ## 7. 插槽机制
 
-### 7.1 控制栏插槽
+### 7.1 区域插槽与插件插槽
 
-`config.ui.slots: ControlSlotItem[]`，每项：
+`config.ui.slots: SlotEntry[]`，每项：
 
 ```ts
-interface ControlSlotItem {
+interface SlotEntry {
   id: string; // 唯一标识，用于 diff/卸载
-  position: ControlSlotPosition;
+  slot: SlotId; // 区域插槽 id 或插件声明的插槽 id
   order?: number; // 升序，默认 0；同 order 按数组顺序稳定排列
-  vnode: VNode | ((ctx: SlotContext) => VNode);
+  content: SlotEntryContent; // VNode / Node / HTML 字符串 / SlotMount / (ctx) => 内容
+  replace?: NativeControlKey; // 替换原生控件（原生不渲染），此时 slot 不参与排序
 }
 ```
 
-位置：
+区域插槽（播放器定义，容器永远存在）：
 
-| position       | 说明                                           |
-| -------------- | ---------------------------------------------- |
-| `leftEnd`      | 左侧按钮组末尾（prev/play/next/time 之后）     |
-| `rightStart`   | 右侧按钮组开头（quality 之前）                 |
-| `rightEnd`     | 右侧按钮组末尾（full 之后）                    |
-| `topRight`     | 顶部栏右侧（与顶部进度条同层）                 |
-| `bottomCenter` | 底部中央（LeftControls 与 RightControls 之间） |
+| slot                   | 说明                                                                 |
+| ---------------------- | -------------------------------------------------------------------- |
+| `video.overlay`        | 视频画面区（`.nova-player-video-area`）唯一悬浮插槽位                |
+| `controls.left.end`    | 左侧按钮组末尾（prev/play/next/time 之后）                           |
+| `controls.center`      | 底部中央（LeftControls 与 RightControls 之间）                       |
+| `controls.right.start` | 右侧按钮组开头（quality 之前）                                       |
+| `controls.right.end`   | 右侧按钮组末尾（full 之后）                                          |
+| `top.start`            | 顶部栏左侧起始位（顶部内容之前）                                     |
+| `top.end`              | 顶部栏右侧末尾位（顶部内容之后）                                     |
 
-插槽 VNode 由框架响应式渲染：内容使用 Signal / 响应式表达式时，运行期数据变化精准更新；结构性变更（替换插槽）通过 `setConfig` 重建。插槽 VNode 的生命周期由播放器统一管理（mount/destroy）。
+`video.overlay` 只有一个插槽位：内容按 order 追加，位置 / 层级 / 显隐 / 皮肤全部由插槽内容自控，播放器不创建任何挂载层。未安装 Top 插件 / 未配置 `ui.top` 时 `top.start` / `top.end` 依旧可用。
+
+插件插槽（id 规则 `plugin.<插件名>.<用途>`）：
+
+```ts
+player.defineSlot({
+  id: "plugin.top.issue", // PluginSlotId
+  region: "top.start", // 所属区域
+  order: 0, // 区域内排序，默认 0
+  content: () => h(IssueButton, {}), // 默认内容，可省略
+});
+```
+
+插件在 `install` 中通过 `defineSlot` 声明插槽（返回注销函数），播放器只负责按 `region` 挂载；消费方仍可用 `ui.slots` 向同一插件插槽追加内容。区域内直挂项与插件插槽项统一按 order 合并排序（插件插槽项 order = 定义 order + 项 order；定义默认内容作为一项参与排序）。
+
+插槽内容由框架挂载：内容使用 Signal / 响应式表达式时，运行期数据变化精准更新；结构性变更通过 `setConfig` 重建。插槽生命周期由播放器统一管理（mount/destroy）。
 
 ### 7.2 自定义按钮示例
 
@@ -793,23 +897,23 @@ new VideoPlayer({
     slots: [
       {
         id: "skip-intro",
-        position: "rightStart",
+        slot: "controls.right.start",
         order: 10,
-        vnode: h(SkipIntro, {}),
+        content: h(SkipIntro, {}),
       },
     ],
   },
 });
 ```
 
-函数式 vnode（接收 SlotContext，可读取 player/state 动态渲染）：
+函数式 content（接收 SlotContext，可读取 player/state 动态渲染）：
 
 ```ts
 {
   id: "current-time",
-  position: "topRight",
+  slot: "top.end",
   order: 0,
-  vnode: (ctx) => h("span", {}, `当前：${ctx.player.getCurrentTime().toFixed(1)}s`),
+  content: (ctx) => h("span", {}, `当前：${ctx.player.getCurrentTime().toFixed(1)}s`),
 }
 ```
 
@@ -825,7 +929,7 @@ type SlotContent =
 
 interface PlayerConfig {
   ui?: {
-    top?: SlotContent;    // 只替换 .nova-player-top-wrap 内部
+    top?: SlotContent;    // 只替换 .nova-player-top-view 内部，top.start / top.end 区域保持可用
     ending?: SlotContent; // 只替换 .nova-player-ending-wrap 内部
   };
 }
@@ -885,7 +989,7 @@ TopPlugin({
 });
 ```
 
-- `TopPlugin` 挂载到核心的 `.nova-player-top-wrap`
+- `TopPlugin` 挂载到核心的 `.nova-player-top-view`（`top.start` / `top.end` 区域插槽位于其两侧，始终可用）
 - `EndingPlugin` 挂载到核心的 `.nova-player-ending-wrap`
 - 插件不创建包装 DOM、不加类名、不替换根容器
 - 不安装插件时核心不渲染任何 Top / Ending 内容
@@ -930,9 +1034,10 @@ player.registerPlugin(TopPlugin(...));       // UI 响应式自动挂载
 player.unregisterPlugin("top");              // UI 响应式自动移除
 player.progress.setSegments(segments);       // 章节 / 顶部 / 影子进度条共用
 player.progress.setEnergy(energy);           // 高能进度条
+player.progress.setThumbIcon(thumbIcon);     // 自定义 thumb 图标（传 null 恢复内置）
 ```
 
-### 7.4 SlotContext
+### 7.4.2 SlotContext
 
 ```ts
 interface SlotContext {
@@ -1241,7 +1346,7 @@ pnpm demo:csr   # 纯客户端渲染，http://localhost:5175
 综合 demo 见 [`demo/entry-client.ts`](../demo/entry-client.ts)，覆盖：
 
 1. 通过 `plugins.list` 注入 `DanmakuPlugin` / `SubtitlePlugin` / `InteractionPlugin` / `createHlsPlugin`
-2. `ui.slots` 在 `rightStart` 位置注入倍速预设按钮（`useContext(PlayerContext)` 调用 `setPlaybackRate`）
+2. `ui.slots` 在 `controls.right.start` 位置注入倍速预设按钮（`useContext(PlayerContext)` 调用 `setPlaybackRate`）
 3. `TopPlugin()` / `EndingPlugin()` 内置 Top / Ending，`ui.top` / `ui.ending` 整体插槽
 4. `callbacks` 配置式订阅 `play` / `pause` / `ended` / `timeupdate` / `wideScreenChange` / `webFullscreenChange` / `displayModeChange` / `danmakuToggle` / `subtitleToggle`
 5. `player.on` 运行时订阅（与 callbacks 并存）
@@ -1255,7 +1360,7 @@ const player = new VideoPlayer({
   src: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
   ui: {
     controls: { ...defaultControlConfig },
-    slots: [{ id: "rate-presets", position: "rightStart", order: 10, vnode: h(RatePresets, {}) }],
+    slots: [{ id: "rate-presets", slot: "controls.right.start", order: 10, content: h(RatePresets, {}) }],
   },
   ending: { content: () => h(CustomEnding, {}) },
   plugins: {
@@ -1287,7 +1392,7 @@ player.getPlugin<SubtitlePluginAPI>("subtitle")?.setStyle({ fontSize: 24 });
 
 ### Q3：框架有响应式吗？
 
-没有。状态变化后需手动操作 DOM（通过 `useState` 订阅 `TypedStateManager`，回调中更新 `lifecycle.el` 或 `useTemplateRef` 引用）。插槽列表在挂载期读取一次，运行时变更需 `setConfig` 重渲染。
+没有。状态变化后需手动操作 DOM（通过 `useState` 订阅 `TypedStateManager`，回调中更新 `lifecycle.el` 或 `useTemplateRef` 引用）。`ui.slots` 在挂载期读取一次，运行时变更需 `setConfig` 重渲染；插件插槽（`defineSlot` / `undefineSlot`）会自动触发区域重新挂载。
 
 ### Q4：`callbacks` 与 `player.on` 有什么区别？
 
@@ -1345,9 +1450,10 @@ const hls = player.getPlugin<HlsPlugin>("hls");
 
 ### 插槽
 
-- 位置插槽：`leftEnd / rightStart / rightEnd / topRight / bottomCenter / stageLeft / stageRight / cornerLeft / cornerRight`；
-- `replace: NativeControlKey`：**原生控件不渲染**；渲染层按 `bottomRightOrder` / `bottomLeftOrder` 在原始位置直接渲染插槽 VNode（无 host、无 wrapper、无注释占位）；替换内容必须是 VNode；左右控制栏只处理各自顺序表内的键；
-- `SlotContext = { player, state }`：所有插槽（含 corner / topRight / 替换项）均保证可拿到，`PlayerDocker` 以 `stateMgr ?? player.state` 兜底。
+- 区域插槽：`video.overlay / controls.left.end / controls.center / controls.right.start / controls.right.end / top.start / top.end`；
+- `video.overlay`：直接挂到 `.nova-player-video-area` 的单一悬浮插槽位，内容可任意多个（按 order 追加），位置 / 层级 / 显隐 / 皮肤全部由插槽内容自控；
+- `replace: NativeControlKey`：**原生控件不渲染**；渲染层按 `bottomRightOrder` / `bottomLeftOrder` 在原始位置直接渲染插槽内容（无 host、无 wrapper、无注释占位）；替换内容必须是 VNode；左右控制栏只处理各自顺序表内的键；
+- `SlotContext = { player, state }`：所有插槽（含 corner / top.* / 插件插槽 / 替换项）均保证可拿到，`PlayerDocker` 以 `stateMgr ?? player.state` 兜底。
 
 ### Top 插件
 

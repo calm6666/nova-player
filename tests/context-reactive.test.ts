@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { createReactiveContext, defineComponent, destroy, h, mount, provide, signal, useContext } from '@lumina/framework/core';
 import type { VNode } from "@lumina/framework/types";
-import { transformCode } from "../plugins/vite-plugin-lumina-compile/transform";
+import { transformV2 } from "../plugins/vite-plugin-lumina-compile-v2/transform";
 
 describe("响应式 Context", () => {
   it("Provider 取值函数变化时消费组件精准更新", () => {
@@ -62,12 +62,8 @@ const App = defineComponent(() => {
   return h(Child, { config: useContext(ConfigContext), label: ctx.title });
 });
 `;
-    const result = transformCode(source, "context-prop.ts", {
-      isProduction: false,
-      hoistStatic: true,
-      compileComponentType: true,
-      compileAttrs: true,
-      tmplStatic: true,
+    const result = transformV2(source, "context-prop.ts", {
+      internalImportSource: "@lumina/framework/core/internal-dom",
     });
     const code = result?.code ?? source;
     expect(code).toContain("useContext(ConfigContext)");

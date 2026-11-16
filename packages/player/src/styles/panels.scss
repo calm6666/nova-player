@@ -1,0 +1,11 @@
+/**
+ * 懒挂载面板样式集合
+ *
+ * 只在 ensurePanel 首次打开面板时与组件一起动态加载并注入，
+ * 不进入首屏 style.css。
+ */
+@use "./audio-panel.scss" as *;
+@use "./videoinfo.scss" as *;
+@use "./colorpanel.scss" as *;
+@use "./hotkeypanel.scss" as *;
+@use "./feedbackpanel.scss" as *;
