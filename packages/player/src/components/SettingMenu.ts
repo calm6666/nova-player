@@ -10,7 +10,7 @@
  *   过渡由 .ui-panel-wrap / .ui-panel-move 上的 CSS transition 承担
  */
 
-import { h, defineComponent, useTemplateRef, useContext, useReactiveState, signal, computed, onEffect, Show, t } from '@lumina/framework/core';
+import { h, defineComponent, useTemplateRef, useContext, useReactiveState, signal, computed, onEffect, For, t } from '@lumina/framework/core';
 import type { Signal, ReadonlySignal } from "@lumina/framework/core";
 import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
 import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
@@ -25,7 +25,7 @@ import { Checkbox } from "./Checkbox";
 import { ArrowRight } from "./icons";
 import { RadioGroup } from "./RadioGroup";
 import type { RadioGroupOption } from "./RadioGroup";
-import type { PlayerPluginFlags } from "./PlayerDocker";
+import type { PluginSettingSection } from "../core/plugin";
 import settingHoverAnimationData from "../assets/lottie-icon/settings-animation.json";
 
 export interface SettingMenuProps {
@@ -37,12 +37,6 @@ export interface SettingMenuProps {
    * 缺省可见；display 由本组件根节点响应式 style 单一来源管理
    */
   visible?: boolean | ReadonlySignal<boolean>;
-  /**
-   * 插件安装标志读取器（getter 形态，RightControls 透传）：
-   * 未装 audioEffect 插件时第二页「音量均衡」音频设置区块不渲染，
-   * 面板高度联动收缩；未传（独立使用场景）保持既有行为
-   */
-  plugins?: () => PlayerPluginFlags;
 }
 
 export type SettingMenuEvents = {
@@ -56,24 +50,12 @@ const MENU_HIDE_DELAY = 220;
 /** 第一页（设置主面板）尺寸，px */
 const SETTING_PAGE_MAIN = { width: 132, height: 140 };
 /**
- * 第二页（更多设置）尺寸，px（页内容为固定结构，尺寸为常量）
- * 高度按 CSS 推导：padding 上下 16×2 + 5 个 title（16+4）+ 4 组
- * radio 内容（24+12）+ others（title 20 + checkbox 行 20）= 296px
+ * 第二页（更多设置）基础尺寸，px（页内容为固定结构，尺寸为常量）
+ * 高度按 CSS 推导：padding 上下 16×2 + 4 个 title（16+4）+ 4 组
+ * radio 内容（24+12）+ others（title 20 + checkbox 行 20）= 240px；
+ * 插件设置分区按各自声明的高度叠加（分区容器在 title 前插入）
  */
-const SETTING_PAGE_MORE = { width: 286, height: 296 };
-/**
- * 「音量均衡」区块高度，px（title 16+4 + 内容 24 + 区块间距 12）
- * 未装音效插件时区块不渲染，第二页高度相应收缩
- */
-const LOUDNESS_BLOCK_HEIGHT = 56;
-/**
- * 第二页（无音频设置）尺寸：隐藏音量均衡区块后的收缩高度
- * 音效插件未装时使用，面板高度随区块渲染状态动态选择
- */
-const SETTING_PAGE_MORE_NO_AUDIO = {
-  width: 286,
-  height: SETTING_PAGE_MORE.height - LOUDNESS_BLOCK_HEIGHT,
-};
+const SETTING_PAGE_MORE = { width: 286, height: 240 };
 
 export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
   (props, lifecycle) => {
@@ -420,13 +402,23 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
     ];
 
     /**
-     * 派生信号：音效插件是否安装（音频设置区块的渲染开关）
-     * 读 plugins getter 建立依赖，插件运行中装卸时区块即时挂/摘，
-     * 第二页面板高度随区块渲染状态联动收缩
+     * 插件设置分区（声明式贡献）
+     *
+     * 读取播放器注册版本信号建立依赖：插件运行期装卸时分区自动挂/摘，
+     * 「更多设置」面板高度按分区声明高度联动
      */
-    const hasAudioEffectSignal = computed(
-      () => props.plugins?.().audioEffect ?? true,
+    const settingSectionsSignal = computed<PluginSettingSection[]>(
+      () => player?.getPluginSettingSections?.() ?? [],
     );
+
+    /** 第二页总高度 = 基础高度 + 各插件分区高度 */
+    const morePageHeight = computed<number>(() => {
+      let height = SETTING_PAGE_MORE.height;
+      for (const section of settingSectionsSignal.value) {
+        height += section.height;
+      }
+      return height;
+    });
 
     /**
      * 响应式同步：信号变化 → 调用组件 API 同步勾选状态
@@ -499,17 +491,13 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                 {
                   class: "ui-panel-wrap",
                 // 外框尺寸跟随当前页（响应式 style 派生，过渡由 CSS transition 承担）
-                // 第二页高度联动音频设置区块：未装音效插件时区块不
-                // 渲染，高度取收缩尺寸（296 - 56 = 240）
+                // 第二页高度 = 基础高度 + 插件设置分区声明高度
                 style: {
                   width: `${(pageIndexSignal.value === 0 ? SETTING_PAGE_MAIN : SETTING_PAGE_MORE).width}px`,
                   height: `${
                     pageIndexSignal.value === 0
                       ? mainPageHeight
-                      : (hasAudioEffectSignal.value
-                          ? SETTING_PAGE_MORE
-                          : SETTING_PAGE_MORE_NO_AUDIO
-                        ).height
+                      : morePageHeight.value
                   }px`,
                 },
                 },
@@ -722,56 +710,19 @@ export const SettingMenu = defineComponent<SettingMenuProps, SettingMenuEvents>(
                         ),
                       ),
                     ),
-                    // 音频设置（音量均衡）区块：按音效插件安装状态
-                    // 条件渲染——未装插件时整个区块不挂载（Show 控制
-                    // 流），面板高度联动收缩（见 ui-panel-wrap 的
-                    // 高度表达式）；装卸即时联动由 hasAudioEffectSignal
-                    // 驱动
-                    h(
-                      Show,
-                      { when: (): boolean => hasAudioEffectSignal.value },
-                      h(
-                        "div",
-                        { class: "nova-player-ctrl-setting-loudness" },
-                        h(
-                          "div",
-                          { class: "nova-player-ctrl-setting-loudness-title" },
-                          t("player.ui.settings.loudness.title"),
-                        ),
-                        h(
-                          "div",
-                          {
-                            class:
-                              "nova-player-ctrl-setting-loudness-content ui ui-radio ui-dark",
-                          },
-                          h(
-                            "div",
-                            { class: "ui-area" },
-                            renderRadioGroup(
-                              // 响应式迁移后单选组不再需要 DOM 引用，refKey 参数已删除（避免运行时未注册告警）
-                              [
-                                {
-                                  label: t(
-                                    "player.ui.settings.loudness.standard",
-                                  ),
-                                  value: 1,
-                                },
-                                {
-                                  label: t("player.ui.settings.loudness.dynamic"),
-                                  value: 2,
-                                },
-                                {
-                                  label: t("player.ui.settings.loudness.off"),
-                                  value: 0,
-                                  checked: true,
-                                },
-                              ],
-                              "loudness",
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                    // 插件设置分区：内容与状态由插件持有，核心只负责
+                    // 排序、挂载和高度累加（声明式贡献，SSR 首帧一致）
+                    h(For, {
+                      each: (): PluginSettingSection[] =>
+                        settingSectionsSignal.value,
+                      key: (section: unknown): string =>
+                        (section as PluginSettingSection).id,
+                      render: (section: unknown): VNode => {
+                        const entry = section as PluginSettingSection;
+                        if (!player) return h("div", {});
+                        return entry.render({ player }) ?? h("div", {});
+                      },
+                    }),
                     h(
                       "div",
                       { class: "nova-player-ctrl-setting-others" },

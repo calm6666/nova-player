@@ -42,7 +42,24 @@ export type { ProgressPreviewFrame, ProgressPreviewProvider, EnergyProgressData,
 // 发送栏组件：由 DanmakuPlugin 通过 uiContributions 渲染（SSR 同样可用）
 export { SendBar } from './components/SendBar';
 export type { SendBarProps } from './components/SendBar';
-export type { PluginUiContribution } from './core/plugin';
+// 字幕菜单组件：由 SubtitlePlugin 通过 uiContributions 渲染
+export { SubtitleMenu } from './components/SubtitleMenu';
+export type {
+  SubtitleMenuApi,
+  SubtitleMenuEvents,
+  SubtitleMenuProps,
+  SubtitleStylePatch,
+} from './components/SubtitleMenu';
+// 单选组：插件设置分区复用播放器 UI 原语，保证与原设置项一致
+export { RadioGroup } from './components/RadioGroup';
+export type { RadioGroupConfig, RadioGroupOption } from './components/RadioGroup';
+export type {
+  PluginSettingSection,
+  PluginSettingSectionHost,
+  PluginUiContribution,
+  PluginUiRegion,
+} from './core/plugin';
+export type { PlayerPort, PlayerUiHost } from './types/playerPort';
 
 // 面板懒加载入口：插件通过播放器注册面板时按需加载组件与样式
 export const loadColorPanel = (): Promise<typeof import('./components/ColorPanel')> =>

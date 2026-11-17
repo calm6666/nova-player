@@ -11,7 +11,11 @@ import type { TypedStateManager } from "@lumina/framework/core";
 import type { PlayerEventBus } from "../types/events";
 import type { PluginOptions } from "@lumina/framework/types/plugin";
 import type { VNode } from "@lumina/framework/types";
+import type { PlayerPort } from "../types/playerPort";
 export type { PlayerEventBus };
+
+/** 插件可贡献的 UI 区域 */
+export type PluginUiRegion = "controls.sendbar" | "controls.right";
 
 /**
  * 插件 UI 区域贡献
@@ -23,9 +27,37 @@ export interface PluginUiContribution {
   /** 唯一 id */
   id: string;
   /** 目标区域 */
-  region: "controls.sendbar";
+  region: PluginUiRegion;
+  /**
+   * 接管的内置控件位（仅 controls.right）：
+   * 填内置键（如 subtitle）时在该键的固定位置渲染，替代内置实现
+   */
+  slot?: string;
   /** 渲染函数：入参为播放器提供的宿主 props */
   render: (host: unknown) => VNode | null;
+}
+
+/** 设置分区渲染上下文 */
+export interface PluginSettingSectionHost {
+  /** 播放器端口：分区自行调用播放器命令，核心不持有分区业务状态 */
+  player: PlayerPort;
+}
+
+/**
+ * 插件设置分区
+ *
+ * 声明为插件普通属性（不依赖 install），SSR 与水合首帧一致；
+ * 分区标题、内容、状态全部由插件持有，核心只负责排序与高度。
+ */
+export interface PluginSettingSection {
+  /** 唯一 id */
+  id: string;
+  /** 排列顺序，小的在前 */
+  order: number;
+  /** 分区高度（px），参与「更多设置」面板高度计算 */
+  height: number;
+  /** 渲染分区（标题 + 内容） */
+  render: (host: PluginSettingSectionHost) => VNode | null;
 }
 // 通用插件选项由框架层定义，播放器出口统一再导出（插件包经 @lumina/nova 消费）
 export type { PluginOptions };
@@ -49,6 +81,13 @@ export interface Plugin {
    * 以普通属性声明，SSR 阶段无需执行 install 即可被播放器读取。
    */
   readonly uiContributions?: readonly PluginUiContribution[];
+
+  /**
+   * 插件贡献的设置面板分区
+   *
+   * 同样以普通属性声明，SSR 阶段无需 install 即可渲染。
+   */
+  readonly settingSections?: readonly PluginSettingSection[];
 
   /**
    * 安装插件

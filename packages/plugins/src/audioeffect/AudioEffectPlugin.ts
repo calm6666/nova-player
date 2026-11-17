@@ -24,10 +24,12 @@
 import type { Plugin, PluginOptions } from '@lumina/nova';
 import type { VideoPlayer } from '@lumina/nova';
 import type { PlayerEventBus } from '@lumina/nova';
-import { PlayerEventEnum, h, mount, destroy, loadAudioPanel, loadPanelStyles } from '@lumina/nova';
+import { PlayerEventEnum, h, mount, destroy, loadAudioPanel, loadPanelStyles, RadioGroup, t } from '@lumina/nova';
+import type { PluginSettingSection } from '@lumina/nova';
 import type { VNode } from '@lumina/framework/types';
 import type { AudioPanelApi, AudioPanelHandle } from '@lumina/nova';
 import { createLogger, isBrowser } from '@lumina/framework/utils';
+import { injectPluginStyle } from '../utils/injectStyle';
 import { EffectChain } from './effects/EffectChain';
 import { HiResAudioDecoder, detectHiResSupport } from './HiResAudioDecoder';
 import type { HiResDecodedAudio, HiResSupportInfo } from './HiResAudioDecoder';
@@ -110,6 +112,61 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
   readonly version = '1.0.0';
   readonly description = 'Web Audio 音效插件';
   readonly options?: PluginOptions;
+  /**
+   * 设置面板「音量均衡」分区：普通属性声明，SSR 不执行 install 也能渲染
+   * （只依赖 host.player 命令，不持有插件实例状态）
+   */
+  readonly settingSections: readonly PluginSettingSection[] = [
+    {
+      id: 'audioEffect.loudness',
+      order: 0,
+      height: 56,
+      render: (host): VNode =>
+        h(
+          'div',
+          { class: 'lumina-audio-setting-loudness' },
+          h(
+            'div',
+            { class: 'lumina-audio-setting-loudness-title' },
+            t('player.ui.settings.loudness.title'),
+          ),
+          h(
+            'div',
+            {
+              class:
+                'lumina-audio-setting-loudness-content ui ui-radio ui-dark',
+            },
+            h(
+              'div',
+              { class: 'ui-area' },
+              RadioGroup(
+                [
+                  {
+                    label: t('player.ui.settings.loudness.standard'),
+                    value: 1,
+                  },
+                  {
+                    label: t('player.ui.settings.loudness.dynamic'),
+                    value: 2,
+                  },
+                  {
+                    label: t('player.ui.settings.loudness.off'),
+                    value: 0,
+                    checked: true,
+                  },
+                ],
+                {
+                  name: 'loudness',
+                  onSelect: (option): void => {
+                    host.player.setLoudness?.(Number(option.value));
+                  },
+                },
+              ),
+            ),
+          ),
+        ),
+    },
+  ];
 
   /** 播放器事件总线 */
   private eventBus: PlayerEventBus | null = null;
@@ -157,6 +214,8 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
       logger.warn('服务端环境，音效插件仅注册不初始化');
       return;
     }
+    // 设置分区样式随插件分发（尺寸与原设置项一致，避免挤压面板高度）
+    injectPluginStyle('audio-setting', audioSettingCss);
     this.eventBus = player.events;
     // 音效入口与面板都由插件自己注册：安装即出现，卸载自动移除
     player.registerMenuItem?.({
@@ -425,6 +484,24 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
     this.eventBus = null;
   }
 }
+
+/** 设置分区样式（数值与播放器设置项保持一致：title 16+4，内容 24+12） */
+const audioSettingCss = `
+.lumina-audio-setting-loudness-title {
+  font-size: 12px;
+  height: 16px;
+  line-height: 16px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+.lumina-audio-setting-loudness-content {
+  margin-bottom: 12px;
+  width: 100%;
+}
+.lumina-audio-setting-loudness-content .ui-radio-item {
+  flex: 1;
+}
+`;
 
 /**
  * 音效插件工厂函数

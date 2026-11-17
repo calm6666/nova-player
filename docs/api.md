@@ -526,6 +526,82 @@ install(player) {
 
 面板容器由播放器提供，内容、样式和显隐由插件自己管理；插件卸载时注册项与已挂载面板自动回收。
 
+### 4.16 声明式 UI 贡献（发送栏 / 控件位）
+
+`uiContributions` 是插件的普通属性（不依赖 `install`）：SSR 阶段即可被播放器读取并渲染，
+水合前后 DOM 一致。播放器只提供区域与宿主 props，视图组件由插件决定。
+
+```ts
+class SubtitlePlugin {
+  readonly name = "subtitle";
+
+  readonly uiContributions = [
+    {
+      id: "subtitle.menu",
+      region: "controls.right",
+      slot: "subtitle", // 接管右侧控制栏的内置 subtitle 控件位
+      render: (host) => h(SubtitleMenu, host as SubtitleMenuProps),
+    },
+  ];
+}
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `region` | `controls.sendbar`（发送栏）/ `controls.right`（右侧控制栏） |
+| `slot` | 仅 `controls.right`：接管的内置控件键（如 `subtitle`），保持原位置 |
+| `render(host)` | 播放器传入宿主 props（状态 / 事件 / 播放器端口），插件返回视图 |
+
+| 方法 | 说明 |
+| --- | --- |
+| `getPluginUiContribution(region, slot?)` | 读取首个匹配的贡献；未命中时核心渲染内置实现 |
+
+发送栏在嵌入式场景无插件贡献时仍回落内置 `SendBar`；字幕菜单无插件贡献时回落内置
+`SubtitleMenu`（并按其插件标志隐藏，行为与迁移前一致）。
+
+### 4.17 设置面板分区
+
+设置面板的「更多设置」页由核心固定项 + 插件分区组成。分区同样是普通属性声明，
+核心只负责排序、挂载与高度累加，分区的标题、内容、状态全部由插件持有。
+
+```ts
+class AudioEffectPlugin {
+  readonly name = "audioEffect";
+
+  readonly settingSections = [
+    {
+      id: "audioEffect.loudness",
+      order: 0,
+      height: 56, // px，参与「更多设置」面板高度计算
+      render: ({ player }) =>
+        h(
+          "div",
+          { class: "lumina-audio-setting-loudness" },
+          h("div", { class: "lumina-audio-setting-loudness-title" }, t("player.ui.settings.loudness.title")),
+          RadioGroup([...], {
+            name: "loudness",
+            onSelect: (option) => player.setLoudness?.(Number(option.value)),
+          }),
+        ),
+    },
+  ];
+}
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 唯一 id，卸载插件时自动摘除 |
+| `order` | 排列顺序，小的在前 |
+| `height` | 分区高度（px），面板高度 = 基础高度 + 所有分区高度 |
+| `render({ player })` | 返回分区视图；命令经播放器端口调用，核心不持有分区状态 |
+
+| 方法 | 说明 |
+| --- | --- |
+| `getPluginSettingSections()` | 读取已登记插件的设置分区（按 order 排序，读取时建立注册依赖） |
+
+快捷键与快捷键面板始终属于播放器核心：插件只通过 `registerHotkey` 注册自己的快捷键，
+面板自动汇总展示。
+
 ---
 
 ## 5. 全事件表

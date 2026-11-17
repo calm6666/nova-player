@@ -24,7 +24,7 @@ import {
 import { PlayerState, PlayMode } from "../types/player";
 import { h, mount, hydrate as hydrateVNode, renderToString as renderVNodeToString, destroy, createTypedStateManager, createTypedEventBus, signal } from '@lumina/framework/core';
 import type { TypedStateManager, TypedEventBus } from "@lumina/framework/core";
-import type { Plugin, PluginUiContribution } from "../core/plugin";
+import type { Plugin, PluginSettingSection, PluginUiContribution, PluginUiRegion } from "../core/plugin";
 import type { ControlsAPI } from "../components/Controls";
 import { PlayerEventEnum, PlayerEventMap } from "../types/events";
 import { PlayerStateKeyEnum, PlayerStateMap, StateContext, ConfigContext, defaultControlConfig } from "../store/runtimeState";
@@ -464,6 +464,14 @@ export class VideoPlayer
 
   /** 已登记的插件实例（SSR 不执行 install，但仍需读取 UI 贡献） */
   private registeredPlugins: Plugin[] = [];
+
+  /**
+   * 插件注册版本：use / uninstall 时递增
+   *
+   * 设置分区等「插件声明」由 UI 在渲染期读取；读取方法内部访问该信号，
+   * 让 computed 建立依赖，插件运行期装卸时分区与面板高度自动联动。
+   */
+  private pluginRegistryVersion: Signal<number> = signal(0);
 
   /** 面板宿主（由 PlayerDocker 挂载后回填），负责插件面板的真实挂载与显隐 */
   private panelHost: {
@@ -2422,6 +2430,7 @@ export class VideoPlayer
   use(plugin: Plugin): VideoPlayer {
     if (!this.registeredPlugins.some((item) => item.name === plugin.name)) {
       this.registeredPlugins.push(plugin);
+      this.pluginRegistryVersion.value += 1;
     }
     /**
      * SSR 环境只同步安装标志（renderToString 依赖 pluginFlags 决定
@@ -2527,19 +2536,28 @@ export class VideoPlayer
 
   /** 读取插件贡献的 UI 区域内容（按已安装顺序取第一个） */
   getPluginUiContribution(
-    region: "controls.sendbar",
+    region: PluginUiRegion,
+    slot?: string,
   ): PluginUiContribution | null {
-    let found: PluginUiContribution | null = null;
+    this.pluginRegistryVersion.value;
     for (const plugin of this.registeredPlugins) {
-      const contribution = plugin.uiContributions?.find(
-        (item) => item.region === region,
-      );
-      if (contribution) {
-        found = contribution;
-        break;
+      for (const contribution of plugin.uiContributions ?? []) {
+        if (contribution.region !== region) continue;
+        if (slot !== undefined && contribution.slot !== slot) continue;
+        return contribution;
       }
     }
-    return found;
+    return null;
+  }
+
+  /** 当前已登记插件的设置分区（按 order 排序） */
+  getPluginSettingSections(): PluginSettingSection[] {
+    this.pluginRegistryVersion.value;
+    const sections: PluginSettingSection[] = [];
+    for (const plugin of this.registeredPlugins) {
+      sections.push(...(plugin.settingSections ?? []));
+    }
+    return sections.sort((a, b) => a.order - b.order);
   }
 
   /** 注册右键菜单项，返回注销函数 */
@@ -2590,6 +2608,7 @@ export class VideoPlayer
     this.registeredPlugins = this.registeredPlugins.filter(
       (plugin) => plugin.name !== name,
     );
+    this.pluginRegistryVersion.value += 1;
     this.hotkeyRegistry.removeByPlugin(name);
     this.uiRegistry.removeByPlugin(name);
     this.syncPluginFlags(name, false);
@@ -3327,7 +3346,8 @@ export class VideoPlayer
    *
    * SettingMenu emit settingChange 的 key：
    * - 开关：mirror / loop / autostart / lightoff / pip / highenergy
-   * - 单选组：handoff(播放方式) / aspect(视频比例) / codec(播放策略) / loudness(音量均衡)
+   * - 单选组：handoff(播放方式) / aspect(视频比例) / codec(播放策略)
+   * - 插件设置分区（如音量均衡）由插件直接调用播放器命令，不经此入口
    *
    * @param key - 配置键
    * @param value - 配置值
@@ -3372,9 +3392,6 @@ export class VideoPlayer
         break;
       case "codec":
         this.setCodecPrefer(typeof value === "number" ? value : 0);
-        break;
-      case "loudness":
-        this.setLoudness(typeof value === "number" ? value : 0);
         break;
       default:
         break;

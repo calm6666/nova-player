@@ -601,7 +601,8 @@ export const RightControls = defineComponent<
         scale: false,
         fade: false,
       };
-      return h(SubtitleMenu, {
+      /** 宿主 props：插件只负责渲染视图，状态与事件仍由播放器接线 */
+      const menuProps = {
         /** 插件安装标志读取器透传：未装 subtitle 插件时按钮整体隐藏 */
         plugins: props.plugins,
         visible: state?.get(PlayerStateKeyEnum.SUBTITLE_VISIBLE) ?? false,
@@ -616,7 +617,14 @@ export const RightControls = defineComponent<
         onSubtitleLangChange,
         onSubtitleStyleChange,
         onBilingualChange,
-      });
+      };
+      // 字幕插件接管 controls.right 的 subtitle 控件位；未装插件时渲染内置实现
+      const contribution = player?.getPluginUiContribution?.(
+        "controls.right",
+        "subtitle",
+      );
+      if (contribution) return contribution.render(menuProps);
+      return h(SubtitleMenu, menuProps);
     },
     /** 渲染音量滑块组件（hover 展开 / 拖拽调量 / 静音切换） */
     volume: () => h(VolumeSlider, { onVolumeChange, onMuteToggle }),
@@ -625,8 +633,6 @@ export const RightControls = defineComponent<
       return h(SettingMenu, {
         onSettingChange,
         visible: settingConfigSignal,
-        /** 插件安装标志读取器透传：未装 audioEffect 插件时第二页音频设置区块不渲染 */
-        plugins: props.plugins,
       });
     },
     /** 渲染画中画按钮（state-active 由 isPipSignal 驱动，style.display 由 pipConfigSignal 驱动） */

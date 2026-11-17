@@ -87,6 +87,8 @@ export interface PlayerPort {
   getVolume(): number;
   setMuted(muted: boolean): void;
   toggleMute(): void;
+  /** 设置音量均衡模式（0 关闭 / 1 标准 / 2 高动态，音效插件设置分区使用） */
+  setLoudness?(mode: number): void;
 
   // ---- 字幕 ----
   setSubtitleVisible(visible: boolean): void;
@@ -142,10 +144,14 @@ export interface PlayerUiHost extends PlayerPort {
   /** 插件 UI 注册表（右键菜单 / 面板） */
   getUiRegistry?(): UiRegistry;
 
-  /** 读取插件贡献的区域内容（如发送栏） */
+  /** 读取插件贡献的区域内容（如发送栏 / 右侧控件位） */
   getPluginUiContribution?(
-    region: "controls.sendbar",
+    region: import("../core/plugin").PluginUiRegion,
+    slot?: string,
   ): import("../core/plugin").PluginUiContribution | null;
+
+  /** 插件声明的设置面板分区（按 order 排序，读取时建立插件注册依赖） */
+  getPluginSettingSections?(): import("../core/plugin").PluginSettingSection[];
 
   /** 注册面板宿主（PlayerDocker 内部使用） */
   registerPanelHost?(

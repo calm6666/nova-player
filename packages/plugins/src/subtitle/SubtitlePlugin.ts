@@ -35,6 +35,8 @@
 import type { Plugin, PluginOptions } from '@lumina/nova';
 import type { SubtitleItem, ParsedSubtitle, SubtitleSource, SubtitleStyle, LocalAiSubtitleConfig, LocalAiSubtitleProvider, RemoteSubtitleProvider, RemoteSubtitleTrack, SubtitleTrackInfo, SubtitleAiStatusPayload, SubtitleCueEvent, SubtitleEngineContext, AsrEngine, AiSubtitleEntry } from "@lumina/nova";
 import { SubtitleFormat } from "@lumina/nova";
+import { h, SubtitleMenu } from "@lumina/nova";
+import type { PluginUiContribution, SubtitleMenuProps } from "@lumina/nova";
 
 export type { SubtitleSource } from "@lumina/nova";
 import type { VideoPlayer } from "@lumina/nova";
@@ -297,6 +299,19 @@ class SubtitlePluginClass implements SubtitlePluginAPI {
   readonly version = "1.0.0";
   readonly description = "Subtitle rendering plugin";
   readonly options?: PluginOptions;
+  /**
+   * 字幕菜单由插件贡献：接管右侧控制栏的 subtitle 控件位，
+   * 普通属性声明，SSR 不执行 install 也能渲染同一菜单
+   */
+  readonly uiContributions: readonly PluginUiContribution[] = [
+    {
+      id: "subtitle.menu",
+      region: "controls.right",
+      slot: "subtitle",
+      render: (host: unknown) =>
+        h(SubtitleMenu, host as SubtitleMenuProps & Record<string, unknown>),
+    },
+  ];
 
   private video: HTMLVideoElement | null = null;
   private subtitleWrap: HTMLElement | null = null;
