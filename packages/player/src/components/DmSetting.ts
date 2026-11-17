@@ -328,21 +328,17 @@ export const DmSetting = defineComponent<DmSettingProps, DmSettingEvents>(
           h(
             "span",
             { class: "nova-player-block-filter-image" },
-            h(
-              "svg",
-              {
-                xmlns: "http://www.w3.org/2000/svg",
-                "xml:space": "preserve",
-                "data-pointer": "none",
-                style: "enable-background:new 0 0 28 28",
-                viewBox: "0 0 28 28",
-              },
-              ...FILTER_ICONS[item.type].map((path) =>
-                h("path", {
-                  d: path,
-                }),
-              ),
-            ),
+            h("svg", {
+              xmlns: "http://www.w3.org/2000/svg",
+              "xml:space": "preserve",
+              "data-pointer": "none",
+              style: "enable-background:new 0 0 28 28",
+              viewBox: "0 0 28 28",
+              // 过滤图标路径是静态常量，用内容洞交给模板/SSR，避免运行时逐个建 SVG 节点
+              svgContent: FILTER_ICONS[item.type]
+                .map((path) => `<path d="${path}"></path>`)
+                .join(""),
+            }),
           ),
           h(
             "span",

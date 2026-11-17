@@ -209,6 +209,22 @@ function isReactiveKey(key: t.Node): boolean {
 }
 
 /** 不能进入骨架模板的运行时属性 */
+/** 当前编译文件（仅 debug 回退原因时使用） */
+let debugFile = "";
+
+/** 全局骨架变量序号：多趟编译时避免 const 名冲突 */
+let skelSeq = 0;
+
+/** 记录一次骨架化回退（LUMINA_COMPILE_DEBUG=1 时输出） */
+function skipFalse(reason: string, node?: t.Node): boolean {
+  if (process.env.LUMINA_COMPILE_DEBUG === "1") {
+    console.log(
+      `[v2-skip] ${debugFile}:${node?.loc?.start.line ?? 0} ${reason}`,
+    );
+  }
+  return false;
+}
+
 const RESERVED_ATTR_KEYS = new Set([
   "__events",
   "__providers",
@@ -223,6 +239,8 @@ interface SplitAttrs {
   dynamic: Array<{ name: string; getter: string }>;
   events: Array<{ name: string; getter: string }>;
   refs: Array<{ name: string; getter: string }>;
+  /** 整对象属性洞：...spread / 非对象字面量 attrs，运行时 applyAttrs */
+  attrs: Array<{ getter: string }>;
   contents: Array<{
     mode: "innerHTML" | "textContent" | "svgContent";
     getter: string;
@@ -248,6 +266,7 @@ function splitAttrs(
     dynamic: [],
     events: [],
     refs: [],
+    attrs: [],
     contents: [],
     directives: [],
   };
@@ -255,12 +274,23 @@ function splitAttrs(
   if (t.isNullLiteral(attrsArg) || t.isBooleanLiteral(attrsArg)) {
     return result;
   }
-  if (!t.isObjectExpression(attrsArg)) return null;
+  // 非对象字面量 attrs（变量 / 调用结果）降级为整对象属性洞，不再整段回退
+  if (!t.isObjectExpression(attrsArg)) {
+    const source = code.slice(attrsArg.start ?? 0, attrsArg.end ?? 0);
+    result.attrs.push({ getter: `() => (${source})` });
+    return result;
+  }
 
   const staticProps: t.ObjectProperty[] = [];
   const seen = new Set<string>();
 
   for (const prop of attrsArg.properties) {
+    // ...spread：整对象属性洞，运行时合并
+    if (t.isSpreadElement(prop)) {
+      const source = code.slice(prop.argument.start ?? 0, prop.argument.end ?? 0);
+      result.attrs.push({ getter: `() => (${source})` });
+      continue;
+    }
     if (!t.isObjectProperty(prop) || prop.computed) return null;
     const keyNode = prop.key;
     const name = t.isIdentifier(keyNode)
@@ -269,7 +299,59 @@ function splitAttrs(
         ? keyNode.value
         : null;
     if (name === null) return null;
-    if (RESERVED_ATTR_KEYS.has(name)) return null;
+    // key 不落 DOM
+    if (name === "key") continue;
+    // 上下文注入无法模板化，保留回退
+    if (name === "__providers") return null;
+    // 内部响应式属性协议：拆成逐个动态属性洞
+    if (name === "__reactiveAttrs") {
+      if (!t.isObjectExpression(prop.value)) return null;
+      for (const inner of prop.value.properties) {
+        if (!t.isObjectProperty(inner) || inner.computed) return null;
+        const innerName = t.isIdentifier(inner.key)
+          ? inner.key.name
+          : t.isStringLiteral(inner.key)
+            ? inner.key.value
+            : null;
+        if (innerName === null) return null;
+        const innerSource = code.slice(
+          inner.value.start ?? 0,
+          inner.value.end ?? 0,
+        );
+        const innerGetter =
+          t.isArrowFunctionExpression(inner.value) ||
+          t.isFunctionExpression(inner.value)
+            ? innerSource
+            : `() => (${innerSource})`;
+        result.dynamic.push({ name: innerName, getter: innerGetter });
+      }
+      continue;
+    }
+    // 内部事件协议：拆成事件洞
+    if (name === "__events") {
+      if (!t.isObjectExpression(prop.value)) return null;
+      for (const inner of prop.value.properties) {
+        if (!t.isObjectProperty(inner) || inner.computed) return null;
+        const innerName = t.isIdentifier(inner.key)
+          ? inner.key.name
+          : t.isStringLiteral(inner.key)
+            ? inner.key.value
+            : null;
+        if (innerName === null) return null;
+        const eventName = innerName.startsWith("on")
+          ? innerName
+          : `on${innerName.charAt(0).toUpperCase()}${innerName.slice(1)}`;
+        const innerSource = code.slice(
+          inner.value.start ?? 0,
+          inner.value.end ?? 0,
+        );
+        result.events.push({
+          name: eventName,
+          getter: `() => (${innerSource})`,
+        });
+      }
+      continue;
+    }
     if (seen.has(name)) return null;
     seen.add(name);
 
@@ -436,14 +518,20 @@ function emitElement(
   validT: Set<t.Node>,
 ): boolean {
   const tagNode = node.arguments[0];
-  if (!t.isStringLiteral(tagNode)) return false;
+  if (!t.isStringLiteral(tagNode)) {
+    return skipFalse("tag-not-literal", node);
+  }
   const tag = tagNode.value;
-  if (tag === "fragment") return false;
-  if (SVG_TAGS.has(tag) && tag !== "svg" && !inSvg) return false;
-  if (!inSvg && TEMPLATE_UNSAFE_ROOTS.has(tag)) return false;
+  if (tag === "fragment") return skipFalse("fragment", node);
+  if (SVG_TAGS.has(tag) && tag !== "svg" && !inSvg) {
+    return skipFalse("svg-child-outside-svg", node);
+  }
+  if (!inSvg && TEMPLATE_UNSAFE_ROOTS.has(tag)) {
+    return skipFalse("unsafe-root", node);
+  }
 
   const split = splitAttrs(node.arguments[1], code);
-  if (split === null) return false;
+  if (split === null) return skipFalse("splitAttrs-null", node);
   const openStart = `<${tag}${split.staticAttrs}`;
   const appendOpen = (): void => {
     appendStatic(out, openStart);
@@ -487,6 +575,17 @@ function emitElement(
         path: [...path],
         name: directive.name,
         getter: directive.getter,
+      });
+      out.parts.push(holeIndex);
+    }
+    // 整对象属性洞：...spread / 非字面量 attrs，运行时合并到元素
+    for (const attrs of split.attrs) {
+      const holeIndex = out.holes.length;
+      out.holes.push({
+        kind: "attrs",
+        root: rootIndex,
+        path: [...path],
+        getter: attrs.getter,
       });
       out.parts.push(holeIndex);
     }
@@ -902,6 +1001,7 @@ export function transformV2(
     return null;
   }
 
+  debugFile = filename;
   const candidates: Array<{
     node: t.CallExpression;
     skeleton: SkeletonCode;
@@ -931,11 +1031,18 @@ export function transformV2(
         const skeleton = buildSkeleton(node, code, validH, validT);
         if (skeleton !== null && !hasCommentMarker(skeleton)) {
           candidates.push({ node, skeleton });
+        } else if (skeleton !== null) {
+          skipFalse("comment-marker", node);
         }
       },
     },
   });
 
+  if (process.env.LUMINA_COMPILE_DEBUG === "1") {
+    console.log(
+      `[v2-stats] ${filename} h=${validH.size} candidates=${candidates.length}`,
+    );
+  }
   if (candidates.length === 0) return null;
 
   // 只保留最外层可编译调用，避免父子节点编辑区间重叠
@@ -955,8 +1062,8 @@ export function transformV2(
 
   const s = new MagicString(code);
   const declarations: string[] = [];
-  selected.forEach((item, index) => {
-    const name = `_skel_v2_${index + 1}`;
+  selected.forEach((item) => {
+    const name = `_skel_v2_${++skelSeq}`;
     const start = item.node.start;
     const end = item.node.end;
     if (typeof start !== "number" || typeof end !== "number") return;
@@ -966,10 +1073,14 @@ export function transformV2(
     s.overwrite(start, end, `${name}(${holesCode(item.skeleton)})`);
   });
 
+  // 多趟编译时只在第一趟注入 import 与标记，后续趟只追加骨架声明
+  const firstPass = !code.includes("@lumina-compiled:v2");
   s.prepend(
-    `import { _tmpl2, _frag } from ${JSON.stringify(options.internalImportSource)};\n` +
+    (firstPass
+      ? `import { _tmpl2, _frag } from ${JSON.stringify(options.internalImportSource)};\n`
+      : "") +
       declarations.join("") +
-      "/* @lumina-compiled:v2 */\n",
+      (firstPass ? "/* @lumina-compiled:v2 */\n" : ""),
   );
 
   return {

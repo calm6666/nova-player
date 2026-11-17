@@ -385,6 +385,8 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
     let dropDelayMs = 0;
     let dropResetTimer: ReturnType<typeof setTimeout> | null = null;
     let offThumbConfig: (() => void) | null = null;
+    /** 拖拽期间收到配置更新：等松手后再重建，避免动画中途被销毁 */
+    let pendingThumbRebuild = false;
 
     // ============================================
     // DOM 引用缓存（For render 的函数 ref 收集，零 querySelectorAll）
@@ -828,6 +830,10 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         thumbIconRef.value.replaceChildren(thumbDragDom);
       }
       if (thumbDirection === 0) {
+        // 动画可能尚未触发 DOMLoaded，懒取一次实际中间帧
+        if (dragIdleFrame === 0) {
+          dragIdleFrame = Math.floor((dragAnim.totalFrames || 0) / 2);
+        }
         dragAnim.goToAndStop(dragIdleFrame, true);
       }
       if (dragDirection === "fixed") {
@@ -975,6 +981,12 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         );
         dropAnim?.goToAndStop(dropIdleFrame, true);
       });
+      // 自定义落点但没有描述延迟时，播完自动回常态帧，避免停在最后一帧
+      if (hasCustomDrop && dropDelayMs <= 0) {
+        dropAnim.addEventListener("complete", () => {
+          dropAnim?.goToAndStop(dropIdleFrame, true);
+        });
+      }
       thumbIconRef.value.appendChild(thumbDragDom);
 
       if (pullIndicatorRef.value) {
@@ -1136,6 +1148,10 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
         // 松手落点动画：无自定义图标时切回 drop 动画停在中间帧
         showThumbDropFrame();
         resetPulling();
+        if (pendingThumbRebuild) {
+          pendingThumbRebuild = false;
+          void rebuildThumbAnimations();
+        }
         lifecycle.emit?.("seekEnd");
 
         document.removeEventListener("mousemove", onMouseMove);
@@ -1386,7 +1402,10 @@ export const ProgressBar = defineComponent<ProgressBarProps, ProgressBarEvents>(
           (value) => {
             thumbConfigSignal.value =
               value as ProgressThumbIconConfig | undefined;
-            if (isBrowser()) void rebuildThumbAnimations();
+            if (!isBrowser()) return;
+            // 拖拽中重建会打断动画，延迟到松手
+            if (isDragging) pendingThumbRebuild = true;
+            else void rebuildThumbAnimations();
           },
         );
       }

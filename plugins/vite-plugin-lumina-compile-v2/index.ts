@@ -83,11 +83,22 @@ export default function luminaCompileV2(
       if (!H_IMPORT_RE.test(code)) return null;
 
       // 第一阶段：静态骨架化（h(元素) → _tmpl2 骨架 + 洞）
-      const v2Result = transformV2(code, id, {
-        ...options,
-        internalImportSource,
-      });
+      // 构建期多趟执行：洞回调里的嵌套 h() 也会在后续趟变成模板工厂，
+      // 避免它们留给 v1 生成 _createEl
+      let v2Code = code;
+      let v2Result: ReturnType<typeof transformV2> = null;
+      const passes = isProduction ? 4 : 1;
+      for (let pass = 0; pass < passes; pass += 1) {
+        const result = transformV2(v2Code, id, {
+          ...options,
+          internalImportSource,
+        });
+        if (!result) break;
+        v2Code = result.code;
+        v2Result = result;
+      }
       if (!v2Result) return null;
+      v2Result = { code: v2Code, map: null as never };
 
       // 第二阶段：v1 编译收尾（无骨架化的 h() 调用照常静态编译：
       // 组件调用 → _createComp + _rp 响应式 props、元素属性/事件预分类、

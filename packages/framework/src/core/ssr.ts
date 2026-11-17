@@ -23,6 +23,7 @@ import {
 } from "./normalize";
 import { maybeReactiveProps } from "./reactiveProps";
 import { isFlowComponent } from "./flow";
+import { isSsrEmittedChildHole } from "./skeletonRules";
 
 /**
  * 自闭合 HTML 标签集合
@@ -170,13 +171,24 @@ export function renderToString(
           if (hole?.kind === "attr") {
             out.push(serializeSkeletonAttr(hole.name, hole.get()));
           } else if (hole?.kind === "attrs") {
-            // 动态 attrs 整对象：SSR 无法静态序列化，客户端/水合时 applyAttrs
-            out.push("");
+            // 整对象属性洞（spread / 非字面量 attrs）：SSR 取当前快照序列化，
+            // 水合后再由 applyAttrs 接管响应式更新
+            const attrs = hole.get();
+            if (attrs !== null && typeof attrs === "object") {
+              let html = "";
+              for (const key of Object.keys(attrs)) {
+                html += serializeSkeletonAttr(
+                  key,
+                  (attrs as Record<string, unknown>)[key],
+                );
+              }
+              out.push(html);
+            }
           } else if (hole?.kind === "child") {
             // 子节点洞：SSR 直出「元素根」的动态内容以保留首屏；
             // 文本根会与相邻静态文本合并、fragment 顶层会打乱静态根计数，
             // 这两类不直出，交由客户端水合后挂载（仍然零注释 / 零占位节点）
-            if (hole.root === -1) {
+            if (!isSsrEmittedChildHole(hole)) {
               out.push("");
             } else {
               const value = hole.get();

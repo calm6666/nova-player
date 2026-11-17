@@ -20,6 +20,11 @@ import type { ClassInput, StyleInput } from "./normalize";
 import { isRefObject, isSignalRef } from "./templateRef";
 import { h } from "./h";
 import { getDirective } from "./directives";
+import {
+  isNodePositionHole,
+  isSsrEmittedChildHole,
+  skeletonHoleSignature,
+} from "./skeletonRules";
 
 /**
  * 沿 __parent 链向上查找最近的组件生命周期注册表，解析字符串模板引用
@@ -216,6 +221,8 @@ interface SkeletonReference {
   content: DocumentFragment;
   /** 洞两侧都是文本时 HTML 解析会合并文本，无法按参考对齐，回退旧路径 */
   unsafeTextMerge: boolean;
+  /** 洞类型签名：洞结构变化时参考树必须重建 */
+  signature: string;
 }
 
 const skeletonReferenceCache = new WeakMap<SkeletonPart[], SkeletonReference>();
@@ -225,8 +232,9 @@ function getSkeletonReference(
   parts: SkeletonPart[],
   holes: SkeletonHole[],
 ): SkeletonReference {
+  const signature = skeletonHoleSignature(holes);
   const cached = skeletonReferenceCache.get(parts);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined && cached.signature === signature) return cached;
 
   let html = "";
   for (const part of parts) {
@@ -236,7 +244,7 @@ function getSkeletonReference(
     }
     const hole = holes[part];
     // 属性洞位于标签内部，占位注释会让 HTML 非法；只有节点位置的洞需要占位
-    if (hole !== undefined && (hole.kind === "child" || hole.kind === "text")) {
+    if (hole !== undefined && isNodePositionHole(hole)) {
       html += `<!--h${part}-->`;
     }
   }
@@ -264,7 +272,7 @@ function getSkeletonReference(
     comment = walker.nextNode();
   }
 
-  const reference = { content, unsafeTextMerge };
+  const reference = { content, unsafeTextMerge, signature };
   skeletonReferenceCache.set(parts, reference);
   return reference;
 }
@@ -275,6 +283,53 @@ interface SkeletonHydrationContext {
   pathMap: Map<string, Element>;
   failed: boolean;
   vnode: VNode;
+}
+
+/**
+ * 水合前的结构预校验（不产生任何副作用）
+ *
+ * 静态节点必须按参考顺序对齐；洞占位处允许任意 SSR 节点。
+ * 校验通过后再进入真正的洞级水合，避免「水合一半再整段替换」留下的
+ * 已挂载子组件和 effect 泄漏。
+ */
+function skeletonStructureAligns(
+  refParent: ParentNode,
+  domParent: Element,
+): boolean {
+  let cursor: ChildNode | null = domParent.firstChild;
+  for (const refChild of Array.from(refParent.childNodes)) {
+    if (refChild.nodeType === 8) continue;
+    let matched: ChildNode | null = cursor;
+    if (refChild.nodeType === 1) {
+      while (
+        matched !== null &&
+        !(
+          matched instanceof Element &&
+          matched.tagName === (refChild as Element).tagName
+        )
+      ) {
+        matched = matched.nextSibling;
+      }
+      if (matched === null) return false;
+      if (!skeletonStructureAligns(refChild as Element, matched)) return false;
+      cursor = matched.nextSibling;
+      continue;
+    }
+    if (refChild.nodeType === 3) {
+      while (
+        matched !== null &&
+        !(
+          matched.nodeType === 3 &&
+          (matched as Text).data === (refChild as Text).data
+        )
+      ) {
+        matched = matched.nextSibling;
+      }
+      if (matched === null) return false;
+      cursor = matched.nextSibling;
+    }
+  }
+  return true;
 }
 
 /**
@@ -408,13 +463,15 @@ function hydrateSkeletonHole(
   const child = value as VNode;
   if (child.__parent === undefined) child.__parent = vnode;
 
-  // SSR 只直出元素根的 child 洞（见 ssr.ts 的同一套规则），其余直接挂载；
-  // fragment / 组件按 hydrateNode 自身的游标语义消费 SSR 节点
-  let canHydrate = hole.root !== -1 && cursor !== null;
-  if (canHydrate && typeof child.tag === "string") {
-    canHydrate =
-      cursor instanceof Element &&
-      cursor.tagName.toLowerCase() === String(child.tag).toLowerCase();
+  // SSR 只直出元素根的 child 洞（与 ssr.ts 共用 isSsrEmittedChildHole）；
+  // 非元素根输出不会被 SSR 直出，这里只能新建
+  let canHydrate = false;
+  if (isSsrEmittedChildHole(hole) && cursor instanceof Element) {
+    canHydrate = true;
+    if (typeof child.tag === "string") {
+      canHydrate =
+        cursor.tagName.toLowerCase() === String(child.tag).toLowerCase();
+    }
   }
 
   if (canHydrate) {
@@ -2896,11 +2953,19 @@ function hydrateNode(
           vnode.__holes.length > 0
         ) {
           const reference = getSkeletonReference(tmpl.parts, vnode.__holes);
-          if (
+          const refRoot = reference.content.firstElementChild;
+          const aligns =
             !reference.unsafeTextMerge &&
-            hydrateSkeletonTree(vnode, el, reference)
-          ) {
+            refRoot !== null &&
+            skeletonStructureAligns(refRoot, el);
+          if (aligns && hydrateSkeletonTree(vnode, el, reference)) {
             return el.nextSibling;
+          }
+          hydrationMismatchCount += 1;
+          if (isDev()) {
+            console.warn(
+              "[Lumina/hydrate] Skeleton reference mismatch; replacing the subtree with a client clone",
+            );
           }
           return replaceSkeletonInPlace(vnode, el);
         }
