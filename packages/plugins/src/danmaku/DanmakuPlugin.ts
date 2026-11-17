@@ -44,8 +44,8 @@ import type { VideoPlayer } from "@lumina/nova";
 import type { PlayerEventBus } from "@lumina/nova";
 import { PlayerEventEnum } from "@lumina/nova";
 import { PlayerStateKeyEnum } from "@lumina/nova";
-import { h, SendBar } from "@lumina/nova";
-import type { SendBarProps, PluginUiContribution } from "@lumina/nova";
+import { h, SendBar, DmSetting } from "@lumina/nova";
+import type { SendBarProps, PluginUiContribution, DmSettingApi } from "@lumina/nova";
 import { DanmakuManager } from "../utils/danmaku";
 import { DanmakuTip } from "./DanmakuTip";
 import { injectPluginStyle } from "../utils/injectStyle";
@@ -241,7 +241,13 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
     {
       id: "danmaku.sendbar",
       region: "controls.sendbar",
-      render: (host: unknown) => h(SendBar, host as SendBarProps),
+      render: (host: unknown) =>
+        h(SendBar, {
+          ...(host as SendBarProps),
+          /** 设置面板由弹幕插件收编：发送栏只负责布局与收起复位 */
+          settings: ({ onMounted }: { onMounted: (api: DmSettingApi) => void }) =>
+            h(DmSetting, { onDmSettingMounted: onMounted }),
+        }),
     },
   ];
 

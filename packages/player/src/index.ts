@@ -41,7 +41,10 @@ export type { ProgressPreviewFrame, ProgressPreviewProvider, EnergyProgressData,
 
 // 发送栏组件：由 DanmakuPlugin 通过 uiContributions 渲染（SSR 同样可用）
 export { SendBar } from './components/SendBar';
-export type { SendBarProps } from './components/SendBar';
+export type { SendBarProps, SendBarSettingsHost } from './components/SendBar';
+// 弹幕设置面板：弹幕插件通过 SendBar.settings 提供，核心保留无插件回落
+export { DmSetting } from './components/DmSetting';
+export type { DmSettingApi, DmSettingProps } from './components/DmSetting';
 // 字幕菜单组件：由 SubtitlePlugin 通过 uiContributions 渲染
 export { SubtitleMenu } from './components/SubtitleMenu';
 export type {

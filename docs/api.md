@@ -559,6 +559,9 @@ class SubtitlePlugin {
 发送栏在嵌入式场景无插件贡献时仍回落内置 `SendBar`；字幕菜单无插件贡献时回落内置
 `SubtitleMenu`（并按其插件标志隐藏，行为与迁移前一致）。
 
+发送栏设置面板通过 `SendBarProps.settings` 渲染插槽提供（入参为 `{ onMounted }`，
+用于收起时复位）：DanmakuPlugin 提供内置 `DmSetting`，无插件时发送栏回落同一面板。
+
 ### 4.17 设置面板分区
 
 设置面板的「更多设置」页由核心固定项 + 插件分区组成。分区同样是普通属性声明，

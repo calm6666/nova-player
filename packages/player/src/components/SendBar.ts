@@ -8,7 +8,7 @@
 import { h, defineComponent, useTemplateRef, useContext, useReactiveState, t, signal, computed } from '@lumina/framework/core';
 import { rafTimeout, cancelRaf } from '@lumina/framework/utils/rafTimeout';
 import type { AnimationFrameID } from "@lumina/framework/utils/rafTimeout";
-import type { ComponentLifecycle } from "@lumina/framework/types";
+import type { ComponentLifecycle, VNode } from "@lumina/framework/types";
 import { StateContext, PlayerStateKeyEnum } from "../store/runtimeState";
 import { formatOnlineCount, formatDanmakuCount } from "../utils/formatCount";
 import { DmSetting } from "./DmSetting";
@@ -51,6 +51,17 @@ export interface Tooltip {
 }
 
 /**
+ * 弹幕设置面板渲染上下文
+ *
+ * 插件提供设置视图时，通过 onMounted 把面板 API 交回发送栏：
+ * 面板收起时需要复位到第一页。
+ */
+export interface SendBarSettingsHost {
+  /** 设置面板挂载完成回传 API */
+  onMounted: (api: DmSettingApi) => void;
+}
+
+/**
  * SendBar 组件 Props 接口
  * 定义弹幕发送栏的所有属性和回调
  */
@@ -77,6 +88,12 @@ export interface SendBarProps {
   onShowTooltip?: (tooltip: Tooltip) => void;
   /** 隐藏提示气泡时的回调 */
   onHideTooltip?: (tooltip?: Tooltip) => void;
+  /**
+   * 弹幕设置面板渲染器（插件提供）
+   *
+   * 缺省时回落内置 DmSetting，保证无弹幕插件的嵌入式发送栏仍可配置。
+   */
+  settings?: (host: SendBarSettingsHost) => VNode | null;
 }
 
 /**
@@ -427,6 +444,19 @@ export const SendBar = defineComponent<SendBarProps>(
     // ============================================
     // 组件渲染
     // ============================================
+
+    /**
+     * 设置面板：插件提供视图时由插件渲染（当前为弹幕插件），
+     * 未提供时回落内置 DmSetting（嵌入式无插件场景）
+     */
+    const renderSettings = (): VNode => {
+      const onMounted = (api: DmSettingApi): void => {
+        dmSettingApi = api;
+      };
+      if (props.settings) return props.settings({ onMounted }) ?? h("div", {});
+      return h(DmSetting, { onDmSettingMounted: onMounted });
+    };
+
     return h(
       "div",
       { class: "nova-player-sending-bar" },
@@ -519,11 +549,7 @@ export const SendBar = defineComponent<SendBarProps>(
               "div",
               { class: "nova-player-dm-setting-box ui ui-panel ui-dark" },
               // 弹幕设置面板（显示区域 / 不透明度 / 字号 / 速度，写入运行时状态）
-              h(DmSetting, {
-                onDmSettingMounted: (api: DmSettingApi) => {
-                  dmSettingApi = api;
-                },
-              }),
+              renderSettings(),
             ),
           ),
         ),
