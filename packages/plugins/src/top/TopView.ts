@@ -5,6 +5,7 @@
  */
 
 import { h, defineComponent, useTemplateRef, t, Fragment, rafTimeout, cancelRaf, type AnimationFrameID } from "@lumina/nova";
+import type { FeedbackPanelProps } from "@lumina/nova";
 import type { ComponentLifecycle, VNode } from "@lumina/framework/types";
 
 import { Plus, Issue } from "@lumina/nova";
@@ -82,6 +83,8 @@ export interface TopProps {
   host?: HTMLElement | null;
   /** 问题反馈点击回调 */
   onIssueClick?: () => void;
+  /** 反馈面板配置（提交接口 / 外链打开，由播放器透传） */
+  feedback?: FeedbackPanelProps;
   /** 是否显示问题反馈图标（top-issue）；默认 true；cross 页面配置 false 避免与三连图标重叠 */
   issue?: boolean;
   /** 关注按钮点击回调 */

@@ -10,9 +10,13 @@ import {
 h,
 mount,
 destroy,
+loadFeedbackPanel,
+loadPanelStyles,
+type FeedbackPanelApi,
 type SlotContext,
 type SlotMount
 } from "@lumina/nova";
+import type { VNode } from "@lumina/framework/types";
 import { type Plugin } from '@lumina/nova';
 import { Top as TopView, type TopProps } from "./TopView";
 import { injectPluginStyle } from "../utils/injectStyle";
@@ -37,6 +41,14 @@ interface MusicPluginLike {
 }
 
 interface TopPluginHost {
+  registerPanel?(registration: {
+    id: string;
+    plugin?: string;
+    mount: (ctx: { container: HTMLElement }) => void | (() => void);
+    open?: () => void;
+    close?: () => void;
+  }): () => void;
+  openPanel?(id: string): void;
   registerTopPluginMount(mount: SlotMount["mount"]): void;
   unregisterTopPluginMount(mount?: SlotMount["mount"]): void;
   refreshTop?(): void;
@@ -53,6 +65,8 @@ class TopPluginClass implements Plugin {
   private readonly config: TopPluginConfig;
   private player: TopPluginHost | null = null;
   private registered: SlotMount["mount"] | null = null;
+  /** 最近一次 Top 渲染 props（反馈面板提交配置从中读取） */
+  private currentViewProps: TopProps | undefined;
 
   constructor(config: TopPluginConfig) {
     this.config = config;
@@ -63,6 +77,49 @@ class TopPluginClass implements Plugin {
   install(player: Parameters<Plugin["install"]>[0]): void {
     this.player = player as unknown as TopPluginHost;
     injectPluginStyle("top", topCss);
+
+    // 反馈面板由 Top 插件持有：问题反馈图标与面板生命周期都在插件内
+    let feedbackApi: Partial<FeedbackPanelApi> = {};
+    let feedbackVNode: VNode | null = null;
+    let feedbackClosed = false;
+    this.player.registerPanel?.({
+      id: "feedback",
+      plugin: this.name,
+      mount: ({ container }): (() => void) => {
+        feedbackClosed = false;
+        feedbackApi = {};
+        void (async (): Promise<void> => {
+          const [panelModule, styleModule] = await Promise.all([
+            loadFeedbackPanel(),
+            loadPanelStyles(),
+          ]);
+          if (feedbackClosed) return;
+          styleModule.ensureLazyPanelStyles();
+          feedbackVNode = h(panelModule.FeedbackPanel, {
+            ...this.currentViewProps?.feedback,
+            onFeedbackPanelMounted: (api: FeedbackPanelApi): void => {
+              feedbackApi = api;
+            },
+          });
+          mount(feedbackVNode, container);
+        })();
+        return (): void => {
+          feedbackClosed = true;
+          if (feedbackVNode) {
+            destroy(feedbackVNode);
+            feedbackVNode = null;
+          }
+          feedbackApi = {};
+        };
+      },
+      open: (): void => {
+        feedbackApi.open?.();
+      },
+      close: (): void => {
+        feedbackApi.close?.();
+      },
+    });
+
     const custom = this.config.mount;
     const registered: SlotMount["mount"] = (container, ctx) => {
       if (custom) return custom(container, ctx);
@@ -76,11 +133,16 @@ class TopPluginClass implements Plugin {
       const musicInstalled = this.player?.hasPlugin?.("music") ?? false;
       const requestedMusic =
         this.config.data?.music ?? viewProps?.music ?? false;
+      this.currentViewProps = { ...viewProps, ...this.config.data };
       const vnode = h(TopView, {
         ...viewProps,
         ...this.config.data,
         music: requestedMusic && musicInstalled,
         host: container,
+        // 问题反馈入口：由插件打开自己注册的面板
+        onIssueClick: (): void => {
+          this.player?.openPanel?.("feedback");
+        },
         /** 点击 Top 音乐条：音乐面板默认关闭，只有这里主动 open */
         onMusicClick: (): void => {
           const music = this.player?.getPlugin?.("music");

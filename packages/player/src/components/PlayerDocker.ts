@@ -27,7 +27,6 @@ import type { ErrorSignAPI, ErrorSignInfo } from "./ErrorSign";
 import { Dialog } from "./Dialog";
 import { Context as ContextMenu } from "./Context";
 import type { HotkeyPanelApi } from "./HotkeyPanel";
-import type { FeedbackPanelApi } from "./FeedbackPanel";
 import { isDev } from "@lumina/framework/core/warning";
 import { PlayerEventEnum } from "../types/events";
 import { PlayerStateKeyEnum, StateContext, type PlayerStateMap } from "../store/runtimeState";
@@ -1181,9 +1180,6 @@ export const PlayerDocker = defineComponent<
   /** 快捷键面板 API，由 HotkeyPanel 组件挂载后填充 */
   const hotkeyPanelApi: Partial<HotkeyPanelApi> = {};
 
-  /** 问题反馈面板 API，由 FeedbackPanel 组件挂载后填充 */
-  const feedbackPanelApi: Partial<FeedbackPanelApi> = {};
-
   /** 右键菜单组件 API，由 Context 组件挂载后填充 */
   const contextApi: {
     /** 在指定坐标显示右键菜单 */
@@ -1307,13 +1303,12 @@ export const PlayerDocker = defineComponent<
     color?: VNode;
     info?: VNode;
     keyboard?: VNode;
-    feedback?: VNode;
   } = {};
 
   /** 音量提示层懒挂载节点（首次滚轮/快捷键调节音量时创建，之后复用） */
   let volumeHintVNode: VNode | null = null;
 
-  type PanelName = "info" | "keyboard" | "feedback";
+  type PanelName = "info" | "keyboard";
 
   /** 进行中的面板加载任务：同一面板并发打开只加载/挂载一次 */
   const panelLoading = new Map<PanelName, Promise<void>>();
@@ -1333,15 +1328,12 @@ export const PlayerDocker = defineComponent<
       import("./LazyPanelStyles"),
       name === "info"
         ? import("./VideoInfo")
-        : name === "keyboard"
-          ? import("./HotkeyPanel")
-          : import("./FeedbackPanel"),
+        : import("./HotkeyPanel"),
     ]);
     // 动态 import 的联合类型无法直接取成员，这里按面板名收窄为同一份结构
     const component = componentRaw as unknown as {
       VideoInfo: typeof import("./VideoInfo").VideoInfo;
       HotkeyPanel: typeof import("./HotkeyPanel").HotkeyPanel;
-      FeedbackPanel: typeof import("./FeedbackPanel").FeedbackPanel;
     };
     styles.ensureLazyPanelStyles();
     if (!playerVideoAreaRef.value) return;
@@ -1379,17 +1371,6 @@ export const PlayerDocker = defineComponent<
       mount(lazyPanelVNodes.keyboard, videoArea);
     }
 
-    if (name === "feedback" && !lazyPanelVNodes.feedback) {
-      lazyPanelVNodes.feedback = h(component.FeedbackPanel, {
-        submit: props.config?.feedback?.submit,
-        openWindow: props.config?.feedback?.openWindow,
-        onFeedbackPanelMounted: (api: FeedbackPanelApi) => {
-          feedbackPanelApi.open = api.open;
-          feedbackPanelApi.close = api.close;
-        },
-      });
-      mount(lazyPanelVNodes.feedback, videoArea);
-    }
   };
 
   /** 按需挂载面板（已挂载直接返回；并发调用复用同一加载任务） */
@@ -2676,17 +2657,6 @@ export const PlayerDocker = defineComponent<
         videoInfoApi.close?.();
       },
     });
-    resolvedPlayer?.registerPanel?.({
-      id: "feedback",
-      plugin: "core",
-      mount: (): void => {},
-      open: (): void => {
-        void ensurePanel("feedback").then(() => feedbackPanelApi.open?.());
-      },
-      close: (): void => {
-        feedbackPanelApi.close?.();
-      },
-    });
 
     // 插件面板宿主：插件通过 player.openPanel / closePanel 控制
     if (resolvedPlayer?.registerPanelHost) {
@@ -2839,7 +2809,6 @@ export const PlayerDocker = defineComponent<
     });
     lazyPanelVNodes.info = undefined;
     lazyPanelVNodes.keyboard = undefined;
-    lazyPanelVNodes.feedback = undefined;
 
     // 销毁懒挂载的音量提示层
     if (volumeHintVNode) {
@@ -2940,10 +2909,8 @@ export const PlayerDocker = defineComponent<
     onMoreClick: (): void => {
       lifecycle.emit?.("more");
     },
-    // 问题反馈图标：点击打开反馈面板（首次懒挂载，之后复用）
-    onIssueClick: (): void => {
-      void ensurePanel("feedback").then(() => feedbackPanelApi.open?.());
-    },
+    // 反馈面板提交与外链配置透传给 Top 插件，由插件注册面板
+    feedback: props.config?.feedback,
     // 问题反馈图标的悬停提示（既有实现的
     // top.on("show-tooltip"/"hide-tooltip") 接通 Tooltips 组件）
     onShowTooltip: handleShowTooltip,
