@@ -39,6 +39,11 @@ export * from './types/callbacks';
 // 进度条扩展 API：预览图 / 高能进度条数据均由外部 Provider 提供
 export type { ProgressPreviewFrame, ProgressPreviewProvider, EnergyProgressData, EnergyProgressProvider } from './types/player';
 
+// 发送栏组件：由 DanmakuPlugin 通过 uiContributions 渲染（SSR 同样可用）
+export { SendBar } from './components/SendBar';
+export type { SendBarProps } from './components/SendBar';
+export type { PluginUiContribution } from './core/plugin';
+
 // 面板懒加载入口：插件通过播放器注册面板时按需加载组件与样式
 export const loadColorPanel = (): Promise<typeof import('./components/ColorPanel')> =>
   import('./components/ColorPanel');

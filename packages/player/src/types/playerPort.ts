@@ -142,6 +142,11 @@ export interface PlayerUiHost extends PlayerPort {
   /** 插件 UI 注册表（右键菜单 / 面板） */
   getUiRegistry?(): UiRegistry;
 
+  /** 读取插件贡献的区域内容（如发送栏） */
+  getPluginUiContribution?(
+    region: "controls.sendbar",
+  ): import("../core/plugin").PluginUiContribution | null;
+
   /** 注册面板宿主（PlayerDocker 内部使用） */
   registerPanelHost?(
     host: { open: (id: string) => void; close: (id: string) => void } | null,

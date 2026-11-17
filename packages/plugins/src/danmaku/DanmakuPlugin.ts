@@ -44,6 +44,8 @@ import type { VideoPlayer } from "@lumina/nova";
 import type { PlayerEventBus } from "@lumina/nova";
 import { PlayerEventEnum } from "@lumina/nova";
 import { PlayerStateKeyEnum } from "@lumina/nova";
+import { h, SendBar } from "@lumina/nova";
+import type { SendBarProps, PluginUiContribution } from "@lumina/nova";
 import { DanmakuManager } from "../utils/danmaku";
 import { DanmakuTip } from "./DanmakuTip";
 import { injectPluginStyle } from "../utils/injectStyle";
@@ -232,6 +234,16 @@ class DanmakuPluginClass implements DanmakuPluginAPI {
   readonly version = "2.0.0";
   readonly description = "Danmaku rendering plugin";
   readonly options?: PluginOptions;
+  /**
+   * 发送栏由弹幕插件贡献：普通属性声明，SSR 不执行 install 也能被播放器读取
+   */
+  readonly uiContributions: readonly PluginUiContribution[] = [
+    {
+      id: "danmaku.sendbar",
+      region: "controls.sendbar",
+      render: (host: unknown) => h(SendBar, host as SendBarProps),
+    },
+  ];
 
   private manager: DanmakuManager | null = null;
   /** 弹幕悬停操作条（原版 player-dm-tip 移植，挂在弹幕容器内） */

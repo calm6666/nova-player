@@ -76,7 +76,7 @@ export interface SendBarProps {
   /** 显示提示气泡时的回调 */
   onShowTooltip?: (tooltip: Tooltip) => void;
   /** 隐藏提示气泡时的回调 */
-  onHideTooltip?: () => void;
+  onHideTooltip?: (tooltip?: Tooltip) => void;
 }
 
 /**

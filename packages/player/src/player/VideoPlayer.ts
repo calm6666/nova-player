@@ -24,7 +24,7 @@ import {
 import { PlayerState, PlayMode } from "../types/player";
 import { h, mount, hydrate as hydrateVNode, renderToString as renderVNodeToString, destroy, createTypedStateManager, createTypedEventBus, signal } from '@lumina/framework/core';
 import type { TypedStateManager, TypedEventBus } from "@lumina/framework/core";
-import type { Plugin } from "../core/plugin";
+import type { Plugin, PluginUiContribution } from "../core/plugin";
 import type { ControlsAPI } from "../components/Controls";
 import { PlayerEventEnum, PlayerEventMap } from "../types/events";
 import { PlayerStateKeyEnum, PlayerStateMap, StateContext, ConfigContext, defaultControlConfig } from "../store/runtimeState";
@@ -461,6 +461,9 @@ export class VideoPlayer
 
   /** 插件 UI 注册表：右键菜单项与面板 */
   readonly uiRegistry: UiRegistry = createUiRegistry();
+
+  /** 已登记的插件实例（SSR 不执行 install，但仍需读取 UI 贡献） */
+  private registeredPlugins: Plugin[] = [];
 
   /** 面板宿主（由 PlayerDocker 挂载后回填），负责插件面板的真实挂载与显隐 */
   private panelHost: {
@@ -2417,6 +2420,9 @@ export class VideoPlayer
    * @returns 当前播放器实例
    */
   use(plugin: Plugin): VideoPlayer {
+    if (!this.registeredPlugins.some((item) => item.name === plugin.name)) {
+      this.registeredPlugins.push(plugin);
+    }
     /**
      * SSR 环境只同步安装标志（renderToString 依赖 pluginFlags 决定
      * Show 图层与弹幕发送栏是否直出）；插件 install 可能挂载 DOM /
@@ -2519,6 +2525,23 @@ export class VideoPlayer
     return this.hotkeyRegistry;
   }
 
+  /** 读取插件贡献的 UI 区域内容（按已安装顺序取第一个） */
+  getPluginUiContribution(
+    region: "controls.sendbar",
+  ): PluginUiContribution | null {
+    let found: PluginUiContribution | null = null;
+    for (const plugin of this.registeredPlugins) {
+      const contribution = plugin.uiContributions?.find(
+        (item) => item.region === region,
+      );
+      if (contribution) {
+        found = contribution;
+        break;
+      }
+    }
+    return found;
+  }
+
   /** 注册右键菜单项，返回注销函数 */
   registerMenuItem(registration: UiMenuRegistration): () => void {
     return this.uiRegistry.registerMenu(registration);
@@ -2564,6 +2587,9 @@ export class VideoPlayer
      * 对应图层 DOM 仍在场；清理完成后再写信号，Show 摘除 DOM
      */
     this.pluginManager?.uninstall(name);
+    this.registeredPlugins = this.registeredPlugins.filter(
+      (plugin) => plugin.name !== name,
+    );
     this.hotkeyRegistry.removeByPlugin(name);
     this.uiRegistry.removeByPlugin(name);
     this.syncPluginFlags(name, false);

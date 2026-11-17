@@ -45,7 +45,7 @@ import { State } from "./State";
 import { createBufferSpeedSampler } from "../utils/media/bufferSpeed";
 import { BrowserCapabilityDetector } from "../utils/browserCapabilityDetector";
 import type { BufferSpeedSampler } from "../utils/media/bufferSpeed";
-import { SendBar } from "./SendBar";
+import { SendBar, type SendBarProps } from "./SendBar";
 import type { VideoInfoApi } from "./VideoInfo";
 import { RelationStrip } from "./RelationStrip";
 import { Mini, type MiniApi } from "./Mini";
@@ -2992,6 +2992,48 @@ export const PlayerDocker = defineComponent<
     },
   });
 
+  /** 发送栏宿主 props：内容由插件贡献，播放器只提供状态与回调 */
+  const buildSendBarProps = (): SendBarProps & {
+    onSendBarMounted?: (api: SendBarAPI) => void;
+  } => ({
+    danmakuSwitch: stateMgr?.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true,
+    placeholder: embeddedMode
+      ? t("player.ui.embed.send_placeholder")
+      : undefined,
+    onInputFocus: () => {
+      isSendFocus = true;
+      showControls("control");
+    },
+    onInputBlur: () => {
+      isSendFocus = false;
+    },
+    onDanmakuSwitch: (checked: boolean) => {
+      stateMgr?.set(PlayerStateKeyEnum.DANMAKU_VISIBLE, checked);
+      props.events?.emit(PlayerEventEnum.DANMAKU_TOGGLE, {
+        visible: checked,
+      });
+    },
+    onSendDanmaku: (text: string) => {
+      props.events?.emit(PlayerEventEnum.DANMAKU_SEND, { text });
+      lifecycle.emit?.("sendDanmaku", text);
+    },
+    onShowTooltip: handleShowTooltip,
+    onHideTooltip: (tooltip?: Parameters<typeof handleHideTooltip>[0]) => {
+      if (tooltip) handleHideTooltip(tooltip);
+    },
+    onSendBarMounted: (api: SendBarAPI) => {
+      Object.assign(sendBarApi, api);
+    },
+  });
+
+  /** 发送栏渲染：插件贡献优先，外链模式无插件时回落内置 SendBar */
+  const renderSendBar = (): VNode | null => {
+    const contribution =
+      resolvedPlayer?.getPluginUiContribution?.("controls.sendbar") ?? null;
+    if (contribution) return contribution.render(buildSendBarProps());
+    return embeddedMode ? h(SendBar, buildSendBarProps()) : null;
+  };
+
   return h(
     "div",
     {
@@ -3398,46 +3440,7 @@ export const PlayerDocker = defineComponent<
               class: "nova-player-sending-area",
               ref: "playerSendingAreaRef",
             },
-            h(SendBar, {
-              // 弹幕开关初始状态来自运行时状态（与设置面板共享同一状态源）
-              danmakuSwitch:
-                stateMgr?.get(PlayerStateKeyEnum.DANMAKU_VISIBLE) ?? true,
-              placeholder: embeddedMode
-                ? t("player.ui.embed.send_placeholder")
-                : undefined,
-              // 输入框聚焦 / 失焦：维护 isSendFocus，供 mouseleave 豁免判断
-              onInputFocus: () => {
-                isSendFocus = true;
-                // 聚焦输入时保持控制栏显示、取消自动隐藏（既有实现 input-focus 行为）
-                showControls("control");
-              },
-              onInputBlur: () => {
-                isSendFocus = false;
-              },
-              // 弹幕开关：写运行时状态（唯一数据源，插件订阅后自动应用）
-              // 注意：不再向上发 danmakuToggle lifecycle 事件——
-              // VideoPlayer 的该事件处理器是 toggle 语义，会把刚写入的值再翻转一次
-              onDanmakuSwitch: (checked: boolean) => {
-                stateMgr?.set(PlayerStateKeyEnum.DANMAKU_VISIBLE, checked);
-                props.events?.emit(PlayerEventEnum.DANMAKU_TOGGLE, {
-                  visible: checked,
-                });
-              },
-              // 发送弹幕：向上转发文本，同时广播「提交请求」事件（DANMAKU_SEND）
-              // 注意：DANMAKU_SENT 的语义是「发送成功」，由 DanmakuPlugin 在服务器确认后发出；
-              // 此处只是提交请求，若在此发 DANMAKU_SENT 会把「提交」误当成「成功」。
-              onSendDanmaku: (text: string) => {
-                props.events?.emit(PlayerEventEnum.DANMAKU_SEND, { text });
-                lifecycle.emit?.("sendDanmaku", text);
-              },
-              // 弹幕开关提示气泡：与控制栏 tooltip 走同一通道（接通 Tooltips 组件）
-              onShowTooltip: handleShowTooltip,
-              onHideTooltip: handleHideTooltip,
-              // 持有 SendBar 控制方法（setInputValue / focusInput 等）
-              onSendBarMounted: (api: SendBarAPI) => {
-                Object.assign(sendBarApi, api);
-              },
-            }),
+            renderSendBar(),
           ),
         ),
       ),

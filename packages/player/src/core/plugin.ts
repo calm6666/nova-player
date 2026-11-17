@@ -10,7 +10,23 @@ import type { VideoPlayer } from "../player/VideoPlayer";
 import type { TypedStateManager } from "@lumina/framework/core";
 import type { PlayerEventBus } from "../types/events";
 import type { PluginOptions } from "@lumina/framework/types/plugin";
+import type { VNode } from "@lumina/framework/types";
 export type { PlayerEventBus };
+
+/**
+ * 插件 UI 区域贡献
+ *
+ * 播放器只提供区域和宿主 props，具体渲染由插件决定；
+ * SSR 阶段同样读取该贡献，保证发送栏等关键 UI 不掉首屏。
+ */
+export interface PluginUiContribution {
+  /** 唯一 id */
+  id: string;
+  /** 目标区域 */
+  region: "controls.sendbar";
+  /** 渲染函数：入参为播放器提供的宿主 props */
+  render: (host: unknown) => VNode | null;
+}
 // 通用插件选项由框架层定义，播放器出口统一再导出（插件包经 @lumina/nova 消费）
 export type { PluginOptions };
 
@@ -27,6 +43,12 @@ export interface Plugin {
   readonly description?: string;
   /** 依赖的其他插件名称列表 */
   readonly dependencies?: string[];
+  /**
+   * 插件贡献的 UI 区域内容
+   *
+   * 以普通属性声明，SSR 阶段无需执行 install 即可被播放器读取。
+   */
+  readonly uiContributions?: readonly PluginUiContribution[];
 
   /**
    * 安装插件
