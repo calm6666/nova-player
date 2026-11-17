@@ -225,13 +225,6 @@ function skipFalse(reason: string, node?: t.Node): boolean {
   return false;
 }
 
-const RESERVED_ATTR_KEYS = new Set([
-  "__events",
-  "__providers",
-  "__reactiveAttrs",
-  "key",
-]);
-
 const CONTENT_ATTRS = new Set(["innerHTML", "textContent", "svgContent"]);
 
 interface SplitAttrs {
