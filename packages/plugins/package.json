@@ -47,6 +47,10 @@
       "import": "./dist/audioeffect.js",
       "types": "./dist/audioeffect.d.ts"
     },
+    "./color": {
+      "import": "./dist/color.js",
+      "types": "./dist/color.d.ts"
+    },
     "./interaction": {
       "import": "./dist/interaction.js",
       "types": "./dist/interaction.d.ts"

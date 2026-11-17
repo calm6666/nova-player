@@ -24,7 +24,9 @@
 import type { Plugin, PluginOptions } from '@lumina/nova';
 import type { VideoPlayer } from '@lumina/nova';
 import type { PlayerEventBus } from '@lumina/nova';
-import { PlayerEventEnum } from '@lumina/nova';
+import { PlayerEventEnum, h, mount, destroy, loadAudioPanel, loadPanelStyles } from '@lumina/nova';
+import type { VNode } from '@lumina/framework/types';
+import type { AudioPanelApi, AudioPanelHandle } from '@lumina/nova';
 import { createLogger, isBrowser } from '@lumina/framework/utils';
 import { EffectChain } from './effects/EffectChain';
 import { HiResAudioDecoder, detectHiResSupport } from './HiResAudioDecoder';
@@ -156,13 +158,57 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
       return;
     }
     this.eventBus = player.events;
-    // 音效入口由插件自己注册：插件安装即出现，卸载自动移除
+    // 音效入口与面板都由插件自己注册：安装即出现，卸载自动移除
     player.registerMenuItem?.({
       id: 'audioEffect.settings',
       plugin: this.name,
       position: 35,
       labelKey: 'player.ui.audio.title',
       onSelect: () => player.openPanel?.('audio'),
+    });
+
+    let panelApi: Partial<AudioPanelHandle> = {};
+    let panelVNode: VNode | null = null;
+    let panelClosed = false;
+    player.registerPanel?.({
+      id: 'audio',
+      plugin: this.name,
+      mount: ({ container }): (() => void) => {
+        panelClosed = false;
+        panelApi = {};
+        void (async (): Promise<void> => {
+          const [panelModule, styleModule] = await Promise.all([
+            loadAudioPanel(),
+            loadPanelStyles(),
+          ]);
+          if (panelClosed) return;
+          styleModule.ensureLazyPanelStyles();
+          panelVNode = h(panelModule.AudioPanel, {
+            api: this as unknown as AudioPanelApi,
+            onAudioPanelMounted: (handle: AudioPanelHandle): void => {
+              panelApi = handle;
+            },
+            onClose: (): void => {
+              panelApi.close?.();
+            },
+          });
+          mount(panelVNode, container);
+        })();
+        return (): void => {
+          panelClosed = true;
+          if (panelVNode) {
+            destroy(panelVNode);
+            panelVNode = null;
+          }
+          panelApi = {};
+        };
+      },
+      open: (): void => {
+        panelApi.open?.();
+      },
+      close: (): void => {
+        panelApi.close?.();
+      },
     });
     const unsub = this.eventBus.on(PlayerEventEnum.MOUNTED, (data): void => {
       if (data.video instanceof HTMLVideoElement) {

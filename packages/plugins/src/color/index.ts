@@ -1,0 +1,1 @@
+export { ColorPlugin } from './ColorPlugin';

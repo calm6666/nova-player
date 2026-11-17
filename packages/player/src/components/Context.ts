@@ -78,7 +78,6 @@ const BUILTIN_MENU: Array<{
   text: string;
 }> = [
   { id: "copyLink", position: 10, action: "copyLink", text: "复制视频地址（精准空降）" },
-  { id: "color", position: 20, action: "color", text: "视频色彩调整" },
   { id: "keyboard", position: 30, action: "keyboard", text: "快捷键说明" },
   { id: "version", position: 40, action: "version", text: "播放器版本" },
   { id: "info", position: 50, action: "info", text: "视频统计信息" },

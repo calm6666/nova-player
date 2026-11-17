@@ -39,6 +39,27 @@ export * from './types/callbacks';
 // 进度条扩展 API：预览图 / 高能进度条数据均由外部 Provider 提供
 export type { ProgressPreviewFrame, ProgressPreviewProvider, EnergyProgressData, EnergyProgressProvider } from './types/player';
 
+// 面板懒加载入口：插件通过播放器注册面板时按需加载组件与样式
+export const loadColorPanel = (): Promise<typeof import('./components/ColorPanel')> =>
+  import('./components/ColorPanel');
+export const loadAudioPanel = (): Promise<typeof import('./components/AudioPanel')> =>
+  import('./components/AudioPanel');
+export const loadFeedbackPanel = (): Promise<typeof import('./components/FeedbackPanel')> =>
+  import('./components/FeedbackPanel');
+export const loadPanelStyles = (): Promise<
+  typeof import('./components/LazyPanelStyles')
+> => import('./components/LazyPanelStyles');
+export type {
+  AudioPanelApi,
+  AudioPanelHandle,
+  AudioPanelProps,
+} from './components/AudioPanel';
+export type { ColorPanelApi, ColorPanelProps } from './components/ColorPanel';
+export type {
+  FeedbackPanelApi,
+  FeedbackPanelProps,
+} from './components/FeedbackPanel';
+
 // 插件快捷键注册契约
 export type { HotkeyConfig, HotkeyContext, HotkeyHandlers } from './core/hotkeys';
 export type { HotkeyRegistration, HotkeyRegistry } from './core/hotkeyRegistry';

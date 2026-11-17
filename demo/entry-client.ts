@@ -38,6 +38,7 @@ import { InteractionPlugin } from "@lumina/plugins/interaction";
 import { SubtitlePlugin } from "@lumina/plugins/subtitle";
 import type { SubtitlePluginAPI } from "@lumina/plugins/subtitle";
 import { AudioEffectPlugin } from "@lumina/plugins/audioeffect";
+import { ColorPlugin } from "@lumina/plugins/color";
 import { DynamicBgPlugin } from "@lumina/plugins/dynamicbg";
 import type {
   AudioEffectPluginAPI,
@@ -1650,6 +1651,7 @@ function collectPlugins(
     // 订阅 MOUNTED 事件待 video 元素就绪后构建 AudioContext，
     // 运行时 API 经 getPluginAPI("audioEffect") 获取
     AudioEffectPlugin(),
+    ColorPlugin(),
     DynamicBgPlugin(),
   ];
   // 互动视频插件：剧情树已拉取时挂载（华强买瓜 demo）。节点带 avid 引用，

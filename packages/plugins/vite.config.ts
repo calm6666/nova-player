@@ -66,6 +66,7 @@ export default defineConfig({
         ending: resolve(__dirname, 'src/ending/index.ts'),
         music: resolve(__dirname, 'src/music/index.ts'),
         audioeffect: resolve(__dirname, 'src/audioeffect/index.ts'),
+        color: resolve(__dirname, 'src/color/index.ts'),
         interaction: resolve(__dirname, 'src/interaction/index.ts'),
         'interactive-video': resolve(__dirname, 'src/interactive-video/index.ts'),
         dynamicbg: resolve(__dirname, 'src/dynamicbg/index.ts'),

@@ -47,8 +47,6 @@ import { createBufferSpeedSampler } from "../utils/media/bufferSpeed";
 import { BrowserCapabilityDetector } from "../utils/browserCapabilityDetector";
 import type { BufferSpeedSampler } from "../utils/media/bufferSpeed";
 import { SendBar } from "./SendBar";
-import type { ColorPanelApi } from "./ColorPanel";
-import type { AudioPanelApi, AudioPanelHandle } from "./AudioPanel";
 import type { VideoInfoApi } from "./VideoInfo";
 import { RelationStrip } from "./RelationStrip";
 import { Mini, type MiniApi } from "./Mini";
@@ -428,8 +426,6 @@ export interface PlayerDockerProps {
    */
   plugins?: () => PlayerPluginFlags;
 
-  /** 音效插件 API 读取器（右键「音效调节」面板使用，未装插件返回 null） */
-  getAudioEffect?: () => AudioPanelApi | null;
 }
 
 // ============================================
@@ -1286,12 +1282,6 @@ export const PlayerDocker = defineComponent<
     lifecycle.emit?.("hideTooltip", tip);
   };
 
-  /** 色彩调整面板 API，由 ColorPanel 组件挂载后填充（对应既有实现的 colorpanel） */
-  const colorPanelApi: Partial<ColorPanelApi> = {};
-
-  /** 音效调节面板 API，由 AudioPanel 组件挂载后填充 */
-  const audioPanelApi: Partial<AudioPanelHandle> = {};
-
   /** 视频统计信息面板 API，由 VideoInfo 组件挂载后填充（对应既有实现的 info） */
   const videoInfoApi: Partial<VideoInfoApi> = {};
 
@@ -1315,7 +1305,6 @@ export const PlayerDocker = defineComponent<
   /** 懒挂载面板的 VNode 缓存（首次使用创建，之后复用；销毁时统一 destroy） */
   const lazyPanelVNodes: {
     color?: VNode;
-    audio?: VNode;
     info?: VNode;
     keyboard?: VNode;
     feedback?: VNode;
@@ -1324,7 +1313,7 @@ export const PlayerDocker = defineComponent<
   /** 音量提示层懒挂载节点（首次滚轮/快捷键调节音量时创建，之后复用） */
   let volumeHintVNode: VNode | null = null;
 
-  type PanelName = "color" | "audio" | "info" | "keyboard" | "feedback";
+  type PanelName = "info" | "keyboard" | "feedback";
 
   /** 进行中的面板加载任务：同一面板并发打开只加载/挂载一次 */
   const panelLoading = new Map<PanelName, Promise<void>>();
@@ -1342,69 +1331,20 @@ export const PlayerDocker = defineComponent<
 
     const [styles, componentRaw] = await Promise.all([
       import("./LazyPanelStyles"),
-      name === "color"
-        ? import("./ColorPanel")
-        : name === "audio"
-          ? import("./AudioPanel")
-          : name === "info"
-            ? import("./VideoInfo")
-            : name === "keyboard"
-              ? import("./HotkeyPanel")
-              : import("./FeedbackPanel"),
+      name === "info"
+        ? import("./VideoInfo")
+        : name === "keyboard"
+          ? import("./HotkeyPanel")
+          : import("./FeedbackPanel"),
     ]);
     // 动态 import 的联合类型无法直接取成员，这里按面板名收窄为同一份结构
     const component = componentRaw as unknown as {
-      ColorPanel: typeof import("./ColorPanel").ColorPanel;
-      AudioPanel: typeof import("./AudioPanel").AudioPanel;
       VideoInfo: typeof import("./VideoInfo").VideoInfo;
       HotkeyPanel: typeof import("./HotkeyPanel").HotkeyPanel;
       FeedbackPanel: typeof import("./FeedbackPanel").FeedbackPanel;
     };
     styles.ensureLazyPanelStyles();
     if (!playerVideoAreaRef.value) return;
-
-    if (name === "color" && !lazyPanelVNodes.color) {
-      lazyPanelVNodes.color = h(component.ColorPanel, {
-        onClose: () => {
-          colorPanelApi.close?.();
-        },
-        onSaturateChange: (value: number) => {
-          filterSaturate = value;
-          applyVideoFilter();
-        },
-        onBrightnessChange: (value: number) => {
-          filterBrightness = value;
-          applyVideoFilter();
-        },
-        onContrastChange: (value: number) => {
-          filterContrast = value;
-          applyVideoFilter();
-        },
-        onReset: () => {
-          filterSaturate = 100;
-          filterBrightness = 100;
-          filterContrast = 100;
-          applyVideoFilter();
-        },
-        onColorPanelMounted: (api: ColorPanelApi) => {
-          Object.assign(colorPanelApi, api);
-        },
-      });
-      mount(lazyPanelVNodes.color, videoArea);
-    }
-
-    if (name === "audio" && !lazyPanelVNodes.audio) {
-      lazyPanelVNodes.audio = h(component.AudioPanel, {
-        api: props.getAudioEffect?.() ?? null,
-        onClose: () => {
-          audioPanelApi.close?.();
-        },
-        onAudioPanelMounted: (handle: AudioPanelHandle) => {
-          Object.assign(audioPanelApi, handle);
-        },
-      });
-      mount(lazyPanelVNodes.audio, videoArea);
-    }
 
     if (name === "info" && !lazyPanelVNodes.info) {
       lazyPanelVNodes.info = h(component.VideoInfo, {
@@ -1511,35 +1451,6 @@ export const PlayerDocker = defineComponent<
 
   const closeAllPluginPanels = (): void => {
     for (const id of [...mountedPluginPanels.keys()]) closePluginPanel(id);
-  };
-
-  // ============================================
-  // 视频色彩滤镜（右键「视频色彩调整」面板 → .nova-player-video 的 style.filter）
-  // ============================================
-
-  /** 当前饱和度（0-200，100 为默认） */
-  let filterSaturate = 100;
-
-  /** 当前亮度（0-200，100 为默认） */
-  let filterBrightness = 100;
-
-  /** 当前对比度（0-200，100 为默认） */
-  let filterContrast = 100;
-
-  /**
-   * 将当前色彩参数写入 .nova-player-video 元素的 CSS filter
-   * 默认值（100）的项不参与拼接，全部默认时清空 filter
-   */
-  const applyVideoFilter = (): void => {
-    const video = videoRef.value;
-    if (!video) return;
-    /** 滤镜函数片段 */
-    const parts: string[] = [];
-    if (filterSaturate !== 100) parts.push(`saturate(${filterSaturate}%)`);
-    if (filterBrightness !== 100)
-      parts.push(`brightness(${filterBrightness}%)`);
-    if (filterContrast !== 100) parts.push(`contrast(${filterContrast}%)`);
-    video.style.filter = parts.join(" ");
   };
 
   // ============================================
@@ -2744,28 +2655,6 @@ export const PlayerDocker = defineComponent<
 
     // 核心面板登记到 UI 注册表：插件菜单 / 快捷键可统一走 player.openPanel
     resolvedPlayer?.registerPanel?.({
-      id: "color",
-      plugin: "core",
-      mount: (): void => {},
-      open: (): void => {
-        void ensurePanel("color").then(() => colorPanelApi.open?.());
-      },
-      close: (): void => {
-        colorPanelApi.close?.();
-      },
-    });
-    resolvedPlayer?.registerPanel?.({
-      id: "audio",
-      plugin: "core",
-      mount: (): void => {},
-      open: (): void => {
-        void ensurePanel("audio").then(() => audioPanelApi.open?.());
-      },
-      close: (): void => {
-        audioPanelApi.close?.();
-      },
-    });
-    resolvedPlayer?.registerPanel?.({
       id: "keyboard",
       plugin: "core",
       mount: (): void => {},
@@ -2948,8 +2837,6 @@ export const PlayerDocker = defineComponent<
     Object.values(lazyPanelVNodes).forEach((panelVNode) => {
       if (panelVNode) destroy(panelVNode);
     });
-    lazyPanelVNodes.color = undefined;
-    lazyPanelVNodes.audio = undefined;
     lazyPanelVNodes.info = undefined;
     lazyPanelVNodes.keyboard = undefined;
     lazyPanelVNodes.feedback = undefined;
@@ -3617,10 +3504,10 @@ export const PlayerDocker = defineComponent<
           contextApi.hideMenu = api.hideMenu;
         },
         onOpenPanel: (panel: "color" | "audio" | "keyboard" | "info") => {
+          // audio / color 面板已迁移到插件，由 player.openPanel 处理
+          if (panel === "audio" || panel === "color") return;
           // 面板组件与样式都按需加载：加载完成后再调用面板自身 open
           void ensurePanel(panel).then(() => {
-            if (panel === "color") colorPanelApi.open?.();
-            if (panel === "audio") audioPanelApi.open?.();
             if (panel === "keyboard") hotkeyPanelApi.open?.();
             if (panel === "info") videoInfoApi.open?.();
           });
