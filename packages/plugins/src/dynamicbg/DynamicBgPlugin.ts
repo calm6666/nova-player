@@ -232,19 +232,20 @@ class DynamicBgPluginClass implements Plugin {
   /** MOUNTED 处理：幂等；video 元素被替换（重连/重建）时重新挂载 */
   private handleMounted(data: MountedPayload | undefined): void {
     const video = data?.video;
-    if (!video || !(video instanceof HTMLVideoElement)) return;
+    if (!video || !(video instanceof HTMLVideoElement) || !data.container) return;
     if (this.video === video) return;
 
     // 元素变化（首次挂载或替换）：先拆旧再建新
     this.teardownDom();
-    this.initDom(video);
+    this.initDom(video, data.container);
   }
 
   /** 创建背景三层 DOM 并插入到 video 之前（DOM 顺序即 z 序垫底） */
-  private initDom(video: HTMLVideoElement): void {
-    const parent = video.parentElement;
+  private initDom(video: HTMLVideoElement, container: HTMLElement): void {
+    const videoWrap = container.querySelector(".nova-player-video-wrap");
+    if (!videoWrap) return;
+    const parent = videoWrap.parentElement;
     if (!parent) return;
-
     this.video = video;
 
     const wrap = document.createElement("div");
@@ -263,7 +264,7 @@ class DynamicBgPluginClass implements Plugin {
 
     // 统一插入策略：插在 video 之前（兄弟节点 DOM 顺序决定层级），
     // 不依赖 MOUNTED payload.container（live 端传的是弹幕层，不可靠）
-    parent.insertBefore(wrap, video);
+    parent.insertBefore(wrap, videoWrap);
 
     this.wrap = wrap;
     this.canvas = canvas;

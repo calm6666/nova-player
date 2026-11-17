@@ -704,7 +704,14 @@ export const Controls = defineComponent<ControlsProps, ControlsEvents>(
 
     return h(
       "div",
-      { class: "nova-player-control-wrap" },
+      {
+        class: "nova-player-control-wrap",
+        // 悬停保持协议：控制栏自带 data-ctrl-hold，视频区 mousemove 的
+        // 豁免检查命中后按 control 语义处理。否则控制栏 mousemove 虽先
+        // 取消自动隐藏，但事件冒泡到视频区后又按 video 语义重启
+        // 3 秒定时器，播放中悬停控制栏静止后仍会被隐藏
+        "data-ctrl-hold": "true",
+      },
       h("div", { class: "nova-player-control-mask" }),
       h(
         "div",

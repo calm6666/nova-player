@@ -15,6 +15,7 @@ export const DEMO_SSR_TITLE = "赶集买了几只牛蛙，好久没吃了，立�
 
 /** SSR / 水合共用配置：服务端与客户端对象结构完全一致 */
 export const DEMO_SSR_PLAYER_CONFIG: PlayerConfig = {
+  playerName: "Lumina Demo Player",
   src: DEMO_SSR_SOURCE,
   playback: {
     autoplay: true,

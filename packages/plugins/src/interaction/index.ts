@@ -1,6 +1,6 @@
 /**
  * ============================================
- * 交互插件 (InteractionPlugin) — 响应式重构版
+ * 弹幕互动插件 (InteractionPlugin) — 响应式重构版
  * ============================================
  * 互动命令功能插件，通过 PlayerEventEnum 事件实现跨组件通信
  * 在 MOUNTED 时查找 .nova-player-cmd-dm-inside 容器（不自行创建容器）
@@ -275,7 +275,7 @@ export interface InteractionPluginAPI extends Plugin {
 class InteractionPluginClass implements InteractionPluginAPI {
   readonly name = "interaction";
   readonly version = "1.0.0";
-  readonly description = "互动命令插件";
+  readonly description = "弹幕互动插件";
   readonly options?: PluginOptions;
 
   private container: HTMLElement | null = null;

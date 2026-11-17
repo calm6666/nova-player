@@ -38,6 +38,7 @@ import { InteractionPlugin } from "@lumina/plugins/interaction";
 import { SubtitlePlugin } from "@lumina/plugins/subtitle";
 import type { SubtitlePluginAPI } from "@lumina/plugins/subtitle";
 import { AudioEffectPlugin } from "@lumina/plugins/audioeffect";
+import { DynamicBgPlugin } from "@lumina/plugins/dynamicbg";
 import type {
   AudioEffectPluginAPI,
   CombinationPresetName,
@@ -1649,6 +1650,7 @@ function collectPlugins(
     // 订阅 MOUNTED 事件待 video 元素就绪后构建 AudioContext，
     // 运行时 API 经 getPluginAPI("audioEffect") 获取
     AudioEffectPlugin(),
+    DynamicBgPlugin(),
   ];
   // 互动视频插件：剧情树已拉取时挂载（华强买瓜 demo）。节点带 avid 引用，
   // 分支切换由插件经 resolveVideo → playurl 接口按需解析播放地址
@@ -1880,6 +1882,7 @@ async function rebuildPlayer(
     ? { ...MEDIA_LIST[targetIndex], src: parsedUrlSrc }
     : MEDIA_LIST[targetIndex];
   const config: PlayerConfig = {
+    playerName: "Lumina Demo Player",
     src: current ? current.src : undefined,
     playlist: MEDIA_LIST,
     playlistIndex: targetIndex,

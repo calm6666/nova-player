@@ -3127,7 +3127,14 @@ export const PlayerDocker = defineComponent<
           // 全部按节点锚点插入，不创建任何占位 DOM
           h(
             "div",
-            { class: "nova-player-top-wrap" },
+            {
+              class: "nova-player-top-wrap",
+              // 悬停保持协议：顶栏自带 data-ctrl-hold，视频区 mousemove 的
+              // 豁免检查命中后按 control 语义处理。否则顶栏 mousemove 虽先
+              // 取消自动隐藏，但事件冒泡到视频区后又按 video 语义重启
+              // 3 秒定时器，播放中悬停顶栏静止后仍会被隐藏
+              "data-ctrl-hold": "true",
+            },
             h("div", { class: "nova-player-top-view", ref: "topRootRef" }),
           ),
           // 外链场景：相关推荐条与 Top 同级，跟随控制栏显隐
