@@ -8,6 +8,12 @@
 import type { ComponentInstance, VNode } from "@lumina/framework/types";
 import type { PlayerConfig, PlayerStateData, PlayerMethods, PlayerEvents, ProgressiveVariant, EventListeners, DeepPartial, MediaItem, PlayerSource, DisplayMode, ProgressSkipPoints, ProgressSegment, EnergyProgressData, ProgressThumbIconConfig } from "../types/player";
 import type { SubtitleConfig } from "../types/subtitle";
+import {
+  createHotkeyRegistry,
+  type HotkeyRegistration,
+  type HotkeyRegistry,
+} from "../core/hotkeyRegistry";
+import type { HotkeyConfig } from "../core/hotkeys";
 
 import { PlayerState, PlayMode } from "../types/player";
 import { h, mount, hydrate as hydrateVNode, renderToString as renderVNodeToString, destroy, createTypedStateManager, createTypedEventBus, signal } from '@lumina/framework/core';
@@ -444,6 +450,9 @@ export class VideoPlayer
    * player.use 场景）信号更新即完成 DOM 挂载，install 内就地初始化
    * 能找到容器
    */
+  /** 快捷键注册表：播放器负责键盘监听，插件通过 registerHotkey 注册自己的快捷键 */
+  readonly hotkeyRegistry: HotkeyRegistry = createHotkeyRegistry();
+
   private pluginFlags: Signal<PlayerPluginFlags> = signal<PlayerPluginFlags>({
     danmaku: false,
     subtitle: false,
@@ -2475,6 +2484,26 @@ export class VideoPlayer
    *
    * @param name - 插件名称
    */
+  /**
+   * 注册插件快捷键
+   *
+   * 注册项需带唯一 id 与来源插件名；返回注销函数，插件卸载时也会按
+   * plugin 名自动批量回收。
+   */
+  registerHotkey(registration: HotkeyRegistration): () => void {
+    return this.hotkeyRegistry.register(registration);
+  }
+
+  /** 当前生效的快捷键列表（内置 + 插件注册，供快捷键面板读取） */
+  getHotkeys(): HotkeyConfig[] {
+    return this.hotkeyRegistry.list();
+  }
+
+  /** 快捷键注册表（UI 面板订阅变化用） */
+  getHotkeyRegistry(): HotkeyRegistry {
+    return this.hotkeyRegistry;
+  }
+
   uninstallPlugin(name: string): void {
     /**
      * 先 uninstall、再同步安装标志：
@@ -2482,6 +2511,7 @@ export class VideoPlayer
      * 对应图层 DOM 仍在场；清理完成后再写信号，Show 摘除 DOM
      */
     this.pluginManager?.uninstall(name);
+    this.hotkeyRegistry.removeByPlugin(name);
     this.syncPluginFlags(name, false);
   }
 

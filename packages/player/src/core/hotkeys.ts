@@ -102,6 +102,16 @@ export interface HotkeyContext {
  * 按键匹配通过 keyMatcher 函数实现，支持单键、组合键和媒体键。
  */
 export interface HotkeyConfig {
+  /** 唯一 id（插件注册时必填；内置项可缺省） */
+  id?: string;
+  /** 注册来源插件名，用于卸载时批量回收与面板分组 */
+  plugin?: string;
+  /** 匹配优先级：>0 先于内置快捷键匹配，默认在内置之后 */
+  priority?: number;
+  /** 运行时启用条件，返回 false 时忽略该快捷键 */
+  when?: () => boolean;
+  /** 是否允许长按重复触发，默认 false（仅首次 keydown） */
+  allowRepeat?: boolean;
   /**
    * 快捷键显示名称
    * 用于快捷键面板展示，如 "Space"、"→"、"媒体键 play/pause" 等
@@ -380,7 +390,10 @@ function isEditableTarget(): boolean {
  * @param ctx - 快捷键执行上下文，提供播放器操作方法
  * @returns keydown / keyup 处理函数与销毁方法
  */
-export function createHotkeyHandlers(ctx: HotkeyContext): HotkeyHandlers {
+export function createHotkeyHandlers(
+  ctx: HotkeyContext,
+  getHotkeys: () => readonly HotkeyConfig[] = () => HOTKEYS,
+): HotkeyHandlers {
   /** 长按 → 键的计时器；非 null 表示正在等待判定是否为长按 */
   let seekHoldTimer: ReturnType<typeof setTimeout> | null = null;
   /** 是否已进入长按倍速状态 */
@@ -431,8 +444,17 @@ export function createHotkeyHandlers(ctx: HotkeyContext): HotkeyHandlers {
     // 通过 Context 获取状态管理器（部分动作需要读取运行时状态）
     const state = useContext(StateContext);
 
-    for (const hotkey of HOTKEYS) {
+    for (const hotkey of getHotkeys()) {
+      if (hotkey.when !== undefined && !hotkey.when()) continue;
       if (!hotkey.keyMatcher(event)) continue;
+      // 插件快捷键默认只响应首次按下，避免长按重复触发
+      if (
+        event.repeat &&
+        hotkey.plugin !== undefined &&
+        hotkey.allowRepeat !== true
+      ) {
+        continue;
+      }
 
       if (hotkey.preventDefault) {
         event.preventDefault();

@@ -38,6 +38,10 @@ export * from './types/streamPlugin';
 export * from './types/callbacks';
 // 进度条扩展 API：预览图 / 高能进度条数据均由外部 Provider 提供
 export type { ProgressPreviewFrame, ProgressPreviewProvider, EnergyProgressData, EnergyProgressProvider } from './types/player';
+
+// 插件快捷键注册契约
+export type { HotkeyConfig, HotkeyContext, HotkeyHandlers } from './core/hotkeys';
+export type { HotkeyRegistration, HotkeyRegistry } from './core/hotkeyRegistry';
 export type { StateManager, EventBus, HookSystem } from '@lumina/framework/core';
 
 // 字幕解析工具（原 framework utils/subtitle，归属播放器应用层）

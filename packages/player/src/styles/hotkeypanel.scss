@@ -47,6 +47,15 @@
 .nova-player-hotkey-panel-content {
   padding: 0 20px;
 
+  .nova-player-hotkey-panel-content-group {
+    color: hsla(0, 0%, 100%, 0.55);
+    font-size: 12px;
+    height: 24px;
+    line-height: 24px;
+    margin-top: 6px;
+    text-align: left;
+  }
+
   .nova-player-hotkey-panel-content-item {
     font-size: 12px;
     height: 24px;

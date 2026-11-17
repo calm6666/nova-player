@@ -251,6 +251,7 @@
   "player.ui.hotkey.toggle_danmaku": "Show or hide comments",
   "player.ui.hotkey.toggle_mute": "Mute or unmute",
   "player.ui.hotkey.media_key": "Media keys",
+  "player.ui.hotkey.plugin_group": "Plugin shortcuts",
   "player.ui.audio.title": "Audio effects",
   "player.ui.audio.gain": "Volume boost",
   "player.ui.audio.reset": "Reset",

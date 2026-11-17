@@ -7,15 +7,20 @@
  * 对外 show/hide/open/close API 契约不变，内部仅写信号。
  */
 
-import { h, defineComponent, signal, t } from '@lumina/framework/core';
-import type { ComponentLifecycle } from "@lumina/framework/types";
-import { HOTKEYS } from "../core/hotkeys";
+import { h, defineComponent, signal, For, t } from '@lumina/framework/core';
+import type { ComponentLifecycle, VNode } from "@lumina/framework/types";
+import { HOTKEYS, type HotkeyConfig } from "../core/hotkeys";
+import type { HotkeyRegistry } from "../core/hotkeyRegistry";
 
 /**
  * 快捷键项接口
  * 描述单个快捷键的按键名称和功能说明
  */
 export interface HotkeyItem {
+  /** 唯一 id（插件注册项提供） */
+  id?: string;
+  /** 来源插件名，用于分组展示 */
+  plugin?: string;
   /** 快捷键按键名称 */
   name: string;
   /** 名称 i18n key（可选） */
@@ -34,6 +39,8 @@ export interface HotkeyPanelProps {
   visible?: boolean;
   /** 快捷键列表，未提供时使用 HOTKEYS（与真实快捷键行为同一数据源） */
   hotkeys?: HotkeyItem[];
+  /** 快捷键注册表：传入后订阅变化，内置与插件快捷键实时更新 */
+  registry?: HotkeyRegistry;
   /** 关闭面板的回调函数 */
   onClose?: () => void;
 }
@@ -88,31 +95,89 @@ export const HotkeyPanel = defineComponent<HotkeyPanelProps>(
       props.onClose?.();
     };
 
-    /**
-     * 渲染快捷键列表项
-     * @returns 快捷键项虚拟节点数组
-     */
-    const renderHotkeyItems = (): ReturnType<typeof h>[] => {
-      /** 实际使用的快捷键列表，优先使用 props 传入值，否则使用 HOTKEYS */
-      const hotkeys: HotkeyItem[] = props.hotkeys ?? HOTKEYS;
+    /** 面板展示项：插件分组标题 + 普通快捷键项 */
+    interface HotkeyDisplayEntry {
+      key: string;
+      kind: "group" | "item";
+      label?: string;
+      item?: HotkeyItem;
+    }
 
-      return hotkeys.map((item: HotkeyItem) =>
-        h(
-          "div",
-          { class: "nova-player-hotkey-panel-content-item" },
-          h(
-            "span",
-            { class: "nova-player-hotkey-panel-content-name" },
-            item.nameKey ? t(item.nameKey) : item.name,
-          ),
-          h(
-            "span",
-            { class: "nova-player-hotkey-panel-content-desc" },
-            item.descKey ? t(item.descKey) : item.desc,
-          ),
-        ),
-      );
+    /** 把注册表返回值收敛为面板展示字段 */
+    const toItems = (list: readonly HotkeyConfig[]): HotkeyItem[] =>
+      list.map((item) => ({
+        id: item.id,
+        plugin: item.plugin,
+        name: item.name,
+        nameKey: item.nameKey,
+        desc: item.desc,
+        descKey: item.descKey,
+      }));
+
+    /** 按来源插件插入分组标题 */
+    const buildEntries = (list: HotkeyItem[]): HotkeyDisplayEntry[] => {
+      const entries: HotkeyDisplayEntry[] = [];
+      let lastPlugin: string | undefined;
+      list.forEach((item, index) => {
+        if (item.plugin !== undefined && item.plugin !== lastPlugin) {
+          entries.push({
+            key: `group:${item.plugin}:${index}`,
+            kind: "group",
+            label: item.plugin,
+          });
+        }
+        lastPlugin = item.plugin;
+        entries.push({
+          key: item.id ?? `item:${index}`,
+          kind: "item",
+          item,
+        });
+      });
+      return entries;
     };
+
+    const hotkeyEntriesSignal = signal<HotkeyDisplayEntry[]>(
+      buildEntries(
+        props.hotkeys ??
+          (props.registry ? toItems(props.registry.list()) : HOTKEYS),
+      ),
+    );
+    let offRegistry: (() => void) | null = null;
+
+    /** 渲染快捷键列表：For 按注册表变化增量更新 */
+    const renderHotkeyEntries = (): ReturnType<typeof h> =>
+      h(For, {
+        each: (): HotkeyDisplayEntry[] => hotkeyEntriesSignal.value,
+        key: (entry: unknown): string =>
+          typeof entry === "object" && entry !== null && "key" in entry
+            ? String((entry as HotkeyDisplayEntry).key)
+            : "entry",
+        render: (entry: unknown): VNode => {
+          const display = entry as HotkeyDisplayEntry;
+          if (display.kind === "group") {
+            return h(
+              "div",
+              { class: "nova-player-hotkey-panel-content-group" },
+              `${display.label ?? ""} · ${t("player.ui.hotkey.plugin_group")}`,
+            );
+          }
+          const item = display.item as HotkeyItem;
+          return h(
+            "div",
+            { class: "nova-player-hotkey-panel-content-item" },
+            h(
+              "span",
+              { class: "nova-player-hotkey-panel-content-name" },
+              item.nameKey ? t(item.nameKey) : item.name,
+            ),
+            h(
+              "span",
+              { class: "nova-player-hotkey-panel-content-desc" },
+              item.descKey ? t(item.descKey) : item.desc,
+            ),
+          );
+        },
+      });
 
     // ============================================
     // 显隐控制（对外 API，内部写信号即可）
@@ -156,7 +221,19 @@ export const HotkeyPanel = defineComponent<HotkeyPanelProps>(
      * （初始显隐已由 activeSignal 初值在渲染时体现）
      */
     lifecycle.onMounted = (): void => {
+      if (props.registry) {
+        offRegistry = props.registry.subscribe(() => {
+          hotkeyEntriesSignal.value = buildEntries(
+            toItems(props.registry!.list()),
+          );
+        });
+      }
       lifecycle.emit?.("hotkeyPanelMounted", { show, hide, open, close });
+    };
+
+    lifecycle.onBeforeDestroy = (): void => {
+      offRegistry?.();
+      offRegistry = null;
     };
 
     return h(
@@ -191,7 +268,7 @@ export const HotkeyPanel = defineComponent<HotkeyPanelProps>(
               transform: "translate(0px, 0px) scale(1) translateZ(0px)",
             },
           },
-          ...renderHotkeyItems(),
+          renderHotkeyEntries(),
         ),
       ),
     );

@@ -452,6 +452,43 @@ install(player) {
 }
 ```
 
+### 4.14 插件快捷键注册
+
+播放器仍然负责键盘监听、输入框豁免、修饰键拦截和匹配顺序；
+插件只注册自己的快捷键描述与动作，快捷键面板会自动展示。
+
+```ts
+install(player) {
+  const dispose = player.registerHotkey({
+    id: "danmaku.gift",
+    plugin: "danmaku",              // 卸载该插件时按来源自动回收
+    name: "G",
+    descKey: "player.ui.hotkey.send_gift",
+    keyMatcher: (e) => e.key === "g" || e.key === "G",
+    when: () => player.hasPlugin("danmaku"),
+    action: () => player.emit("danmaku:gift"),
+  });
+  return () => dispose();
+}
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 唯一 id，重复注册会覆盖 |
+| `plugin` | 来源插件名，卸载时自动批量回收，面板按来源分组 |
+| `priority` | 大于 0 时先于内置快捷键匹配，默认排在内置之后 |
+| `when` | 运行时启用条件 |
+| `allowRepeat` | 是否允许长按重复触发，默认 false |
+| `keyMatcher` | 按键匹配函数 |
+| `preventDefault` | 是否阻止浏览器默认行为 |
+| `action` | 命中后执行，签名与内置快捷键一致 |
+
+| 方法 | 说明 |
+| --- | --- |
+| `registerHotkey(reg)` | 注册插件快捷键，返回注销函数 |
+| `getHotkeys()` | 读取内置 + 插件快捷键列表 |
+| `getHotkeyRegistry()` | 快捷键注册表，面板订阅变化用 |
+
 ---
 
 ## 5. 全事件表

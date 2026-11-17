@@ -1423,6 +1423,8 @@ export const PlayerDocker = defineComponent<
 
     if (name === "keyboard" && !lazyPanelVNodes.keyboard) {
       lazyPanelVNodes.keyboard = h(component.HotkeyPanel, {
+        // 面板订阅注册表，插件注册 / 卸载后实时更新列表
+        registry: resolvedPlayer?.getHotkeyRegistry?.(),
         onHotkeyPanelMounted: (api: HotkeyPanelApi) => {
           hotkeyPanelApi.open = api.open;
           hotkeyPanelApi.close = api.close;
@@ -2264,8 +2266,14 @@ export const PlayerDocker = defineComponent<
     },
   };
 
+  /** 快捷键注册表：内置项 + 插件注册项；插件卸载时按来源自动回收 */
+  const hotkeyRegistry = resolvedPlayer?.getHotkeyRegistry?.() ?? null;
+
   /** keydown / keyup 需成对注册：→ 键的「长按倍速」依赖 keyup 还原速率 */
-  const hotkeyHandlers = createHotkeyHandlers(hotkeyCtx);
+  const hotkeyHandlers = createHotkeyHandlers(
+    hotkeyCtx,
+    hotkeyRegistry ? () => hotkeyRegistry.list() : undefined,
+  );
   const onKeyboard = hotkeyHandlers.onKeydown;
   const onKeyboardUp = hotkeyHandlers.onKeyup;
 

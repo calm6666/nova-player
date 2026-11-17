@@ -251,6 +251,7 @@
   "player.ui.hotkey.toggle_danmaku": "显示 / 隐藏弹幕",
   "player.ui.hotkey.toggle_mute": "静音 / 取消静音",
   "player.ui.hotkey.media_key": "媒体键",
+  "player.ui.hotkey.plugin_group": "插件快捷键",
   "player.ui.audio.title": "音效调节",
   "player.ui.audio.gain": "音量增强",
   "player.ui.audio.reset": "重置",

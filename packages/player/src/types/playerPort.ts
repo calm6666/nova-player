@@ -24,6 +24,8 @@ import type { TypedStateManager } from "@lumina/framework/core";
 import type { MediaItem, PlayerConfig } from "./player";
 import type { PluginSlotDefinition, SlotEntry, SlotMount } from "./slots";
 import type { PlayerStateMap } from "../store/runtimeState";
+import type { HotkeyConfig } from "../core/hotkeys";
+import type { HotkeyRegistration } from "../core/hotkeyRegistry";
 
 /** 播放器事件名（与 `player.on('<name>')` 的小写事件键一致） */
 export type PlayerPortEvent =
@@ -60,6 +62,11 @@ export interface PlayerPort {
 
   /** 获取当前 <video> 元素（尚未创建时返回 null；插件/UI 不自行 querySelector） */
   getVideoElement?(): HTMLVideoElement | null;
+
+  /** 注册插件快捷键，返回注销函数；播放器负责监听与匹配 */
+  registerHotkey?(registration: HotkeyRegistration): () => void;
+  /** 当前生效的快捷键列表 */
+  getHotkeys?(): HotkeyConfig[];
 
   // ---- 音量 ----
   setVolume(volume: number): void;
@@ -114,6 +121,9 @@ export interface PlayerUiHost extends PlayerPort {
   registerTopViewRefresh?(refresh: (() => void) | null): void;
   /** 注册片尾视图刷新回调（null 表示注销） */
   registerEndingViewRefresh?(refresh: (() => void) | null): void;
+
+  /** 快捷键注册表（快捷键面板订阅变化用） */
+  getHotkeyRegistry?(): import("../core/hotkeyRegistry").HotkeyRegistry;
 
   /** 插件声明的插槽定义（用于区域挂载时合并插件插槽内容） */
   getSlotDefinitions(): readonly PluginSlotDefinition[];
