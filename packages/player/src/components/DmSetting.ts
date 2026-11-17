@@ -2,9 +2,6 @@
  * ============================================
  * 弹幕设置面板组件 (DmSetting)
  * ============================================
- * 结构与 `CicadaPlayerNext/platform/danmusetting.txt` 逐条对应
- * （bpx-nova-player-* → nova-player-*，bui-* → ui-*）。外层
- * `.nova-player-dm-setting-wrap > .nova-player-dm-setting-box.ui.ui-panel.ui-dark` 由 SendBar 提供，
  * 本组件从 `.ui-area` 起渲染左右两块：
  *   左：按类型过滤 / 弹幕随屏幕缩放·防挡字幕·智能防挡弹幕 / 屏蔽词 /
  *       显示区域·不透明度·弹幕字号·弹幕速度 / 高级设置
@@ -32,7 +29,7 @@ import type { TypedStateManager } from "@lumina/framework/core/state";
 const speedSliderToMultiplier = (value: number): number => 0.5 + value / 100;
 
 /**
- * 弹幕字体下拉项（对应参考 bui-select-list 的 8 个 data-value）
+ * 弹幕字体下拉项
  * label 存 i18n key（字体名为专有名词，en-US 语言包保留同样文字），
  * 渲染时经 t() 取文案，避免模块加载期 t() 在 initI18n 之前执行取错语言
  */

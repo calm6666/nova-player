@@ -1,0 +1,115 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-progress {
+  height: 12px;
+  cursor: pointer;
+
+  &-wrap {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 6px;
+
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &-unfilled {
+    .lui-progress-bar {
+      background-color: transparent;
+
+      &::before {
+        background-color: transparent;
+      }
+    }
+  }
+
+  &-bar {
+    position: relative;
+    height: 100%;
+    width: 0;
+    border-radius: 6px;
+    background-color: $fn-color;
+    z-index: 1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+  }
+
+  &-dot {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 14px;
+    height: 14px;
+    transform: translate3d(6px, -4px, 0);
+    background-color: #fff;
+    border-radius: 50%;
+    z-index: 4;
+  }
+
+  &-step {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 0;
+    height: 12px;
+    box-sizing: border-box;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  &-item {
+    position: absolute;
+    left: 0;
+    top: 1px;
+    height: 12px;
+    margin-left: -1px;
+    white-space: nowrap;
+
+    &:first-child {
+      margin-left: -4px;
+    }
+
+    &:last-child {
+      margin-left: 0;
+    }
+
+    .lui-progress-text {
+      margin-top: 5px;
+      font-size: 12px;
+      line-height: 16px;
+      transform: translateX(-45%);
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+
+  &-lab {
+    height: 4px;
+    width: 4px;
+    background: #fff;
+    border-radius: 100%;
+  }
+
+  &-val {
+    font-size: 12px;
+    line-height: 16px;
+
+    user-select: none;
+    cursor: default;
+    color: rgba(255, 255, 255, 0.8);
+    box-sizing: border-box;
+    padding-left: 20px;
+    text-wrap: nowrap;
+  }
+}

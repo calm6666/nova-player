@@ -1,0 +1,31 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-tabs {
+  .lui-tabs-header {
+    display: flex;
+
+    .lui-tabs-header-item {
+      text-align: center;
+      margin-right: 20px;
+      font-size: $font-size;
+      color: $dropdown-font;
+      cursor: pointer;
+
+      &.lui-tabs-header-item-active {
+        color: $fn-color;
+        border-bottom: 1px solid $fn-color;
+      }
+    }
+  }
+}
+
+.lui-tabs-body {
+  .lui-tabs-body-item {
+    display: none;
+
+    &.lui-tabs-body-item-active {
+      display: block;
+    }
+  }
+}

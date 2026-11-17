@@ -1,0 +1,12 @@
+@use "./variables" as *;
+
+@mixin dotdotdot {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@mixin transition($transition) {
+  transition: $transition;
+  transform: translateZ(0px);
+}

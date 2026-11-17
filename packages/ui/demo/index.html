@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lumina UI · 组件测试页</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f6f7f8;
+        color: #222;
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .sub { color: #888; margin-bottom: 24px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+      .demo-page { display: contents; }
+      .demo-card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+      .demo-title { font-weight: 600; margin-bottom: 12px; color: #00a1d6; }
+      .demo-body { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+      .theme-toggle { position: fixed; top: 16px; right: 16px; z-index: 100; }
+      .theme-toggle button { padding: 6px 14px; border-radius: 16px; border: 1px solid #ccc; background: #fff; color: #333; cursor: pointer; }
+      html.lui-theme-dark body { background: #181818; color: #ddd; }
+      html.lui-theme-dark .demo-card { background: #212121; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+      html.lui-theme-dark .sub { color: #999; }
+      html.lui-theme-dark .theme-toggle button { background: #2a2a2a; border-color: #444; color: #ddd; }
+    </style>
+  </head>
+  <body>
+    <h1>Lumina UI · 组件测试页</h1>
+    <div class="sub">@lumina/ui 移植自 nano-ui（bui-* → lui-*），21 个组件 + 模拟数据</div>
+    <div class="grid" id="app"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

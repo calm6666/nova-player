@@ -239,6 +239,34 @@ importers:
         specifier: ^3.8.0
         version: 3.9.1(@types/node@20.19.43)(rollup@4.68.1)(typescript@6.0.3)(vite@5.4.21(@types/node@20.19.43)(sass@1.108.1)(terser@5.51.2))
 
+  packages/ui:
+    dependencies:
+      '@lumina/framework':
+        specifier: workspace:*
+        version: link:../framework
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      sass:
+        specifier: ^1.99.0
+        version: 1.108.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^5.2.0
+        version: 5.4.21(@types/node@20.19.43)(sass@1.108.1)(terser@5.51.2)
+      vite-plugin-dts:
+        specifier: ^3.8.0
+        version: 3.9.1(@types/node@20.19.43)(rollup@4.68.1)(typescript@6.0.3)(vite@5.4.21(@types/node@20.19.43)(sass@1.108.1)(terser@5.51.2))
+
+  packages/vite-plugin-lumina-compile:
+    dependencies:
+      vite:
+        specifier: '>=5'
+        version: 5.4.21(@types/node@20.19.43)(sass@1.108.1)(terser@5.51.2)
+
 packages:
 
   '@asamuzakjp/css-color@5.1.11':

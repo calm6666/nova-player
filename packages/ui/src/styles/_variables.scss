@@ -1,0 +1,99 @@
+// ============================================
+// Lumina UI 主题变量
+// ============================================
+// 默认亮色 token 挂在 :root，深色覆盖挂在 .lui-theme-dark（全局 class）。
+// 消费方可直接在任意作用域覆盖 --nova-* 变量实现主题定制，无需改组件。
+
+:root {
+  // 品牌 / 功能色
+  --nova-primary-color: #00a1d6;
+  --nova-fn-color: #00a1d6;
+  --nova-fn-hover-color: #00b5e5;
+  --nova-color-pink: #f9739a;
+
+  // 控件 / 浮层
+  --nova-dmsend-switch-icon: #757575;
+  --nova-aux-button-bg: #e5e9ef;
+  --nova-aux-header-bg: #f4f4f4;
+  --nova-aux-header-font: #222222;
+  --nova-aux-header-icon: #757575;
+  --nova-aux-content-font1: #222222;
+  --nova-aux-float-border: #e5e9ef;
+  --nova-aux-float-bg: #ffffff;
+  --nova-aux-float-hover-bg: #000000;
+  --nova-aux-line-border: #e5e9ef;
+  --nova-aux-float-icon: #6d757a;
+
+  // 文本 / 背景 / 边框
+  --nova-text-color: #222222;
+  --nova-text-color-secondary: #757575;
+  --nova-text-color-disabled: #999999;
+  --nova-bg-color: #ffffff;
+  --nova-bg-color-elevated: #ffffff;
+  --nova-border-color: #e5e9ef;
+  --nova-gray: #999999;
+  --nova-gray-light: #e7e7e7;
+  --nova-gray-dark: #757575;
+  --nova-gray-border: #c0c0c0;
+  --nova-pic-border: rgba(255, 255, 255, 0.8);
+  --nova-text-shadow: rgba(0, 0, 0, 0.5);
+
+  // 字号
+  --nova-ui-font-size: 12px;
+}
+
+// 深色主题：只覆盖变量，组件无需感知
+.lui-theme-dark {
+  --nova-primary-color: #00a1d6;
+  --nova-fn-color: #00a1d6;
+  --nova-fn-hover-color: #00b5e5;
+
+  --nova-dmsend-switch-icon: #9aa0a6;
+  --nova-aux-button-bg: #2f2f2f;
+  --nova-aux-header-bg: #212121;
+  --nova-aux-header-font: #e5e9ef;
+  --nova-aux-header-icon: #9aa0a6;
+  --nova-aux-content-font1: #e5e9ef;
+  --nova-aux-float-border: #3a3a3a;
+  --nova-aux-float-bg: #212121;
+  --nova-aux-float-hover-bg: #2f2f2f;
+  --nova-aux-line-border: #3a3a3a;
+  --nova-aux-float-icon: #9aa0a6;
+
+  --nova-text-color: #e5e9ef;
+  --nova-text-color-secondary: #9aa0a6;
+  --nova-text-color-disabled: #6b6b6b;
+  --nova-bg-color: #181818;
+  --nova-bg-color-elevated: #212121;
+  --nova-border-color: #3a3a3a;
+  --nova-gray: #9aa0a6;
+  --nova-gray-light: #3a3a3a;
+  --nova-gray-dark: #c0c0c0;
+  --nova-gray-border: #4a4a4a;
+  --nova-pic-border: rgba(255, 255, 255, 0.3);
+  --nova-text-shadow: rgba(0, 0, 0, 0.8);
+}
+
+// 组件 SCSS 使用的别名（全部指向 CSS 变量，可被任意作用域覆盖）
+$main-color: var(--nova-primary-color);
+$fn-color: var(--nova-fn-color);
+$fn-hover-color: var(--nova-fn-hover-color);
+$dm-switch-icon: var(--nova-dmsend-switch-icon);
+$gray-button-bg: var(--nova-aux-button-bg);
+$collapse-header-bg: var(--nova-aux-header-bg);
+$collapse-header-font: var(--nova-aux-header-font);
+$collapse-header-icon: var(--nova-aux-header-icon);
+$dropdown-font: var(--nova-aux-content-font1);
+$float-border: var(--nova-aux-float-border);
+$float-bg: var(--nova-aux-float-bg);
+$float-bg-hover: var(--nova-aux-float-hover-bg);
+$float-line-border: var(--nova-aux-line-border);
+$dialog-icon: var(--nova-aux-float-icon);
+$gray: var(--nova-gray);
+$gray-light: var(--nova-gray-light);
+$gray-dark: var(--nova-gray-dark);
+$gray-border: var(--nova-gray-border);
+$pic-border: var(--nova-pic-border);
+$text-shadow: var(--nova-text-shadow);
+$color-pink: var(--nova-color-pink);
+$font-size: var(--nova-ui-font-size);

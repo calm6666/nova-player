@@ -1,0 +1,61 @@
+@use "./variables" as *;
+
+.lui {
+  display: flex;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: flex-start;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  &.lui-disabled {
+    filter: grayscale(100%);
+    cursor: not-allowed;
+
+    * {
+      pointer-events: none;
+    }
+  }
+
+  .lui-area {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: flex-start;
+    line-height: normal;
+    user-select: none;
+  }
+}
+
+// 深色主题公共覆盖：只改 token，组件内部不用感知
+.lui-theme-dark {
+  color: var(--nova-text-color);
+
+  .lui-input-input {
+    color: var(--nova-text-color);
+    background: var(--nova-bg-color-elevated);
+    border-color: var(--nova-border-color);
+  }
+
+  .lui-progress-wrap {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .lui-button .lui-area {
+    color: var(--nova-text-color);
+  }
+
+  .lui-tabs-header-item,
+  .lui-tabs-body-item,
+  .lui-collapse-header,
+  .lui-dropdown-display,
+  .lui-menu-item,
+  .lui-swiper-text {
+    color: var(--nova-text-color);
+  }
+}

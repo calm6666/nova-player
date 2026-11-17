@@ -1,0 +1,68 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-collapse {
+  user-select: none;
+
+  .lui-collapse-wrap {
+    width: 100%;
+  }
+
+  .lui-collapse-header {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    vertical-align: middle;
+    align-items: center;
+    background: $collapse-header-bg;
+    color: $collapse-header-font;
+    border-radius: 2px;
+    box-sizing: border-box;
+    cursor: pointer;
+
+    .lui-collapse-arrow {
+      display: flex;
+      vertical-align: middle;
+      align-items: center;
+      height: 14px;
+      position: absolute;
+      right: 16px;
+      top: 0;
+      bottom: 0;
+      margin: auto;
+
+      .lui-collapse-arrow-text {
+        font-size: var(--nova-ui-font-size, 12px);
+        display: inline-flex;
+
+        .arrow-icon {
+          width: 16px;
+          height: 16px;
+          fill: $collapse-header-icon;
+          transform: rotateZ(-90deg);
+          transition: transform 0.3s;
+        }
+      }
+    }
+  }
+
+  .lui-collapse-wrap-folded {
+    .lui-collapse-header {
+      .lui-collapse-arrow {
+        .lui-collapse-arrow-text {
+          .arrow-icon {
+            transform: rotateZ(90deg);
+          }
+        }
+      }
+    }
+  }
+
+  .lui-collapse-body {
+    width: 100%;
+    box-sizing: border-box;
+    @include transition(height 0.3s);
+    overflow: hidden;
+  }
+}

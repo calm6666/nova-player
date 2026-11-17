@@ -1,0 +1,83 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-circle-progress {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border: 6px solid #00a1d6;
+  border-radius: 50%;
+  box-sizing: border-box;
+
+  &-left,
+  &-right {
+    position: absolute;
+    width: 70px;
+    height: 140px;
+    top: -6px;
+    overflow: hidden;
+    z-index: 1;
+
+    &-content {
+      box-sizing: border-box;
+      position: absolute;
+      top: 0;
+      width: 140px;
+      height: 140px;
+      border: 6px solid transparent;
+      border-radius: 50%;
+      transform: rotate(-45deg);
+      transition: all 0.5s linear;
+      z-index: 2;
+    }
+  }
+
+  &-left {
+    left: -6px;
+  }
+
+  &-right {
+    right: -6px;
+  }
+
+  &-left-content {
+    left: 0;
+    border-top-color: #cccccc;
+    border-left-color: #cccccc;
+  }
+
+  &-right-content {
+    border-right-color: #cccccc;
+    border-bottom-color: #cccccc;
+    right: 0;
+  }
+
+  &-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+
+    width: 116px;
+    text-align: center;
+    line-height: 1.5;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+  }
+
+  &-percent {
+    font-size: 28px;
+  }
+
+  &-top,
+  &-bottom {
+
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: 1.25;
+  }
+
+  &-bottom {
+    color: $gray;
+    margin-bottom: 16px;
+  }
+}

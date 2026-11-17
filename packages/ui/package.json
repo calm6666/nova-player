@@ -1,0 +1,43 @@
+{
+  "name": "@lumina/ui",
+  "version": "0.1.0",
+  "description": "Lumina UI: SSR-safe nano-ui (bui-*) ported components built on @lumina/framework",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite --config demo/vite.config.ts",
+    "build": "tsc --noEmit && vite build && sass src/styles/index.scss dist/style.css --no-source-map --style=compressed",
+    "build:demo": "vite build --config demo/vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "smoke": "node scripts/smoke.mjs && node scripts/smoke-client.mjs && node scripts/smoke-interaction.mjs",
+    "lint": "node ../../scripts/lint.mjs src --ext .ts"
+  },
+  "keywords": [
+    "lumina",
+    "ui",
+    "components"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@lumina/framework": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "sass": "^1.99.0",
+    "typescript": "^6.0.3",
+    "vite": "^5.2.0",
+    "vite-plugin-dts": "^3.8.0"
+  }
+}

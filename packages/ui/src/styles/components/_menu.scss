@@ -1,0 +1,59 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-menu {
+  display: inline-flex;
+  border: 1px solid #e2e2e2;
+  background-color: #fff;
+  border-radius: 3px;
+  box-shadow: 0 0 5px #e2e2e2;
+  text-shadow: 0 0 #e2e2e2;
+
+  .lui-theme-dark & {
+    background-color: rgba(28, 28, 28, 0.9);
+    border: none;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+
+    .lui-menu-items .lui-menu-item {
+      color: #eee;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.12);
+      }
+
+      &+.lui-menu-item {
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+    }
+  }
+
+  .lui-menu-items {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+
+    .lui-menu-item {
+      padding: 4px 20px;
+      display: block;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      text-align: left;
+      height: 30px;
+      line-height: 30px;
+      transition: background-color 0.3s ease-in-out;
+      font-size: $font-size;
+      white-space: nowrap;
+      color: #444;
+
+      &:hover {
+        background-color: #ddd;
+      }
+
+      &+.lui-menu-item {
+        border-top: 1px solid transparent;
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-panel {
+  border-radius: 4px 4px 0 0;
+  border: 1px solid #e2e2e2;
+  background: #fff;
+  overflow: hidden;
+
+  .lui-theme-dark & {
+    border: none;
+    background: rgba(21, 21, 21, 0.9);
+  }
+
+  .lui-panel-wrap {
+    position: relative;
+    @include transition(all 0.25s);
+  }
+
+  .lui-panel-move {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+    transform: translateX(0);
+    @include transition(transform 0.25s);
+  }
+
+  .lui-panel-item {
+    opacity: 0;
+    pointer-events: none;
+    @include transition(opacity 0.1s);
+
+    &.lui-panel-item-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}

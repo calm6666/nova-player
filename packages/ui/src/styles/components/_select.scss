@@ -1,0 +1,259 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-select {
+  display: inline-flex;
+  position: relative;
+  cursor: pointer;
+  line-height: initial;
+
+  .lui-theme-dark & {
+    .lui-select-header:hover {
+      background: #212121;
+    }
+
+    .lui-select-unfold {
+      .lui-select-header {
+        background: #212121;
+      }
+    }
+
+    .lui-select-list {
+      background: #212121;
+    }
+
+    .lui-select-border {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .lui-select-wrap {
+      height: 22px;
+    }
+
+    .lui-select-header {
+      height: 20px;
+      line-height: 20px;
+    }
+
+    .lui-select-item {
+      height: 20px;
+      line-height: 20px;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      &.lui-select-item-disabled {
+        &:hover {
+          background: none;
+        }
+      }
+    }
+  }
+
+  .lui-select-quality-menu {
+    .lui-select-header:hover {
+      background: none;
+    }
+
+    .lui-select-unfold {
+      .lui-select-header {
+        background: none;
+      }
+    }
+
+    .lui-select-list {
+      background: rgba(21, 21, 21, 0.9);
+      border-radius: 2px;
+    }
+
+    .lui-select-border {
+      border: none;
+      font-size: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    .lui-select-arrow {
+      display: none;
+    }
+
+    .lui-select-header {
+      padding: 0;
+      text-align: center;
+      font-size: 14px;
+      height: auto;
+      width: 100%;
+    }
+
+    .lui-select-item {
+      padding: 0 20px;
+      height: 36px;
+      line-height: 36px;
+      white-space: nowrap;
+
+      &.lui-select-item-active {
+        color: $fn-color;
+      }
+    }
+
+    .lui-select-result {
+      line-height: 22px;
+    }
+
+    .lui-select-list {
+      transition: none;
+      position: absolute;
+      left: 0;
+      font-size: $font-size;
+      width: auto;
+      text-align: left;
+    }
+
+    .lui-select-wrap {
+      position: relative;
+      height: 100%;
+    }
+
+    .lui-select-bridge {
+      position: absolute;
+      bottom: 22px;
+      left: 0;
+      right: 0;
+    }
+  }
+
+  .lui-select-wrap {
+    height: 24px;
+    width: 100%;
+  }
+
+  .lui-select-unfold {
+    .lui-select-bridge {
+      display: block;
+    }
+  }
+
+  .lui-select-border {
+    border-radius: 2px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: $font-size;
+    border: 1px solid $gray-border;
+  }
+
+  .lui-select-header {
+    position: relative;
+    padding: 0 22px 0 7px;
+    height: 22px;
+    line-height: 22px;
+  }
+
+  .lui-select-arrow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 22px;
+    display: flex;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lui-select-bridge {
+    cursor: pointer;
+    display: none;
+  }
+
+  .lui-select-list {
+    padding: 0;
+    list-style-type: none;
+    margin: 0;
+    overflow: hidden;
+    @include transition(all 0.2s);
+    height: 0;
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    position: relative;
+    z-index: 1;
+  }
+
+  .lui-select-item {
+    padding: 0 22px 0 7px;
+    height: 22px;
+    line-height: 22px;
+    @include transition(background 0.3s);
+
+    * {
+      pointer-events: none;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    &:hover {
+      background: $gray-button-bg;
+    }
+
+    &.lui-select-item-disabled {
+      color: $gray;
+      cursor: not-allowed;
+
+      &:hover {
+        background: none;
+      }
+    }
+
+    &.lui-select-item-active {
+      cursor: default;
+    }
+  }
+
+  .lui-select-arrow-down {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 4px 3px 0 3px;
+    border-color: $gray transparent transparent transparent;
+  }
+}
+
+&.lui-select-bscroll {
+  .lui-select-list-wrap {
+    height: 0;
+    position: relative;
+    overflow: hidden;
+    z-index: 3;
+  }
+
+  .lui-select-list {
+    height: auto !important;
+  }
+
+  .bscroll-vertical-scrollbar {
+    width: 6px !important;
+    background: transparent !important;
+  }
+
+  .bscroll-indicator {
+    border: none !important;
+    background: #6d7f7a !important;
+    cursor: pointer;
+  }
+
+  .bscroll-vertical-scrollbar.mousedown {
+    opacity: 1 !important;
+  }
+
+  .lui-select-unfold {
+    .lui-select-list-wrap {
+      height: auto !important;
+    }
+
+    .bscroll-vertical-scrollbar {
+      opacity: 1 !important;
+    }
+  }
+}

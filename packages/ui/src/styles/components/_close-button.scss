@@ -1,0 +1,80 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-circle {
+  position: absolute;
+  top: -13px;
+  right: -13px;
+  width: var(--width, 16px);
+  height: var(--height, 16px);
+  border-radius: 50%;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+
+  &:before {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    left: -12px;
+    top: -12px;
+  }
+
+  &-left,
+  &-right {
+    position: absolute;
+    width: 50%;
+    height: var(--height, 16px);
+    top: 0;
+    overflow: hidden;
+    z-index: 1;
+    pointer-events: none;
+
+    &-bar {
+      box-sizing: border-box;
+      position: absolute;
+      top: 0;
+      width: var(--width, 16px);
+      height: var(--height, 16px);
+      border: 1px solid transparent;
+      border-radius: 50%;
+      transform: rotate(-45deg);
+      z-index: 2;
+    }
+  }
+
+  &-left {
+    left: 0;
+  }
+
+  &-right {
+    right: 0;
+  }
+
+  &-left-bar {
+    left: 0;
+    border-top-color: var(--color, #ffffffb3);
+    border-left-color: var(--color, #ffffffb3);
+    transform: rotate(var(--leftDeg, 0));
+  }
+
+  &-right-bar {
+    right: 0;
+    border-right-color: var(--color, #ffffffb3);
+    border-bottom-color: var(--color, #ffffffb3);
+    transform: rotate(var(--rightDeg, 0));
+  }
+
+  svg {
+    display: inline-block;
+    width: 90%;
+    position: absolute;
+    height: 90%;
+    pointer-events: none;
+    fill: #ffffffb3;
+  }
+}

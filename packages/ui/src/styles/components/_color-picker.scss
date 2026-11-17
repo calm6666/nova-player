@@ -1,0 +1,73 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-color-picker {
+  .lui-theme-dark & {
+    .lui-input .lui-input-input {
+      background-color: transparent;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .lui-color-picker-display {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .lui-color-picker-option {
+      &[data-value='#222222'] {
+        border-color: rgba(255, 255, 255, 0.1);
+      }
+
+      &.lui-color-picker-option-active {
+        border-color: #000;
+      }
+    }
+  }
+
+  .lui-color-picker-result {
+    height: 22px;
+    margin-bottom: 6px;
+    display: flex;
+    vertical-align: middle;
+  }
+
+  .lui-color-picker-input {
+    margin-right: 6px;
+    width: 98px;
+  }
+
+  .lui-color-picker-display {
+    display: inline-block;
+    width: 50px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    vertical-align: middle;
+    box-sizing: border-box;
+    @include transition(background 0.2s);
+  }
+
+  .lui-color-picker-options {
+    padding: 0;
+    margin: 0 -6px 0 0;
+    list-style-type: none;
+    white-space: normal;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .lui-color-picker-option {
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+    border-radius: 2px;
+    margin-right: 6px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    display: inline-block;
+
+    &.lui-color-picker-option-active {
+      box-shadow: 0 0 1px 1px #fff;
+    }
+  }
+}

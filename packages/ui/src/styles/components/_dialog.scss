@@ -1,0 +1,38 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-dialog {
+  background: $float-bg;
+  border: 1px solid $float-border;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  border-radius: 4px;
+  text-align: center;
+  position: relative;
+  color: #6d757a;
+  fill: $dialog-icon;
+
+  .lui-theme-dark & {
+    background: rgba(25, 25, 25, 0.88);
+    color: #fff;
+    fill: #fff;
+  }
+
+  .lui-dialog-title {
+    border-bottom: 1px solid $float-line-border;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    font-size: 15px;
+    color: $dropdown-font;
+  }
+
+  .lui-dialog-close {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+  }
+}

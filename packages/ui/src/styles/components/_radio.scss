@@ -1,0 +1,167 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-radio {
+  .lui-theme-dark & {
+    .lui-radio-button {
+      .lui-radio-item {
+        &:hover {
+          .lui-radio-label {
+            background-color: rgba(255, 255, 255, 0.4);
+          }
+        }
+      }
+
+      .lui-radio-input {
+        &:checked {
+          &+.lui-radio-label {
+            background: $fn-color;
+          }
+        }
+      }
+
+      .lui-radio-label {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+    }
+  }
+
+  .lui-radio-wrap {
+    width: 100%;
+    font-size: 0;
+  }
+
+  .lui-radio-item {
+    position: relative;
+    display: inline-block;
+  }
+
+  .lui-radio-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .lui-radio-label {
+    font-size: $font-size;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: inline-block;
+    display: flex;
+    align-items: center;
+  }
+
+  .lui-radio-normal {
+    .lui-radio-item {
+      height: 33px;
+
+      &:hover {
+        .lui-radio-text {
+          color: $fn-color;
+        }
+
+        .lui-radio-icon {
+          svg {
+            fill: $fn-color;
+          }
+        }
+      }
+    }
+
+    .lui-radio-label {
+      display: flex;
+      vertical-align: middle;
+      align-items: center;
+
+      .lui-radio-text {
+        color: #6d757a;
+        @include transition(all 0.2s);
+      }
+
+      .lui-radio-icon {
+        display: inline-block;
+        width: 16px;
+        margin-right: 10px;
+        font-size: 0;
+
+        svg {
+          fill: #6d757a;
+          @include transition(all 0.2s);
+        }
+      }
+
+      .lui-radio-icon-selected {
+        display: none;
+      }
+    }
+
+    .lui-radio-input {
+      &:checked {
+        &+.lui-radio-label {
+          .lui-radio-text {
+            color: $fn-color;
+          }
+
+          .lui-radio-icon {
+            svg {
+              fill: $fn-color;
+            }
+          }
+
+          .lui-radio-icon-selected {
+            display: inline-block;
+          }
+
+          .lui-radio-icon-default {
+            display: none;
+          }
+        }
+      }
+    }
+  }
+
+  .lui-radio-button {
+    .lui-radio-group {
+      display: flex;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .lui-radio-item {
+      flex: 1;
+      text-align: center;
+
+      &:hover {
+        .lui-radio-label {
+          background-color: $gray-dark;
+        }
+      }
+    }
+
+    .lui-radio-input {
+      &:checked {
+        &+.lui-radio-label {
+          background: $fn-color;
+        }
+      }
+    }
+
+    .lui-radio-label {
+      background-color: $gray;
+      transition: all 0.2s;
+      border-radius: 2px;
+      justify-content: center;
+      padding: 2px 0;
+
+      .lui-radio-text {
+        color: #fff;
+      }
+    }
+  }
+}

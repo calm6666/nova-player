@@ -1,0 +1,141 @@
+@use "../variables" as *;
+@use "../mixins" as *;
+
+.lui-button {
+  display: inline-flex;
+  cursor: pointer;
+
+  .lui-area {
+    min-width: 68px;
+    font-size: $font-size;
+    border-radius: 2px;
+    box-sizing: border-box;
+    @include transition(all 0.2s);
+    background: none;
+    padding: 3px;
+    outline: none;
+    color: inherit;
+    text-align: inherit;
+    justify-content: center;
+
+    &.lui-button-transparent {
+      color: #fff;
+      border-width: 1px;
+      border-style: solid;
+      border-color: rgba(255, 255, 255, 0.2);
+
+      &:hover {
+        color: $fn-color;
+        border-color: $fn-color;
+      }
+    }
+
+    &.lui-button-border {
+      color: #fff;
+      border-width: 1px;
+      border-style: solid;
+      border-color: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+
+      &:hover {
+        color: $fn-color;
+        border-color: $fn-color;
+      }
+    }
+
+    &.lui-button-white {
+      color: $gray-dark;
+      border-width: 1px;
+      border-style: solid;
+      border-color: $gray-border;
+      background-color: #fff;
+
+      &:hover {
+        color: $fn-color;
+        border-color: $fn-color;
+      }
+    }
+
+    &.lui-button-gray,
+    &.lui-button-large,
+    &.lui-button-small {
+      background-color: $gray-button-bg;
+      color: $dropdown-font;
+
+      &:hover {
+        background-color: $fn-color;
+        color: #fff;
+      }
+    }
+
+    &.lui-button-gray2 {
+      color: #505050;
+      background-color: #f4f4f4;
+
+      &:hover {
+        background-color: #f4f4f4;
+        color: #222;
+      }
+    }
+
+    &.lui-button-gray3 {
+      color: $gray;
+
+      &:hover {
+        background-color: $fn-color;
+        color: #fff;
+      }
+    }
+
+    &.lui-button-blue {
+      color: #fff;
+      background-color: $fn-color;
+
+      &:hover {
+        background-color: $fn-hover-color;
+      }
+    }
+
+    &.lui-button-blue2 {
+      color: $fn-color;
+      background-color: #fff;
+      border-width: 1px;
+      border-style: solid;
+      border-color: $fn-color;
+
+      &:hover {
+        background-color: $fn-color;
+        color: #fff;
+      }
+    }
+
+    &.lui-button-yellow {
+      background-color: #f5b23d;
+      color: #fff;
+
+      &:hover {
+        background-color: #ffc154;
+      }
+    }
+
+    &.lui-button-text {
+      color: $fn-color;
+
+      &:hover {
+        color: $fn-hover-color;
+      }
+    }
+
+    &.lui-disabled {
+      background: #f5f7fa;
+      color: $gray-border;
+      border: none;
+      pointer-events: none;
+
+      &:hover {
+        background: #f5f7fa;
+        color: $gray-border;
+      }
+    }
+  }
+}
