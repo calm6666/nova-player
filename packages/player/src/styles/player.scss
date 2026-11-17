@@ -613,6 +613,24 @@ img {
   display: contents;
 }
 
+/* 插件面板宿主：铺满视频区，不拦截事件；面板内容自行定位并开启事件 */
+.nova-player-plugin-panel-host {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 70;
+}
+
+.nova-player-plugin-panel {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.nova-player-plugin-panel > * {
+  pointer-events: auto;
+}
+
 .nova-player-video-perch {
   -webkit-box-flex: 0;
   -webkit-box-pack: center;

@@ -156,6 +156,14 @@ class AudioEffectPluginClass implements AudioEffectPluginAPI {
       return;
     }
     this.eventBus = player.events;
+    // 音效入口由插件自己注册：插件安装即出现，卸载自动移除
+    player.registerMenuItem?.({
+      id: 'audioEffect.settings',
+      plugin: this.name,
+      position: 35,
+      labelKey: 'player.ui.audio.title',
+      onSelect: () => player.openPanel?.('audio'),
+    });
     const unsub = this.eventBus.on(PlayerEventEnum.MOUNTED, (data): void => {
       if (data.video instanceof HTMLVideoElement) {
         this.video = data.video;

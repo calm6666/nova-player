@@ -26,6 +26,11 @@ import type { PluginSlotDefinition, SlotEntry, SlotMount } from "./slots";
 import type { PlayerStateMap } from "../store/runtimeState";
 import type { HotkeyConfig } from "../core/hotkeys";
 import type { HotkeyRegistration } from "../core/hotkeyRegistry";
+import type {
+  UiMenuRegistration,
+  UiPanelRegistration,
+  UiRegistry,
+} from "../core/uiRegistry";
 
 /** 播放器事件名（与 `player.on('<name>')` 的小写事件键一致） */
 export type PlayerPortEvent =
@@ -67,6 +72,15 @@ export interface PlayerPort {
   registerHotkey?(registration: HotkeyRegistration): () => void;
   /** 当前生效的快捷键列表 */
   getHotkeys?(): HotkeyConfig[];
+
+  /** 注册右键菜单项，返回注销函数 */
+  registerMenuItem?(registration: UiMenuRegistration): () => void;
+  /** 注册插件面板，返回注销函数 */
+  registerPanel?(registration: UiPanelRegistration): () => void;
+  /** 打开插件面板 */
+  openPanel?(id: string): void;
+  /** 关闭插件面板 */
+  closePanel?(id: string): void;
 
   // ---- 音量 ----
   setVolume(volume: number): void;
@@ -124,6 +138,14 @@ export interface PlayerUiHost extends PlayerPort {
 
   /** 快捷键注册表（快捷键面板订阅变化用） */
   getHotkeyRegistry?(): import("../core/hotkeyRegistry").HotkeyRegistry;
+
+  /** 插件 UI 注册表（右键菜单 / 面板） */
+  getUiRegistry?(): UiRegistry;
+
+  /** 注册面板宿主（PlayerDocker 内部使用） */
+  registerPanelHost?(
+    host: { open: (id: string) => void; close: (id: string) => void } | null,
+  ): void;
 
   /** 插件声明的插槽定义（用于区域挂载时合并插件插槽内容） */
   getSlotDefinitions(): readonly PluginSlotDefinition[];

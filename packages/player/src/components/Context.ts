@@ -7,14 +7,19 @@
  * 渲染层零 DOM 操作（class/style 由编译器包装为 __reactiveAttrs）。
  * CSS 过渡仅作用于 opacity，声明式持续设置 left/top 不会引入额外动画。
  *
+ * 菜单项来源：
+ * - 内置项：复制链接 / 色彩 / 快捷键 / 版本 / 统计
+ * - 插件项：插件通过 player.registerMenuItem 注册，按 position 与内置项合并
+ *
  * 对外保留 showMenu/hideMenu 命令式 API 契约不变
  * （父组件经 contextMounted 持有引用，零改动）；
  * API 内部仅写 signal；document click 关闭监听保留命令式（时序行为）。
  */
 
-import { h, defineComponent, signal, t, Show } from '@lumina/framework/core';
+import { h, defineComponent, signal, For, t } from '@lumina/framework/core';
 import { isBrowser } from '@lumina/framework/utils';
 import type { VNode, ComponentLifecycle } from "@lumina/framework/types";
+import type { UiMenuRegistration, UiRegistry } from "../core/uiRegistry";
 
 /**
  * 菜单项配置
@@ -40,8 +45,10 @@ export interface ContextOffset {
  * Context 组件 Props 接口
  */
 export interface ContextProps {
-  /** 菜单项列表 */
+  /** 菜单项列表（显式传入时不再合并内置项与插件项） */
   menuItems?: ContextMenuItem[];
+  /** 插件 UI 注册表：合并插件注册的菜单项 */
+  registry?: UiRegistry;
   /** 播放器版本号 */
   version?: string;
   /** 菜单点击回调 */
@@ -54,15 +61,27 @@ export interface ContextProps {
   onOpenPanel?: (panel: "color" | "audio" | "keyboard" | "info") => void;
 }
 
-/**
- * 默认菜单项
- */
-const DEFAULT_MENU_ITEMS: ContextMenuItem[] = [
-  { dataAction: "copyLink", text: "复制视频地址（精准空降）" },
-  { dataAction: "color", text: "视频色彩调整" },
-  { dataAction: "keyboard", text: "快捷键说明" },
-  { dataAction: "version", text: "播放器版本 1.0.0" },
-  { dataAction: "info", text: "视频统计信息" },
+/** 渲染用菜单项 */
+interface MenuModelItem {
+  key: string;
+  text: string;
+  action?: string;
+  onSelect?: () => void;
+  isVersion?: boolean;
+}
+
+/** 内置菜单项与位置 */
+const BUILTIN_MENU: Array<{
+  id: string;
+  position: number;
+  action: string;
+  text: string;
+}> = [
+  { id: "copyLink", position: 10, action: "copyLink", text: "复制视频地址（精准空降）" },
+  { id: "color", position: 20, action: "color", text: "视频色彩调整" },
+  { id: "keyboard", position: 30, action: "keyboard", text: "快捷键说明" },
+  { id: "version", position: 40, action: "version", text: "播放器版本" },
+  { id: "info", position: 50, action: "info", text: "视频统计信息" },
 ];
 
 /**
@@ -74,25 +93,72 @@ export const Context = defineComponent<ContextProps>(
     // 状态数据
     // ============================================
 
-    /** 实际使用的菜单项列表（默认菜单；音效项由 Show 响应式插入） */
-    const menuItems = props.menuItems || DEFAULT_MENU_ITEMS;
-    const isAudioEnabled = (): boolean =>
-      typeof props.audioEnabled === "function"
-        ? props.audioEnabled()
-        : props.audioEnabled === true;
     /** 播放器版本号，未传入时默认为 1.0.0 */
     const version = props.version || "1.0.0";
 
-    // ============================================
-    // 响应式状态（渲染层唯一数据源）
-    // ============================================
+    /** 插件菜单注册项 */
+    const pluginMenusSignal = signal<UiMenuRegistration[]>([]);
+    let offMenus: (() => void) | null = null;
 
     /**
      * 当前菜单位置
      * 非 null = 显示态（active 类 + 定位到坐标）；null = 隐藏态
-     * （原实现 classList.add/remove("nova-player-active") 的语义一致化）
      */
     const positionSig = signal<ContextOffset | null>(null);
+
+    /** 合并内置项 + 插件项，按 position 排序（同位置保持注册先后） */
+    const buildMenuModel = (): MenuModelItem[] => {
+      if (props.menuItems) {
+        return props.menuItems.map((item, index) => ({
+          key: `explicit:${index}`,
+          text: item.text,
+          action: item.dataAction,
+          isVersion: item.dataAction === "version",
+        }));
+      }
+
+      const entries: Array<{
+        position: number;
+        seq: number;
+        item: MenuModelItem;
+      }> = [];
+
+      BUILTIN_MENU.forEach((item, index) => {
+        entries.push({
+          position: item.position,
+          seq: index,
+          item: {
+            key: item.id,
+            text: item.text,
+            action: item.action,
+            isVersion: item.action === "version",
+          },
+        });
+      });
+
+      pluginMenusSignal.value.forEach((item, index) => {
+        if (item.visible !== undefined && !item.visible()) return;
+        entries.push({
+          position: item.position,
+          seq: 1000 + index,
+          item: {
+            key: item.id,
+            text: item.labelKey ? t(item.labelKey) : (item.label ?? ""),
+            action: item.dataAction,
+            onSelect: item.onSelect,
+          },
+        });
+      });
+
+      entries.sort((a, b) => a.position - b.position || a.seq - b.seq);
+      return entries.map((entry) => entry.item);
+    };
+
+    const menuModelSignal = signal<MenuModelItem[]>(buildMenuModel());
+
+    const refreshMenu = (): void => {
+      menuModelSignal.value = buildMenuModel();
+    };
 
     // ============================================
     // 方法
@@ -120,10 +186,10 @@ export const Context = defineComponent<ContextProps>(
     };
 
     /**
-     * 处理菜单项点击，根据动作标识执行对应操作
+     * 处理内置动作
      * @param dataAction - 动作标识
      */
-    const clickMenu = (dataAction: string): void => {
+    const runAction = (dataAction: string): void => {
       props.onMenuClick?.(dataAction);
       lifecycle.emit?.("menuClick", dataAction);
 
@@ -146,13 +212,18 @@ export const Context = defineComponent<ContextProps>(
           lifecycle.emit?.("openPanel", "keyboard");
           break;
         case "version":
-          // 版本信息无需特殊处理
           break;
         case "info":
           props.onOpenPanel?.("info");
           lifecycle.emit?.("openPanel", "info");
           break;
       }
+    };
+
+    /** 点击菜单项：插件项走自定义回调，内置项走动作分发 */
+    const clickMenu = (item: MenuModelItem): void => {
+      if (item.onSelect) item.onSelect();
+      else if (item.action) runAction(item.action);
       hideMenu();
     };
 
@@ -160,57 +231,50 @@ export const Context = defineComponent<ContextProps>(
     // 渲染函数
     // ============================================
 
-    /**
-     * 渲染菜单项列表
-     * @returns 菜单项 VNode 数组
-     */
-    const renderMenuItems = (): VNode[] => {
-      const renderLi = (item: ContextMenuItem): VNode =>
-        h(
-          "li",
-          {
-            "data-action": item.dataAction,
-            onClick: () => clickMenu(item.dataAction),
-          },
-          item.dataAction === "version" ? `${item.text} ${version}` : item.text,
-        );
-      if (props.menuItems) return menuItems.map(renderLi);
-      // 音效项按插件注册状态响应式显示：插件客户端动态注册后菜单自动出现
-      return [
-        renderLi(menuItems[0]),
-        renderLi(menuItems[1]),
-        h(
-          Show,
-          { when: isAudioEnabled },
-          h(
+    const renderMenuItems = (): ReturnType<typeof h> =>
+      h(For, {
+        each: (): MenuModelItem[] => menuModelSignal.value,
+        key: (item: unknown): string =>
+          typeof item === "object" && item !== null && "key" in item
+            ? String((item as MenuModelItem).key)
+            : "menu-item",
+        render: (raw: unknown): VNode => {
+          const item = raw as MenuModelItem;
+          return h(
             "li",
             {
-              "data-action": "audio",
-              onClick: () => clickMenu("audio"),
+              "data-action": item.action,
+              onClick: (): void => clickMenu(item),
             },
-            t("player.ui.audio.title"),
-          ),
-        ),
-        ...menuItems.slice(2).map(renderLi),
-      ];
-    };
+            item.isVersion ? `${item.text} ${version}` : item.text,
+          );
+        },
+      });
 
     // ============================================
     // 生命周期
     // ============================================
 
     lifecycle.onMounted = (): void => {
+      if (props.registry) {
+        pluginMenusSignal.value = props.registry.listMenus();
+        refreshMenu();
+        offMenus = props.registry.subscribeMenus(() => {
+          pluginMenusSignal.value = props.registry!.listMenus();
+          refreshMenu();
+        });
+      }
       lifecycle.emit?.("contextMounted", { showMenu, hideMenu });
     };
 
     lifecycle.onBeforeDestroy = (): void => {
+      offMenus?.();
+      offMenus = null;
       document.removeEventListener("click", hideMenu);
     };
 
     // ============================================
     // 组件渲染
-    // （class/style 内读取 positionSig → __reactiveAttrs，
-    //   showMenu/hideMenu 写信号时精准更新）
     // ============================================
     return h(
       "div",
@@ -230,7 +294,7 @@ export const Context = defineComponent<ContextProps>(
               }
             : undefined,
         },
-        ...renderMenuItems(),
+        renderMenuItems(),
       ),
     );
   },

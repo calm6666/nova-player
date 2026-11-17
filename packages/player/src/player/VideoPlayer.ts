@@ -14,6 +14,12 @@ import {
   type HotkeyRegistry,
 } from "../core/hotkeyRegistry";
 import type { HotkeyConfig } from "../core/hotkeys";
+import {
+  createUiRegistry,
+  type UiMenuRegistration,
+  type UiPanelRegistration,
+  type UiRegistry,
+} from "../core/uiRegistry";
 
 import { PlayerState, PlayMode } from "../types/player";
 import { h, mount, hydrate as hydrateVNode, renderToString as renderVNodeToString, destroy, createTypedStateManager, createTypedEventBus, signal } from '@lumina/framework/core';
@@ -452,6 +458,15 @@ export class VideoPlayer
    */
   /** 快捷键注册表：播放器负责键盘监听，插件通过 registerHotkey 注册自己的快捷键 */
   readonly hotkeyRegistry: HotkeyRegistry = createHotkeyRegistry();
+
+  /** 插件 UI 注册表：右键菜单项与面板 */
+  readonly uiRegistry: UiRegistry = createUiRegistry();
+
+  /** 面板宿主（由 PlayerDocker 挂载后回填），负责插件面板的真实挂载与显隐 */
+  private panelHost: {
+    open: (id: string) => void;
+    close: (id: string) => void;
+  } | null = null;
 
   private pluginFlags: Signal<PlayerPluginFlags> = signal<PlayerPluginFlags>({
     danmaku: false,
@@ -2504,6 +2519,44 @@ export class VideoPlayer
     return this.hotkeyRegistry;
   }
 
+  /** 注册右键菜单项，返回注销函数 */
+  registerMenuItem(registration: UiMenuRegistration): () => void {
+    return this.uiRegistry.registerMenu(registration);
+  }
+
+  /** 当前右键菜单注册项（内置项由 UI 层合并） */
+  getMenuItems(): UiMenuRegistration[] {
+    return this.uiRegistry.listMenus();
+  }
+
+  /** 注册插件面板，返回注销函数 */
+  registerPanel(registration: UiPanelRegistration): () => void {
+    return this.uiRegistry.registerPanel(registration);
+  }
+
+  /** 插件 UI 注册表 */
+  getUiRegistry(): UiRegistry {
+    return this.uiRegistry;
+  }
+
+  /** 打开插件面板（由插件菜单 / 快捷键调用） */
+  openPanel(id: string): void {
+    this.panelHost?.open(id);
+  }
+
+  /** 关闭插件面板 */
+  closePanel(id: string): void {
+    this.panelHost?.close(id);
+  }
+
+  /** 面板宿主注册（PlayerDocker 内部使用） */
+  registerPanelHost(host: {
+    open: (id: string) => void;
+    close: (id: string) => void;
+  } | null): void {
+    this.panelHost = host;
+  }
+
   uninstallPlugin(name: string): void {
     /**
      * 先 uninstall、再同步安装标志：
@@ -2512,6 +2565,7 @@ export class VideoPlayer
      */
     this.pluginManager?.uninstall(name);
     this.hotkeyRegistry.removeByPlugin(name);
+    this.uiRegistry.removeByPlugin(name);
     this.syncPluginFlags(name, false);
   }
 

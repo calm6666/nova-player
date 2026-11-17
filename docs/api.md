@@ -489,6 +489,43 @@ install(player) {
 | `getHotkeys()` | 读取内置 + 插件快捷键列表 |
 | `getHotkeyRegistry()` | 快捷键注册表，面板订阅变化用 |
 
+### 4.15 插件 UI 注册（右键菜单 / 面板）
+
+插件通过播放器注册右键菜单项与面板，播放器负责合并排序、提供宿主层与卸载回收。
+
+```ts
+install(player) {
+  player.registerMenuItem({
+    id: "danmaku.settings",
+    plugin: "danmaku",
+    position: 25,
+    labelKey: "player.ui.hotkey.plugin_group",
+    onSelect: () => player.openPanel("plugin.danmaku.settings"),
+  });
+
+  player.registerPanel({
+    id: "plugin.danmaku.settings",
+    plugin: "danmaku",
+    mount: ({ container }) => {
+      const off = mount(DanmakuSettingsPanel({}), container);
+      return off;
+    },
+    open: () => panelApi.open(),
+    close: () => panelApi.close(),
+  });
+}
+```
+
+| 方法 | 说明 |
+| --- | --- |
+| `registerMenuItem(reg)` | 注册右键菜单项，`position` 小的在前，同位置按注册先后 |
+| `registerPanel(reg)` | 注册插件面板，首次 `openPanel` 时挂载到面板宿主层 |
+| `openPanel(id)` / `closePanel(id)` | 打开 / 关闭插件面板 |
+| `getMenuItems()` | 读取插件注册的菜单项（内置项由 UI 层合并） |
+| `getUiRegistry()` | UI 注册表，菜单 / 面板订阅变化用 |
+
+面板容器由播放器提供，内容、样式和显隐由插件自己管理；插件卸载时注册项与已挂载面板自动回收。
+
 ---
 
 ## 5. 全事件表

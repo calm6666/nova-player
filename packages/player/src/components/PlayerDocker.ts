@@ -28,6 +28,7 @@ import { Dialog } from "./Dialog";
 import { Context as ContextMenu } from "./Context";
 import type { HotkeyPanelApi } from "./HotkeyPanel";
 import type { FeedbackPanelApi } from "./FeedbackPanel";
+import { isDev } from "@lumina/framework/core/warning";
 import { PlayerEventEnum } from "../types/events";
 import { PlayerStateKeyEnum, StateContext, type PlayerStateMap } from "../store/runtimeState";
 import { ConfigStoreContext, type ConfigStore } from "../store/configStore";
@@ -498,6 +499,11 @@ export const PlayerDocker = defineComponent<
   const endingRootRef = useTemplateRef<HTMLDivElement>(
     lifecycle,
     "endingRootRef",
+  );
+  /** 插件面板宿主层（inset 0，面板内容自行定位） */
+  const pluginPanelHostRef = useTemplateRef<HTMLDivElement>(
+    lifecycle,
+    "pluginPanelHostRef",
   );
   let topMountCleanup: (() => void) | null = null;
   let endingMountCleanup: (() => void) | null = null;
@@ -1453,6 +1459,58 @@ export const PlayerDocker = defineComponent<
     const task = mountPanel(name).finally(() => panelLoading.delete(name));
     panelLoading.set(name, task);
     return task;
+  };
+
+  // ============================================
+  // 插件面板宿主
+  // ============================================
+
+  interface MountedPluginPanel {
+    el: HTMLElement;
+    cleanup: (() => void) | null;
+  }
+  const mountedPluginPanels = new Map<string, MountedPluginPanel>();
+  let unsubPluginPanels: (() => void) | null = null;
+
+  /** 打开插件注册的面板：首次挂载，之后复用 */
+  const openPluginPanel = (id: string): void => {
+    const registry = resolvedPlayer?.getUiRegistry?.();
+    const registration = registry?.getPanel(id);
+    const host = pluginPanelHostRef.value;
+    if (!registration || !host) return;
+    let mounted = mountedPluginPanels.get(id);
+    if (!mounted) {
+      const el = document.createElement("div");
+      el.className = "nova-player-plugin-panel";
+      el.setAttribute("data-panel-id", id);
+      host.appendChild(el);
+      let cleanup: (() => void) | null = null;
+      try {
+        cleanup = registration.mount({ container: el }) ?? null;
+      } catch (error) {
+        if (isDev()) {
+          console.warn(`[PlayerDocker] plugin panel "${id}" mount failed`, error);
+        }
+      }
+      mounted = { el, cleanup };
+      mountedPluginPanels.set(id, mounted);
+    }
+    registration.open?.();
+  };
+
+  /** 关闭插件面板：调用插件 close + 清理并移除容器 */
+  const closePluginPanel = (id: string): void => {
+    const registration = resolvedPlayer?.getUiRegistry?.()?.getPanel(id);
+    registration?.close?.();
+    const mounted = mountedPluginPanels.get(id);
+    if (!mounted) return;
+    mounted.cleanup?.();
+    mounted.el.remove();
+    mountedPluginPanels.delete(id);
+  };
+
+  const closeAllPluginPanels = (): void => {
+    for (const id of [...mountedPluginPanels.keys()]) closePluginPanel(id);
   };
 
   // ============================================
@@ -2683,6 +2741,80 @@ export const PlayerDocker = defineComponent<
     // 插件插槽声明变化后重新挂载（插件运行期 install / uninstall）
     unregisterSlotsRefresh =
       resolvedPlayer?.registerSlotsRefresh(mountOwnedRegionSlots) ?? null;
+
+    // 核心面板登记到 UI 注册表：插件菜单 / 快捷键可统一走 player.openPanel
+    resolvedPlayer?.registerPanel?.({
+      id: "color",
+      plugin: "core",
+      mount: (): void => {},
+      open: (): void => {
+        void ensurePanel("color").then(() => colorPanelApi.open?.());
+      },
+      close: (): void => {
+        colorPanelApi.close?.();
+      },
+    });
+    resolvedPlayer?.registerPanel?.({
+      id: "audio",
+      plugin: "core",
+      mount: (): void => {},
+      open: (): void => {
+        void ensurePanel("audio").then(() => audioPanelApi.open?.());
+      },
+      close: (): void => {
+        audioPanelApi.close?.();
+      },
+    });
+    resolvedPlayer?.registerPanel?.({
+      id: "keyboard",
+      plugin: "core",
+      mount: (): void => {},
+      open: (): void => {
+        void ensurePanel("keyboard").then(() => hotkeyPanelApi.open?.());
+      },
+      close: (): void => {
+        hotkeyPanelApi.close?.();
+      },
+    });
+    resolvedPlayer?.registerPanel?.({
+      id: "info",
+      plugin: "core",
+      mount: (): void => {},
+      open: (): void => {
+        void ensurePanel("info").then(() => videoInfoApi.open?.());
+      },
+      close: (): void => {
+        videoInfoApi.close?.();
+      },
+    });
+    resolvedPlayer?.registerPanel?.({
+      id: "feedback",
+      plugin: "core",
+      mount: (): void => {},
+      open: (): void => {
+        void ensurePanel("feedback").then(() => feedbackPanelApi.open?.());
+      },
+      close: (): void => {
+        feedbackPanelApi.close?.();
+      },
+    });
+
+    // 插件面板宿主：插件通过 player.openPanel / closePanel 控制
+    if (resolvedPlayer?.registerPanelHost) {
+      resolvedPlayer.registerPanelHost({
+        open: openPluginPanel,
+        close: closePluginPanel,
+      });
+      const registry = resolvedPlayer.getUiRegistry?.();
+      if (registry) {
+        unsubPluginPanels = registry.subscribePanels(() => {
+          const alive = new Set(registry.listPanels().map((panel) => panel.id));
+          for (const id of [...mountedPluginPanels.keys()]) {
+            if (!alive.has(id)) closePluginPanel(id);
+          }
+        });
+      }
+    }
     // cross 固定形态：弹幕发送栏首次出现即移入控制栏中央并定死
     // （发送栏由 danmaku 插件驱动按需渲染——embedded 场景挂载时已存在，
     //  运行时注入插件的场景晚于此处，故用一次性 MutationObserver 兜底：
@@ -2776,6 +2908,11 @@ export const PlayerDocker = defineComponent<
     topEndSlotCleanup = null;
     unregisterSlotsRefresh?.();
     unregisterSlotsRefresh = null;
+    // 插件面板：注销宿主、取消订阅并卸载已挂载面板
+    resolvedPlayer?.registerPanelHost?.(null);
+    unsubPluginPanels?.();
+    unsubPluginPanels = null;
+    closeAllPluginPanels();
 
     if (tornDown) return;
     tornDown = true;
@@ -3221,6 +3358,11 @@ export const PlayerDocker = defineComponent<
                     : "nova-player-ending-wrap",
             ref: "endingRootRef",
           }),
+          // 插件面板宿主层：插件注册的面板首次打开时挂载到这里
+          h("div", {
+            class: "nova-player-plugin-panel-host",
+            ref: "pluginPanelHostRef",
+          }),
           // 迷你播放器面板（默认隐藏，播放器滚出视口进入迷你模式时由
           // data-screen="mini" 的样式规则显示；关闭 / 状态切换回调向上处理）
           h(Mini, {
@@ -3465,6 +3607,7 @@ export const PlayerDocker = defineComponent<
       }),
       // 右键菜单（默认隐藏，右键视频区域时在鼠标位置显示）
       h(ContextMenu, {
+        registry: resolvedPlayer?.getUiRegistry?.(),
         audioEnabled: () => hasPlugin("audioEffect"),
         onContextMounted: (api: {
           showMenu: (x: number, y: number) => void;

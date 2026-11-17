@@ -42,6 +42,12 @@ export type { ProgressPreviewFrame, ProgressPreviewProvider, EnergyProgressData,
 // 插件快捷键注册契约
 export type { HotkeyConfig, HotkeyContext, HotkeyHandlers } from './core/hotkeys';
 export type { HotkeyRegistration, HotkeyRegistry } from './core/hotkeyRegistry';
+export type {
+  UiMenuRegistration,
+  UiPanelRegistration,
+  UiPanelMountContext,
+  UiRegistry,
+} from './core/uiRegistry';
 export type { StateManager, EventBus, HookSystem } from '@lumina/framework/core';
 
 // 字幕解析工具（原 framework utils/subtitle，归属播放器应用层）
